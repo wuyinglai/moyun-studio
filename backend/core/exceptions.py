@@ -87,10 +87,12 @@ class TemplateError(MoyunException):
 
 class TemplateNotFoundError(TemplateError):
     """模板不存在"""
-    def __init__(self, category: str, template_type: str):
+    def __init__(self, template: str = "", category: str = "", template_type: str = ""):
+        # 支持两种构造方式
+        template_path = template or f"{category}/{template_type}"
         super().__init__(
-            f"模板不存在: {category}/{template_type}",
-            {"category": category, "template_type": template_type}
+            f"模板不存在: {template_path}",
+            {"category": category, "template_type": template_type, "template": template_path}
         )
 
 
@@ -180,4 +182,16 @@ class ContextLengthError(MoyunException):
             f"上下文超出限制: {token_count} > {max_tokens}",
             "CONTEXT_LENGTH_ERROR",
             {"token_count": token_count, "max_tokens": max_tokens}
+        )
+
+
+class ResourceNotFoundError(MoyunException):
+    """通用资源不存在错误"""
+    def __init__(self, resource: str = "", identifier: str = "", resource_id: str = ""):
+        # 支持多种构造方式
+        res_id = resource_id or identifier or resource
+        super().__init__(
+            f"资源不存在: {res_id}",
+            "RESOURCE_NOT_FOUND",
+            {"resource": resource, "identifier": identifier, "resource_id": resource_id}
         )

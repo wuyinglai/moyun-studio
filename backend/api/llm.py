@@ -9,6 +9,7 @@
 """
 
 import json
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
@@ -23,6 +24,7 @@ from backend.schemas.llm import (
     ModelInfo,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["llm"], prefix="/llm")
 
 # LLM 配置存储在 workspace/.config.json
@@ -77,6 +79,7 @@ async def save_llm_config(
         "thinking": req.thinking,
     }
     _save_global_config(settings, data)
+    logger.info("LLM配置已保存", extra={"api_type": req.api_type, "model": req.model})
     return ApiResponse.ok(message="配置已保存")
 
 
@@ -114,20 +117,27 @@ async def test_connection(settings: Settings = Depends(get_settings)):
 
     try:
         import litellm
-        litellm.api_key = api_key
-        if api_base:
-            litellm.api_base = api_base
+
+        # 对于 deepseek，使用完整模型名
+        if api_type == "deepseek" and not model.startswith("deepseek/"):
+            model = "deepseek/" + model
+
+        logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
         # 用最短的请求测试
         response = await litellm.acompletion(
             model=model,
             messages=[{"role": "user", "content": "Hi"}],
             max_tokens=5,
+            api_key=api_key,
+            api_base=api_base,
         )
+        logger.info("LLM连接测试成功", extra={"model": model})
         return ApiResponse.ok(
             LLMStatusResponse(connected=True, model=model, message="连接成功")
         )
     except Exception as e:
+        logger.warning("LLM连接测试失败", extra={"model": model, "error": str(e)[:100]})
         return ApiResponse.ok(
             LLMStatusResponse(connected=False, model=model, message=f"连接失败: {str(e)[:100]}")
         )
@@ -151,6 +161,11 @@ async def get_models(settings: Settings = Depends(get_settings)):
             ModelInfo(id="claude-3-5-sonnet-20241022", name="Claude 3.5 Sonnet"),
             ModelInfo(id="claude-3-5-haiku-20241022", name="Claude 3.5 Haiku"),
             ModelInfo(id="claude-3-opus-20240229", name="Claude 3 Opus"),
+        ],
+        "deepseek": [
+            ModelInfo(id="deepseek/deepseek-v4-flash", name="DeepSeek V4 Flash (推荐)"),
+            ModelInfo(id="deepseek/deepseek-chat", name="DeepSeek Chat"),
+            ModelInfo(id="deepseek/deepseek-coder", name="DeepSeek Coder"),
         ],
         "ollama": [
             ModelInfo(id="llama3.2", name="Llama 3.2"),

@@ -3,6 +3,7 @@
 封装Prompt模板加载和渲染。
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,10 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader
 
 from backend.config import get_settings
+from backend.core.exceptions import MoyunException, TemplateNotFoundError
 from backend.services.base import PromptEngineInterface
+
+logger = logging.getLogger(__name__)
 
 
 class PromptEngineService(PromptEngineInterface):
@@ -46,7 +50,8 @@ class PromptEngineService(PromptEngineInterface):
         try:
             template = self.env.get_template(template_path)
         except Exception:
-            raise Exception(f"模板不存在: {template_path}")
+            logger.warning(f"模板不存在: {template_path}")
+            raise TemplateNotFoundError(template=f"{category}/{template_type}")
 
         return template.render(**resolved)
 
@@ -127,11 +132,13 @@ class PromptEngineService(PromptEngineInterface):
         template_path = self.prompts_path / category / template_type
 
         if not template_path.exists():
-            raise Exception(f"模板不存在: {category}/{template_type}")
+            logger.warning(f"模板目录不存在: {category}/{template_type}")
+            raise TemplateNotFoundError(template=f"{category}/{template_type}")
 
         main_file = template_path / "main.md"
         if not main_file.exists():
-            raise Exception(f"模板文件不存在: {main_file}")
+            logger.warning(f"模板文件不存在: {main_file}")
+            raise TemplateNotFoundError(template=f"{category}/{template_type}")
 
         content = main_file.read_text(encoding="utf-8")
 

@@ -12,6 +12,7 @@ from .exceptions import (
     TaskError,
     TaskNotFoundError,
     ValidationError,
+    ResourceNotFoundError,
 )
 from .event_bus import EventBus, EventTypes
 from .prompt_engine import PromptEngine
@@ -28,6 +29,7 @@ __all__ = [
     "TaskError",
     "TaskNotFoundError",
     "ValidationError",
+    "ResourceNotFoundError",
     "EventBus",
     "EventTypes",
     "PromptEngine",

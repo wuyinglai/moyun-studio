@@ -6,13 +6,17 @@
   GET  /api/tree           获取文件树（?project_id=）
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import logging
+
+from fastapi import APIRouter, Depends, Query
 
 from backend.config import Settings, get_settings
+from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError
 from backend.core.file_ops import FileService
 from backend.schemas.common import ApiResponse
 from backend.schemas.file import FileReadResponse, FileTreeResponse, FileWriteRequest, TreeNode
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["files"])
 
 
@@ -49,7 +53,8 @@ async def read_file(
     try:
         content, fm = await fs.read_file(full_path)
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"文件不存在: {path}")
+        logger.warning("读取文件失败", extra={"project_id": project_id, "path": path, "error": str(e)})
+        raise ResourceNotFoundError(resource="file", identifier=f"{project_id}/{path}")
 
     return ApiResponse.ok(
         FileReadResponse(path=path, content=content, frontmatter=fm)
@@ -67,8 +72,10 @@ async def write_file(
     try:
         await fs.write_file(full_path, req.content, req.frontmatter)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"写入失败: {e}")
+        logger.error("写入文件失败", extra={"project_id": project_id, "path": req.path, "error": str(e)})
+        raise
 
+    logger.info("文件已保存", extra={"project_id": project_id, "path": req.path})
     return ApiResponse.ok(message="文件已保存")
 
 
@@ -81,7 +88,7 @@ async def get_tree(
     """获取项目文件树"""
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
-        raise HTTPException(status_code=404, detail=f"项目不存在: {project_id}")
+        raise ProjectNotFoundError(project_id)
 
     raw_tree = await fs.get_file_tree(project_id, max_depth=5)
     nodes = _build_tree_nodes(raw_tree)

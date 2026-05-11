@@ -6,14 +6,18 @@
   POST /api/prompts/{name}    保存/更新Prompt内容
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.config import Settings, get_settings
+from backend.core.exceptions import TemplateNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.prompt_engine import PromptEngine
 from backend.schemas.common import ApiResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["prompts"], prefix="/prompts")
 
 
@@ -62,7 +66,7 @@ async def get_prompt(
     prompt_file = settings.prompts_path / category / name / "prompt.md"
 
     if not prompt_file.exists():
-        raise HTTPException(status_code=404, detail=f"Prompt不存在: {prompt_key}")
+        raise TemplateNotFoundError(template=f"{category}/{name}")
 
     raw_content = prompt_file.read_text(encoding="utf-8")
 

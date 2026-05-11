@@ -8,14 +8,16 @@
 """
 
 import json
+import logging
 import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from backend.config import Settings, get_settings
+from backend.core.exceptions import ProjectNotFoundError
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     ProjectCreateRequest,
@@ -23,6 +25,7 @@ from backend.schemas.project import (
     ProjectListResponse,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["projects"])
 
 
@@ -116,6 +119,8 @@ async def create_project(
     project_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc).isoformat()
 
+    logger.info("创建新项目", extra={"project_id": project_id, "name": req.name, "genre": req.genre})
+
     project_dir = settings.projects_path / project_id
     project_dir.mkdir(parents=True, exist_ok=True)
 
@@ -188,11 +193,12 @@ async def get_project(
     """获取项目详情"""
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
-        raise HTTPException(status_code=404, detail=f"项目不存在: {project_id}")
+        raise ProjectNotFoundError(project_id)
 
     info = _project_info(project_dir)
     if info is None:
-        raise HTTPException(status_code=404, detail=f"项目 meta 损坏: {project_id}")
+        logger.error("项目meta损坏", extra={"project_id": project_id})
+        raise ProjectNotFoundError(project_id)
     return ApiResponse.ok(info)
 
 
@@ -204,7 +210,8 @@ async def delete_project(
     """删除项目（不可恢复）"""
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
-        raise HTTPException(status_code=404, detail=f"项目不存在: {project_id}")
+        raise ProjectNotFoundError(project_id)
 
     shutil.rmtree(project_dir)
+    logger.info("项目已删除", extra={"project_id": project_id})
     return ApiResponse.ok(message=f"项目 {project_id} 已删除")

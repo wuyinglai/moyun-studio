@@ -7,8 +7,8 @@
   GET  /api/tasks       获取任务队列状态
 """
 
-import json
 import asyncio
+import logging
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request
@@ -18,6 +18,7 @@ from backend.config import Settings, get_settings
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import GenerateRequest, ChatRequest
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["generate"])
 
 # 全局停止信号
@@ -44,12 +45,17 @@ async def generate(
         yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
 
         try:
+            import json
+
             # 加载 Prompt 模板
             from backend.core.file_ops import FileService
             from backend.core.prompt_engine import PromptEngine
 
             file_service = FileService(settings.projects_path)
             prompt_engine = PromptEngine(settings.prompts_path, file_service)
+
+            # 记录生成开始
+            logger.info("开始生成任务", extra={"task_id": task_id, "project_id": req.project_id, "file_path": req.file_path})
 
             # 读取目标文件内容
             try:
@@ -144,8 +150,12 @@ async def chat(
     """聊天对话（流式SSE）"""
 
     async def _stream() -> AsyncGenerator[dict, None]:
+        import json
+
         event_bus = getattr(request.app.state, "event_bus", None)
         task_id = f"chat-{id(req)}"
+
+        logger.info("开始聊天任务", extra={"task_id": task_id, "message_length": len(req.message)})
 
         yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
 
@@ -161,20 +171,25 @@ async def chat(
                 except Exception:
                     pass
 
-            if llm_cfg.get("apiKey"):
-                litellm.api_key = llm_cfg["apiKey"]
-            if llm_cfg.get("apiUrl"):
-                litellm.api_base = llm_cfg["apiUrl"]
-
+            # 处理 deepseek 格式
             model = llm_cfg.get("model", settings.llm_model)
+            api_type = llm_cfg.get("apiType", "openai")
+            if api_type == "deepseek" and not model.startswith("deepseek/"):
+                model = "deepseek/" + model
 
             messages = [{"role": "user", "content": req.message}]
 
-            async for chunk in await litellm.acompletion(
-                model=model,
-                messages=messages,
-                stream=True,
-            ):
+            kwargs = {
+                "model": model,
+                "messages": messages,
+                "stream": True,
+            }
+            if llm_cfg.get("apiKey"):
+                kwargs["api_key"] = llm_cfg["apiKey"]
+            if llm_cfg.get("apiUrl"):
+                kwargs["api_base"] = llm_cfg["apiUrl"]
+
+            async for chunk in await litellm.acompletion(**kwargs):
                 delta = chunk.choices[0].delta.content or ""
                 if delta:
                     yield {

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class LLMConfigRequest(BaseModel):
-    api_type: Literal["openai", "anthropic", "ollama", "custom"] = "openai"
+    api_type: Literal["openai", "anthropic", "ollama", "deepseek", "custom"] = "openai"
     api_url: str = ""
     api_key: str = ""
     model: str = ""

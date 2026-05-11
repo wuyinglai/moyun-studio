@@ -3,10 +3,13 @@
 封装LiteLLM调用，提供流式输出和重试机制。
 """
 
+import logging
 from typing import Any, AsyncGenerator, TYPE_CHECKING
 
 import tiktoken
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+from backend.core.exceptions import LLMError
 
 if TYPE_CHECKING:
     from backend.core.exceptions import LLMConfigError
@@ -41,6 +44,7 @@ class LLMService:
     - 自动重试机制
     - Token计数
     """
+    logger = logging.getLogger(__name__)
 
     def __init__(self, config: LLMConfig):
         self.config = config
@@ -100,7 +104,7 @@ class LLMService:
                 yield response.choices[0].message.content
 
         except Exception as e:
-            raise LLMError(f"LLM调用失败: {str(e)}")
+            raise LLMError(message=f"LLM调用失败: {str(e)}")
 
     async def _call_with_retry(self, **kwargs) -> Any:
         """带重试的调用"""
@@ -140,8 +144,3 @@ class LLMService:
         if not self.config.api_key and self.config.provider == "openai":
             return False
         return True
-
-
-class LLMError(Exception):
-    """LLM相关错误"""
-    pass

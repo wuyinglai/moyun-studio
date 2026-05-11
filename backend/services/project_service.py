@@ -4,6 +4,7 @@
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,8 @@ from typing import Any
 import aiofiles
 
 from backend.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectService:
@@ -101,6 +104,16 @@ class ProjectService:
 
         created_at = datetime.now().isoformat()
 
+        logger.info(
+            "创建新项目",
+            extra={
+                "project_id": project_id,
+                "name": name,
+                "genre": genre,
+                "scale": scale,
+            }
+        )
+
         # 写入meta.json
         meta = {
             "name": name,
@@ -176,8 +189,10 @@ class ProjectService:
 
         project_path = self.projects_path / project_id
         if not project_path.exists():
+            logger.warning(f"项目不存在，无法删除: {project_id}")
             return False
 
+        logger.info(f"删除项目: {project_id}")
         shutil.rmtree(project_path)
         return True
 
@@ -187,6 +202,11 @@ class ProjectService:
         scale: int = 100000
     ) -> dict[str, Any]:
         """生成项目目录结构"""
+        logger.info(
+            "生成项目结构",
+            extra={"project_id": project_id, "scale": scale}
+        )
+
         project_path = self.projects_path / project_id
 
         # 计算卷/章/节数量

@@ -3,12 +3,17 @@
 封装异步文件读写操作，支持frontmatter解析。
 """
 
-import aiofiles
-import frontmatter
+import logging
 from pathlib import Path
 from typing import Any
 
+import aiofiles
+import frontmatter
+
 from backend.config import get_settings
+from backend.core.exceptions import MoyunException
+
+logger = logging.getLogger(__name__)
 
 
 class FileService:

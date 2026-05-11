@@ -3,13 +3,17 @@
 封装LLM调用，提供统一的LLM接口。
 """
 
-import json
+import logging
+from pathlib import Path
 from typing import Any, AsyncGenerator
 
 import litellm
 
 from backend.config import get_settings
+from backend.core.exceptions import MoyunException, LLMError
 from backend.services.base import LLMServiceInterface
+
+logger = logging.getLogger(__name__)
 
 
 class LLMService(LLMServiceInterface):
@@ -22,11 +26,14 @@ class LLMService(LLMServiceInterface):
     def _load_config(self) -> dict[str, Any]:
         """加载LLM配置"""
         if self._config is None:
-            config_path = self.settings.workspace_path / ".config.json"
+            # 尝试从项目根目录读取配置
+            import backend
+            root_dir = Path(backend.__file__).parent.parent
+            config_path = root_dir / ".config.json"
             if config_path.exists():
                 with open(config_path, "r", encoding="utf-8") as f:
                     full_config = json.load(f)
-                    self._config = full_config.get("llm", {})
+                    self._config = full_config
             else:
                 self._config = {}
         return self._config
@@ -64,14 +71,19 @@ class LLMService(LLMServiceInterface):
             "temperature": 0.7,
         }
 
-        if self.api_key:
-            kwargs["api_key"] = self.api_key
-        if self.api_base:
-            kwargs["api_base"] = self.api_base
-
         # 设置provider
-        if self.provider == "ollama":
+        if self.provider == "deepseek":
+            # DeepSeek 兼容 OpenAI API
+            kwargs["api_key"] = self.api_key
+            kwargs["api_base"] = self.api_base or "https://api.deepseek.com"
+        elif self.provider == "ollama":
             kwargs["api_base"] = self.api_base or "http://localhost:11434"
+        else:
+            # OpenAI / Custom
+            if self.api_key:
+                kwargs["api_key"] = self.api_key
+            if self.api_base:
+                kwargs["api_base"] = self.api_base
 
         try:
             response = await litellm.acompletion(**kwargs)
@@ -85,7 +97,14 @@ class LLMService(LLMServiceInterface):
                 yield response.choices[0].message.content
 
         except Exception as e:
-            raise Exception(f"LLM调用失败: {str(e)}")
+            logger.error(
+                f"LLM调用失败: {e}",
+                extra={"model": model}
+            )
+            raise LLMError(
+                message=f"LLM调用失败: {str(e)}",
+                details={"model": model}
+            )
 
     async def complete_sync(
         self,
@@ -127,9 +146,9 @@ class LLMService(LLMServiceInterface):
 
     async def list_models(self) -> list[dict[str, str]]:
         """获取可用模型列表"""
-        # 这里可以扩展为动态获取模型列表
-        # 当前返回常用模型
         return [
+            {"id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash (推荐)"},
+            {"id": "deepseek-chat", "name": "DeepSeek Chat"},
             {"id": "gpt-4", "name": "GPT-4"},
             {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo"},
             {"id": "claude-3-opus", "name": "Claude 3 Opus"},

@@ -69,8 +69,7 @@ def create_app() -> FastAPI:
     # CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # 本地单用户部署，全开
-        allow_credentials=True,
+        allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -106,7 +105,24 @@ def create_app() -> FastAPI:
         )
 
     # ─── 注册路由 ─────────────────────────────────────────────────
-    from backend.api import projects, files, llm, generate, events, prompts
+    from backend.api import (
+        projects,
+        files,
+        llm,
+        generate,
+        events,
+        prompts,
+        style_guide,
+        story_state,
+        recent_context,
+        feedback,
+        revision_log,
+        tokens,
+        compare,
+        backup,
+        characters,
+        materials,
+    )
 
     app.include_router(projects.router, prefix="/api")
     app.include_router(files.router, prefix="/api")
@@ -114,6 +130,16 @@ def create_app() -> FastAPI:
     app.include_router(generate.router, prefix="/api")
     app.include_router(events.router, prefix="/api")
     app.include_router(prompts.router, prefix="/api")
+    app.include_router(style_guide.router, prefix="/api")
+    app.include_router(story_state.router, prefix="/api")
+    app.include_router(recent_context.router, prefix="/api")
+    app.include_router(feedback.router, prefix="/api")
+    app.include_router(revision_log.router, prefix="/api")
+    app.include_router(tokens.router, prefix="/api")
+    app.include_router(compare.router, prefix="/api")
+    app.include_router(backup.router, prefix="/api")
+    app.include_router(characters.router, prefix="/api")
+    app.include_router(materials.router, prefix="/api")
 
     # ─── 前端静态文件 & 单页入口 ──────────────────────────────────
     frontend_dir = settings.workspace_path.parent / "frontend"
@@ -137,14 +163,19 @@ def create_app() -> FastAPI:
 def _moyun_to_http_status(error_code: str) -> int:
     _map = {
         "PROJECT_NOT_FOUND": 404,
+        "PROJECT_ERROR": 400,
         "FILE_NOT_FOUND": 404,
+        "FILE_ERROR": 400,
+        "RESOURCE_NOT_FOUND": 404,
         "FILE_ALREADY_EXISTS": 409,
         "TEMPLATE_NOT_FOUND": 404,
+        "TEMPLATE_ERROR": 400,
         "INVALID_TEMPLATE": 422,
         "INVALID_VARIABLE": 422,
+        "VALIDATION_ERROR": 422,
         "LLM_ERROR": 503,
         "LLM_TIMEOUT": 504,
-        "VALIDATION_ERROR": 422,
+        "TASK_ERROR": 400,
         "RATE_LIMIT": 429,
     }
     return _map.get(error_code, 500)

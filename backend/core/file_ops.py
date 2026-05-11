@@ -3,10 +3,14 @@
 异步文件读写，支持frontmatter。
 """
 
-import aiofiles
-import frontmatter
+import logging
 from pathlib import Path
 from typing import Any
+
+import aiofiles
+import frontmatter
+
+from backend.core.exceptions import FileNotFoundError
 
 
 class FileService:
@@ -18,6 +22,7 @@ class FileService:
     - 目录管理
     - 文件树构建
     """
+    logger = logging.getLogger(__name__)
 
     def __init__(self, workspace_path: Path | str):
         self.workspace = Path(workspace_path)
@@ -180,8 +185,3 @@ class FileService:
             async with aiofiles.open(info_path, "r") as f:
                 return json.loads(await f.read())
         return None
-
-
-class FileNotFoundError(Exception):
-    """文件不存在"""
-    pass

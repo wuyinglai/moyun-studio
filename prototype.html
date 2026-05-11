@@ -1,19 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark-purple">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>墨韵 - AI小说创作助手</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
+        /* ================================================
+           墨韵 - 全局样式与主题系统
+           ================================================ */
+
         :root {
+            /* 深邃夜紫（默认） */
             --bg-primary: #1a1a2e;
             --bg-secondary: #16213e;
             --bg-card: #0f3460;
-            --bg-card-hover: #1a4a7a;
             --accent-primary: #3b82f6;
             --accent-success: #4ade80;
             --accent-warning: #f59e0b;
@@ -22,136 +28,149 @@
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
             --border-color: #334155;
-            --border-light: #475569;
-            --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
-            --shadow-md: 0 4px 20px rgba(0,0,0,0.3);
-            --radius-sm: 6px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-            --radius-xl: 16px;
+
+            /* 布局 */
+            --toolbar-height: 48px;
+            --sidebar-width: 240px;
+            --right-panel-width: 320px;
+            --border-radius-sm: 6px;
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+            --border-radius-xl: 16px;
         }
 
-        [data-theme="green-eye"] {
+        /* 墨绿护眼主题 */
+        [data-theme="green"] {
             --bg-primary: #1a1f1a;
             --bg-secondary: #242a24;
             --bg-card: #2d362d;
-            --bg-card-hover: #3a453a;
             --accent-primary: #6ee7b7;
             --accent-success: #34d399;
             --text-primary: #e8f5e9;
             --text-secondary: #a5d6a7;
-            --border-color: #4a5d4a;
-            --border-light: #5a6d5a;
+            --text-muted: #5d8a5d;
+            --border-color: #3d4a3d;
         }
 
-        [data-theme="classic-gray"] {
+        /* 经典炭灰主题 */
+        [data-theme="gray"] {
             --bg-primary: #1f1f1f;
             --bg-secondary: #2d2d2d;
             --bg-card: #3d3d3d;
-            --bg-card-hover: #4a4a4a;
             --accent-primary: #60a5fa;
             --accent-success: #4ade80;
             --text-primary: #f5f5f5;
             --text-secondary: #b0b0b0;
-            --border-color: #555555;
-            --border-light: #666666;
+            --text-muted: #808080;
+            --border-color: #4a4a4a;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* 重置样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
-            font-family: 'Noto Sans SC', sans-serif;
+            font-family: 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
+            min-height: 100vh;
             overflow: hidden;
-            height: 100vh;
         }
 
-        /* Layout */
+        /* ================================================
+           布局结构
+           ================================================ */
+
         .app-container {
             display: flex;
             flex-direction: column;
             height: 100vh;
         }
 
-        /* M01 Top Toolbar */
-        .top-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            height: 56px;
+        /* 顶部工具栏 M01 */
+        .toolbar {
+            height: var(--toolbar-height);
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
             flex-shrink: 0;
         }
 
         .toolbar-left {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 8px;
         }
 
-        /* M0101 Logo */
         .logo {
             display: flex;
             align-items: center;
-            gap: 10px;
-            cursor: default;
+            gap: 6px;
+            font-weight: bold;
+            font-size: 18px;
         }
 
         .logo-icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
-            border-radius: var(--radius-md);
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: white;
+            font-size: 14px;
         }
 
-        .logo-text {
-            font-size: 18px;
-            font-weight: 600;
-            background: linear-gradient(135deg, var(--text-primary), var(--accent-primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* M0102 Project Name */
         .project-name {
-            padding: 6px 12px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            font-size: 13px;
-            cursor: text;
-            max-width: 200px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            border: 1px solid transparent;
         }
 
-        .project-name:focus {
-            outline: 2px solid var(--accent-primary);
-            outline-offset: 2px;
+        .project-name:hover {
+            background: var(--bg-card);
+            border-color: var(--border-color);
         }
 
         .toolbar-center {
+            flex: 1;
             display: flex;
-            align-items: center;
-            gap: 16px;
+            justify-content: center;
         }
 
-        /* M0103 LLM Status */
-        .llm-status {
+        .toolbar-right {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 12px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: background 0.2s;
         }
 
-        .llm-status:hover { background: var(--bg-card-hover); }
+        /* LLM 状态 */
+        .llm-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: var(--border-radius-sm);
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .llm-status:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
 
         .status-dot {
             width: 8px;
@@ -160,7 +179,9 @@
             background: var(--accent-success);
         }
 
-        .status-dot.offline { background: var(--accent-danger); }
+        .status-dot.offline {
+            background: var(--accent-danger);
+        }
 
         .status-dot.loading {
             background: var(--accent-warning);
@@ -172,180 +193,766 @@
             50% { opacity: 0.5; }
         }
 
-        .status-text { font-size: 12px; color: var(--text-secondary); }
-
-        /* M0104 LLM Calling */
-        .llm-calling {
-            display: none;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 12px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-        }
-
-        .llm-calling.active { display: flex; }
-
-        .llm-calling i {
-            color: var(--accent-primary);
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        .llm-calling-text { font-size: 12px; color: var(--text-secondary); }
-
-        /* M0107 Thinking Switch */
-        .thinking-switch {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .switch {
-            width: 36px;
-            height: 20px;
-            background: var(--bg-card);
-            border-radius: 10px;
-            cursor: pointer;
-            position: relative;
-            transition: background 0.2s;
-        }
-
-        .switch::after {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 16px;
-            height: 16px;
-            background: var(--text-secondary);
-            border-radius: 50%;
-            transition: all 0.2s;
-        }
-
-        .switch.active { background: var(--accent-primary); }
-        .switch.active::after { left: 18px; background: white; }
-
-        .toolbar-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        /* Buttons */
+        /* 按钮样式 */
         .btn {
-            display: inline-flex;
+            padding: 6px 14px;
+            border-radius: var(--border-radius-md);
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 16px;
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: 13px;
-            font-family: inherit;
-            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .btn-primary { background: var(--accent-primary); color: white; }
-        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
 
-        .btn-secondary { background: var(--bg-card); color: var(--text-primary); }
-        .btn-secondary:hover { background: var(--bg-card-hover); }
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+        }
+
+        .btn-danger {
+            background: var(--accent-danger);
+            color: white;
+        }
 
         .btn-icon {
-            padding: 8px;
+            padding: 6px 10px;
             background: transparent;
             color: var(--text-secondary);
         }
 
-        .btn-icon:hover { background: var(--bg-card); color: var(--text-primary); }
+        .btn-icon:hover {
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
 
-        .btn-icon.danger:hover { background: var(--accent-danger); color: white; }
-
-        /* Main Content */
+        /* 主内容区 */
         .main-content {
-            flex: 1;
             display: flex;
+            flex: 1;
             overflow: hidden;
         }
 
-        /* M02 Left Sidebar */
-        .left-sidebar {
-            width: 240px;
-            min-width: 180px;
-            max-width: 400px;
+        /* 左侧边栏 M02 */
+        .sidebar {
+            width: var(--sidebar-width);
             background: var(--bg-secondary);
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            flex-shrink: 0;
         }
 
-        /* M0201 Header */
         .sidebar-header {
+            padding: 12px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 12px;
             border-bottom: 1px solid var(--border-color);
         }
 
-        .sidebar-path {
-            font-size: 11px;
-            color: var(--text-muted);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        .sidebar-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        /* M0202-M0204 File Tree */
         .file-tree {
             flex: 1;
             overflow-y: auto;
-            padding: 8px;
+            padding: 8px 0;
         }
 
         .tree-item {
             display: flex;
             align-items: center;
+            padding: 6px 16px;
             gap: 8px;
-            padding: 6px 10px;
-            border-radius: var(--radius-sm);
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.15s;
             font-size: 13px;
         }
 
-        .tree-item:hover { background: var(--bg-card); }
+        .tree-item:hover {
+            background: var(--bg-card);
+        }
 
-        .tree-item.folder { font-weight: 500; }
+        .tree-item.active {
+            background: var(--accent-primary);
+            color: white;
+        }
 
-        .tree-item .icon { color: var(--text-muted); font-size: 12px; }
-        .tree-item .icon-folder { color: var(--accent-warning); }
-        .tree-item .icon-chapter { color: var(--accent-primary); }
-        .tree-item .icon-meta { color: var(--accent-success); }
-        .tree-item .icon-backup { color: var(--accent-danger); }
+        .tree-item.folder {
+            font-weight: 500;
+        }
 
-        .tree-children { margin-left: 20px; display: none; }
-        .tree-item.expanded + .tree-children { display: block; }
+        .tree-icon {
+            width: 16px;
+            color: var(--text-muted);
+        }
 
-        .tree-empty {
+        .tree-item.active .tree-icon {
+            color: white;
+        }
+
+        /* 展开/折叠箭头 */
+        .tree-arrow {
+            width: 16px;
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+
+        .tree-arrow.expanded {
+            transform: rotate(90deg);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 40px 20px;
+            color: var(--text-muted);
+            gap: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            opacity: 0.5;
+        }
+
+        /* 编辑区 M03 */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 标签页 */
+        .tabs-bar {
+            display: flex;
+            align-items: center;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 8px;
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .tab-close {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .tab-close:hover {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        /* 编辑器工具栏 */
+        .editor-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* 编辑器内容 */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 300px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.8;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .editor-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* 保存状态 */
+        .save-status {
+            padding: 4px 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .save-status.saving {
+            color: var(--accent-warning);
+        }
+
+        .save-status.saved {
+            color: var(--accent-success);
+        }
+
+        .save-status.error {
+            color: var(--accent-danger);
+        }
+
+        /* 聊天区 */
+        .chat-panel {
+            border-left: 1px solid var(--border-color);
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: var(--border-radius-lg);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            background: var(--accent-primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.assistant {
+            align-self: flex-start;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-area {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 14px;
+            resize: none;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .chat-send {
+            padding: 10px 16px;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-send:hover {
+            filter: brightness(1.1);
+        }
+
+        /* 右侧面板 M04 */
+        .right-panel {
+            width: var(--right-panel-width);
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+        }
+
+        .panel-tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .prompt-preview {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-md);
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* 执行面板 */
+        .task-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .task-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-md);
+            padding: 12px;
+        }
+
+        .task-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .task-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .task-status {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .task-status.waiting {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .task-status.running {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .task-status.done {
+            background: var(--accent-success);
+            color: white;
+        }
+
+        .task-progress {
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .task-progress-bar {
+            height: 100%;
+            background: var(--accent-primary);
+            transition: width 0.3s;
+        }
+
+        /* 模态框 M05 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-xl);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* 表单元素 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .form-input.password {
+            font-family: monospace;
+        }
+
+        /* 按钮组 */
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn-option {
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-option:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .btn-option.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        /* 规模选择 */
+        .scale-options {
+            display: flex;
+            gap: 8px;
+        }
+
+        .scale-option {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .scale-option:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .scale-option.active {
+            border-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .scale-option .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .scale-option .unit {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .scale-info {
+            margin-top: 8px;
+            font-size: 12px;
             color: var(--text-muted);
             text-align: center;
         }
 
-        .tree-empty i { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
-        .tree-empty-text { font-size: 13px; }
+        /* 项目列表 */
+        .project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-        /* M07 Resizers */
+        .project-item {
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .project-item:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .project-item.selected {
+            border-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .project-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .project-item-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .project-item-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .project-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .project-progress-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .project-progress-fill {
+            height: 100%;
+            background: var(--accent-success);
+            transition: width 0.3s;
+        }
+
+        .project-progress-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            min-width: 40px;
+        }
+
+        /* 设置表单 */
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* 通知系统 M06 */
+        .notification {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: var(--border-radius-md);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            z-index: 2000;
+            animation: slideDown 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .notification.success {
+            background: var(--accent-success);
+            color: white;
+        }
+
+        .notification.error {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .notification.warning {
+            background: var(--accent-warning);
+            color: white;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* 拖拽分隔线 M07 */
         .resizer {
             width: 4px;
             cursor: col-resize;
@@ -354,7 +961,10 @@
             flex-shrink: 0;
         }
 
-        .resizer:hover, .resizer.active { background: var(--accent-primary); }
+        .resizer:hover,
+        .resizer.active {
+            background: var(--accent-primary);
+        }
 
         .resizer-h {
             height: 4px;
@@ -363,1867 +973,1369 @@
             transition: background 0.2s;
         }
 
-        .resizer-h:hover, .resizer-h.active { background: var(--accent-primary); }
-
-        /* M03 Center Editor */
-        .center-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 400px;
-            overflow: hidden;
+        .resizer-h:hover,
+        .resizer-h.active {
+            background: var(--accent-primary);
         }
 
-        /* M0301 Tabs */
-        .tabs-bar {
-            display: flex;
-            align-items: flex-end;
-            height: 36px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 0 8px;
-            overflow-x: auto;
-            flex-shrink: 0;
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
 
-        .tabs-bar::-webkit-scrollbar { height: 4px; }
-        .tabs-bar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
-
-        .tab {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
+        ::-webkit-scrollbar-track {
             background: transparent;
-            border: none;
-            border-bottom: 2px solid transparent;
-            color: var(--text-secondary);
-            font-size: 12px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
         }
 
-        .tab:hover { color: var(--text-primary); }
-
-        .tab.active {
-            color: var(--text-primary);
-            border-bottom-color: var(--accent-primary);
-        }
-
-        .tab-close {
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-size: 10px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .tab:hover .tab-close { opacity: 1; }
-        .tab-close:hover { background: var(--accent-danger); color: white; }
-
-        /* M0302 Toolbar */
-        .editor-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0 16px;
-            height: 48px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
-        }
-
-        .toolbar-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .toolbar-divider {
-            width: 1px;
-            height: 24px;
+        ::-webkit-scrollbar-thumb {
             background: var(--border-color);
+            border-radius: 4px;
         }
 
-        .save-status {
-            margin-left: auto;
-            font-size: 11px;
-            color: var(--text-muted);
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Thinking 开关 */
+        .thinking-toggle {
             display: flex;
             align-items: center;
             gap: 6px;
-        }
-
-        .save-status.saving { color: var(--accent-warning); }
-        .save-status.saved { color: var(--accent-success); }
-        .save-status.error { color: var(--accent-danger); }
-
-        /* M0303 Editor */
-        .editor-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .editor-area {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background: var(--bg-primary);
-            display: flex;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        .line-numbers {
-            width: 40px;
-            text-align: right;
-            padding-right: 12px;
-            color: var(--text-muted);
-            font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
-            user-select: none;
-            flex-shrink: 0;
-        }
-
-        .editor-textarea {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: inherit;
-            line-height: inherit;
-            resize: none;
-            outline: none;
-        }
-
-        .editor-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-            color: var(--text-muted);
-        }
-
-        .editor-placeholder i { font-size: 64px; margin-bottom: 16px; opacity: 0.2; }
-
-        /* M0304 Chat */
-        .chat-area {
-            height: 250px;
-            min-height: 150px;
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-        }
-
-        .chat-message {
-            max-width: 80%;
-            margin-bottom: 12px;
-            padding: 10px 14px;
-            border-radius: var(--radius-lg);
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .chat-message.user {
-            margin-left: auto;
-            background: var(--accent-primary);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .chat-message.ai {
+            padding: 4px 10px;
             background: var(--bg-card);
-            border-bottom-left-radius: 4px;
-        }
-
-        .chat-message-time {
-            font-size: 10px;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        }
-
-        .chat-input-area {
-            display: flex;
-            gap: 8px;
-            padding: 12px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 10px 14px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 13px;
-            resize: none;
-            outline: none;
-        }
-
-        .chat-input:focus { border-color: var(--accent-primary); }
-
-        .chat-send {
-            width: 40px;
-            height: 40px;
-            background: var(--accent-primary);
-            border: none;
-            border-radius: var(--radius-md);
-            color: white;
+            border-radius: var(--border-radius-sm);
             cursor: pointer;
-            transition: filter 0.2s;
         }
 
-        .chat-send:hover { filter: brightness(1.1); }
-
-        /* M04 Right Panel */
-        .right-panel {
-            width: 320px;
-            min-width: 280px;
-            max-width: 500px;
-            background: var(--bg-secondary);
-            border-left: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .panel-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
-        }
-
-        .panel-tab {
-            flex: 1;
-            padding: 12px;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .panel-tab.active {
-            color: var(--text-primary);
-            background: var(--bg-card);
-            border-bottom: 2px solid var(--accent-primary);
-        }
-
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* M0402 Prompt */
-        .prompt-section {
-            padding: 12px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .prompt-title {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-
-        .prompt-area {
-            min-height: 150px;
-            max-height: 250px;
-            padding: 12px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            font-size: 12px;
-            line-height: 1.6;
-            overflow-y: auto;
-            outline: none;
-            font-family: 'JetBrains Mono', monospace;
-            white-space: pre-wrap;
-        }
-
-        .prompt-area:focus { box-shadow: 0 0 0 2px var(--accent-primary); }
-
-        .prompt-link {
-            color: var(--accent-primary);
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .prompt-link:hover { color: var(--accent-success); }
-
-        /* M0403 Execution */
-        .execution-section {
-            padding: 12px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .execution-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-            font-size: 12px;
-        }
-
-        .execution-status.idle { color: var(--text-muted); }
-        .execution-status.running { color: var(--accent-primary); }
-
-        .task-stack {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .task-card {
-            padding: 10px 12px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            margin-bottom: 8px;
-            border-left: 3px solid var(--text-muted);
-            position: relative;
-        }
-
-        .task-card.waiting { border-left-color: var(--text-muted); }
-        .task-card.running { border-left-color: var(--accent-primary); }
-        .task-card.completed { border-left-color: var(--accent-success); }
-
-        .task-name {
-            font-size: 12px;
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-
-        .task-status {
-            font-size: 10px;
-            color: var(--text-secondary);
-        }
-
-        .task-progress {
-            height: 4px;
-            background: var(--bg-primary);
-            border-radius: 2px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-
-        .task-progress-bar {
-            height: 100%;
-            background: var(--accent-primary);
-            border-radius: 2px;
-            transition: width 0.3s;
-        }
-
-        .task-cancel {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            border-radius: 50%;
-            font-size: 10px;
-        }
-
-        .task-cancel:hover { background: var(--accent-danger); color: white; }
-
-        .execution-log {
-            margin-top: 12px;
-            padding: 10px;
-            background: var(--bg-primary);
-            border-radius: var(--radius-md);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: var(--text-muted);
-            max-height: 100px;
-            overflow-y: auto;
-        }
-
-        .log-entry { margin-bottom: 4px; }
-        .log-time { color: var(--text-secondary); margin-right: 8px; }
-
-        /* M05 Modals */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s;
-        }
-
-        .modal-overlay.active { opacity: 1; visibility: visible; }
-
-        .modal {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-lg);
-            max-width: 90%;
-            max-height: 90vh;
-            overflow: hidden;
-            transform: scale(0.95);
-            transition: transform 0.3s;
-        }
-
-        .modal-overlay.active .modal { transform: scale(1); }
-
-        .modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .modal-title { font-size: 16px; font-weight: 600; }
-
-        .modal-close {
+        .thinking-toggle .switch {
             width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            border-radius: var(--radius-md);
-            transition: all 0.2s;
+            height: 18px;
+            background: var(--border-color);
+            border-radius: 9px;
+            position: relative;
+            transition: background 0.2s;
         }
 
-        .modal-close:hover { background: var(--bg-card); color: var(--text-primary); }
-
-        .modal-body {
-            padding: 20px;
-            overflow-y: auto;
-            max-height: calc(90vh - 120px);
+        .thinking-toggle .switch::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
         }
 
-        /* New Project Modal */
-        .new-project-modal .modal { width: 600px; }
-
-        .param-group { margin-bottom: 20px; }
-
-        .param-label {
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 10px;
+        .thinking-toggle.active .switch {
+            background: var(--accent-primary);
         }
 
-        .param-options {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        .thinking-toggle.active .switch::after {
+            transform: translateX(14px);
         }
 
-        .param-option {
-            padding: 8px 16px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            color: var(--text-secondary);
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .param-option:hover { border-color: var(--accent-primary); color: var(--text-primary); }
-        .param-option.selected { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
-        .param-option.add-new { border-style: dashed; color: var(--accent-primary); }
-
-        /* Theme Options in New Project */
-        .theme-options {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-        }
-
-        .theme-option {
-            padding: 12px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
+        /* 加载动画 */
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
             border: 2px solid transparent;
-            transition: all 0.2s;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
 
-        .theme-option:hover { border-color: var(--accent-primary); }
-        .theme-option.selected { border-color: var(--accent-primary); }
-
-        .theme-preview {
-            height: 60px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 8px;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-        .theme-option.dark-purple .theme-preview { background: linear-gradient(135deg, #1a1a2e, #16213e); }
-        .theme-option.green-eye .theme-preview { background: linear-gradient(135deg, #1a1f1a, #242a24); }
-        .theme-option.classic-gray .theme-preview { background: linear-gradient(135deg, #1f1f1f, #2d2d2d); }
-
-        .theme-name { font-size: 12px; text-align: center; }
-
-        /* Scale Options */
-        .scale-options {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        .scale-option {
-            padding: 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .scale-option:hover { border-color: var(--accent-primary); }
-        .scale-option.selected { background: var(--accent-primary); border-color: var(--accent-primary); color: white; }
-
-        .scale-option .value { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-        .scale-option .unit { font-size: 10px; opacity: 0.7; }
-
-        .form-group { margin-bottom: 16px; }
-
-        .form-label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 10px 14px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            color: var(--text-primary);
-            font-size: 13px;
-            outline: none;
-        }
-
-        .form-input:focus { border-color: var(--accent-primary); }
-
-        /* Open Project Modal */
-        .open-project-modal .modal { width: 500px; }
-
-        .project-list { display: flex; flex-direction: column; gap: 8px; }
-
-        .project-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .project-item:hover { background: var(--bg-card-hover); }
-        .project-item.selected { box-shadow: inset 0 0 0 2px var(--accent-primary); }
-
-        .project-info { flex: 1; }
-
-        .project-name-item { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
-
-        .project-meta {
-            display: flex;
-            gap: 16px;
+        /* SSE 日志 */
+        .log-container {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-sm);
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             font-size: 11px;
-            color: var(--text-secondary);
-        }
-
-        .project-progress {
-            width: 100px;
-            height: 6px;
-            background: var(--bg-primary);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .project-progress-bar {
-            height: 100%;
-            background: var(--accent-success);
-            border-radius: 3px;
-        }
-
-        /* Settings Modal */
-        .settings-modal .modal { width: 500px; }
-
-        .settings-section { margin-bottom: 24px; }
-        .settings-section:last-child { margin-bottom: 0; }
-
-        .settings-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            margin-bottom: 12px;
-        }
-
-        .auto-mode-options {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-
-        .auto-mode-option {
-            padding: 16px;
-            background: var(--bg-card);
-            border: 2px solid transparent;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .auto-mode-option:hover { border-color: var(--accent-primary); }
-        .auto-mode-option.selected { border-color: var(--accent-primary); background: var(--bg-card-hover); }
-
-        .auto-mode-option .mode { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-        .auto-mode-option .desc { font-size: 11px; color: var(--text-secondary); }
-
-        .form-select {
-            width: 100%;
-            padding: 10px 14px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            color: var(--text-primary);
-            font-size: 13px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-        .settings-footer {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        /* M06 Notification Bar */
-        .notification-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border-color);
-            max-height: 200px;
+            max-height: 150px;
             overflow-y: auto;
-            z-index: 900;
-            display: none;
+            margin-top: 12px;
         }
 
-        .notification-bar.active { display: block; }
-
-        .notification {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--bg-card);
-        }
-
-        .notification:last-child { border-bottom: none; }
-
-        .notification.success { border-left: 3px solid var(--accent-success); }
-        .notification.error { background: rgba(239,68,68,0.1); border-left: 3px solid var(--accent-danger); }
-        .notification.warning { border-left: 3px solid var(--accent-warning); }
-
-        .notification-icon {
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .notification.success .notification-icon { color: var(--accent-success); }
-        .notification.error .notification-icon { color: var(--accent-danger); }
-        .notification.warning .notification-icon { color: var(--accent-warning); }
-
-        .notification-content { flex: 1; }
-
-        .notification-time { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
-
-        .notification-message { font-size: 12px; }
-
-        .notification-details {
-            margin-top: 8px;
-            padding: 8px;
-            background: var(--bg-primary);
-            border-radius: var(--radius-sm);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: var(--text-secondary);
-            white-space: pre-wrap;
-            display: none;
-        }
-
-        .notification.expanded .notification-details { display: block; }
-
-        .notification-toggle {
-            padding: 4px 8px;
-            background: transparent;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            color: var(--text-secondary);
-            font-size: 10px;
-            cursor: pointer;
-        }
-
-        .notification-toggle:hover { background: var(--bg-card-hover); }
-
-        .notification-close {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
+        .log-entry {
+            padding: 2px 0;
             color: var(--text-muted);
-            cursor: pointer;
-            border-radius: var(--radius-sm);
         }
 
-        .notification-close:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-
-        /* M1002 Feature Editor Popup */
-        .feature-editor-popup {
-            position: fixed;
-            z-index: 2000;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            width: 400px;
-            display: none;
-            overflow: hidden;
+        .log-entry .time {
+            color: var(--text-muted);
+            margin-right: 8px;
         }
 
-        .feature-editor-popup.active { display: block; }
-
-        .feature-editor-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--bg-card);
-        }
-
-        .feature-module-id { font-size: 12px; font-weight: 600; color: var(--accent-primary); }
-        .feature-module-name { font-size: 14px; font-weight: 600; margin-top: 4px; }
-
-        .feature-editor-body { padding: 16px; }
-
-        .feature-editor-textarea {
-            width: 100%;
-            min-height: 200px;
-            padding: 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 13px;
-            line-height: 1.6;
-            resize: vertical;
-            outline: none;
-        }
-
-        .feature-editor-textarea:focus { border-color: var(--accent-primary); }
-
-        .feature-editor-footer {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-            padding: 12px 16px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            z-index: 3000;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s;
-        }
-
-        .toast.show { opacity: 1; transform: translateY(0); }
-        .toast i { color: var(--accent-success); }
-
-        /* Confirm Dialog */
-        .confirm-dialog {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 3000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s;
-        }
-
-        .confirm-dialog.active { opacity: 1; visibility: visible; }
-
-        .confirm-content {
-            background: var(--bg-secondary);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
-        .confirm-message { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
-
-        .confirm-buttons { display: flex; gap: 12px; justify-content: center; }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-primary); }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-
+        .log-entry.info { color: var(--accent-primary); }
+        .log-entry.success { color: var(--accent-success); }
+        .log-entry.error { color: var(--accent-danger); }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- M01 Top Toolbar -->
-        <div class="top-toolbar">
-            <div class="toolbar-left">
-                <div class="logo" data-module-id="M0101">
-                    <div class="logo-icon"><i class="fas fa-feather"></i></div>
-                    <span class="logo-text">墨韵</span>
+    <div id="app">
+        <!-- 通知系统 M06 -->
+        <div v-if="notification.show" :class="['notification', notification.type]">
+            <i :class="notificationIcon"></i>
+            <span>{{ notification.message }}</span>
+        </div>
+
+        <!-- 主容器 -->
+        <div class="app-container">
+            <!-- M01 顶部工具栏 -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="logo">
+                        <div class="logo-icon">墨</div>
+                        <span>墨韵</span>
+                    </div>
+                    <div v-if="currentProject" class="project-name" @click="editProjectName">
+                        {{ currentProject.name }}
+                    </div>
                 </div>
-                <div class="project-name" contenteditable="true" data-module-id="M0102" title="点击编辑项目名称">星际迷途</div>
+
+                <div class="toolbar-center">
+                    <!-- 通知显示区 -->
+                </div>
+
+                <div class="toolbar-right">
+                    <!-- M0103 LLM连接状态 -->
+                    <div class="llm-status" @click="openModal('settings')">
+                        <span :class="['status-dot', llmStatusClass]"></span>
+                        <span>{{ llmStatusText }}</span>
+                    </div>
+
+                    <!-- M0104 LLM调用中 -->
+                    <div v-if="isGenerating" class="llm-status">
+                        <div class="loading-spinner"></div>
+                        <span>生成中...</span>
+                    </div>
+
+                    <!-- M0107 Thinking开关 -->
+                    <div :class="['thinking-toggle', { active: thinkingEnabled }]" @click="toggleThinking">
+                        <div class="switch"></div>
+                        <span>Thinking</span>
+                    </div>
+
+                    <!-- M0108 打开项目 -->
+                    <button class="btn btn-secondary" @click="openModal('openProject')">
+                        <i class="fa-regular fa-folder-open"></i>
+                        打开项目
+                    </button>
+
+                    <!-- M0109 新建项目 -->
+                    <button class="btn btn-primary" @click="openModal('newProject')">
+                        <i class="fa-solid fa-plus"></i>
+                        新建项目
+                    </button>
+
+                    <!-- M0110 设置 -->
+                    <button class="btn btn-icon" @click="openModal('settings')">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="toolbar-center">
-                <div class="llm-status" data-module-id="M0103" title="点击打开设置">
-                    <span class="status-dot"></span>
-                    <span class="status-text">已连接</span>
+            <!-- 主内容区 -->
+            <div class="main-content">
+                <!-- M02 左侧文件树 -->
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <span class="sidebar-title">文件</span>
+                        <button class="btn btn-icon" @click="refreshTree">
+                            <i class="fa-solid fa-rotate-right" :class="{ 'fa-spin': loadingTree }"></i>
+                        </button>
+                    </div>
+
+                    <div v-if="currentProject" class="file-tree">
+                        <template v-for="item in fileTree" :key="item.path">
+                            <div class="tree-item folder" @click="toggleFolder(item)">
+                                <i :class="['fa-solid fa-chevron-right tree-arrow', { expanded: item.expanded }]"></i>
+                                <i class="fa-solid fa-folder tree-icon"></i>
+                                <span>{{ item.name }}</span>
+                            </div>
+                            <template v-if="item.expanded && item.children">
+                                <div v-for="child in item.children" :key="child.path"
+                                     :class="['tree-item', { active: activeFile === child.path }]"
+                                     @click="openFile(child)">
+                                    <i :class="['fa-solid fa-file-lines tree-icon', child.icon || '']"></i>
+                                    <span>{{ child.name }}</span>
+                                </div>
+                            </template>
+                        </template>
+                    </div>
+
+                    <!-- M0205 空状态 -->
+                    <div v-else class="empty-state">
+                        <i class="fa-regular fa-folder-open"></i>
+                        <p>选择或创建项目开始创作</p>
+                    </div>
                 </div>
 
-                <div class="llm-calling" data-module-id="M0104">
-                    <i class="fas fa-spinner"></i>
-                    <span class="llm-calling-text">正在生成第一章...</span>
+                <!-- M07 拖拽分隔线 -->
+                <div class="resizer" @mousedown="startResize('sidebar')"></div>
+
+                <!-- M03 中间编辑器区 -->
+                <div class="editor-area">
+                    <!-- 标签页 M0301 -->
+                    <div class="tabs-bar">
+                        <div v-for="tab in openTabs" :key="tab.path"
+                             :class="['tab', { active: tab.path === activeFile }]"
+                             @click="switchTab(tab.path)">
+                            <i class="fa-regular fa-file-lines"></i>
+                            <span>{{ tab.name }}</span>
+                            <span class="tab-close" @click.stop="closeTab(tab.path)">
+                                <i class="fa-solid fa-times"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 编辑器工具栏 M0302 -->
+                    <div v-if="activeFile" class="editor-toolbar">
+                        <button class="btn btn-primary" @click="rewriteFile">
+                            <i class="fa-solid fa-rotate"></i>
+                            重写本文件
+                        </button>
+                        <button class="btn btn-secondary" @click="continueWriting">
+                            <i class="fa-solid fa-pen"></i>
+                            写下一部分
+                        </button>
+                        <div style="flex:1"></div>
+                        <button class="btn btn-secondary" @click="undoVersion" title="后退">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button class="btn btn-secondary" @click="redoVersion" title="前进">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button v-if="isGenerating" class="btn btn-danger" @click="stopGeneration">
+                            <i class="fa-solid fa-stop"></i>
+                            停止
+                        </button>
+                    </div>
+
+                    <!-- 编辑器内容 M0303 -->
+                    <div class="editor-container">
+                        <div class="editor-main">
+                            <div v-if="activeFile" class="editor-content">
+                                <textarea
+                                    class="editor-textarea"
+                                    v-model="currentContent"
+                                    @input="onContentChange"
+                                    placeholder="开始写作..."
+                                ></textarea>
+                            </div>
+                            <div v-else class="empty-state">
+                                <i class="fa-regular fa-keyboard"></i>
+                                <p>打开左侧文件开始编辑...</p>
+                            </div>
+                            <div v-if="activeFile" :class="['save-status', saveStatusClass]">
+                                {{ saveStatusText }}
+                            </div>
+                        </div>
+
+                        <!-- M0304 聊天区 -->
+                        <div class="resizer-h" @mousedown="startResize('chat')"></div>
+                        <div class="chat-panel">
+                            <div class="chat-header">
+                                <i class="fa-solid fa-robot"></i>
+                                <span>AI 助手</span>
+                            </div>
+                            <div class="chat-messages" ref="chatMessages">
+                                <div v-for="(msg, idx) in chatMessages" :key="idx"
+                                     :class="['chat-message', msg.role]">
+                                    {{ msg.content }}
+                                </div>
+                                <div v-if="isGenerating" class="chat-message assistant">
+                                    <div class="loading-spinner"></div>
+                                </div>
+                            </div>
+                            <div class="chat-input-area">
+                                <textarea
+                                    class="chat-input"
+                                    v-model="chatInput"
+                                    @keydown="handleChatKeydown"
+                                    placeholder="输入消息，Shift+Enter换行，Enter发送..."
+                                    rows="2"
+                                ></textarea>
+                                <button class="chat-send" @click="sendChatMessage">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="thinking-switch" data-module-id="M0107">
-                    <span>Thinking: 开</span>
-                    <div class="switch active" id="thinking-switch"></div>
-                </div>
-            </div>
+                <!-- M07 拖拽分隔线 -->
+                <div class="resizer" @mousedown="startResize('rightPanel')"></div>
 
-            <div class="toolbar-right">
-                <button class="btn btn-secondary" id="btn-open-project" data-module-id="M0108">
-                    <i class="fas fa-folder"></i> 打开项目
-                </button>
-                <button class="btn btn-primary" id="btn-new-project" data-module-id="M0109">
-                    <i class="fas fa-plus"></i> 新建项目
-                </button>
-                <button class="btn btn-icon" id="btn-settings" data-module-id="M0110">
-                    <i class="fas fa-cog"></i>
-                </button>
+                <!-- M04 右侧面板 -->
+                <div class="right-panel">
+                    <div class="panel-tabs">
+                        <div :class="['panel-tab', { active: rightPanelTab === 'prompt' }]" @click="rightPanelTab = 'prompt'">
+                            Prompt
+                        </div>
+                        <div :class="['panel-tab', { active: rightPanelTab === 'execution' }]" @click="rightPanelTab = 'execution'">
+                            执行
+                        </div>
+                    </div>
+
+                    <div class="panel-content">
+                        <!-- M0402 Prompt面板 -->
+                        <div v-if="rightPanelTab === 'prompt'">
+                            <div class="form-label">发送给LLM的Prompt</div>
+                            <div class="prompt-preview">{{ currentPrompt || '选择操作后显示Prompt...' }}</div>
+
+                            <div style="margin-top:16px">
+                                <div class="form-label">引用文件</div>
+                                <div v-if="referencedFiles.length" style="display:flex;flex-wrap:wrap;gap:6px;">
+                                    <span v-for="f in referencedFiles" :key="f"
+                                          style="padding:4px 8px;background:var(--bg-card);border-radius:4px;font-size:12px;cursor:pointer;"
+                                          @click="openFileByPath(f)">
+                                        {{ f }}
+                                    </span>
+                                </div>
+                                <div v-else style="color:var(--text-muted);font-size:12px;">暂无引用</div>
+                            </div>
+                        </div>
+
+                        <!-- M0403 执行面板 -->
+                        <div v-if="rightPanelTab === 'execution'">
+                            <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+                                <span style="font-size:13px;color:var(--text-secondary);">
+                                    状态: {{ isGenerating ? '运行中' : '空闲' }}
+                                </span>
+                            </div>
+
+                            <div class="form-label">LLM工作堆栈</div>
+                            <div class="task-stack">
+                                <div v-for="task in taskQueue" :key="task.id" class="task-card">
+                                    <div class="task-header">
+                                        <span class="task-name">{{ task.name }}</span>
+                                        <span :class="['task-status', task.status]">
+                                            {{ taskStatusText(task.status) }}
+                                        </span>
+                                    </div>
+                                    <div class="task-progress">
+                                        <div class="task-progress-bar" :style="{ width: task.progress + '%' }"></div>
+                                    </div>
+                                </div>
+                                <div v-if="!taskQueue.length" style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">
+                                    暂无任务
+                                </div>
+                            </div>
+
+                            <div class="form-label" style="margin-top:16px;">执行日志</div>
+                            <div class="log-container">
+                                <div v-for="(log, idx) in executionLogs" :key="idx" :class="['log-entry', log.level]">
+                                    <span class="time">{{ log.time }}</span>
+                                    <span>{{ log.message }}</span>
+                                </div>
+                                <div v-if="!executionLogs.length" style="color:var(--text-muted);">
+                                    暂无日志
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- M02 Left Sidebar -->
-            <div class="left-sidebar" data-module-id="M02">
-                <div class="sidebar-header" data-module-id="M0201">
-                    <span class="sidebar-path">projects/星际迷途</span>
-                    <button class="btn btn-icon" id="btn-refresh-tree">
-                        <i class="fas fa-rotate-right"></i>
+        <!-- M0501 新建项目模态框 -->
+        <div v-if="modalType === 'newProject'" class="modal-overlay" @click.self="closeModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">新建项目</h2>
+                    <button class="modal-close" @click="closeModal">
+                        <i class="fa-solid fa-times"></i>
                     </button>
                 </div>
-                <div class="file-tree" data-module-id="M0202-M0204">
-                    <div class="tree-item folder expanded" data-module-id="M0202">
-                        <i class="fas fa-chevron-right icon"></i>
-                        <i class="fas fa-folder icon icon-folder"></i>
-                        <span>chapters/ 章节文件</span>
-                    </div>
-                    <div class="tree-children">
-                        <div class="tree-item folder expanded" data-module-id="M0202">
-                            <i class="fas fa-chevron-right icon"></i>
-                            <i class="fas fa-folder icon icon-chapter"></i>
-                            <span>vol-01/ 第一卷</span>
-                        </div>
-                        <div class="tree-children" style="margin-left: 40px;">
-                            <div class="tree-item" data-module-id="M0203">
-                                <i class="fas fa-file-lines icon"></i>
-                                <span>vol-meta.json</span>
-                            </div>
-                            <div class="tree-item folder expanded" data-module-id="M0202">
-                                <i class="fas fa-chevron-right icon"></i>
-                                <i class="fas fa-folder icon icon-chapter"></i>
-                                <span>ch-001/ 第一章</span>
-                            </div>
-                            <div class="tree-children" style="margin-left: 40px;">
-                                <div class="tree-item" data-module-id="M0203">
-                                    <i class="fas fa-file-lines icon"></i>
-                                    <span>ch-meta.json</span>
-                                </div>
-                                <div class="tree-item active" data-module-id="M0203">
-                                    <i class="fas fa-file-lines icon icon-chapter"></i>
-                                    <span>sec-001.md</span>
-                                </div>
-                                <div class="tree-item" data-module-id="M0203">
-                                    <i class="fas fa-file-lines icon icon-chapter"></i>
-                                    <span>sec-002.md</span>
-                                </div>
-                                <div class="tree-item" data-module-id="M0203">
-                                    <i class="fas fa-file-lines icon icon-chapter"></i>
-                                    <span>sec-003.md</span>
-                                </div>
-                                <div class="tree-item" data-module-id="M0203">
-                                    <i class="fas fa-file-lines icon icon-chapter"></i>
-                                    <span>sec-004.md</span>
-                                </div>
-                            </div>
-                            <div class="tree-item folder" data-module-id="M0202">
-                                <i class="fas fa-chevron-right icon"></i>
-                                <i class="fas fa-folder icon icon-chapter"></i>
-                                <span>ch-002/ 第二章</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tree-item folder" data-module-id="M0202">
-                        <i class="fas fa-chevron-right icon"></i>
-                        <i class="fas fa-folder icon icon-meta"></i>
-                        <span>characters/ 角色档案</span>
-                    </div>
-                    <div class="tree-children" style="display: none;"></div>
-                    <div class="tree-item folder" data-module-id="M0202">
-                        <i class="fas fa-chevron-right icon"></i>
-                        <i class="fas fa-folder icon icon-meta"></i>
-                        <span>materials/ 素材库</span>
-                    </div>
-                    <div class="tree-children" style="display: none;"></div>
-                    <div class="tree-item folder" data-module-id="M0202">
-                        <i class="fas fa-chevron-right icon"></i>
-                        <i class="fas fa-folder icon icon-backup"></i>
-                        <span>backup/ 版本快照</span>
-                    </div>
-                    <div class="tree-children" style="display: none;"></div>
-                </div>
-                <div class="tree-empty" style="display: none;" data-module-id="M0204">
-                    <i class="fas fa-folder-open"></i>
-                    <span class="tree-empty-text">请打开项目或新建项目</span>
-                </div>
-            </div>
-
-            <div class="resizer" data-module-id="M0701"></div>
-
-            <!-- M03 Center Editor -->
-            <div class="center-main" data-module-id="M03">
-                <!-- M0301 Tabs -->
-                <div class="tabs-bar" data-module-id="M0301">
-                    <button class="tab active">
-                        <i class="fas fa-file-lines"></i>
-                        sec-001.md
-                        <span class="tab-close"><i class="fas fa-times"></i></span>
-                    </button>
-                    <button class="tab">
-                        <i class="fas fa-file-lines"></i>
-                        outline.md
-                        <span class="tab-close"><i class="fas fa-times"></i></span>
-                    </button>
-                </div>
-
-                <!-- M0302 Toolbar -->
-                <div class="editor-toolbar" data-module-id="M0302">
-                    <div class="toolbar-group">
-                        <button class="btn btn-primary" id="btn-rewrite" data-module-id="M0302-1">
-                            <i class="fas fa-rotate"></i> 重写本文件
-                        </button>
-                        <button class="btn btn-secondary" id="btn-continue" data-module-id="M0302-2">
-                            <i class="fas fa-plus"></i> 写下一部分
-                        </button>
-                    </div>
-                    <div class="toolbar-divider"></div>
-                    <div class="toolbar-group">
-                        <button class="btn btn-icon" id="btn-forward" title="前进" data-module-id="M0302-3">
-                            <i class="fas fa-undo"></i>
-                        </button>
-                        <button class="btn btn-icon" id="btn-backward" title="后退" data-module-id="M0302-4">
-                            <i class="fas fa-redo"></i>
-                        </button>
-                    </div>
-                    <div class="toolbar-divider"></div>
-                    <button class="btn btn-icon danger" id="btn-stop" data-module-id="M0302-5">
-                        <i class="fas fa-stop"></i>
-                    </button>
-                    <div class="save-status saved" data-module-id="M0303-3">
-                        <i class="fas fa-check"></i> 已保存
-                    </div>
-                </div>
-
-                <!-- M0303 Editor Content -->
-                <div class="editor-content">
-                    <div class="editor-area" data-module-id="M0303-1-M0303-2">
-                        <div class="line-numbers">1<br>2<br>3<br>4<br>5</div>
-                        <textarea class="editor-textarea">银河纪元2157年，人类联邦的舰队在探索未知星域时，遭遇了一场神秘的时空风暴。旗舰"希望号"被卷入其中，醒来时发现自己已经身处一万光年之外的陌生星域。
-
-舰长林远站在指挥舱中，看着舷窗外那片从未见过的星空。星图上没有任何匹配的坐标，通讯系统也完全失灵。他意识到，他们可能永远无法回家了。
-
-就在这时，探测器传来一阵微弱的信号。那个频率...那是人类的声音！</textarea>
-                    </div>
-
-                    <div class="resizer-h" data-module-id="M0703"></div>
-
-                    <!-- M0304 Chat Area -->
-                    <div class="chat-area" data-module-id="M0304">
-                        <div class="chat-messages" data-module-id="M0304-1">
-                            <div class="chat-message user">
-                                <div class="chat-message-time">14:30:25</div>
-                                把第三段的描写改得更生动一些
-                            </div>
-                            <div class="chat-message ai">
-                                <div class="chat-message-time">14:30:26</div>
-                                我已修改 sec-001.md 的第三段，增加了更多细节描写。
-                            </div>
-                        </div>
-                        <div class="chat-input-area" data-module-id="M0304-2-M0304-3">
-                            <textarea class="chat-input" placeholder="输入写作指导..." rows="2"></textarea>
-                            <button class="chat-send">
-                                <i class="fas fa-paper-plane"></i>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">题材</label>
+                        <div class="btn-group">
+                            <button v-for="opt in options.genre" :key="opt"
+                                    :class="['btn-option', { active: newProject.genre === opt }]"
+                                    @click="newProject.genre = opt">
+                                {{ opt }}
                             </button>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="resizer" data-module-id="M0702"></div>
-
-            <!-- M04 Right Panel -->
-            <div class="right-panel" data-module-id="M04">
-                <div class="panel-tabs" data-module-id="M0401">
-                    <button class="panel-tab active">Prompt & 执行</button>
-                </div>
-
-                <div class="panel-content">
-                    <!-- M0402 Prompt Panel -->
-                    <div class="prompt-section" data-module-id="M0402">
-                        <div class="prompt-title">发送给LLM的Prompt</div>
-                        <div class="prompt-area" contenteditable="true" data-module-id="M0402-1-M0402-2">
-<span class="prompt-link" data-module-id="M0402-3">@{outline.md}</span>
-
-# 角色
-你是一位专业的小说作家。
-
-# 任务
-根据提供的大纲，续写当前章节的内容。
-
-# 约束
-- 保持与前文的连贯性
-- 控制每段在200-500字</div>
-                        <div style="margin-top: 8px; display: flex; gap: 8px;">
-                            <button class="btn btn-icon" id="btn-prompt-backward" title="后退">
-                                <i class="fas fa-undo"></i>
-                            </button>
-                            <button class="btn btn-icon" id="btn-prompt-forward" title="前进">
-                                <i class="fas fa-redo"></i>
+                    <div class="form-group">
+                        <label class="form-label">基调</label>
+                        <div class="btn-group">
+                            <button v-for="opt in options.tone" :key="opt"
+                                    :class="['btn-option', { active: newProject.tone === opt }]"
+                                    @click="newProject.tone = opt">
+                                {{ opt }}
                             </button>
                         </div>
                     </div>
 
-                    <!-- M0403 Execution Panel -->
-                    <div class="execution-section" data-module-id="M0403">
-                        <div class="execution-status running" data-module-id="M0403-1">
-                            <i class="fas fa-circle"></i>
-                            <span>运行中</span>
+                    <div class="form-group">
+                        <label class="form-label">背景</label>
+                        <div class="btn-group">
+                            <button v-for="opt in options.background" :key="opt"
+                                    :class="['btn-option', { active: newProject.background === opt }]"
+                                    @click="newProject.background = opt">
+                                {{ opt }}
+                            </button>
                         </div>
+                    </div>
 
-                        <div class="task-stack" data-module-id="M0403-2">
-                            <div class="task-card running" data-module-id="M0403-3">
-                                <button class="task-cancel"><i class="fas fa-times"></i></button>
-                                <div class="task-name">写下一部分</div>
-                                <div class="task-status">执行中 - 65%</div>
-                                <div class="task-progress">
-                                    <div class="task-progress-bar" style="width: 65%;"></div>
+                    <div class="form-group">
+                        <label class="form-label">主题</label>
+                        <div class="btn-group">
+                            <button v-for="opt in options.theme" :key="opt"
+                                    :class="['btn-option', { active: newProject.theme === opt }]"
+                                    @click="newProject.theme = opt">
+                                {{ opt }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">写作风格</label>
+                        <div class="btn-group">
+                            <button v-for="opt in options.style" :key="opt"
+                                    :class="['btn-option', { active: newProject.style === opt }]"
+                                    @click="newProject.style = opt">
+                                {{ opt }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">作品规模</label>
+                        <div class="scale-options">
+                            <div v-for="s in scales" :key="s.value"
+                                 :class="['scale-option', { active: newProject.scale === s.value }]"
+                                 @click="newProject.scale = s.value">
+                                <div class="value">{{ s.value }}</div>
+                                <div class="unit">万字</div>
+                            </div>
+                        </div>
+                        <div class="scale-info">预估 {{ estimatedChapters }} 章，约 {{ estimatedVolumes }} 卷</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">作者名（可选）</label>
+                        <input type="text" class="form-input" v-model="newProject.author" placeholder="输入作者名">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeModal">取消</button>
+                    <button class="btn btn-primary" @click="createProject" :disabled="creating">
+                        <i v-if="creating" class="loading-spinner"></i>
+                        <span>{{ creating ? '创建中...' : '创建项目' }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- M0502 打开项目模态框 -->
+        <div v-if="modalType === 'openProject'" class="modal-overlay" @click.self="closeModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">打开项目</h2>
+                    <button class="modal-close" @click="closeModal">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="project-list">
+                        <div v-for="p in projectList" :key="p.id"
+                             :class="['project-item', { selected: selectedProject === p.id }]"
+                             @click="selectedProject = p.id">
+                            <div class="project-item-header">
+                                <span class="project-item-name">{{ p.name }}</span>
+                                <span class="project-item-date">{{ formatDate(p.created_at) }}</span>
+                            </div>
+                            <div class="project-progress">
+                                <div class="project-progress-bar">
+                                    <div class="project-progress-fill" :style="{ width: p.progress + '%' }"></div>
                                 </div>
-                            </div>
-                            <div class="task-card waiting">
-                                <button class="task-cancel"><i class="fas fa-times"></i></button>
-                                <div class="task-name">重写本文件</div>
-                                <div class="task-status">等待中</div>
-                            </div>
-                            <div class="task-card completed">
-                                <button class="task-cancel" style="display: none;"><i class="fas fa-times"></i></button>
-                                <div class="task-name">生成书名+创意</div>
-                                <div class="task-status">已完成</div>
+                                <span class="project-progress-text">{{ p.progress }}%</span>
                             </div>
                         </div>
-
-                        <div class="execution-log" data-module-id="M0403-4">
-                            <div class="log-entry">
-                                <span class="log-time">14:32:15</span>
-                                开始生成内容...
-                            </div>
-                            <div class="log-entry">
-                                <span class="log-time">14:32:18</span>
-                                已生成 128/200 字
-                            </div>
-                            <div class="log-entry">
-                                <span class="log-time">14:32:20</span>
-                                正在续写场景描写...
-                            </div>
+                        <div v-if="!projectList.length" style="text-align:center;color:var(--text-muted);padding:40px;">
+                            暂无项目
                         </div>
                     </div>
+                </div>
+                <div class="modal-footer">
+                    <button v-if="selectedProject" class="btn btn-danger" @click="deleteProject">
+                        <i class="fa-solid fa-trash"></i>
+                        删除
+                    </button>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-secondary" @click="closeModal">取消</button>
+                    <button class="btn btn-primary" @click="openProject" :disabled="!selectedProject">
+                        打开
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- M05 Modal: New Project -->
-    <div class="modal-overlay new-project-modal" id="modal-new-project">
-        <div class="modal" data-module-id="M0501">
-            <div class="modal-header">
-                <h2 class="modal-title">新建项目</h2>
-                <button class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <div class="param-group" data-module-id="M0501-1">
-                    <div class="param-label">主题</div>
-                    <div class="theme-options">
-                        <div class="theme-option dark-purple selected">
-                            <div class="theme-preview"></div>
-                            <div class="theme-name">深邃夜紫</div>
-                        </div>
-                        <div class="theme-option green-eye">
-                            <div class="theme-preview"></div>
-                            <div class="theme-name">墨绿护眼</div>
-                        </div>
-                        <div class="theme-option classic-gray">
-                            <div class="theme-preview"></div>
-                            <div class="theme-name">经典炭灰</div>
+        <!-- M0503 设置模态框 -->
+        <div v-if="modalType === 'settings'" class="modal-overlay" @click.self="closeModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">设置</h2>
+                    <button class="modal-close" @click="closeModal">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <div class="settings-section-title">主题</div>
+                        <div class="btn-group">
+                            <button v-for="t in themes" :key="t.id"
+                                    :class="['btn-option', { active: settings.theme === t.id }]"
+                                    @click="settings.theme = t.id; applyTheme()">
+                                {{ t.name }}
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <div class="param-group" data-module-id="M0501-2">
-                    <div class="param-label">题材</div>
-                    <div class="param-options">
-                        <button class="param-option selected">玄幻</button>
-                        <button class="param-option">都市</button>
-                        <button class="param-option">科幻</button>
-                        <button class="param-option">悬疑</button>
-                        <button class="param-option add-new">+ 自定义</button>
-                    </div>
-                </div>
-
-                <div class="param-group" data-module-id="M0501-3">
-                    <div class="param-label">基调</div>
-                    <div class="param-options">
-                        <button class="param-option selected">热血</button>
-                        <button class="param-option">轻松</button>
-                        <button class="param-option">紧张</button>
-                        <button class="param-option add-new">+ 自定义</button>
-                    </div>
-                </div>
-
-                <div class="param-group" data-module-id="M0501-4">
-                    <div class="param-label">背景</div>
-                    <div class="param-options">
-                        <button class="param-option selected">星际</button>
-                        <button class="param-option">异世界</button>
-                        <button class="param-option">未来科技</button>
-                        <button class="param-option add-new">+ 自定义</button>
-                    </div>
-                </div>
-
-                <div class="param-group" data-module-id="M0501-5">
-                    <div class="param-label">写作风格</div>
-                    <div class="param-options">
-                        <button class="param-option selected">叙事性强</button>
-                        <button class="param-option">对话丰富</button>
-                        <button class="param-option">描写细腻</button>
-                        <button class="param-option add-new">+ 自定义</button>
-                    </div>
-                </div>
-
-                <div class="param-group" data-module-id="M0501-7">
-                    <div class="param-label">作品规模</div>
-                    <div class="scale-options">
-                        <div class="scale-option">
-                            <div class="value">5</div>
-                            <div class="unit">万字 / 12-15章</div>
-                        </div>
-                        <div class="scale-option selected">
-                            <div class="value">10</div>
-                            <div class="unit">万字 / 25-30章</div>
-                        </div>
-                        <div class="scale-option">
-                            <div class="value">15</div>
-                            <div class="unit">万字 / 35-40章</div>
-                        </div>
-                        <div class="scale-option">
-                            <div class="value">20</div>
-                            <div class="unit">万字 / 45-50章</div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">自动化等级</div>
+                        <div class="btn-group">
+                            <button :class="['btn-option', { active: settings.autoMode === 'L1' }]"
+                                    @click="settings.autoMode = 'L1'">
+                                L1 半自动
+                            </button>
+                            <button :class="['btn-option', { active: settings.autoMode === 'L2' }]"
+                                    @click="settings.autoMode = 'L2'">
+                                L2 连续
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-group" data-module-id="M0501-8">
-                    <label class="form-label">作者名（可选）</label>
-                    <input type="text" class="form-input" placeholder="输入作者名称">
-                </div>
-            </div>
-            <div class="modal-header" style="border-top: 1px solid var(--border-color); border-bottom: none;">
-                <button class="btn btn-primary" id="btn-create-project" data-module-id="M0501-9">
-                    <i class="fas fa-rocket"></i> 创建项目
-                </button>
-            </div>
-        </div>
-    </div>
+                    <div class="settings-section">
+                        <div class="settings-section-title">LLM 配置</div>
 
-    <!-- M05 Modal: Open Project -->
-    <div class="modal-overlay open-project-modal" id="modal-open-project">
-        <div class="modal" data-module-id="M0502">
-            <div class="modal-header">
-                <h2 class="modal-title">打开项目</h2>
-                <button class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <div class="project-list" data-module-id="M0502-1">
-                    <div class="project-item selected">
-                        <div class="project-info">
-                            <div class="project-name-item">星际迷途</div>
-                            <div class="project-meta">
-                                <span>创建于 2024-01-15</span>
-                                <span>10章节 / 30章</span>
+                        <div class="form-group">
+                            <label class="form-label">墨韵后端地址</label>
+                            <input type="text" class="form-input" v-model="settings.backendUrl"
+                                   placeholder="http://localhost:8000">
+                            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                                前端通过该地址调用墨韵后端 API
                             </div>
                         </div>
-                        <div class="project-progress">
-                            <div class="project-progress-bar" style="width: 33%;"></div>
-                        </div>
-                        <button class="btn btn-icon" data-module-id="M0502-3"><i class="fas fa-trash"></i></button>
-                    </div>
-                    <div class="project-item">
-                        <div class="project-info">
-                            <div class="project-name-item">修仙之旅</div>
-                            <div class="project-meta">
-                                <span>创建于 2024-01-10</span>
-                                <span>20章节 / 25章</span>
+
+                        <div class="form-group">
+                            <label class="form-label">API 类型</label>
+                            <div class="btn-group">
+                                <button v-for="t in apiTypes" :key="t"
+                                        :class="['btn-option', { active: settings.apiType === t }]"
+                                        @click="settings.apiType = t">
+                                    {{ t }}
+                                </button>
                             </div>
                         </div>
-                        <div class="project-progress">
-                            <div class="project-progress-bar" style="width: 80%;"></div>
-                        </div>
-                        <button class="btn btn-icon" data-module-id="M0502-3"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-header" style="border-top: 1px solid var(--border-color); border-bottom: none;">
-                <button class="btn btn-primary" id="btn-open-selected" data-module-id="M0502-2">
-                    <i class="fas fa-folder-open"></i> 打开项目
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- M05 Modal: Settings -->
-    <div class="modal-overlay settings-modal" id="modal-settings">
-        <div class="modal" data-module-id="M0503">
-            <div class="modal-header">
-                <h2 class="modal-title">设置</h2>
-                <button class="modal-close"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-section" data-module-id="M0503-1">
-                    <div class="settings-title">自动化等级</div>
-                    <div class="auto-mode-options">
-                        <div class="auto-mode-option selected">
-                            <div class="mode">L1 半自动</div>
-                            <div class="desc">每步需要确认</div>
+                        <div class="form-group">
+                            <label class="form-label">LLM API 地址</label>
+                            <input type="text" class="form-input" v-model="settings.llmApiUrl"
+                                   placeholder="https://api.deepseek.com">
+                            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                                后端通过此地址调用 LLM 服务
+                            </div>
                         </div>
-                        <div class="auto-mode-option">
-                            <div class="mode">L2 连续</div>
-                            <div class="desc">自动连续执行</div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="settings-section" data-module-id="M0804">
-                    <div class="settings-title">主题选择</div>
-                    <div class="theme-options">
-                        <div class="theme-option selected" data-theme="dark-purple">
-                            <div class="theme-preview" style="background: linear-gradient(135deg, #1a1a2e, #0f3460);"></div>
-                            <div class="theme-name">深邃夜紫</div>
-                        </div>
-                        <div class="theme-option" data-theme="green-eye">
-                            <div class="theme-preview" style="background: linear-gradient(135deg, #1a1f1a, #2d362d);"></div>
-                            <div class="theme-name">墨绿护眼</div>
-                        </div>
-                        <div class="theme-option" data-theme="classic-gray">
-                            <div class="theme-preview" style="background: linear-gradient(135deg, #1f1f1f, #3d3d3d);"></div>
-                            <div class="theme-name">经典炭灰</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-section" data-module-id="M0503-2">
-                    <div class="settings-title">LLM 配置</div>
-                    <div class="form-group" data-module-id="M0503-2">
-                        <label class="form-label">API 类型</label>
-                        <select class="form-select">
-                            <option>OpenAI</option>
-                            <option>Ollama</option>
-                            <option>Claude</option>
-                            <option>其他</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group" data-module-id="M0503-3">
-                            <label class="form-label">后端地址</label>
-                            <input type="text" class="form-input" value="https://api.openai.com/v1">
-                        </div>
-                        <div class="form-group" data-module-id="M0503-4">
+                        <div class="form-group">
                             <label class="form-label">API Key</label>
-                            <input type="password" class="form-input" value="sk-xxxxx...">
+                            <input type="password" class="form-input password" v-model="settings.apiKey"
+                                   placeholder="sk-...">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">模型</label>
+                            <select class="form-input" v-model="settings.model">
+                                <option v-for="m in modelList" :key="m.id" :value="m.id">
+                                    {{ m.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Thinking</label>
+                            <div :class="['thinking-toggle', { active: settings.thinking }]"
+                                 @click="settings.thinking = !settings.thinking">
+                                <div class="switch"></div>
+                                <span>{{ settings.thinking ? '开启' : '关闭' }}</span>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-secondary" @click="testConnection">
+                                <i v-if="testing" class="loading-spinner"></i>
+                                <span>{{ testing ? '测试中...' : '测试连接' }}</span>
+                            </button>
+                            <button class="btn btn-secondary" @click="fetchModels" :disabled="fetchingModels">
+                                <i v-if="fetchingModels" class="loading-spinner"></i>
+                                <span>{{ fetchingModels ? '获取中...' : '获取模型' }}</span>
+                            </button>
                         </div>
                     </div>
-                    <div class="form-group" data-module-id="M0503-5">
-                        <label class="form-label">模型选择</label>
-                        <select class="form-select">
-                            <option>gpt-4o</option>
-                            <option>gpt-4o-mini</option>
-                            <option>gpt-4-turbo</option>
-                        </select>
-                    </div>
-                    <div class="form-group" data-module-id="M0503-6">
-                        <label class="form-label">Thinking 模式</label>
-                        <div class="thinking-switch" style="margin-top: 8px;">
-                            <span>启用</span>
-                            <div class="switch active"></div>
-                        </div>
-                    </div>
                 </div>
-
-                <div class="settings-section">
-                    <div class="settings-footer" style="border: none; padding: 0; justify-content: flex-start;">
-                        <button class="btn btn-secondary" data-module-id="M0503-7">
-                            <i class="fas fa-plug"></i> 测试连接
-                        </button>
-                        <button class="btn btn-secondary" data-module-id="M0503-8">
-                            <i class="fas fa-list"></i> 获取模型
-                        </button>
-                    </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="closeModal">取消</button>
+                    <button class="btn btn-primary" @click="saveSettings">
+                        保存设置
+                    </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- M06 Notification Bar -->
-    <div class="notification-bar" id="notification-bar" data-module-id="M06">
-        <div class="notification success" data-module-id="M0601">
-            <div class="notification-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="notification-content">
-                <div class="notification-time">14:32:25</div>
-                <div class="notification-message">文件已保存到 sec-001.md</div>
-                <div class="notification-details">
-文件大小: 1.2KB
-保存时间: 2024-01-15 14:32:25
-                </div>
-            </div>
-            <button class="notification-toggle">详情</button>
-            <button class="notification-close"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="notification error" data-module-id="M0602">
-            <div class="notification-icon">
-                <i class="fas fa-exclamation-circle"></i>
-            </div>
-            <div class="notification-content">
-                <div class="notification-time">14:30:12</div>
-                <div class="notification-message">LLM 调用失败: Rate limit exceeded</div>
-                <div class="notification-details">
-Error: 429 Rate Limit
-Retry-After: 60s
-Endpoint: /v1/chat/completions
-                </div>
-            </div>
-            <button class="notification-toggle">详情</button>
-            <button class="notification-close"><i class="fas fa-times"></i></button>
-        </div>
-    </div>
-
-
-
-    <!-- Toast -->
-    <div class="toast" id="toast">
-        <i class="fas fa-check-circle"></i>
-        <span id="toast-message">功能清单已保存</span>
-    </div>
-
-    <!-- Confirm Dialog -->
-    <div class="confirm-dialog" id="confirm-dialog">
-        <div class="confirm-content">
-            <div class="confirm-title" id="confirm-title">确认</div>
-            <div class="confirm-message" id="confirm-message">是否保存当前项目？</div>
-            <div class="confirm-buttons">
-                <button class="btn btn-secondary" id="btn-confirm-cancel">取消</button>
-                <button class="btn btn-secondary" id="btn-confirm-no">不保存</button>
-                <button class="btn btn-primary" id="btn-confirm-yes">保存</button>
             </div>
         </div>
     </div>
 
     <script>
-        // State Management
-        const state = {
-            currentProject: '星际迷途',
-            currentFile: 'sec-001.md',
-            theme: 'dark-purple',
-            thinkingEnabled: true,
-            autoMode: 'L1',
-            notifications: [],
-            editorHistory: [],
-            historyIndex: -1,
-            saveStatus: 'saved'
-        };
+        const { createApp, ref, computed, watch, nextTick, onMounted, onUnmounted } = Vue;
 
-        // Toast
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-message').textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
+        createApp({
+            setup() {
+                // ================================================
+                // 状态
+                // ================================================
 
-        // Confirm Dialog
-        function showConfirm(title, message) {
-            return new Promise((resolve) => {
-                document.getElementById('confirm-title').textContent = title;
-                document.getElementById('confirm-message').textContent = message;
-                document.getElementById('confirm-dialog').classList.add('active');
+                // 模态框
+                const modalType = ref(null);
 
-                const handleYes = () => {
-                    cleanup();
-                    resolve('yes');
-                };
-                const handleNo = () => {
-                    cleanup();
-                    resolve('no');
-                };
-                const handleCancel = () => {
-                    cleanup();
-                    resolve('cancel');
-                };
+                // 项目
+                const currentProject = ref(null);
+                const projectList = ref([]);
+                const selectedProject = ref(null);
+                const creating = ref(false);
 
-                const cleanup = () => {
-                    document.getElementById('confirm-dialog').classList.remove('active');
-                    document.getElementById('btn-confirm-yes').removeEventListener('click', handleYes);
-                    document.getElementById('btn-confirm-no').removeEventListener('click', handleNo);
-                    document.getElementById('btn-confirm-cancel').removeEventListener('click', handleCancel);
-                };
+                // 文件树
+                const fileTree = ref([]);
+                const loadingTree = ref(false);
+                const activeFile = ref(null);
+                const openTabs = ref([]);
+                const currentContent = ref('');
 
-                document.getElementById('btn-confirm-yes').addEventListener('click', handleYes);
-                document.getElementById('btn-confirm-no').addEventListener('click', handleNo);
-                document.getElementById('btn-confirm-cancel').addEventListener('click', handleCancel);
-            });
-        }
+                // 保存状态
+                const saveStatus = ref('saved');
+                let saveTimer = null;
 
-        // Modal Management
-        function openModal(id) {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
+                // LLM
+                const llmConnected = ref(false);
+                const isGenerating = ref(false);
+                const thinkingEnabled = ref(false);
+                const chatMessages = ref([]);
+                const chatInput = ref('');
 
-        function closeAllModals() {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-        }
+                // 任务队列
+                const taskQueue = ref([]);
+                const executionLogs = ref([]);
 
-        // Theme Switching (M08)
-        function setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            state.theme = theme;
-            localStorage.setItem('theme', theme);
-        }
+                // 面板
+                const rightPanelTab = ref('prompt');
+                const currentPrompt = ref('');
 
-        // Setup theme options in settings modal
-        document.querySelectorAll('#modal-settings .theme-option').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('#modal-settings .theme-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-                const theme = option.dataset.theme;
-                setTheme(theme);
-            });
-        });
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            setTheme(savedTheme);
-            document.querySelectorAll('#modal-settings .theme-option').forEach(o => {
-                if (o.dataset.theme === savedTheme) {
-                    o.classList.add('selected');
-                } else {
-                    o.classList.remove('selected');
-                }
-            });
-        }
-
-        // Thinking Switch (M0107)
-        document.getElementById('thinking-switch').addEventListener('click', function() {
-            this.classList.toggle('active');
-            state.thinkingEnabled = this.classList.contains('active');
-            this.previousElementSibling.textContent = `Thinking: ${state.thinkingEnabled ? '开' : '关'}`;
-        });
-
-        // LLM Status Click (M0103)
-        document.querySelector('.llm-status').addEventListener('click', () => openModal('modal-settings'));
-
-        // Button Events
-        document.getElementById('btn-settings').addEventListener('click', () => openModal('modal-settings'));
-
-        document.getElementById('btn-new-project').addEventListener('click', async () => {
-            if (state.currentProject) {
-                const result = await showConfirm('新建项目', '是否保存当前项目？');
-                if (result === 'cancel') return;
-            }
-            openModal('modal-new-project');
-        });
-
-        document.getElementById('btn-open-project').addEventListener('click', async () => {
-            if (state.currentProject) {
-                const result = await showConfirm('打开项目', '是否保存当前项目？');
-                if (result === 'cancel') return;
-            }
-            openModal('modal-open-project');
-        });
-
-        // Modal Close Events
-        document.querySelectorAll('.modal-close').forEach(btn => {
-            btn.addEventListener('click', closeAllModals);
-        });
-
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) closeAllModals();
-            });
-        });
-
-        // Param Option Selection
-        document.querySelectorAll('.param-options').forEach(group => {
-            group.querySelectorAll('.param-option:not(.add-new)').forEach(option => {
-                option.addEventListener('click', () => {
-                    group.querySelectorAll('.param-option').forEach(o => o.classList.remove('selected'));
-                    option.classList.add('selected');
+                // 故事状态
+                const storyState = ref({
+                    protagonist_status: {},
+                    factions: {},
+                    foreshadowing: [],
+                    main_plot_progress: 0,
+                    side_plots: [],
+                    key_items: []
                 });
-            });
-        });
+                const loadingStoryState = ref(false);
 
-        // Scale Option Selection
-        document.querySelectorAll('.scale-option').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.scale-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-            });
-        });
+                // 文风指南
+                const styleGuide = ref('');
+                const loadingStyleGuide = ref(false);
+                const styleGuideEditing = ref(false);
 
-        // Auto Mode Selection
-        document.querySelectorAll('.auto-mode-option').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.auto-mode-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-                state.autoMode = option.querySelector('.mode').textContent.split(' ')[0];
-            });
-        });
+                // 近期上下文
+                const recentContext = ref({
+                    chapters: [],
+                    total_words: 0,
+                    chapter_range: {}
+                });
+                const loadingRecentContext = ref(false);
 
-        // Project Item Selection
-        document.querySelectorAll('.project-item').forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.project-item').forEach(i => i.classList.remove('selected'));
-                item.classList.add('selected');
-            });
-        });
+                // 用户反馈
+                const feedbackList = ref([]);
+                const loadingFeedback = ref(false);
+                const newFeedback = ref({
+                    chapter_path: '',
+                    type: 'suggestion',
+                    content: '',
+                    satisfaction_level: '一般'
+                });
 
-        // Notification Toggle
-        document.querySelectorAll('.notification-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.closest('.notification').classList.toggle('expanded');
-                btn.textContent = btn.closest('.notification').classList.contains('expanded') ? '收起' : '详情';
-            });
-        });
+                // 修改日志
+                const revisionLogs = ref([]);
+                const loadingRevisionLogs = ref(false);
 
-        // Notification Close
-        document.querySelectorAll('.notification-close').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.closest('.notification').remove();
-                if (document.querySelectorAll('.notification').length === 0) {
-                    document.getElementById('notification-bar').classList.remove('active');
+                // Token统计
+                const tokenCount = ref({ tokens: 0, max_context: 4096, remaining: 4096 });
+
+                // 通知
+                const notification = ref({ show: false, type: 'success', message: '' });
+
+                // 设置
+                const settings = ref({
+                    theme: 'purple',
+                    autoMode: 'L1',
+                    backendUrl: 'http://localhost:8000',
+                    apiType: 'deepseek',
+                    llmApiUrl: 'https://api.deepseek.com',
+                    apiKey: '',
+                    model: 'deepseek/deepseek-v4-flash',
+                    thinking: false
+                });
+
+                // 选项
+                const options = {
+                    genre: ['玄幻', '都市', '科幻', '悬疑', '历史', '言情', '武侠', '奇幻'],
+                    tone: ['热血', '治愈', '虐心', '轻松', '深沉', '浪漫', '紧张', '黑暗'],
+                    background: ['现代', '古代', '未来', '异世界', '末日', '赛博朋克', '蒸汽朋克', '星际'],
+                    theme: ['成长', '复仇', '冒险', '爱情', '悬疑', '探案', '战争', '救赎'],
+                    style: ['网络文学', '传统文学', '轻小说', '水浒风', '红楼风', '金庸风', '日式', '欧美']
+                };
+
+                const scales = [
+                    { value: 5, chapters: 28, volumes: 3 },
+                    { value: 10, chapters: 56, volumes: 5 },
+                    { value: 15, chapters: 83, volumes: 8 },
+                    { value: 20, chapters: 111, volumes: 10 }
+                ];
+
+                const themes = [
+                    { id: 'purple', name: '深邃夜紫' },
+                    { id: 'green', name: '墨绿护眼' },
+                    { id: 'gray', name: '经典炭灰' }
+                ];
+
+                const apiTypes = ['deepseek', 'openai', 'anthropic', 'ollama', 'custom'];
+                const modelList = ref([
+                    { id: 'deepseek/deepseek-v4-flash', name: 'DeepSeek V4 Flash' },
+                    { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' }
+                ]);
+
+                const testing = ref(false);
+                const fetchingModels = ref(false);
+
+                // SSE
+                let eventSource = null;
+
+                // ================================================
+                // 计算属性
+                // ================================================
+
+                const llmStatusClass = computed(() => {
+                    if (isGenerating.value) return 'loading';
+                    return llmConnected.value ? '' : 'offline';
+                });
+
+                const llmStatusText = computed(() => {
+                    if (isGenerating.value) return '生成中';
+                    return llmConnected.value ? '已连接' : '未连接';
+                });
+
+                const saveStatusClass = computed(() => saveStatus.value);
+                const saveStatusText = computed(() => {
+                    switch (saveStatus.value) {
+                        case 'saving': return '保存中...';
+                        case 'saved': return '已保存';
+                        case 'error': return '保存失败';
+                        default: return '';
+                    }
+                });
+
+                const estimatedChapters = computed(() => {
+                    const scale = scales.find(s => s.value === newProject.value.scale);
+                    return scale ? scale.chapters : 0;
+                });
+
+                const estimatedVolumes = computed(() => {
+                    const scale = scales.find(s => s.value === newProject.value.scale);
+                    return scale ? scale.volumes : 0;
+                });
+
+                const notificationIcon = computed(() => {
+                    switch (notification.value.type) {
+                        case 'success': return 'fa-solid fa-check-circle';
+                        case 'error': return 'fa-solid fa-exclamation-circle';
+                        case 'warning': return 'fa-solid fa-exclamation-triangle';
+                        default: return 'fa-solid fa-info-circle';
+                    }
+                });
+
+                const referencedFiles = computed(() => {
+                    // 从 currentPrompt 中提取引用
+                    const refs = [];
+                    if (currentPrompt.value) {
+                        const matches = currentPrompt.value.match(/@[\w/.-]+/g);
+                        if (matches) {
+                            matches.forEach(m => refs.push(m.substring(1)));
+                        }
+                    }
+                    return refs;
+                });
+
+                // 新建项目表单
+                const newProject = ref({
+                    genre: '玄幻',
+                    tone: '热血',
+                    background: '异世界',
+                    theme: '冒险',
+                    style: '网络文学',
+                    scale: 10,
+                    author: ''
+                });
+
+                // ================================================
+                // 方法
+                // ================================================
+
+                // API 请求
+                function getBackendUrl() {
+                    return settings.value.backendUrl.replace(/\/+$/, '');
                 }
-            });
-        });
 
-        // Show notification bar on load
-        document.getElementById('notification-bar').classList.add('active');
-
-        // Tree Folder Toggle
-        document.querySelectorAll('.tree-item.folder').forEach(folder => {
-            folder.addEventListener('click', () => {
-                folder.classList.toggle('expanded');
-                const icon = folder.querySelector('.fa-chevron-right');
-                if (icon) {
-                    icon.style.transform = folder.classList.contains('expanded') ? 'rotate(90deg)' : '';
+                async function api(path, options = {}) {
+                    const base = getBackendUrl();
+                    const url = base + '/api' + path;
+                    const resp = await fetch(url, {
+                        headers: { 'Content-Type': 'application/json', ...options.headers },
+                        ...options
+                    });
+                    const data = await resp.json();
+                    if (!data.success) throw new Error(data.message || '请求失败');
+                    return data.data;
                 }
-            });
-        });
 
-        // Tab Close
-        document.querySelectorAll('.tab .tab-close').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const tab = btn.closest('.tab');
-                if (tab.closest('.tabs-bar').querySelectorAll('.tab').length > 1) {
-                    tab.remove();
+                // 通知
+                function showNotification(message, type = 'success') {
+                    notification.value = { show: true, message, type };
+                    setTimeout(() => {
+                        notification.value.show = false;
+                    }, 3000);
                 }
-            });
-        });
 
-        // Resizer Functionality (M07)
-        let isResizing = false;
-        let currentResizer = null;
-
-        document.querySelectorAll('.resizer, .resizer-h').forEach(resizer => {
-            resizer.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                currentResizer = resizer;
-                resizer.classList.add('active');
-                document.body.style.cursor = resizer.classList.contains('resizer') ? 'col-resize' : 'row-resize';
-                e.preventDefault();
-            });
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing || !currentResizer) return;
-
-            if (currentResizer.classList.contains('resizer')) {
-                const leftSidebar = document.querySelector('.left-sidebar');
-                const rightPanel = document.querySelector('.right-panel');
-                const resizerIndex = Array.from(document.querySelectorAll('.resizer')).indexOf(currentResizer);
-
-                if (resizerIndex === 0 && leftSidebar) {
-                    const newWidth = e.clientX;
-                    leftSidebar.style.width = Math.max(180, Math.min(400, newWidth)) + 'px';
-                } else if (resizerIndex === 1 && rightPanel) {
-                    const newWidth = window.innerWidth - e.clientX;
-                    rightPanel.style.width = Math.max(280, Math.min(500, newWidth)) + 'px';
+                // 模态框
+                function openModal(type) {
+                    modalType.value = type;
+                    if (type === 'openProject') {
+                        loadProjectList();
+                    }
                 }
-            } else {
-                const chatArea = document.querySelector('.chat-area');
-                if (chatArea) {
-                    const editorContent = document.querySelector('.editor-content');
-                    const rect = editorContent.getBoundingClientRect();
-                    const newHeight = rect.bottom - e.clientY;
-                    chatArea.style.height = Math.max(150, Math.min(400, newHeight)) + 'px';
+
+                function closeModal() {
+                    modalType.value = null;
                 }
+
+                // 项目列表
+                async function loadProjectList() {
+                    try {
+                        projectList.value = await api('/projects');
+                    } catch (e) {
+                        showNotification('加载项目列表失败', 'error');
+                    }
+                }
+
+                // 创建项目
+                async function createProject() {
+                    creating.value = true;
+                    try {
+                        const project = await api('/projects', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                name: `${newProject.value.genre}小说`,
+                                author: newProject.value.author,
+                                genre: newProject.value.genre,
+                                tone: newProject.value.tone,
+                                background: newProject.value.background,
+                                theme: newProject.value.theme,
+                                style: newProject.value.style,
+                                scale: newProject.value.scale * 10000
+                            })
+                        });
+                        showNotification('项目创建成功');
+                        closeModal();
+                        await openProjectById(project.project_id);
+                    } catch (e) {
+                        showNotification('创建失败: ' + e.message, 'error');
+                    } finally {
+                        creating.value = false;
+                    }
+                }
+
+                // 打开项目
+                async function openProjectById(id) {
+                    try {
+                        const project = await api('/projects/' + id);
+                        // 标准化：确保有 id 字段（后端返回 project_id）
+                        if (project && project.project_id && !project.id) {
+                            project.id = project.project_id;
+                        }
+                        currentProject.value = project;
+                        selectedProject.value = null;
+                        closeModal();
+                        await loadFileTree();
+                        showNotification('已打开: ' + project.name);
+                    } catch (e) {
+                        showNotification('打开项目失败', 'error');
+                    }
+                }
+
+                function openProject() {
+                    if (selectedProject.value) {
+                        openProjectById(selectedProject.value);
+                    }
+                }
+
+                // 删除项目
+                async function deleteProject() {
+                    if (!selectedProject.value) return;
+                    if (!confirm('确定要删除这个项目吗？')) return;
+                    try {
+                        await api('/projects/' + selectedProject.value, { method: 'DELETE' });
+                        showNotification('项目已删除');
+                        selectedProject.value = null;
+                        loadProjectList();
+                    } catch (e) {
+                        showNotification('删除失败', 'error');
+                    }
+                }
+
+                // 文件树
+                async function loadFileTree() {
+                    if (!currentProject.value) return;
+                    loadingTree.value = true;
+                    try {
+                        const resp = await api('/tree?project_id=' + currentProject.value.id);
+                        // resp = { project_id, tree: [...] }
+                        const nodes = resp.tree || resp || [];
+                        fileTree.value = parseTree(nodes);
+                    } catch (e) {
+                        showNotification('加载文件树失败', 'error');
+                    } finally {
+                        loadingTree.value = false;
+                    }
+                }
+
+                function parseTree(nodes, parentExpanded = true) {
+                    return nodes.map(node => ({
+                        name: node.name,
+                        path: node.path,
+                        type: node.type,
+                        icon: getFileIcon(node.name),
+                        expanded: parentExpanded && node.type === 'directory',
+                        children: node.children ? parseTree(node.children, false) : []
+                    }));
+                }
+
+                function getFileIcon(name) {
+                    if (name.endsWith('.md')) return 'fa-file-lines';
+                    if (name.endsWith('.json')) return 'fa-file-code';
+                    return 'fa-file';
+                }
+
+                function toggleFolder(item) {
+                    item.expanded = !item.expanded;
+                }
+
+                async function refreshTree() {
+                    await loadFileTree();
+                    showNotification('已刷新');
+                }
+
+                // 打开文件
+                async function openFile(item) {
+                    if (item.type === 'directory') {
+                        item.expanded = !item.expanded;
+                        return;
+                    }
+
+                    // 检查是否已打开
+                    const existingTab = openTabs.value.find(t => t.path === item.path);
+                    if (existingTab) {
+                        activeFile.value = item.path;
+                        currentContent.value = existingTab.content;
+                        return;
+                    }
+
+                    try {
+                        const content = await api('/file?project_id=' + currentProject.value.id + '&path=' + encodeURIComponent(item.path));
+                        openTabs.value.push({ name: item.name, path: item.path, content });
+                        activeFile.value = item.path;
+                        currentContent.value = content;
+                    } catch (e) {
+                        showNotification('打开文件失败', 'error');
+                    }
+                }
+
+                function openFileByPath(path) {
+                    const item = findInTree(fileTree.value, path);
+                    if (item) openFile(item);
+                }
+
+                function findInTree(nodes, path) {
+                    for (const node of nodes) {
+                        if (node.path === path) return node;
+                        if (node.children) {
+                            const found = findInTree(node.children, path);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                }
+
+                function switchTab(path) {
+                    activeFile.value = path;
+                    const tab = openTabs.value.find(t => t.path === path);
+                    if (tab) currentContent.value = tab.content;
+                }
+
+                function closeTab(path) {
+                    const idx = openTabs.value.findIndex(t => t.path === path);
+                    if (idx === -1) return;
+                    openTabs.value.splice(idx, 1);
+                    if (activeFile.value === path) {
+                        activeFile.value = openTabs.value.length > 0 ? openTabs.value[0].path : null;
+                        if (activeFile.value) {
+                            const tab = openTabs.value.find(t => t.path === activeFile.value);
+                            if (tab) currentContent.value = tab.content;
+                        } else {
+                            currentContent.value = '';
+                        }
+                    }
+                }
+
+                // 内容变化
+                function onContentChange() {
+                    saveStatus.value = 'saving';
+                    clearTimeout(saveTimer);
+                    saveTimer = setTimeout(saveFile, 500);
+                }
+
+                async function saveFile() {
+                    if (!activeFile.value || !currentProject.value) return;
+                    try {
+                        await api('/file?project_id=' + currentProject.value.id, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                path: activeFile.value,
+                                content: currentContent.value
+                            })
+                        });
+                        // 更新标签页内容
+                        const tab = openTabs.value.find(t => t.path === activeFile.value);
+                        if (tab) tab.content = currentContent.value;
+                        saveStatus.value = 'saved';
+                    } catch (e) {
+                        saveStatus.value = 'error';
+                        showNotification('保存失败', 'error');
+                    }
+                }
+
+                // 写作功能
+                async function rewriteFile() {
+                    if (!activeFile.value) return;
+                    showNotification('开始重写...');
+                    // TODO: 调用生成API
+                }
+
+                async function continueWriting() {
+                    if (!activeFile.value) return;
+                    showNotification('继续写作...');
+                    // TODO: 调用生成API
+                }
+
+                // 版本控制
+                async function undoVersion() {
+                    showNotification('后退版本');
+                }
+
+                async function redoVersion() {
+                    showNotification('前进版本');
+                }
+
+                async function stopGeneration() {
+                    try {
+                        await api('/stop', { method: 'POST' });
+                        isGenerating.value = false;
+                        showNotification('已停止');
+                    } catch (e) {
+                        showNotification('停止失败', 'error');
+                    }
+                }
+
+                // 聊天
+                async function sendChatMessage() {
+                    if (!chatInput.value.trim()) return;
+                    chatMessages.value.push({ role: 'user', content: chatInput.value });
+                    const input = chatInput.value;
+                    chatInput.value = '';
+                    isGenerating.value = true;
+
+                    try {
+                        const response = await api('/chat', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                project_id: currentProject.value?.id,
+                                messages: chatMessages.value
+                            })
+                        });
+                        chatMessages.value.push({ role: 'assistant', content: response.content });
+                    } catch (e) {
+                        chatMessages.value.push({ role: 'assistant', content: '抱歉，发生了错误。' });
+                        showNotification('生成失败', 'error');
+                    } finally {
+                        isGenerating.value = false;
+                    }
+                }
+
+                function handleChatKeydown(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendChatMessage();
+                    }
+                }
+
+                // 任务状态
+                function taskStatusText(status) {
+                    return { waiting: '等待中', running: '执行中', done: '已完成' }[status] || status;
+                }
+
+                // 主题
+                function applyTheme() {
+                    document.documentElement.dataset.theme = settings.value.theme === 'purple' ? '' :
+                        settings.value.theme === 'green' ? 'green' : 'gray';
+                }
+
+                // 设置
+                async function testConnection() {
+                    testing.value = true;
+                    try {
+                        const result = await api('/llm/test', { method: 'POST' });
+                        if (result.connected) {
+                            llmConnected.value = true;
+                            showNotification('连接成功');
+                        } else {
+                            llmConnected.value = false;
+                            showNotification(result.message || '连接失败', 'error');
+                        }
+                    } catch (e) {
+                        llmConnected.value = false;
+                        showNotification('连接失败', 'error');
+                    } finally {
+                        testing.value = false;
+                    }
+                }
+
+                async function fetchModels() {
+                    fetchingModels.value = true;
+                    try {
+                        const result = await api('/llm/models');
+                        modelList.value = result.models || [];
+                        showNotification('已获取 ' + (result.models?.length || 0) + ' 个模型');
+                    } catch (e) {
+                        showNotification('获取模型失败', 'error');
+                    } finally {
+                        fetchingModels.value = false;
+                    }
+                }
+
+                async function saveSettings() {
+                    try {
+                        await api('/llm/config', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                apiType: settings.value.apiType,
+                                apiUrl: settings.value.llmApiUrl,
+                                apiKey: settings.value.apiKey,
+                                model: settings.value.model
+                            })
+                        });
+                        // 保存到本地配置
+                        localStorage.setItem('moyun_settings', JSON.stringify(settings.value));
+                        showNotification('设置已保存');
+                        closeModal();
+                        await testConnection();
+                    } catch (e) {
+                        showNotification('保存失败', 'error');
+                    }
+                }
+
+                function toggleThinking() {
+                    thinkingEnabled.value = !thinkingEnabled.value;
+                }
+
+                function formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    return d.toLocaleDateString('zh-CN');
+                }
+
+                // SSE 连接
+                function connectSSE() {
+                    const base = getBackendUrl();
+                    eventSource = new EventSource(base + '/api/events');
+
+                    eventSource.addEventListener('generation', (e) => {
+                        const data = JSON.parse(e.data);
+                        // 处理生成事件
+                    });
+
+                    eventSource.addEventListener('llm-status', (e) => {
+                        const data = JSON.parse(e.data);
+                        llmConnected.value = data.connected;
+                    });
+
+                    eventSource.addEventListener('task', (e) => {
+                        const data = JSON.parse(e.data);
+                        updateTask(data);
+                    });
+
+                    eventSource.addEventListener('log', (e) => {
+                        const data = JSON.parse(e.data);
+                        executionLogs.value.push({
+                            time: new Date().toLocaleTimeString(),
+                            message: data.message,
+                            level: data.level || 'info'
+                        });
+                    });
+
+                    eventSource.onerror = () => {
+                        llmConnected.value = false;
+                    };
+                }
+
+                function updateTask(data) {
+                    const idx = taskQueue.value.findIndex(t => t.id === data.id);
+                    if (idx === -1) {
+                        taskQueue.value.push(data);
+                    } else {
+                        taskQueue.value[idx] = { ...taskQueue.value[idx], ...data };
+                    }
+                }
+
+                // 拖拽调整
+                let resizing = null;
+                let startX = 0;
+                let startWidth = 0;
+
+                function startResize(target) {
+                    resizing = target;
+                    document.addEventListener('mousemove', doResize);
+                    document.addEventListener('mouseup', stopResize);
+                }
+
+                function doResize(e) {
+                    if (!resizing) return;
+                    if (resizing === 'sidebar') {
+                        const width = Math.max(150, Math.min(400, e.clientX));
+                        document.documentElement.style.setProperty('--sidebar-width', width + 'px');
+                    } else if (resizing === 'rightPanel') {
+                        const width = Math.max(200, Math.min(500, window.innerWidth - e.clientX));
+                        document.documentElement.style.setProperty('--right-panel-width', width + 'px');
+                    }
+                }
+
+                function stopResize() {
+                    resizing = null;
+                    document.removeEventListener('mousemove', doResize);
+                    document.removeEventListener('mouseup', stopResize);
+                }
+
+                // 生命周期
+                onMounted(() => {
+                    // 加载保存的设置
+                    const saved = localStorage.getItem('moyun_settings');
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            // 兼容旧版本：apiUrl → llmApiUrl
+                            if (parsed.apiUrl && !parsed.llmApiUrl) {
+                                parsed.llmApiUrl = parsed.apiUrl;
+                                delete parsed.apiUrl;
+                            }
+                            settings.value = { ...settings.value, ...parsed };
+                            applyTheme();
+                        } catch (e) {}
+                    }
+
+                    // 连接SSE
+                    connectSSE();
+
+                    // 加载项目列表
+                    loadProjectList();
+
+                    // 测试连接
+                    testConnection();
+                });
+
+                onUnmounted(() => {
+                    if (eventSource) eventSource.close();
+                    if (saveTimer) clearTimeout(saveTimer);
+                });
+
+                // 聊天滚动
+                watch(chatMessages, () => {
+                    nextTick(() => {
+                        if (chatMessages.value) {
+                            chatMessages.value.scrollTop = chatMessages.value.scrollHeight;
+                        }
+                    });
+                }, { deep: true });
+
+                // 暴露全局接口供测试使用
+                window.$moyun = {
+                    // 状态（ref 对象）
+                    modalType, currentProject, projectList, selectedProject,
+                    fileTree, activeFile, chatMessages, chatInput,
+                    settings, isGenerating, thinkingEnabled,
+
+                    // 方法
+                    openModal, closeModal, loadProjectList, createProject,
+                    openProjectById, openProject, deleteProject, loadFileTree,
+                    toggleFolder, refreshTree, openFile, openFileByPath,
+                    switchTab, closeTab, onContentChange, saveFile,
+                    rewriteFile, continueWriting, sendChatMessage,
+                    testConnection, fetchModels, saveSettings, toggleThinking
+                };
+
+                return {
+                    // 状态
+                    modalType, currentProject, projectList, selectedProject, creating,
+                    fileTree, loadingTree, activeFile, openTabs, currentContent,
+                    saveStatus, llmConnected, isGenerating, thinkingEnabled,
+                    chatMessages, chatInput, chatMessages,
+                    taskQueue, executionLogs, rightPanelTab, currentPrompt,
+                    notification, settings, options, scales, themes, apiTypes,
+                    modelList, testing, fetchingModels, newProject,
+
+                    // 计算属性
+                    llmStatusClass, llmStatusText, saveStatusClass, saveStatusText,
+                    estimatedChapters, estimatedVolumes, notificationIcon, referencedFiles,
+
+                    // 方法
+                    openModal, closeModal, loadProjectList, createProject,
+                    openProjectById, openProject, deleteProject, loadFileTree,
+                    toggleFolder, refreshTree, openFile, openFileByPath,
+                    switchTab, closeTab, onContentChange, saveFile,
+                    rewriteFile, continueWriting, undoVersion, redoVersion,
+                    stopGeneration, sendChatMessage, handleChatKeydown,
+                    taskStatusText, applyTheme, testConnection, fetchModels,
+                    saveSettings, toggleThinking, formatDate, startResize
+                };
             }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isResizing && currentResizer) {
-                currentResizer.classList.remove('active');
-            }
-            isResizing = false;
-            currentResizer = null;
-            document.body.style.cursor = '';
-        });
-
-        // Editor Save Status
-        const editorTextarea = document.querySelector('.editor-textarea');
-        const saveStatus = document.querySelector('.save-status');
-
-        let saveTimeout = null;
-
-        function updateSaveStatus(status) {
-            state.saveStatus = status;
-            saveStatus.className = 'save-status ' + status;
-
-            if (status === 'saving') {
-                saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
-            } else if (status === 'saved') {
-                saveStatus.innerHTML = '<i class="fas fa-check"></i> 已保存';
-            } else if (status === 'error') {
-                saveStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> 保存失败';
-            }
-        }
-
-        editorTextarea.addEventListener('input', () => {
-            updateSaveStatus('saving');
-
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                updateSaveStatus('saved');
-            }, 300);
-        });
-
-        // Chat Send
-        document.querySelector('.chat-send').addEventListener('click', () => {
-            const input = document.querySelector('.chat-input');
-            const message = input.value.trim();
-
-            if (!message) return;
-
-            const now = new Date();
-            const time = now.toLocaleTimeString('zh-CN', { hour12: false });
-
-            const chatMessages = document.querySelector('.chat-messages');
-
-            const userMsg = document.createElement('div');
-            userMsg.className = 'chat-message user';
-            userMsg.innerHTML = `<div class="chat-message-time">${time}</div>${message}`;
-            chatMessages.appendChild(userMsg);
-
-            input.value = '';
-
-            setTimeout(() => {
-                const aiMsg = document.createElement('div');
-                aiMsg.className = 'chat-message ai';
-                aiMsg.innerHTML = `<div class="chat-message-time">${time}</div>我已修改 ${state.currentFile} 的相关内容。`;
-                chatMessages.appendChild(aiMsg);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 1000);
-
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-
-        // Task Cancel
-        document.querySelectorAll('.task-cancel').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const card = btn.closest('.task-card');
-                if (card.classList.contains('running') || card.classList.contains('waiting')) {
-                    card.remove();
-                }
-            });
-        });
-
-        // Project creation
-        document.getElementById('btn-create-project').addEventListener('click', () => {
-            closeAllModals();
-            showToast('项目创建成功');
-            state.currentProject = '新项目';
-            document.querySelector('.project-name').textContent = state.currentProject;
-        });
-
-        // Project open
-        document.getElementById('btn-open-selected').addEventListener('click', () => {
-            const selected = document.querySelector('.project-item.selected .project-name-item');
-            if (selected) {
-                closeAllModals();
-                state.currentProject = selected.textContent;
-                document.querySelector('.project-name').textContent = state.currentProject;
-                showToast(`已打开项目: ${state.currentProject}`);
-            }
-        });
-
-        // Prompt links
-        document.querySelectorAll('.prompt-link').forEach(link => {
-            link.addEventListener('click', () => {
-                const fileName = link.textContent.replace('@{', '').replace('}', '');
-                showToast(`打开文件: ${fileName}`);
-            });
-        });
-
-        // Forward/Backward buttons
-        document.getElementById('btn-forward').addEventListener('click', () => {
-            showToast('前进到下一个版本');
-        });
-
-        document.getElementById('btn-backward').addEventListener('click', () => {
-            showToast('后退到上一个版本');
-        });
-
-        // Prompt forward/backward
-        document.getElementById('btn-prompt-forward').addEventListener('click', () => {
-            showToast('前进到下一个Prompt版本');
-        });
-
-        document.getElementById('btn-prompt-backward').addEventListener('click', () => {
-            showToast('后退到上一个Prompt版本');
-        });
-
-        // Stop button
-        document.getElementById('btn-stop').addEventListener('click', () => {
-            const llmCalling = document.querySelector('.llm-calling');
-            if (llmCalling.classList.contains('active')) {
-                llmCalling.classList.remove('active');
-                showToast('已停止生成');
-            }
-        });
-
-        console.log('墨韵 - AI小说创作助手 原型已加载');
-        console.log('提示：将鼠标悬停在任意模块上5秒，可查看/编辑功能清单');
+        }).mount('#app');
     </script>
 </body>
 </html>

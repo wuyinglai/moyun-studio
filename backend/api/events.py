@@ -6,10 +6,12 @@
 
 import json
 import asyncio
+import logging
 
 from fastapi import APIRouter, Request
 from sse_starlette.sse import EventSourceResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["events"])
 
 

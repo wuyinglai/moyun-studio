@@ -4,6 +4,7 @@
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -12,7 +13,10 @@ from typing import Any
 import aiofiles
 
 from backend.config import get_settings
+from backend.core.exceptions import MoyunException, ResourceNotFoundError
 from backend.services.base import SnapshotServiceInterface
+
+logger = logging.getLogger(__name__)
 
 
 class SnapshotService(SnapshotServiceInterface):
@@ -97,7 +101,8 @@ class SnapshotService(SnapshotServiceInterface):
         snapshot_data = await self._find_snapshot(project_path, snapshot_id)
 
         if not snapshot_data:
-            raise Exception(f"快照不存在: {snapshot_id}")
+            logger.warning(f"快照不存在: {snapshot_id}")
+            raise ResourceNotFoundError(resource="snapshot", identifier=snapshot_id)
 
         file_path = snapshot_data["file_path"]
         target_file = project_path / file_path
@@ -125,9 +130,11 @@ class SnapshotService(SnapshotServiceInterface):
         snap2 = await self._find_snapshot(project_path, snapshot_id2)
 
         if not snap1:
-            raise Exception(f"快照不存在: {snapshot_id1}")
+            logger.warning(f"快照不存在: {snapshot_id1}")
+            raise ResourceNotFoundError(resource="snapshot", identifier=snapshot_id1)
         if not snap2:
-            raise Exception(f"快照不存在: {snapshot_id2}")
+            logger.warning(f"快照不存在: {snapshot_id2}")
+            raise ResourceNotFoundError(resource="snapshot", identifier=snapshot_id2)
 
         diff = difflib.unified_diff(
             snap1["content"].splitlines(),
