@@ -1,0 +1,164 @@
+"""墨韵 - LLM 配置 API
+
+端点：
+  GET  /api/llm/config      获取当前LLM配置
+  POST /api/llm/config      保存LLM配置
+  GET  /api/llm/models      获取可用模型列表
+  POST /api/llm/test        测试连接
+  GET  /api/llm/status      获取LLM状态
+"""
+
+import json
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, Request
+
+from backend.config import Settings, get_settings
+from backend.schemas.common import ApiResponse
+from backend.schemas.llm import (
+    LLMConfigRequest,
+    LLMConfigResponse,
+    LLMModelsResponse,
+    LLMStatusResponse,
+    ModelInfo,
+)
+
+router = APIRouter(tags=["llm"], prefix="/llm")
+
+# LLM 配置存储在 workspace/.config.json
+_LLM_CONFIG_KEY = "llm"
+
+
+def _config_file(settings: Settings) -> Path:
+    return settings.workspace_path / ".config.json"
+
+
+def _load_global_config(settings: Settings) -> dict:
+    cf = _config_file(settings)
+    if cf.exists():
+        try:
+            return json.loads(cf.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def _save_global_config(settings: Settings, data: dict) -> None:
+    cf = _config_file(settings)
+    cf.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@router.get("/config", response_model=ApiResponse[LLMConfigResponse])
+async def get_llm_config(settings: Settings = Depends(get_settings)):
+    """获取当前LLM配置（不返回API Key）"""
+    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
+    return ApiResponse.ok(
+        LLMConfigResponse(
+            api_type=cfg.get("apiType", settings.llm_provider),
+            api_url=cfg.get("apiUrl", settings.llm_api_base),
+            model=cfg.get("model", settings.llm_model),
+            thinking=cfg.get("thinking", settings.llm_thinking),
+        )
+    )
+
+
+@router.post("/config", response_model=ApiResponse[None])
+async def save_llm_config(
+    req: LLMConfigRequest,
+    settings: Settings = Depends(get_settings),
+):
+    """保存LLM配置"""
+    data = _load_global_config(settings)
+    data[_LLM_CONFIG_KEY] = {
+        "apiType": req.api_type,
+        "apiUrl": req.api_url,
+        "apiKey": req.api_key,
+        "model": req.model,
+        "thinking": req.thinking,
+    }
+    _save_global_config(settings, data)
+    return ApiResponse.ok(message="配置已保存")
+
+
+@router.get("/status", response_model=ApiResponse[LLMStatusResponse])
+async def get_llm_status(settings: Settings = Depends(get_settings)):
+    """获取LLM连接状态（快速检查，不发真实请求）"""
+    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
+    api_key = cfg.get("apiKey", settings.llm_api_key)
+    model = cfg.get("model", settings.llm_model)
+    api_type = cfg.get("apiType", settings.llm_provider)
+
+    # Ollama 不需要 key
+    has_key = bool(api_key) or api_type == "ollama"
+    has_model = bool(model)
+
+    if has_key and has_model:
+        return ApiResponse.ok(
+            LLMStatusResponse(connected=True, model=model, message="配置就绪")
+        )
+    else:
+        msg = "缺少API Key" if not has_key else "未配置模型"
+        return ApiResponse.ok(
+            LLMStatusResponse(connected=False, model=model, message=msg)
+        )
+
+
+@router.post("/test", response_model=ApiResponse[LLMStatusResponse])
+async def test_connection(settings: Settings = Depends(get_settings)):
+    """测试LLM连接（发送一个最小请求）"""
+    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
+    api_key = cfg.get("apiKey", settings.llm_api_key)
+    model = cfg.get("model", settings.llm_model)
+    api_type = cfg.get("apiType", settings.llm_provider)
+    api_base = cfg.get("apiUrl", settings.llm_api_base) or None
+
+    try:
+        import litellm
+        litellm.api_key = api_key
+        if api_base:
+            litellm.api_base = api_base
+
+        # 用最短的请求测试
+        response = await litellm.acompletion(
+            model=model,
+            messages=[{"role": "user", "content": "Hi"}],
+            max_tokens=5,
+        )
+        return ApiResponse.ok(
+            LLMStatusResponse(connected=True, model=model, message="连接成功")
+        )
+    except Exception as e:
+        return ApiResponse.ok(
+            LLMStatusResponse(connected=False, model=model, message=f"连接失败: {str(e)[:100]}")
+        )
+
+
+@router.get("/models", response_model=ApiResponse[LLMModelsResponse])
+async def get_models(settings: Settings = Depends(get_settings)):
+    """获取可用模型列表"""
+    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
+    api_type = cfg.get("apiType", settings.llm_provider)
+
+    # 预设模型列表
+    presets: dict[str, list[ModelInfo]] = {
+        "openai": [
+            ModelInfo(id="gpt-4o", name="GPT-4o"),
+            ModelInfo(id="gpt-4o-mini", name="GPT-4o Mini"),
+            ModelInfo(id="gpt-4-turbo", name="GPT-4 Turbo"),
+            ModelInfo(id="gpt-3.5-turbo", name="GPT-3.5 Turbo"),
+        ],
+        "anthropic": [
+            ModelInfo(id="claude-3-5-sonnet-20241022", name="Claude 3.5 Sonnet"),
+            ModelInfo(id="claude-3-5-haiku-20241022", name="Claude 3.5 Haiku"),
+            ModelInfo(id="claude-3-opus-20240229", name="Claude 3 Opus"),
+        ],
+        "ollama": [
+            ModelInfo(id="llama3.2", name="Llama 3.2"),
+            ModelInfo(id="qwen2.5", name="Qwen 2.5"),
+            ModelInfo(id="deepseek-r1", name="DeepSeek R1"),
+        ],
+        "custom": [],
+    }
+
+    models = presets.get(api_type, [])
+    return ApiResponse.ok(LLMModelsResponse(models=models))

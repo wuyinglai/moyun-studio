@@ -113,7 +113,7 @@ class FileService:
         for item in dir_path.iterdir():
             items.append({
                 "name": item.name,
-                "path": str(item.relative_to(self.workspace)),
+                "path": item.relative_to(self.workspace).as_posix(),
                 "is_dir": item.is_dir(),
                 "size": item.stat().st_size if item.is_file() else 0,
             })
@@ -159,7 +159,7 @@ class FileService:
             if item.name.startswith("."):
                 continue
 
-            child_path = str(item.relative_to(self.workspace))
+            child_path = item.relative_to(self.workspace).as_posix()  # 统一正斜杠
             if item.is_dir():
                 child = await self._build_tree(child_path, current_depth + 1, max_depth)
                 node["children"].append(child)
