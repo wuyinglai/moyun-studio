@@ -11,7 +11,6 @@ import api from '@/services/api'
 import { useStoryStateStore } from '@/stores/storyState'
 import { useStyleGuideStore } from '@/stores/styleGuide'
 import { useRecentContextStore } from '@/stores/recentContext'
-import { useProjectStore } from '@/stores/project'
 
 // 变量正则：@{filepath} 或 {{ variable }}
 const VARIABLE_PATTERN = /(@\{[^}]+\}|\{\{\s*\w+(\.\w+)*\s*\}\})/g

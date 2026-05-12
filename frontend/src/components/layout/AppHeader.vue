@@ -74,7 +74,7 @@ import { onMounted, onUnmounted, computed } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
-import { useSSE, sseService } from '@/composables/useSSE'
+import { useSSE } from '@/composables/useSSE'
 
 const projectStore = useProjectStore()
 const llmStore = useLLMStore()

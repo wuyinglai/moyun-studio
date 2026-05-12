@@ -116,7 +116,7 @@ class SSEService {
         this.emit('connected', { timestamp: Date.now() })
       }
 
-      this.eventSource.onerror = (error) => {
+      this.eventSource.onerror = () => {
         this._isConnected.value = false
         this.isConnecting = false
         this._lastError.value = 'SSE 连接错误'
@@ -193,7 +193,7 @@ class SSEService {
         // 新文件创建 - 刷新文件树
         if (data.path) {
           fileStore.handleFileCreated(data.path, data.name)
-          notification.info(`已创建文件: ${data.name || data.path}`)
+          notification.success(`已创建文件: ${data.name || data.path}`)
         }
         break
 

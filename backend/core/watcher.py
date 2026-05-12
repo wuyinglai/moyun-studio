@@ -35,6 +35,7 @@ class FileWatcher:
 
         class Handler(FileSystemEventHandler):
             def __init__(watcher: FileWatcher):
+                super().__init__()
                 self._watcher = watcher
 
             def on_created(self, event):

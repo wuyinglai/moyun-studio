@@ -1,5 +1,6 @@
 """墨韵 - FastAPI 应用入口"""
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -31,6 +32,14 @@ async def lifespan(app: FastAPI):
     event_bus = EventBus()
     app.state.event_bus = event_bus
 
+    # 初始化 SSE Manager 并挂载到 app.state
+    from backend.api.sse import sse_manager
+    app.state.sse_manager = sse_manager
+
+    # 启动 EventBus -> SSE 桥接任务
+    sse_bridge_task = asyncio.create_task(_bridge_events_to_sse(event_bus, sse_manager))
+    app.state.sse_bridge_task = sse_bridge_task
+
     # 初始化文件监听器（仅在项目目录存在时）
     watcher = None
     if settings.projects_path.exists():
@@ -46,10 +55,40 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # 关闭时停止桥接任务
+    if hasattr(app.state, 'sse_bridge_task'):
+        app.state.sse_bridge_task.cancel()
+        try:
+            await app.state.sse_bridge_task
+        except asyncio.CancelledError:
+            pass
+
     # 关闭时停止监听器
     if watcher:
         watcher.stop()  # 同步方法
     logger.info("墨韵后端已关闭")
+
+
+async def _bridge_events_to_sse(event_bus: EventBus, sse_manager) -> None:
+    """将EventBus事件桥接到SSE"""
+    _, queue = event_bus.subscribe()
+    
+    try:
+        while True:
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=5.0)
+                event_type = event.get("type", "unknown")
+                data = event.get("data", {})
+                await sse_manager.broadcast(event_type, data)
+            except asyncio.TimeoutError:
+                continue
+            except Exception as e:
+                logger.error(f"事件桥接异常: {e}")
+                await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        logger.info("SSE桥接任务已取消")
+    finally:
+        event_bus.unsubscribe(queue)
 
 
 # ─── 创建应用 ─────────────────────────────────────────────────────

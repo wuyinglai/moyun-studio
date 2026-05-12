@@ -6,6 +6,7 @@ API层只依赖这些接口，不直接依赖具体实现。
 
 from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator
+import asyncio
 
 
 class FileServiceInterface(ABC):
@@ -75,11 +76,10 @@ class PromptEngineInterface(ABC):
     @abstractmethod
     async def render(
         self,
-        category: str,
-        template_type: str,
+        prompt_type: str,
         variables: dict[str, Any]
     ) -> str:
-        """渲染模板"""
+        """渲染模板（prompt_type格式: category/template_type）"""
 
 
 class TaskQueueInterface(ABC):
@@ -110,31 +110,46 @@ class EventBusInterface(ABC):
         """发布事件"""
 
     @abstractmethod
-    async def subscribe(
+    def subscribe(
         self,
-        event_types: list[str]
-    ) -> AsyncGenerator[dict, None]:
-        """订阅事件流"""
+        event_types: list[str] | None = None
+    ) -> tuple[str, asyncio.Queue]:
+        """订阅事件，返回 (client_id, queue)"""
 
 
 class SnapshotServiceInterface(ABC):
     """快照服务接口"""
 
     @abstractmethod
-    async def create_snapshot(self, file_path: str, label: str | None = None) -> str:
+    async def create_snapshot(
+        self,
+        project_id: str,
+        file_path: str,
+        content: str,
+        label: str | None = None
+    ) -> dict[str, Any]:
         """创建快照"""
 
     @abstractmethod
-    async def list_snapshots(self, file_path: str) -> list[dict]:
+    async def list_snapshots(
+        self,
+        project_id: str,
+        file_path: str
+    ) -> list[dict[str, Any]]:
         """列出快照"""
 
     @abstractmethod
-    async def restore_snapshot(self, snapshot_id: str) -> None:
+    async def restore_snapshot(
+        self,
+        project_id: str,
+        snapshot_id: str
+    ) -> dict[str, Any]:
         """恢复快照"""
 
     @abstractmethod
     async def compare_versions(
         self,
+        project_id: str,
         snapshot_id1: str,
         snapshot_id2: str
     ) -> str:

@@ -8,6 +8,7 @@
 """
 
 import asyncio
+import json
 import logging
 from typing import AsyncGenerator
 
@@ -15,6 +16,11 @@ from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
 from backend.config import Settings, get_settings
+from backend.core.llm import (
+    load_llm_config_from_workspace,
+    normalize_model_for_provider,
+    build_litellm_kwargs,
+)
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import GenerateRequest, ChatRequest
 
@@ -38,15 +44,12 @@ async def generate(
         task_id = f"gen-{id(req)}"
         _stop_signals[task_id] = asyncio.Event()
 
-        # 通知任务开始
         if event_bus:
             await event_bus.publish("task", {"task_id": task_id, "status": "running", "name": f"生成 {req.file_path}"})
 
         yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
 
         try:
-            import json
-
             # 加载 Prompt 模板
             from backend.core.file_ops import FileService
             from backend.core.prompt_engine import PromptEngine
@@ -54,7 +57,6 @@ async def generate(
             file_service = FileService(settings.projects_path)
             prompt_engine = PromptEngine(settings.prompts_path, file_service)
 
-            # 记录生成开始
             logger.info("开始生成任务", extra={"task_id": task_id, "project_id": req.project_id, "file_path": req.file_path})
 
             # 读取目标文件内容
@@ -76,22 +78,10 @@ async def generate(
                 prompt_text = f"请根据以下内容进行创作：\n\n{content}"
 
             # 调用 LLM
-            import json as _json
-            cfg_file = settings.workspace_path / ".config.json"
-            llm_cfg = {}
-            if cfg_file.exists():
-                try:
-                    llm_cfg = _json.loads(cfg_file.read_text(encoding="utf-8")).get("llm", {})
-                except Exception:
-                    pass
-
             import litellm
-            if llm_cfg.get("apiKey"):
-                litellm.api_key = llm_cfg["apiKey"]
-            if llm_cfg.get("apiUrl"):
-                litellm.api_base = llm_cfg["apiUrl"]
 
-            model = llm_cfg.get("model", settings.llm_model)
+            llm_cfg = load_llm_config_from_workspace(settings)
+            model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
             thinking = llm_cfg.get("thinking", settings.llm_thinking)
 
             messages = [{"role": "user", "content": prompt_text}]
@@ -99,13 +89,10 @@ async def generate(
             if thinking and "claude" in model:
                 extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
 
+            kwargs = build_litellm_kwargs(llm_cfg, model, messages, timeout=180, stream=True, **extra_kwargs)
+
             generated_text = ""
-            async for chunk in await litellm.acompletion(
-                model=model,
-                messages=messages,
-                stream=True,
-                **extra_kwargs,
-            ):
+            async for chunk in litellm.acompletion(**kwargs):
                 if _stop_signals[task_id].is_set():
                     break
                 delta = chunk.choices[0].delta.content or ""
@@ -132,6 +119,7 @@ async def generate(
                 await event_bus.publish("done", {"task_id": task_id})
 
         except Exception as e:
+            logger.error(f"生成任务异常: {e}", exc_info=True)
             yield {"event": "error", "data": json.dumps({"message": str(e), "task_id": task_id})}
             if event_bus:
                 await event_bus.publish("error", {"message": str(e)})
@@ -150,8 +138,6 @@ async def chat(
     """聊天对话（流式SSE）"""
 
     async def _stream() -> AsyncGenerator[dict, None]:
-        import json
-
         event_bus = getattr(request.app.state, "event_bus", None)
         task_id = f"chat-{id(req)}"
 
@@ -161,35 +147,14 @@ async def chat(
 
         try:
             import litellm
-            import json as _json
 
-            cfg_file = settings.workspace_path / ".config.json"
-            llm_cfg = {}
-            if cfg_file.exists():
-                try:
-                    llm_cfg = _json.loads(cfg_file.read_text(encoding="utf-8")).get("llm", {})
-                except Exception:
-                    pass
-
-            # 处理 deepseek 格式
-            model = llm_cfg.get("model", settings.llm_model)
-            api_type = llm_cfg.get("apiType", "openai")
-            if api_type == "deepseek" and not model.startswith("deepseek/"):
-                model = "deepseek/" + model
+            llm_cfg = load_llm_config_from_workspace(settings)
+            model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
 
             messages = [{"role": "user", "content": req.message}]
+            kwargs = build_litellm_kwargs(llm_cfg, model, messages, timeout=120, stream=True)
 
-            kwargs = {
-                "model": model,
-                "messages": messages,
-                "stream": True,
-            }
-            if llm_cfg.get("apiKey"):
-                kwargs["api_key"] = llm_cfg["apiKey"]
-            if llm_cfg.get("apiUrl"):
-                kwargs["api_base"] = llm_cfg["apiUrl"]
-
-            async for chunk in await litellm.acompletion(**kwargs):
+            async for chunk in litellm.acompletion(**kwargs):
                 delta = chunk.choices[0].delta.content or ""
                 if delta:
                     yield {
@@ -200,6 +165,7 @@ async def chat(
             yield {"event": "done", "data": json.dumps({"task_id": task_id})}
 
         except Exception as e:
+            logger.error(f"聊天任务异常: {e}", exc_info=True)
             yield {"event": "error", "data": json.dumps({"message": str(e)})}
 
     return EventSourceResponse(_stream())

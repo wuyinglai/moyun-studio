@@ -17,7 +17,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError
+from backend.core.exceptions import ProjectError, ProjectNotFoundError
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     ProjectCreateRequest,

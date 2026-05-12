@@ -70,7 +70,7 @@ async function handleSave() {
 }
 
 async function autoGenerate() {
-  notification.info('AI 自动更新功能待后端实现')
+  notification.warning('AI 自动更新功能待后端实现')
 }
 
 defineExpose({ loadState })

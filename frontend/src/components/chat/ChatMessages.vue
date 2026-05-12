@@ -28,7 +28,7 @@ import { ref, watch, nextTick } from 'vue'
 import ChatMessage from './ChatMessage.vue'
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
 
-defineProps<{
+const props = defineProps<{
   messages: ChatMessageType[]
   isThinking?: boolean
 }>()
@@ -49,8 +49,8 @@ function scrollToBottom(smooth = true) {
 
 // 新消息时自动滚动
 watch(
-  () => arguments[0]?.messages?.length,
-  () => scrollToBottom()
+  () => props.messages?.length,
+  () => scrollToBottom(),
 )
 
 defineExpose({ scrollToBottom })

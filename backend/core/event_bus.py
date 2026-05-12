@@ -41,7 +41,7 @@ class EventBus:
 
         return client_id, queue
 
-    def unsubscribe(self, client_id: str, queue: asyncio.Queue) -> None:
+    def unsubscribe(self, queue: asyncio.Queue) -> None:
         """取消订阅"""
         if queue in self._all_subscribers:
             self._all_subscribers.discard(queue)
@@ -80,7 +80,7 @@ class EventBus:
                     dead_queues.add(queue)
 
         for queue in dead_queues:
-            self.unsubscribe("", queue)
+            self.unsubscribe(queue)
 
 
 class EventTypes:

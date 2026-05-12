@@ -6,7 +6,14 @@ import { ref } from 'vue'
 import { useFileStore } from '@/stores/file'
 import { useProjectStore } from '@/stores/project'
 import { fileService } from '@/services/file.service'
-import type { FileNode } from '@/types/file'
+
+export interface TreeNode {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  children?: TreeNode[]
+  expanded?: boolean
+}
 
 export function useFileTree() {
   const fileStore = useFileStore()
@@ -14,7 +21,6 @@ export function useFileTree() {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  /** 加载项目文件树 */
   async function loadTree(projectId?: string) {
     const pid = projectId || projectStore.currentProject?.id
     if (!pid) return
@@ -23,7 +29,7 @@ export function useFileTree() {
     error.value = null
     try {
       const tree = await fileService.getTree(pid)
-      fileStore.setTree(tree.nodes || [])
+      fileStore.tree = tree.nodes || []
     } catch (e) {
       error.value = '加载文件树失败'
       console.error(e)
@@ -32,20 +38,17 @@ export function useFileTree() {
     }
   }
 
-  /** 刷新文件树 */
   async function refresh() {
     await loadTree()
   }
 
-  /** 展开/折叠目录 */
-  function toggleNode(node: FileNode) {
+  function toggleNode(node: TreeNode) {
     if (node.type !== 'directory') return
     node.expanded = !node.expanded
   }
 
-  /** 展开所有目录 */
-  function expandAll(nodes?: FileNode[]) {
-    const list = nodes || fileStore.tree
+  function expandAll(nodes?: TreeNode[]) {
+    const list = nodes || fileStore.tree as TreeNode[]
     list.forEach((node) => {
       if (node.type === 'directory') {
         node.expanded = true
@@ -56,9 +59,8 @@ export function useFileTree() {
     })
   }
 
-  /** 折叠所有目录 */
-  function collapseAll(nodes?: FileNode[]) {
-    const list = nodes || fileStore.tree
+  function collapseAll(nodes?: TreeNode[]) {
+    const list = nodes || fileStore.tree as TreeNode[]
     list.forEach((node) => {
       if (node.type === 'directory') {
         node.expanded = false

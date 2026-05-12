@@ -1,7 +1,8 @@
-import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGuardNext } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
+import { Modal } from 'ant-design-vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -38,11 +39,18 @@ const routes: RouteRecordRaw[] = [
       const projectId = to.params.projectId as string
       const filePath = '/' + (to.params.pathMatch as string[]).join('/')
 
-      // 脏状态检查：路由跳转前确认
-      // TODO: 应改为组件级 beforeRouteLeave 守卫，
-      // 使用自定义 Modal 替代 window.confirm（当前会阻塞 UI 线程）
+      // 脏状态检查：使用 Ant Design Modal，不阻塞 UI 线程
       if (editorStore.isDirty) {
-        const confirmed = window.confirm('有未保存的内容，确定要离开吗？')
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Modal.confirm({
+            title: '未保存的内容',
+            content: '有未保存的内容，确定要离开吗？',
+            okText: '确定',
+            cancelText: '取消',
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+          })
+        })
         if (!confirmed) return false
       }
 

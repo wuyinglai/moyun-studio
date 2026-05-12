@@ -13,6 +13,11 @@ import re
 
 from fastapi import APIRouter, Depends
 from backend.config import Settings, get_settings
+from backend.core.llm import (
+    load_llm_config_from_workspace,
+    normalize_model_for_provider,
+    build_litellm_kwargs,
+)
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     BookIdeaRequest,
@@ -52,43 +57,12 @@ async def generate_book_idea(
 请直接返回JSON，不要添加任何前缀或解释。"""
 
     try:
-        cfg_file = settings.workspace_path / ".config.json"
-        llm_cfg = {}
-        if cfg_file.exists():
-            try:
-                raw_cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-                # 优先使用嵌套的 llm 配置
-                llm_cfg = raw_cfg.get("llm", {})
-                # 如果 llm 配置为空或 apiType 为空，回退到顶层配置（兼容旧格式）
-                if not llm_cfg or not llm_cfg.get("apiType"):
-                    llm_cfg = {
-                        "apiType": raw_cfg.get("apiType", "openai"),
-                        "apiUrl": raw_cfg.get("apiUrl", ""),
-                        "apiKey": raw_cfg.get("apiKey", ""),
-                        "model": raw_cfg.get("model", ""),
-                    }
-            except Exception:
-                pass
+        llm_cfg = load_llm_config_from_workspace(settings)
+        model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
 
-        model = llm_cfg.get("model", settings.llm_model)
-        api_type = llm_cfg.get("apiType", "openai")
-        # 对于 DeepSeek，确保模型名包含 provider 前缀
-        if api_type == "deepseek" and model and not model.startswith("deepseek/"):
-            model = "deepseek/" + model
-        elif api_type == "deepseek" and not model:
-            model = "deepseek/deepseek-chat"
+        logger.info("Wizard LLM配置", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": model, "has_key": bool(llm_cfg.get("apiKey"))})
 
-        logger.info("Wizard LLM配置", extra={"api_type": api_type, "model": model, "has_key": bool(llm_cfg.get("apiKey"))})
-
-        kwargs = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-        }
-        if llm_cfg.get("apiKey"):
-            kwargs["api_key"] = llm_cfg["apiKey"]
-        if llm_cfg.get("apiUrl"):
-            kwargs["api_base"] = llm_cfg["apiUrl"]
+        kwargs = build_litellm_kwargs(llm_cfg, model, [{"role": "user", "content": prompt}], temperature=0.7)
 
         logger.info("调用LLM生成书名", extra={"model": model})
         response = await litellm.acompletion(**kwargs)
@@ -103,10 +77,8 @@ async def generate_book_idea(
         return ApiResponse.ok(BookIdeaResponse(**result))
 
     except Exception as e:
-        logger.error(f"生成书名创意失败: {e}")
-        default_name = f"《{req.genre}故事》"
-        default_desc = f"这是一个关于{req.genre}的精彩故事，充满了{req.tone or '引人入胜'}的情节。"
-        return ApiResponse.ok(BookIdeaResponse(name=default_name, description=default_desc))
+        logger.error(f"生成书名创意失败: {e}", exc_info=True)
+        raise
 
 
 @router.post("/wizard/{project_id}/generate-outline", response_model=ApiResponse[OutlineResponse])
@@ -149,44 +121,12 @@ async def generate_outline(
 """
 
     try:
-        cfg_file = settings.workspace_path / ".config.json"
-        llm_cfg = {}
-        if cfg_file.exists():
-            try:
-                raw_cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-                # 优先使用嵌套的 llm 配置
-                llm_cfg = raw_cfg.get("llm", {})
-                # 如果 llm 配置为空或 apiType 为空，回退到顶层配置（兼容旧格式）
-                if not llm_cfg or not llm_cfg.get("apiType"):
-                    llm_cfg = {
-                        "apiType": raw_cfg.get("apiType", "openai"),
-                        "apiUrl": raw_cfg.get("apiUrl", ""),
-                        "apiKey": raw_cfg.get("apiKey", ""),
-                        "model": raw_cfg.get("model", ""),
-                    }
-            except Exception:
-                pass
+        llm_cfg = load_llm_config_from_workspace(settings)
+        model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
 
-        model = llm_cfg.get("model", settings.llm_model)
-        api_type = llm_cfg.get("apiType", "openai")
-        # 对于 DeepSeek，确保模型名包含 provider 前缀
-        if api_type == "deepseek" and model and not model.startswith("deepseek/"):
-            model = "deepseek/" + model
-        elif api_type == "deepseek" and not model:
-            model = "deepseek/deepseek-chat"
+        logger.info("Wizard LLM配置(大纲)", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": model, "has_key": bool(llm_cfg.get("apiKey"))})
 
-        logger.info("Wizard LLM配置(大纲)", extra={"api_type": api_type, "model": model, "has_key": bool(llm_cfg.get("apiKey"))})
-
-        kwargs = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-            "max_tokens": 4000,
-        }
-        if llm_cfg.get("apiKey"):
-            kwargs["api_key"] = llm_cfg["apiKey"]
-        if llm_cfg.get("apiUrl"):
-            kwargs["api_base"] = llm_cfg["apiUrl"]
+        kwargs = build_litellm_kwargs(llm_cfg, model, [{"role": "user", "content": prompt}], temperature=0.7, max_tokens=4000)
 
         logger.info("调用LLM生成大纲", extra={"model": model, "chapters": chapters})
         response = await litellm.acompletion(**kwargs)
@@ -210,9 +150,8 @@ async def generate_outline(
         ))
 
     except Exception as e:
-        logger.error(f"生成大纲失败: {e}")
-        default_outline = f"# {req.book_name or '新作品'} - 大纲\n\n待生成详细大纲...\n"
-        return ApiResponse.ok(OutlineResponse(outline=default_outline, chapters=[]))
+        logger.error(f"生成大纲失败: {e}", exc_info=True)
+        raise
 
 
 @router.post("/wizard/{project_id}/confirm-outline", response_model=ApiResponse)
@@ -245,10 +184,12 @@ async def confirm_outline(
     for match in re.finditer(chapter_pattern, req.outline, re.DOTALL):
         chapter_num = match.group(1).zfill(3)
         chapter_title = match.group(2).strip().split('\n')[0]
+        # 移除文件名中的非法字符
+        safe_title = re.sub(r'[<>:"/\\|?*]', '', chapter_title)
         chapter_dir = chapters_dir / f"chapter-{chapter_num}"
         chapter_dir.mkdir(parents=True, exist_ok=True)
 
-        chapter_file = chapter_dir / f"{chapter_num}-{chapter_title}.md"
+        chapter_file = chapter_dir / f"{chapter_num}-{safe_title}.md"
         if not chapter_file.exists():
             chapter_file.write_text(
                 f"# 第{chapter_num}章 {chapter_title}\n\n",

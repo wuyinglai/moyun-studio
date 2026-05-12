@@ -2,7 +2,7 @@
  * 项目服务 - 封装 /api/projects 相关操作
  */
 import api from './api'
-import type { Project, CreateProjectDTO, ProjectListItem } from '@/types/project'
+import type { Project, CreateProjectDTO } from '@/types/project'
 
 export const projectService = {
   /** 获取所有项目列表 */

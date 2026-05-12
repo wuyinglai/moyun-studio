@@ -21,6 +21,7 @@ export interface Project {
 
 export interface CreateProjectParams {
   // 创作参数
+  name?: string
   genre?: string
   tone?: string
   background?: string
@@ -54,7 +55,7 @@ export const useProjectStore = defineStore('project', () => {
     createStep.value = 1
     try {
       const raw = await api.post<Record<string, unknown>>('/projects', {
-        name: params.genre || '新项目',
+        name: params.name || '新项目',
         author: params.author || '',
         genre: params.genre || '',
         tone: params.tone || '',

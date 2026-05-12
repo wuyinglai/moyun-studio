@@ -112,24 +112,21 @@ def _get_context_length(model: str) -> int:
     return DEFAULT_CONTEXT_LENGTH
 
 
-async def _count_tokens_sync(text: str, model: str = "gpt-4") -> int:
-    """同步计算Token数（用于async函数）"""
+async def _count_tokens_async(text: str, model: str = "gpt-4") -> int:
+    """异步计算Token数"""
     try:
-        import tiktoken
+        import tiktoken as _tiktoken
 
-        # 尝试获取编码器
         try:
-            enc = tiktoken.encoding_for_model(model)
-        except KeyError:
-            enc = tiktoken.get_encoding("cl100k_base")
+            enc = _tiktoken.encoding_for_model(model)
+        except (KeyError, _tiktoken.core.TiktokenError):
+            enc = _tiktoken.get_encoding("cl100k_base")
 
         tokens = len(enc.encode(text))
         return tokens
 
-    except ImportError:
-        # tiktoken 未安装，使用估算
-        logger.warning("tiktoken 未安装，使用估算方法")
-        # 粗略估算：中文约1.5个字符=1 token，英文约4个字符=1 token
+    except Exception as e:
+        logger.warning(f"tiktoken 计算失败，使用估算方法: {e}")
         chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
         other_chars = len(text) - chinese_chars
         return int(chinese_chars * 0.5 + other_chars * 0.25)
@@ -150,7 +147,7 @@ async def count_tokens(
     Returns:
         Token数统计
     """
-    tokens = await _count_tokens_sync(req.text, req.model)
+    tokens = await _count_tokens_async(req.text, req.model)
     max_context = _get_context_length(req.model)
     remaining = max(0, max_context - tokens)
 
@@ -221,7 +218,7 @@ async def estimate_tokens(
             text = outline_file.read_text(encoding="utf-8")
 
     # 计算Token数
-    tokens = await _count_tokens_sync(text)
+    tokens = await _count_tokens_async(text)
 
     logger.debug(
         "Token估算: 项目=%s, 目标=%s, 模板=%s, 估算Token=%d",

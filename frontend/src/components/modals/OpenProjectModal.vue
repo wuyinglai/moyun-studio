@@ -78,7 +78,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useProjectStore, Project } from '@/stores/project'
+import { useProjectStore } from '@/stores/project'
+import type { Project } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notification'

@@ -29,7 +29,6 @@ const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
 
-const editorContainer = ref<HTMLElement | null>(null)
 const codemirrorEl = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null

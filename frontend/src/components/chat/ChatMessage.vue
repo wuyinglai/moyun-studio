@@ -54,7 +54,7 @@ const renderedContent = computed(() => {
   return renderMarkdown(props.message.content)
 })
 
-function formatTime(timestamp: string): string {
+function formatTime(timestamp: number): string {
   const d = new Date(timestamp)
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
@@ -87,7 +87,7 @@ function formatTime(timestamp: string): string {
   color: white;
 }
 
-.role-assistant .message-avatar {
+.role-ai .message-avatar {
   background: var(--bg-card);
   color: var(--text-secondary);
 }
@@ -137,7 +137,7 @@ function formatTime(timestamp: string): string {
   border-bottom-right-radius: 4px;
 }
 
-.role-assistant .message-content {
+.role-ai .message-content {
   background: var(--bg-card);
   color: var(--text-primary);
   border-bottom-left-radius: 4px;

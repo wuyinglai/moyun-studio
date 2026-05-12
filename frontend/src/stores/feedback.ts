@@ -37,7 +37,7 @@ export const useFeedbackStore = defineStore('feedback', () => {
     return feedback
   }
 
-  async function deleteFeedback(projectId: string, feedbackId: string) {
+  async function deleteFeedback(_projectId: string, feedbackId: string) {
     await api.delete(`/feedback/${feedbackId}`)
     feedbacks.value = feedbacks.value.filter((f) => f.id !== feedbackId)
   }

@@ -50,7 +50,7 @@ function levelLabel(level: string): string {
 
 // 新日志到达时自动滚动到底部
 watch(
-  () => arguments[0]?.logs?.length,
+  () => logs.length,
   () => {
     nextTick(() => {
       if (containerRef.value) {

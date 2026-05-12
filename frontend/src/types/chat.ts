@@ -2,9 +2,9 @@
 
 export interface ChatMessage {
   id: string
-  role: 'user' | 'assistant' | 'system'
+  role: 'user' | 'ai'
   content: string
-  timestamp: string
+  timestamp: number
   thinking?: string
   taskId?: string
 }

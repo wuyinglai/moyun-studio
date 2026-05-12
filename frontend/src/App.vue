@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import NotificationContainer from '@/components/layout/NotificationContainer.vue'
 import CreateProjectModal from '@/components/modals/CreateProjectModal.vue'
@@ -9,12 +9,10 @@ import SettingsModal from '@/components/modals/SettingsModal.vue'
 import { useAppInit } from '@/composables/useApp'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
-import { sseService } from '@/composables/useSSE'
 
 const { initApp, cleanupApp } = useAppInit()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
-const router = useRouter()
 const route = useRoute()
 
 // 初始化应用

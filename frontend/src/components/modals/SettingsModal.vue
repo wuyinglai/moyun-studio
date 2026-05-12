@@ -172,7 +172,7 @@ const isTesting = ref(false)
 const testResult = ref<{ status: 'success' | 'error'; message: string } | null>(null)
 
 const config = ref({
-  apiType: 'openai',
+  apiType: 'openai' as const,
   apiKey: '',
   apiUrl: 'https://api.openai.com/v1',
   model: 'gpt-4',
@@ -199,7 +199,7 @@ async function testConnection() {
   testResult.value = null
 
   try {
-    await llmStore.saveConfig(config.value)
+    await llmStore.saveConfig(config.value as typeof llmStore.config)
     const success = await llmStore.testConnection()
 
     if (success) {

@@ -109,7 +109,7 @@ function formatTime(timestamp: number): string {
 
 function cancelTask(taskId: string) {
   taskStore.cancelTask(taskId)
-  notification.info('任务已取消')
+  notification.warning('任务已取消')
 }
 
 function clearAll() {

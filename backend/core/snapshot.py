@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 import aiofiles
 
+from backend.core.exceptions import ResourceNotFoundError
+
 if TYPE_CHECKING:
     from backend.core.file_ops import FileService
 
@@ -87,7 +89,8 @@ class SnapshotManager:
 
         await self.file_service.write_file(
             snapshot_file,
-            json.dumps(snapshot_data, ensure_ascii=False, indent=2)
+            json.dumps(snapshot_data, ensure_ascii=False, indent=2),
+            None  # 没有frontmatter
         )
 
         await self._update_index(file_path, snapshot.to_dict())
@@ -108,7 +111,7 @@ class SnapshotManager:
         """恢复快照"""
         snapshot_data = await self._find_snapshot(snapshot_id)
         if not snapshot_data:
-            raise ValueError(f"快照不存在: {snapshot_id}")
+            raise ResourceNotFoundError(resource="快照", resource_id=snapshot_id)
 
         await self.file_service.write_file(
             snapshot_data["file_path"],
@@ -126,7 +129,7 @@ class SnapshotManager:
         snap2 = await self._find_snapshot(snapshot_id2)
 
         if not snap1 or not snap2:
-            raise ValueError("快照不存在")
+            raise ResourceNotFoundError(resource="快照", resource_id=f"{snapshot_id1}或{snapshot_id2}")
 
         import difflib
         diff = difflib.unified_diff(
@@ -173,5 +176,6 @@ class SnapshotManager:
 
         await self.file_service.write_file(
             index_file,
-            json.dumps(index_data, ensure_ascii=False, indent=2)
+            json.dumps(index_data, ensure_ascii=False, indent=2),
+            None  # 没有frontmatter
         )

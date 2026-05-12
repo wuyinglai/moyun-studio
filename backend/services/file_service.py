@@ -11,7 +11,7 @@ import aiofiles
 import frontmatter
 
 from backend.config import get_settings
-from backend.core.exceptions import MoyunException
+from backend.core.exceptions import FileNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -45,22 +45,19 @@ class FileService:
         path = self._resolve_path(relative_path)
 
         if not path.exists():
-            from backend.core.exceptions import MoyunException
-            raise MoyunException(
-                code="FILE_NOT_FOUND",
-                message=f"文件不存在: {relative_path}"
-            )
+            raise FileNotFoundError(str(path))
 
         async with aiofiles.open(path, "r", encoding="utf-8") as f:
             content = await f.read()
 
-        # 解析 frontmatter
-        try:
-            post = frontmatter.parse(content)
-            return post.content, dict(post.metadata) if post.metadata else None
-        except Exception:
-            # 解析失败，返回原文
-            return content, None
+        if path.suffix == ".md":
+            try:
+                post = frontmatter.loads(content)
+                return post.content, dict(post.metadata) if post.metadata else None
+            except Exception:
+                return content, None
+
+        return content, None
 
     async def write_file(
         self,

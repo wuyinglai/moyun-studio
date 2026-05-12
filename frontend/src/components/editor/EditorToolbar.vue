@@ -17,9 +17,6 @@
 
     <!-- 插入按钮 -->
     <div class="toolbar-group">
-      <button class="toolbar-btn" title="插入素材" @click="insertMaterial">
-        <i class="fa-solid fa-folder-plus"></i>
-      </button>
       <button class="toolbar-btn" title="插入时间线" @click="insertTimeline">
         <i class="fa-solid fa-clock"></i>
       </button>
@@ -30,7 +27,7 @@
     <!-- AI 生成 -->
     <div class="toolbar-group">
       <button
-        class="toolbar-btn toolbar-btn--primary"
+        class="toolbar-btn"
         title="AI 续写"
         :disabled="llmStore.isGenerating"
         @click="aiGenerate"
@@ -58,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useLLMStore } from '@/stores/llm'
@@ -109,10 +106,6 @@ function handleFormat(action: string) {
   }
 }
 
-function insertMaterial() {
-  window.dispatchEvent(new CustomEvent('editor:insert-material'))
-}
-
 function insertTimeline() {
   const template = `
 ## 时间线
@@ -158,15 +151,21 @@ async function saveFile() {
   }
 }
 
-// 监听键盘快捷键
-if (typeof window !== 'undefined') {
-  window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault()
-      saveFile()
-    }
-  })
+// 键盘快捷键处理函数
+function handleKeyDown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault()
+    saveFile()
+  }
 }
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <style scoped lang="scss">

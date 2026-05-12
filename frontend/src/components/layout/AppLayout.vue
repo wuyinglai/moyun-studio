@@ -34,8 +34,8 @@ import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import RightPanel from '@/components/right-panel/RightPanel.vue'
 
-let hSplit: Split | null = null   // 水平分隔：左|中|右
-let vSplit: Split | null = null   // 垂直分隔：编辑区|聊天区
+let hSplit: InstanceType<typeof Split> | null = null   // 水平分隔：左|中|右
+let vSplit: InstanceType<typeof Split> | null = null   // 垂直分隔：编辑区|聊天区
 
 onMounted(() => {
   // 第一层：水平三栏（左 | 中 | 右）

@@ -1,13 +1,33 @@
+<template>
+  <div class="chat-panel">
+    <div class="chat-messages" ref="messagesContainer">
+      <ChatMessages :messages="messages" :is-thinking="!!currentThinking" />
+    </div>
+    <div class="chat-input-area">
+      <ChatInput v-model="inputText" @send="sendMessage" :disabled="isStreaming" />
+      <div class="chat-actions">
+        <button v-if="isStreaming" class="btn-cancel" @click="cancelStream">取消生成</button>
+        <button class="btn-clear" @click="clearMessages">清空</button>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
-import { marked } from 'marked'
+import { useProjectStore } from '@/stores/project'
+import { useFileStore } from '@/stores/file'
+import ChatMessages from './ChatMessages.vue'
+import ChatInput from './ChatInput.vue'
 
 const chatStore = useChatStore()
 const llmStore = useLLMStore()
 const notification = useNotificationStore()
+const projectStore = useProjectStore()
+const fileStore = useFileStore()
 
 const messagesContainer = ref<HTMLElement | null>(null)
 const inputText = ref('')
@@ -60,30 +80,69 @@ function clearMessages() {
   chatStore.clearMessages()
 }
 
-// 格式化时间
-function formatTime(timestamp: number): string {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
-
-// 简单的 Markdown 渲染
-function renderMarkdown(text: string): string {
-  if (!text) return ''
+// 监听编辑器发起的 AI 生成请求
+async function handleAIRequest() {
+  const projectId = projectStore.currentProject?.id
+  const filePath = fileStore.currentFile?.path
+  if (!projectId || !filePath) {
+    notification.warning('请先打开项目和文件')
+    return
+  }
   try {
-    return marked.parse(text) as string
+    await chatStore.continueWriting(projectId, filePath)
   } catch {
-    return text
+    notification.error('AI 生成失败')
   }
 }
 
-// 编辑器应直接调用 chatStore.continueWriting(projectId, filePath)
-// 不再使用 window 事件通信
-
 onMounted(() => {
-  // 初始化
+  window.addEventListener('chat:request-generate', handleAIRequest)
 })
 
 onBeforeUnmount(() => {
-  // 清理
+  window.removeEventListener('chat:request-generate', handleAIRequest)
 })
 </script>
+
+<style scoped lang="scss">
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.chat-input-area {
+  border-top: 1px solid var(--border-color);
+  padding: 12px;
+}
+
+.chat-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-cancel {
+  padding: 4px 12px;
+  background: var(--accent-error);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.btn-clear {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+</style>

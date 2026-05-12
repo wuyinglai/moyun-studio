@@ -111,8 +111,8 @@ async function confirmAppend() {
   }
 }
 
-function deleteEntry(index: number) {
-  notification.info('删除功能待实现')
+function deleteEntry(_index: number) {
+  notification.warning('删除功能待实现')
 }
 
 defineExpose({ loadContext })

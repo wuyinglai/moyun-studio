@@ -35,7 +35,8 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useFileStore, FileNode } from '@/stores/file'
+import { useFileStore } from '@/stores/file'
+import type { FileNode } from '@/stores/file'
 import { useProjectStore } from '@/stores/project'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
@@ -69,12 +70,9 @@ async function refreshTree() {
 async function handleFileClick(node: FileNode) {
   if (node.type === 'file') {
     try {
-      // 读取文件内容
-      const content = await fileStore.readFile(projectStore.currentProject!.id, node.path)
-      // 打开文件（添加到标签栏）
+      const fileData = await fileStore.readFile(projectStore.currentProject!.id, node.path)
       fileStore.openFile(node)
-      // 设置编辑器内容
-      editorStore.setContent(content)
+      editorStore.setContent(fileData.content)
       editorStore.setCurrentFile(node.path)
     } catch (e) {
       notification.error(`无法打开文件: ${node.name}`)

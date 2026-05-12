@@ -13,7 +13,7 @@ from typing import Any
 import aiofiles
 
 from backend.config import get_settings
-from backend.core.exceptions import MoyunException, ResourceNotFoundError
+from backend.core.exceptions import ResourceNotFoundError
 from backend.services.base import SnapshotServiceInterface
 
 logger = logging.getLogger(__name__)

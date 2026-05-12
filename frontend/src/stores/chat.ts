@@ -25,7 +25,7 @@ export const useChatStore = defineStore('chat', () => {
 
   function addMessage(role: 'user' | 'ai', content: string) {
     messages.value.push({
-      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       role,
       content,
       timestamp: Date.now(),
@@ -39,7 +39,7 @@ export const useChatStore = defineStore('chat', () => {
     const llmStore = useLLMStore()
     llmStore.setGenerating(true)
     isStreaming.value = true
-    currentAIMessageId.value = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    currentAIMessageId.value = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
     currentTaskId.value = taskId || null
     messages.value.push({
       id: currentAIMessageId.value,
@@ -90,7 +90,6 @@ export const useChatStore = defineStore('chat', () => {
    * 发送聊天消息
    */
   async function sendMessage(content: string) {
-    const llmStore = useLLMStore()
     generationMode.value = 'chat'
     llmStore.setGenerating(true)
     isStreaming.value = true
@@ -106,6 +105,10 @@ export const useChatStore = defineStore('chat', () => {
         body: JSON.stringify({ message: content }),
         signal: streamController.signal,
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
 
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
@@ -146,6 +149,10 @@ export const useChatStore = defineStore('chat', () => {
         body: JSON.stringify({ project_id: projectId, path: filePath, prompt }),
         signal: streamController.signal,
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
 
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
@@ -189,6 +196,10 @@ export const useChatStore = defineStore('chat', () => {
         body: JSON.stringify({ project_id: projectId, path: filePath, prompt }),
         signal: streamController.signal,
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
 
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')

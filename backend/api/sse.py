@@ -1,67 +1,79 @@
 """墨韵 - SSE 事件流 API
 
-提供 Server-Sent Events 实时推送功能
+提供 Server-Sent Events 实时推送功能，与EventBus集成
 """
 
 import asyncio
 import json
 import logging
 from typing import AsyncGenerator
+import time
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sse"])
 
+MAX_SSE_CONNECTIONS = 100
+
 
 class SSEManager:
-    """SSE 连接管理器"""
-
+    """SSE 连接管理器，集成EventBus"""
+    
     def __init__(self):
-        self.connections: list[asyncio.Queue] = []
+        self.connections: set[asyncio.Queue] = set()
 
     async def subscribe(self) -> asyncio.Queue:
         """订阅 SSE 事件流"""
-        queue = asyncio.Queue()
-        self.connections.append(queue)
-        logger.info("新的 SSE 连接已建立")
+        if len(self.connections) >= MAX_SSE_CONNECTIONS:
+            raise RuntimeError("SSE连接数已达上限")
+        queue = asyncio.Queue(maxsize=200)
+        self.connections.add(queue)
+        logger.info(f"新的 SSE 连接已建立 (当前: {len(self.connections)})")
         return queue
 
     def unsubscribe(self, queue: asyncio.Queue):
         """取消订阅"""
         if queue in self.connections:
-            self.connections.remove(queue)
-            logger.info("SSE 连接已断开")
+            self.connections.discard(queue)
+            logger.info(f"SSE 连接已断开 (当前: {len(self.connections)})")
 
     async def broadcast(self, event_type: str, data: dict):
         """广播事件到所有连接"""
         message = f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-        for queue in self.connections[:]:
+        dead_queues = []
+        for queue in list(self.connections):
             try:
-                await queue.put(message)
+                await asyncio.wait_for(queue.put(message), timeout=2.0)
+            except asyncio.TimeoutError:
+                dead_queues.append(queue)
             except Exception:
-                self.connections.remove(queue)
+                dead_queues.append(queue)
+        for q in dead_queues:
+            self.unsubscribe(q)
 
 
 # 全局 SSE 管理器
 sse_manager = SSEManager()
 
 
-async def event_generator() -> AsyncGenerator[str, None]:
+async def event_generator(request: Request) -> AsyncGenerator[str, None]:
     """SSE 事件生成器"""
     queue = await sse_manager.subscribe()
 
     # 发送初始连接事件
-    yield f"event: connected\ndata: {json.dumps({'timestamp': __import__('time').time()})}\n\n"
+    yield f"event: connected\ndata: {json.dumps({'timestamp': time.time(), 'connections': len(sse_manager.connections)})}\n\n"
 
     try:
         while True:
+            if await request.is_disconnected():
+                logger.info("客户端已断开连接")
+                break
             try:
                 message = await asyncio.wait_for(queue.get(), timeout=30)
                 yield message
             except asyncio.TimeoutError:
-                # 发送 keep-alive
                 yield ": keep-alive\n\n"
     except asyncio.CancelledError:
         logger.info("SSE 连接被取消")
@@ -70,10 +82,10 @@ async def event_generator() -> AsyncGenerator[str, None]:
 
 
 @router.get("/sse")
-async def sse_endpoint():
+async def sse_endpoint(request: Request):
     """SSE 事件流端点"""
     return StreamingResponse(
-        event_generator(),
+        event_generator(request),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

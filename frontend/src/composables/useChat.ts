@@ -6,7 +6,6 @@ import { ref } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useProjectStore } from '@/stores/project'
 import api from '@/services/api'
-import type { ChatMessage } from '@/types/chat'
 
 export function useChat() {
   const chatStore = useChatStore()
@@ -21,26 +20,23 @@ export function useChat() {
     isSending.value = true
 
     try {
-      // 添加用户消息
       chatStore.addMessage({
         id: crypto.randomUUID(),
         role: 'user',
         content,
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
       })
 
-      // 发送请求
       const response = await api.post<{ reply: string }>('/chat', {
         project_id: projectStore.currentProject.id,
         message: content,
       })
 
-      // 添加 AI 回复
       chatStore.addMessage({
         id: crypto.randomUUID(),
-        role: 'assistant',
+        role: 'ai',
         content: response?.reply || '',
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
       })
     } finally {
       isSending.value = false
@@ -59,12 +55,11 @@ export function useChat() {
         id: crypto.randomUUID(),
         role: 'user',
         content,
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
       })
 
-      // SSE 流式请求（由 useSSE.ts 处理响应）
       await api.post('/chat/stream', {
-        project_id: projectStore.currentProject.id,
+        project_id: projectStore.currentProject?.id,
         message: content,
       })
     } finally {

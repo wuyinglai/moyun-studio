@@ -10,11 +10,13 @@
 
 import json
 import logging
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
 
 from backend.config import Settings, get_settings
+from backend.core.exceptions import MoyunException, RateLimitError
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
     LLMConfigRequest,
@@ -26,6 +28,10 @@ from backend.schemas.llm import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["llm"], prefix="/llm")
+
+# 简单的内存速率限制器
+_rate_limit_store: dict[str, float] = {}
+_RATE_LIMIT_SECONDS = 10  # 测试连接间隔至少10秒
 
 # LLM 配置存储在 workspace/.config.json
 _LLM_CONFIG_KEY = "llm"
@@ -107,8 +113,20 @@ async def get_llm_status(settings: Settings = Depends(get_settings)):
 
 
 @router.post("/test", response_model=ApiResponse[LLMStatusResponse])
-async def test_connection(settings: Settings = Depends(get_settings)):
+async def test_connection(
+    request: Request,
+    settings: Settings = Depends(get_settings)
+):
     """测试LLM连接（发送一个最小请求）"""
+    # 速率限制：10秒内只能测试一次
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    last_test_time = _rate_limit_store.get(client_ip, 0)
+    if now - last_test_time < _RATE_LIMIT_SECONDS:
+        remaining = int(_RATE_LIMIT_SECONDS - (now - last_test_time))
+        raise RateLimitError(retry_after=remaining)
+    _rate_limit_store[client_ip] = now
+
     cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
     api_key = cfg.get("apiKey", settings.llm_api_key)
     model = cfg.get("model", settings.llm_model)
@@ -124,17 +142,23 @@ async def test_connection(settings: Settings = Depends(get_settings)):
 
         logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
-        # 用最短的请求测试
+        # 用最短的请求测试，设置30秒超时
         response = await litellm.acompletion(
             model=model,
             messages=[{"role": "user", "content": "Hi"}],
             max_tokens=5,
             api_key=api_key,
             api_base=api_base,
+            timeout=30,
         )
         logger.info("LLM连接测试成功", extra={"model": model})
         return ApiResponse.ok(
             LLMStatusResponse(connected=True, model=model, message="连接成功")
+        )
+    except TimeoutError as e:
+        logger.warning("LLM连接测试超时", extra={"model": model})
+        return ApiResponse.ok(
+            LLMStatusResponse(connected=False, model=model, message="连接超时")
         )
     except Exception as e:
         logger.warning("LLM连接测试失败", extra={"model": model, "error": str(e)[:100]})

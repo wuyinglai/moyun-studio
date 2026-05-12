@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import type { Project } from './project'
 
 export type Theme = 'dark' | 'green' | 'gray'

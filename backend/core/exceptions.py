@@ -57,15 +57,19 @@ class ProjectAlreadyExistsError(ProjectError):
         )
 
 
-class FileError(MoyunException):
+class MoyunFileError(MoyunException):
     """文件相关错误（默认 code: FILE_ERROR）"""
 
     def __init__(self, message: str, details: Any | None = None):
         super().__init__(message, "FILE_ERROR", details)
 
 
-class FileNotFoundError(FileError):
-    """文件不存在（code: FILE_NOT_FOUND，对应 HTTP 404）"""
+class FileNotFoundError(MoyunFileError):
+    """文件不存在（code: FILE_NOT_FOUND，对应 HTTP 404）
+
+    注意：命名为 FileNotFoundError 以保持向后兼容，
+    但这与 Python 内置异常同名，使用时需注意导入来源。
+    """
 
     def __init__(self, file_path: str):
         super().__init__(
@@ -75,7 +79,7 @@ class FileNotFoundError(FileError):
         self.code = "FILE_NOT_FOUND"
 
 
-class DirectoryNotFoundError(FileError):
+class DirectoryNotFoundError(MoyunFileError):
     """目录不存在（code: FILE_NOT_FOUND，对应 HTTP 404）"""
 
     def __init__(self, dir_path: str):
@@ -212,4 +216,15 @@ class ResourceNotFoundError(MoyunException):
             f"资源不存在: {res_id}",
             "RESOURCE_NOT_FOUND",
             {"resource": resource, "identifier": identifier, "resource_id": resource_id},
+        )
+
+
+class RateLimitError(MoyunException):
+    """速率限制错误（code: RATE_LIMIT，对应 HTTP 429）"""
+
+    def __init__(self, retry_after: int):
+        super().__init__(
+            f"请求过于频繁，请{retry_after}秒后再试",
+            "RATE_LIMIT",
+            {"retry_after": retry_after},
         )

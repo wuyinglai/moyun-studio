@@ -50,7 +50,6 @@
 import { computed, ref } from 'vue'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
-import { useNotificationStore } from '@/stores/notification'
 
 const fileStore = useFileStore()
 const editorStore = useEditorStore()

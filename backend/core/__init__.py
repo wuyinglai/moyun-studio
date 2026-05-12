@@ -4,7 +4,7 @@ from .exceptions import (
     MoyunException,
     ProjectError,
     ProjectNotFoundError,
-    FileError,
+    MoyunFileError,
     FileNotFoundError,
     TemplateError,
     TemplateNotFoundError,
@@ -13,6 +13,7 @@ from .exceptions import (
     TaskNotFoundError,
     ValidationError,
     ResourceNotFoundError,
+    RateLimitError,
 )
 from .event_bus import EventBus, EventTypes
 from .prompt_engine import PromptEngine
@@ -21,7 +22,7 @@ __all__ = [
     "MoyunException",
     "ProjectError",
     "ProjectNotFoundError",
-    "FileError",
+    "MoyunFileError",
     "FileNotFoundError",
     "TemplateError",
     "TemplateNotFoundError",
@@ -30,6 +31,7 @@ __all__ = [
     "TaskNotFoundError",
     "ValidationError",
     "ResourceNotFoundError",
+    "RateLimitError",
     "EventBus",
     "EventTypes",
     "PromptEngine",

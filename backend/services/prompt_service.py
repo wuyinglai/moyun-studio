@@ -37,11 +37,18 @@ class PromptEngineService(PromptEngineInterface):
 
     async def render(
         self,
-        category: str,
-        template_type: str,
+        prompt_type: str,
         variables: dict[str, Any]
     ) -> str:
-        """渲染模板"""
+        """渲染模板（prompt_type格式: category/template_type）"""
+        # 解析 prompt_type
+        parts = prompt_type.split("/", 1)
+        if len(parts) == 2:
+            category, template_type = parts
+        else:
+            category = "generate"
+            template_type = prompt_type
+        
         # 解析引用
         resolved = await self._resolve_variables(variables)
 
@@ -62,24 +69,32 @@ class PromptEngineService(PromptEngineInterface):
 
         resolved = {}
         for key, value in variables.items():
-            if isinstance(value, str) and self.REFERENCE_PATTERN.match(value):
-                file_path = value[2:-1]
-                try:
-                    content, _ = await self._file_service.read_file(file_path)
-                    resolved[key] = content
-                except Exception:
+            if isinstance(value, str):
+                match = self.REFERENCE_PATTERN.search(value)
+                if match:
+                    file_path = match.group(1)
+                    try:
+                        content, _ = await self._file_service.read_file(file_path)
+                        resolved[key] = content
+                    except Exception:
+                        resolved[key] = value
+                else:
                     resolved[key] = value
             elif isinstance(value, dict):
                 resolved[key] = await self._resolve_variables(value)
             elif isinstance(value, list):
                 resolved_list = []
                 for v in value:
-                    if isinstance(v, str) and self.REFERENCE_PATTERN.match(v):
-                        file_path = v[2:-1]
-                        try:
-                            content, _ = await self._file_service.read_file(file_path)
-                            resolved_list.append(content)
-                        except Exception:
+                    if isinstance(v, str):
+                        match = self.REFERENCE_PATTERN.search(v)
+                        if match:
+                            file_path = match.group(1)
+                            try:
+                                content, _ = await self._file_service.read_file(file_path)
+                                resolved_list.append(content)
+                            except Exception:
+                                resolved_list.append(v)
+                        else:
                             resolved_list.append(v)
                     else:
                         resolved_list.append(v)
@@ -183,4 +198,6 @@ class PromptEngineService(PromptEngineInterface):
             enc = tiktoken.encoding_for_model("gpt-4")
             return len(enc.encode(text))
         except Exception:
-            return len(text) // 4
+            chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+            other_chars = len(text) - chinese_chars
+            return int(chinese_chars * 0.5 + other_chars * 0.25)

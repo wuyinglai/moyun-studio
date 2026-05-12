@@ -167,10 +167,9 @@ async def create_backup(
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    backup_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-    backup_path = _ensure_backup_dir(project_dir) / backup_id
-
     # 创建备份
+    backup_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    backup_path = _ensure_backup_dir(project_dir) / backup_id
     _create_backup_snapshot(project_dir, backup_path)
 
     # 写入 meta.json

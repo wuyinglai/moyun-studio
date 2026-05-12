@@ -7,6 +7,8 @@ TaskQueue只负责状态管理，TaskExecutor负责具体执行。
 from typing import Any, TYPE_CHECKING
 import asyncio
 
+from backend.core.exceptions import ContextLengthError
+
 if TYPE_CHECKING:
     from backend.services.base import LLMServiceInterface, FileServiceInterface, EventBusInterface
 
@@ -42,7 +44,7 @@ class TaskExecutor:
         template = f"{task['template_category']}/{task['template_type']}"
 
         try:
-            await self.event_bus.publish("task_started", {
+            await self.event_bus.publish("task:started", {
                 "task_id": task_id,
                 "template": template
             })
@@ -57,7 +59,7 @@ class TaskExecutor:
 
             token_count = await self.llm.count_tokens(rendered_prompt)
             if token_count > 128000:
-                raise ValueError(f"Context too long: {token_count} tokens")
+                raise ContextLengthError(token_count, 128000)
 
             generated_content = await self._generate_content(
                 rendered_prompt,
@@ -78,7 +80,7 @@ class TaskExecutor:
                 "target_file": task.get("target_file")
             }
 
-            await self.event_bus.publish("task_completed", {
+            await self.event_bus.publish("task:completed", {
                 "task_id": task_id,
                 "result": result
             })
@@ -86,7 +88,7 @@ class TaskExecutor:
             return result
 
         except Exception as e:
-            await self.event_bus.publish("task_failed", {
+            await self.event_bus.publish("task:failed", {
                 "task_id": task_id,
                 "error": str(e)
             })
@@ -102,7 +104,8 @@ class TaskExecutor:
         from backend.core.prompt_engine import PromptEngine
 
         engine = PromptEngine(file_service=self.file_service)
-        return await engine.render(category, template_type, variables)
+        prompt_type = f"{category}/{template_type}"
+        return await engine.render(prompt_type, variables)
 
     async def _generate_content(
         self,

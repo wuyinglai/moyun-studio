@@ -43,7 +43,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { FileNode, useFileStore } from '@/stores/file'
+import { useFileStore } from '@/stores/file'
+import type { FileNode } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 
 const props = defineProps<{
@@ -95,7 +96,7 @@ const iconClass = computed(() => {
 })
 
 const isActive = computed(() => {
-  return editorStore.currentFile === props.node.path
+  return fileStore.currentFile?.path === props.node.path
 })
 
 const isDirty = computed(() => {

@@ -15,12 +15,10 @@ import {
   lineNumbers,
   highlightActiveLine,
   drawSelection,
-  lineWrapping,
 } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
-import { oneDark } from '@codemirror/theme-one-dark'
 
 const props = defineProps<{
   content: string
@@ -79,7 +77,7 @@ function createEditor(content: string) {
     syntaxHighlighting(defaultHighlightStyle),
     moyunTheme,
     keymap.of([...defaultKeymap, ...historyKeymap]),
-    lineWrapping,
+    EditorView.lineWrapping,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         emit('change', update.state.doc.toString())

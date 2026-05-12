@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useFileStore } from './file'
+import { countWords } from '@/utils/wordCount'
 
 export const useEditorStore = defineStore('editor', () => {
   const contents = ref<Record<string, string>>({})
-  const frontmatter = ref<Record<string, Record<string, unknown>>({})
+  const frontmatter = ref<Record<string, Record<string, unknown>>>({})
   const currentFilePath = ref<string | null>(null)
   const isDirty = computed(() => {
     const fileStore = useFileStore()
@@ -30,18 +31,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   function updateWordCount(path: string) {
     const content = contents.value[path] || ''
-    // 去除 markdown 格式字符后统计字数
-    const text = content
-      .replace(/#/g, '')
-      .replace(/\*/g, '')
-      .replace(/_/g, '')
-      .replace(/~/g, '')
-      .replace(/\[/g, '')
-      .replace(/\]/g, '')
-      .replace(/\(/g, '')
-      .replace(/\)/g, '')
-      .trim()
-    wordCount.value = text.length
+    wordCount.value = countWords(content)
   }
 
   function clearFile(path: string) {

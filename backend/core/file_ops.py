@@ -6,6 +6,8 @@
 import logging
 from pathlib import Path
 from typing import Any
+import shutil
+import json
 
 import aiofiles
 import frontmatter
@@ -53,7 +55,7 @@ class FileService:
 
         if file_path.suffix == ".md":
             post = frontmatter.loads(content)
-            return post.content, dict(post) if post.metadata else None
+            return post.content, dict(post.metadata) if post.metadata else None
 
         return content, None
 
@@ -96,7 +98,6 @@ class FileService:
         """删除目录"""
         dir_path = self._resolve_path(relative_path)
         if dir_path.exists() and dir_path.is_dir():
-            import shutil
             shutil.rmtree(dir_path)
 
     async def exists(self, relative_path: str) -> bool:
@@ -181,7 +182,6 @@ class FileService:
         """获取项目信息"""
         info_path = self._resolve_path(f"{project_path}/.project.json")
         if info_path.exists():
-            import json
             async with aiofiles.open(info_path, "r") as f:
                 return json.loads(await f.read())
         return None

@@ -2,7 +2,6 @@
  * 文件服务 - 封装 /api/file 和 /api/tree 相关操作
  */
 import api from './api'
-import type { FileNode, FileTree, FileContent } from '@/types/file'
 
 export const fileService = {
   /** 获取项目文件树 */

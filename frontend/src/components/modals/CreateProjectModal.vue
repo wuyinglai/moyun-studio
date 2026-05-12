@@ -207,7 +207,6 @@ import { useFileStore } from '@/stores/file'
 const wizard = useProjectWizard()
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
-const fileStore = useFileStore()
 
 // 监听 wizard 步骤变化，step=2 时自动触发大纲生成
 watch(
@@ -254,11 +253,6 @@ const createdProjectName = computed(() => projectStore.currentProject?.name || '
 
 async function startGenerate() {
   await wizard.generateBookIdea()
-}
-
-async function startGenerateOutline() {
-  if (!projectStore.currentProject) return
-  await wizard.generateOutline(projectStore.currentProject.id)
 }
 
 async function proceedToOutline() {

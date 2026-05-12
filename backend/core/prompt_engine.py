@@ -61,20 +61,26 @@ class PromptEngine:
 
     async def render(
         self,
-        category: str,
-        template_type: str,
+        prompt_type: str,
         variables: dict[str, Any]
     ) -> str:
         """渲染模板
 
         Args:
-            category: 模板类别
-            template_type: 模板类型
+            prompt_type: Prompt类型，格式为 category/template_type（如 generate/chapter）
             variables: 渲染变量
 
         Returns:
             渲染后的字符串
         """
+        # 解析 prompt_type，支持 category/template_type 格式
+        parts = prompt_type.split("/", 1)
+        if len(parts) == 2:
+            category, template_type = parts
+        else:
+            category = "generate"
+            template_type = prompt_type
+        
         resolved_variables = await self._resolve_references(variables)
         template = self.load_template(category, template_type)
         return template.render(**resolved_variables)
@@ -89,20 +95,36 @@ class PromptEngine:
 
         resolved = {}
         for key, value in variables.items():
-            if isinstance(value, str) and self.REFERENCE_PATTERN.match(value):
-                file_path = value[2:-1]
-                try:
-                    content, _ = await self.file_service.read_file(file_path)
-                    resolved[key] = content
-                except Exception:
+            if isinstance(value, str):
+                match = self.REFERENCE_PATTERN.search(value)
+                if match:
+                    file_path = match.group(1)
+                    try:
+                        content, _ = await self.file_service.read_file(file_path)
+                        resolved[key] = content
+                    except Exception:
+                        resolved[key] = value
+                else:
                     resolved[key] = value
             elif isinstance(value, dict):
                 resolved[key] = await self._resolve_references(value)
             elif isinstance(value, list):
-                resolved[key] = [
-                    await self._resolve_references({k: v}) if isinstance(v, str) and self.REFERENCE_PATTERN.match(v) else v
-                    for v in value
-                ]
+                resolved_list = []
+                for v in value:
+                    if isinstance(v, str):
+                        match = self.REFERENCE_PATTERN.search(v)
+                        if match:
+                            file_path = match.group(1)
+                            try:
+                                content, _ = await self.file_service.read_file(file_path)
+                                resolved_list.append(content)
+                            except Exception:
+                                resolved_list.append(v)
+                        else:
+                            resolved_list.append(v)
+                    else:
+                        resolved_list.append(v)
+                resolved[key] = resolved_list
             else:
                 resolved[key] = value
 
@@ -114,9 +136,14 @@ class PromptEngine:
 
     async def estimate_tokens(self, text: str) -> int:
         """估算token数"""
-        import tiktoken
-        enc = tiktoken.encoding_for_model("gpt-4")
-        return len(enc.encode(text))
+        try:
+            import tiktoken
+            enc = tiktoken.encoding_for_model("gpt-4")
+            return len(enc.encode(text))
+        except Exception:
+            chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+            other_chars = len(text) - chinese_chars
+            return int(chinese_chars * 0.5 + other_chars * 0.25)
 
     def get_template_path(self, category: str, template_type: str) -> Path:
         """获取模板文件路径"""

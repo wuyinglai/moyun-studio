@@ -11,7 +11,7 @@ from typing import Any, AsyncGenerator
 import litellm
 
 from backend.config import get_settings
-from backend.core.exceptions import MoyunException, LLMError
+from backend.core.exceptions import LLMError
 from backend.services.base import LLMServiceInterface
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class LLMService(LLMServiceInterface):
                 kwargs["api_base"] = self.api_base
 
         try:
-            response = await litellm.acompletion(**kwargs)
+            response = litellm.acompletion(**kwargs)
 
             if stream:
                 async for chunk in response:
@@ -100,7 +100,8 @@ class LLMService(LLMServiceInterface):
                     if content:
                         yield content
             else:
-                yield response.choices[0].message.content
+                result = await response
+                yield result.choices[0].message.content
 
         except Exception as e:
             logger.error(
@@ -130,8 +131,9 @@ class LLMService(LLMServiceInterface):
             enc = tiktoken.encoding_for_model(self.model)
             return len(enc.encode(text))
         except Exception:
-            # 回退到简单估算
-            return len(text) // 4
+            chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+            other_chars = len(text) - chinese_chars
+            return int(chinese_chars * 0.5 + other_chars * 0.25)
 
     async def test_connection(self) -> dict[str, Any]:
         """测试LLM连接"""

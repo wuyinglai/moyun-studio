@@ -3,7 +3,8 @@
  * 使用 hotkeys-js 库
  */
 import { onBeforeUnmount } from 'vue'
-import hotkeys, { KeyHandler } from 'hotkeys-js'
+import hotkeys from 'hotkeys-js'
+import type { KeyHandler } from 'hotkeys-js'
 
 export interface HotkeyBinding {
   key: string
