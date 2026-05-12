@@ -1,0 +1,142 @@
+/* ===== CSS 变量定义（默认：深邃夜紫 M0801）===== */
+:root {
+  /* 背景色 */
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-card: #0f3460;
+
+  /* 强调色 */
+  --accent-primary: #3b82f6;
+  --accent-success: #4ade80;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+
+  /* 文字色 */
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* 边框色 */
+  --border-color: #334155;
+
+  /* 圆角 */
+  --radius-sm: 6px;   /* 输入框 M0902 */
+  --radius-md: 8px;   /* 按钮 M0902 */
+  --radius-lg: 12px;  /* 卡片 M0902 */
+  --radius-xl: 16px;  /* 模态框 M0902 */
+
+  /* 字体 */
+  --font-family-ch: "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-family-en: "Inter", "SF Pro", sans-serif;
+  --font-family-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* ===== 主题：墨绿护眼（M0802）===== */
+[data-theme="green"] {
+  --bg-primary: #1a1f1a;
+  --bg-secondary: #242a24;
+  --bg-card: #2d362d;
+  --accent-primary: #6ee7b7;
+  --accent-success: #34d399;
+  --text-primary: #e8f5e9;
+  --text-secondary: #a5d6a7;
+  --border-color: #2d362d;
+}
+
+/* ===== 主题：经典炭灰（M0803）===== */
+[data-theme="dark-gray"] {
+  --bg-primary: #1f1f1f;
+  --bg-secondary: #2d2d2d;
+  --bg-card: #3d3d3d;
+  --accent-primary: #60a5fa;
+  --accent-success: #4ade80;
+  --text-primary: #f5f5f5;
+  --text-secondary: #b0b0b0;
+  --border-color: #3d3d3d;
+}
+
+/* ===== 基础样式重置 ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: var(--font-family-ch);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100vh;
+  overflow: hidden;
+}
+
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent-primary);
+}
+
+/* 滚动条基础样式（会被 scrollbar.css 覆盖）*/
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
