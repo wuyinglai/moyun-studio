@@ -206,8 +206,8 @@ class SSEService {
 
       case 'file-renamed':
         // 文件重命名 - 刷新文件树
-        if (data.oldPath && data.newPath) {
-          fileStore.renameFile(data.oldPath, data.newPath)
+        if (data.oldPath && data.newPath && data.projectId) {
+          fileStore.renameFile(data.projectId, data.oldPath, data.newPath)
         }
         break
 

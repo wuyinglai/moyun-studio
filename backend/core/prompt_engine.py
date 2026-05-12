@@ -5,6 +5,7 @@
 """
 
 import re
+import tiktoken
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
@@ -137,7 +138,6 @@ class PromptEngine:
     async def estimate_tokens(self, text: str) -> int:
         """估算token数"""
         try:
-            import tiktoken
             enc = tiktoken.encoding_for_model("gpt-4")
             return len(enc.encode(text))
         except Exception:

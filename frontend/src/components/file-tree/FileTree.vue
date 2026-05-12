@@ -86,27 +86,29 @@ async function handleFileClick(node: FileNode) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--bg-secondary);
 }
 
 .tree-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
 }
 
 .tree-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .btn-icon {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -114,12 +116,12 @@ async function handleFileClick(node: FileNode) {
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: var(--bg-card);
-    color: var(--text-primary);
+    background: var(--bg-hover);
+    color: var(--accent-primary);
   }
 
   .spinning {
@@ -139,15 +141,15 @@ async function handleFileClick(node: FileNode) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
   color: var(--text-muted);
   font-size: 13px;
-  padding: 20px;
+  padding: 32px;
   text-align: center;
 
   i {
-    font-size: 32px;
-    opacity: 0.5;
+    font-size: 36px;
+    opacity: 0.4;
   }
 }
 

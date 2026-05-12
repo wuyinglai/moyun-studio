@@ -6,7 +6,7 @@ import api from './api'
 export const fileService = {
   /** 获取项目文件树 */
   getTree(projectId: string) {
-    return api.get<FileTree>('/tree', {
+    return api.get<{ nodes: any[] }>('/tree', {
       params: { project_id: projectId },
     })
   },

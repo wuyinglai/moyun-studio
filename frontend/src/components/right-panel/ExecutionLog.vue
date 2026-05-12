@@ -24,7 +24,7 @@
 import { ref, watch, nextTick } from 'vue'
 import type { ExecutionLog } from '@/types/task'
 
-defineProps<{
+const props = defineProps<{
   logs: ExecutionLog[]
 }>()
 
@@ -48,9 +48,8 @@ function levelLabel(level: string): string {
   return map[level] || level.toUpperCase()
 }
 
-// 新日志到达时自动滚动到底部
 watch(
-  () => logs.length,
+  () => props.logs.length,
   () => {
     nextTick(() => {
       if (containerRef.value) {

@@ -70,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
@@ -105,12 +105,25 @@ async function toggleThinking() {
 .app-header {
   display: flex;
   align-items: center;
-  height: 52px;
-  padding: 0 16px;
-  background: var(--bg-secondary);
+  height: 60px;
+  padding: 0 24px;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   gap: 16px;
+  position: relative;
+  backdrop-filter: blur(10px);
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+    opacity: 0.3;
+  }
 }
 
 .header-left {
@@ -123,18 +136,24 @@ async function toggleThinking() {
 .logo {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 18px;
   font-weight: 600;
   color: var(--accent-primary);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.02);
+  }
 
   .fa-feather-pointed {
-    font-size: 20px;
+    font-size: 24px;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-}
-
-.logo-text {
-  font-family: var(--font-family-ch);
 }
 
 .project-name {
@@ -164,23 +183,39 @@ async function toggleThinking() {
 .llm-status {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  transition: background 0.2s;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  transition: all 0.25s ease;
 
   &:hover {
-    background: var(--bg-card);
+    border-color: var(--accent-primary);
   }
 
   .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: var(--accent-danger);
+    background: var(--accent-error);
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: inherit;
+      animation: pulse 2s ease-out infinite;
+    }
   }
 
   &--connected .status-dot {
@@ -191,7 +226,7 @@ async function toggleThinking() {
 .llm-generating {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--accent-primary);
 
@@ -211,31 +246,32 @@ async function toggleThinking() {
   }
 
   .toggle-btn {
-    width: 36px;
-    height: 20px;
-    border-radius: 10px;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     position: relative;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.25s ease;
 
     .toggle-knob {
       position: absolute;
       top: 2px;
       left: 2px;
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       background: var(--text-secondary);
-      transition: transform 0.2s, background 0.2s;
+      transition: transform 0.25s ease, background 0.25s ease;
     }
 
     &--on {
       background: var(--accent-primary);
+      border-color: var(--accent-primary);
 
       .toggle-knob {
-        transform: translateX(16px);
+        transform: translateX(18px);
         background: white;
       }
     }
@@ -246,24 +282,28 @@ async function toggleThinking() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
   cursor: pointer;
+  border: none;
+  position: relative;
+  overflow: hidden;
 
   &:active {
     transform: scale(0.97);
   }
 
   &-primary {
-    background: var(--accent-primary);
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     color: white;
-    border: none;
+    box-shadow: 0 4px 14px rgba(107, 140, 255, 0.3);
 
     &:hover {
-      filter: brightness(1.1);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(107, 140, 255, 0.4);
     }
   }
 
@@ -273,14 +313,15 @@ async function toggleThinking() {
     border: 1px solid var(--border-color);
 
     &:hover {
+      background: var(--bg-hover);
       border-color: var(--accent-primary);
       color: var(--accent-primary);
     }
   }
 
   &-icon {
-    width: 34px;
-    height: 34px;
+    width: 42px;
+    height: 42px;
     padding: 0;
     display: inline-flex;
     align-items: center;
@@ -288,11 +329,11 @@ async function toggleThinking() {
     background: transparent;
     color: var(--text-secondary);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 12px;
 
     &:hover {
       background: var(--bg-card);
-      color: var(--text-primary);
+      color: var(--accent-primary);
     }
   }
 }

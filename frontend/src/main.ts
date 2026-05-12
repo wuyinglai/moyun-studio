@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPersistedstate from 'pinia-plugin-persistedstate'
+import Antd from 'ant-design-vue'
+import 'ant-design-vue/dist/reset.css'
 import router from './router'
 import './assets/styles/base.css'
 import App from './App.vue'
@@ -12,8 +14,8 @@ pinia.use(piniaPersistedstate)
 const app = createApp(App)
 app.use(pinia)
 app.use(router)
+app.use(Antd)
 
-// 初始化主题（读取 localStorage 并应用到 DOM）
 const { initTheme } = useTheme()
 initTheme()
 

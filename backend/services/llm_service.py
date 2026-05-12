@@ -5,9 +5,11 @@
 
 import json
 import logging
+import tiktoken
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
+import backend
 import litellm
 
 from backend.config import get_settings
@@ -28,7 +30,6 @@ class LLMService(LLMServiceInterface):
         """加载LLM配置"""
         if self._config is None:
             # 尝试从项目根目录读取配置
-            import backend
             root_dir = Path(backend.__file__).parent.parent
             config_path = root_dir / ".config.json"
             if config_path.exists():
@@ -127,7 +128,6 @@ class LLMService(LLMServiceInterface):
     async def count_tokens(self, text: str) -> int:
         """计算token数"""
         try:
-            import tiktoken
             enc = tiktoken.encoding_for_model(self.model)
             return len(enc.encode(text))
         except Exception:

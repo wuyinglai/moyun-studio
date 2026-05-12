@@ -4,6 +4,8 @@
 """
 
 import logging
+import shutil
+import yaml
 from pathlib import Path
 from typing import Any
 
@@ -73,7 +75,6 @@ class FileService:
 
         # 组装内容
         if frontmatter:
-            import yaml
             fm_content = yaml.dump(frontmatter, allow_unicode=True, default_flow_style=False)
             full_content = f"---\n{fm_content}---\n\n{content}"
         else:
@@ -94,7 +95,6 @@ class FileService:
             if path.is_file():
                 path.unlink()
             else:
-                import shutil
                 shutil.rmtree(path)
 
     async def list_directory(self, relative_path: str = "") -> list[dict]:

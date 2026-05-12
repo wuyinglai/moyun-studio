@@ -7,7 +7,6 @@
       <ChatInput v-model="inputText" @send="sendMessage" :disabled="isStreaming" />
       <div class="chat-actions">
         <button v-if="isStreaming" class="btn-cancel" @click="cancelStream">取消生成</button>
-        <button class="btn-clear" @click="clearMessages">清空</button>
       </div>
     </div>
   </div>
@@ -109,40 +108,64 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--bg-primary);
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  padding: 8px;
 }
 
 .chat-input-area {
   border-top: 1px solid var(--border-color);
-  padding: 12px;
+  padding: 16px;
+  background: var(--bg-card);
 }
 
 .chat-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .btn-cancel {
-  padding: 4px 12px;
+  padding: 8px 16px;
   background: var(--accent-error);
   color: white;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 .btn-clear {
-  padding: 4px 12px;
+  padding: 8px 16px;
   background: transparent;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   cursor: pointer;
   color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+  }
 }
 </style>

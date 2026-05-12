@@ -3,6 +3,7 @@
 创建、恢复快照，对比版本差异。
 """
 
+import difflib
 import json
 import uuid
 from datetime import datetime
@@ -131,7 +132,6 @@ class SnapshotManager:
         if not snap1 or not snap2:
             raise ResourceNotFoundError(resource="快照", resource_id=f"{snapshot_id1}或{snapshot_id2}")
 
-        import difflib
         diff = difflib.unified_diff(
             snap1["content"].splitlines(),
             snap2["content"].splitlines(),

@@ -10,14 +10,19 @@ import json
 import logging
 import litellm
 import re
+from pathlib import Path
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from backend.config import Settings, get_settings
+from backend.core.exceptions import ProjectNotFoundError
 from backend.core.llm import (
     load_llm_config_from_workspace,
     normalize_model_for_provider,
     build_litellm_kwargs,
 )
+from backend.api.projects import _load_meta, _project_info, _meta_path
+from backend.core.prompt_engine import PromptEngine
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     BookIdeaRequest,
@@ -161,13 +166,8 @@ async def confirm_outline(
     settings: Settings = Depends(get_settings),
 ):
     """Wizard 步骤3：确认大纲并创建目录结构"""
-    from pathlib import Path
-    from backend.api.projects import _load_meta, _project_info, _meta_path
-    from datetime import datetime, timezone
-
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
-        from backend.core.exceptions import ProjectNotFoundError
         raise ProjectNotFoundError(project_id)
 
     logger.info("确认大纲", extra={"project_id": project_id})
@@ -178,7 +178,6 @@ async def confirm_outline(
 
     # 解析章节并创建目录
     chapters_dir = project_dir / "chapters"
-    import re
     chapter_pattern = r'#\s*第(\d+)章\s+(.+?)(?=\n#|\Z)'
 
     for match in re.finditer(chapter_pattern, req.outline, re.DOTALL):

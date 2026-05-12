@@ -76,7 +76,7 @@ function createEditor(content: string) {
     markdown(),
     syntaxHighlighting(defaultHighlightStyle),
     moyunTheme,
-    keymap.of([...defaultKeymap, ...historyKeymap]),
+    keymap.of([...defaultKeymap, ...historyKeymap] as unknown as import('@codemirror/view').KeyBinding[]),
     EditorView.lineWrapping,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {

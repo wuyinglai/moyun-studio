@@ -8,6 +8,7 @@
 import difflib
 import json
 import logging
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -126,7 +127,6 @@ def _get_revision_log_file(revision_dir: Path, log_id: str) -> Path | None:
 
 def _count_words(text: str) -> int:
     """统计字数（中英文混合）"""
-    import re
     # 匹配中文字符和英文单词
     chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
     english_words = len(re.findall(r'[a-zA-Z]+', text))

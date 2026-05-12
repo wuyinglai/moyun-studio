@@ -14,13 +14,15 @@ from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
-
 from backend.config import Settings, get_settings
 from backend.core.llm import (
     load_llm_config_from_workspace,
     normalize_model_for_provider,
     build_litellm_kwargs,
 )
+from backend.core.file_ops import FileService
+from backend.core.prompt_engine import PromptEngine
+import litellm
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import GenerateRequest, ChatRequest
 
@@ -51,9 +53,6 @@ async def generate(
 
         try:
             # 加载 Prompt 模板
-            from backend.core.file_ops import FileService
-            from backend.core.prompt_engine import PromptEngine
-
             file_service = FileService(settings.projects_path)
             prompt_engine = PromptEngine(settings.prompts_path, file_service)
 
@@ -78,8 +77,7 @@ async def generate(
                 prompt_text = f"请根据以下内容进行创作：\n\n{content}"
 
             # 调用 LLM
-            import litellm
-
+            
             llm_cfg = load_llm_config_from_workspace(settings)
             model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
             thinking = llm_cfg.get("thinking", settings.llm_thinking)
@@ -146,8 +144,7 @@ async def chat(
         yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
 
         try:
-            import litellm
-
+            
             llm_cfg = load_llm_config_from_workspace(settings)
             model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
 

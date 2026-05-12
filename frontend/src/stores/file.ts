@@ -119,11 +119,11 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  function handleFileCreated(path: string, name?: string) {
+  function handleFileCreated(_path: string, _name?: string) {
     refreshTree()
   }
 
-  function handleDirectoryCreated(path: string, name?: string) {
+  function handleDirectoryCreated(_path: string, _name?: string) {
     refreshTree()
   }
 

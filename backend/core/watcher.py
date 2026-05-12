@@ -7,6 +7,9 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
 if TYPE_CHECKING:
     from backend.core.event_bus import EventBus
 
@@ -30,11 +33,8 @@ class FileWatcher:
 
     def start(self) -> None:
         """启动监听"""
-        from watchdog.observers import Observer
-        from watchdog.events import FileSystemEventHandler
-
         class Handler(FileSystemEventHandler):
-            def __init__(watcher: FileWatcher):
+            def __init__(self, watcher: FileWatcher):
                 super().__init__()
                 self._watcher = watcher
 
@@ -67,8 +67,7 @@ class FileWatcher:
                     )
 
         self._observer = Observer()
-        handler = Handler()
-        handler._watcher = self
+        handler = Handler(self)
         self._observer.schedule(handler, str(self.workspace), recursive=True)
         self._observer.start()
 

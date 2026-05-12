@@ -5,6 +5,7 @@
 
 import json
 import logging
+import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -185,8 +186,6 @@ class ProjectService:
 
     async def delete_project(self, project_id: str) -> bool:
         """删除项目"""
-        import shutil
-
         project_path = self.projects_path / project_id
         if not project_path.exists():
             logger.warning(f"项目不存在，无法删除: {project_id}")

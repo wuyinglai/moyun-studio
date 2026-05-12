@@ -20,24 +20,14 @@ export function useChat() {
     isSending.value = true
 
     try {
-      chatStore.addMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        content,
-        timestamp: Date.now(),
-      })
+      chatStore.addMessage('user', content)
 
       const response = await api.post<{ reply: string }>('/chat', {
         project_id: projectStore.currentProject.id,
         message: content,
       })
 
-      chatStore.addMessage({
-        id: crypto.randomUUID(),
-        role: 'ai',
-        content: response?.reply || '',
-        timestamp: Date.now(),
-      })
+      chatStore.addMessage('ai', response?.reply || '')
     } finally {
       isSending.value = false
     }
@@ -51,12 +41,7 @@ export function useChat() {
     isSending.value = true
 
     try {
-      chatStore.addMessage({
-        id: crypto.randomUUID(),
-        role: 'user',
-        content,
-        timestamp: Date.now(),
-      })
+      chatStore.addMessage('user', content)
 
       await api.post('/chat/stream', {
         project_id: projectStore.currentProject?.id,

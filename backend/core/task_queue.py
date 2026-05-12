@@ -6,8 +6,11 @@ TaskQueue只负责状态管理，TaskExecutor负责具体执行。
 
 from typing import Any, TYPE_CHECKING
 import asyncio
+import uuid
+from datetime import datetime
 
 from backend.core.exceptions import ContextLengthError
+from backend.core.prompt_engine import PromptEngine
 
 if TYPE_CHECKING:
     from backend.services.base import LLMServiceInterface, FileServiceInterface, EventBusInterface
@@ -101,8 +104,6 @@ class TaskExecutor:
         variables: dict[str, Any]
     ) -> str:
         """渲染Prompt模板"""
-        from backend.core.prompt_engine import PromptEngine
-
         engine = PromptEngine(file_service=self.file_service)
         prompt_type = f"{category}/{template_type}"
         return await engine.render(prompt_type, variables)
@@ -137,9 +138,6 @@ class TaskQueue:
 
     async def enqueue(self, task_data: dict) -> str:
         """添加任务到队列"""
-        import uuid
-        from datetime import datetime
-
         task_id = str(uuid.uuid4())
         task = {
             "task_id": task_id,
@@ -165,14 +163,14 @@ class TaskQueue:
         """标记任务开始执行"""
         if task_id in self._tasks:
             self._tasks[task_id]["status"] = "running"
-            self._tasks[task_id]["started_at"] = __import__("datetime").datetime.now().isoformat()
+            self._tasks[task_id]["started_at"] = datetime.now().isoformat()
             self._running.add(task_id)
 
     async def complete_task(self, task_id: str, result: Any) -> None:
         """标记任务完成"""
         if task_id in self._tasks:
             self._tasks[task_id]["status"] = "completed"
-            self._tasks[task_id]["completed_at"] = __import__("datetime").datetime.now().isoformat()
+            self._tasks[task_id]["completed_at"] = datetime.now().isoformat()
             self._tasks[task_id]["result"] = result
             self._running.discard(task_id)
 
@@ -180,7 +178,7 @@ class TaskQueue:
         """标记任务失败"""
         if task_id in self._tasks:
             self._tasks[task_id]["status"] = "failed"
-            self._tasks[task_id]["completed_at"] = __import__("datetime").datetime.now().isoformat()
+            self._tasks[task_id]["completed_at"] = datetime.now().isoformat()
             self._tasks[task_id]["error"] = error
             self._running.discard(task_id)
 
@@ -190,7 +188,7 @@ class TaskQueue:
             task = self._tasks[task_id]
             if task["status"] in ("pending", "running"):
                 task["status"] = "cancelled"
-                task["completed_at"] = __import__("datetime").datetime.now().isoformat()
+                task["completed_at"] = datetime.now().isoformat()
                 self._running.discard(task_id)
                 return True
         return False

@@ -13,6 +13,8 @@ import logging
 import time
 from pathlib import Path
 
+import litellm
+
 from fastapi import APIRouter, Depends, Request
 
 from backend.config import Settings, get_settings
@@ -134,8 +136,6 @@ async def test_connection(
     api_base = cfg.get("apiUrl", settings.llm_api_base) or None
 
     try:
-        import litellm
-
         # 对于 deepseek，使用完整模型名
         if api_type == "deepseek" and not model.startswith("deepseek/"):
             model = "deepseek/" + model

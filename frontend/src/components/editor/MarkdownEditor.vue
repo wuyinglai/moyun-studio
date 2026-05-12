@@ -1,13 +1,11 @@
 <template>
   <div class="markdown-editor" ref="editorContainer">
-    <!-- 空状态 -->
     <div v-if="!fileStore.currentFile" class="editor-empty">
       <i class="fa-solid fa-file-lines"></i>
       <h3>暂无打开的文件</h3>
       <p>从左侧文件树选择一个文件开始编辑</p>
     </div>
 
-    <!-- 编辑器 -->
     <div v-show="fileStore.currentFile" ref="codemirrorEl" class="codemirror-container"></div>
   </div>
 </template>
@@ -33,7 +31,6 @@ const codemirrorEl = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
-// 主题样式
 const moyunTheme = EditorView.theme({
   '&': {
     height: '100%',
@@ -42,19 +39,20 @@ const moyunTheme = EditorView.theme({
     fontSize: '15px',
   },
   '.cm-content': {
-    fontFamily: "'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
-    lineHeight: '1.8',
-    padding: '20px',
+    fontFamily: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+    lineHeight: '1.85',
+    padding: '24px 32px',
     caretColor: 'var(--accent-primary)',
   },
   '.cm-cursor': {
     borderLeftColor: 'var(--accent-primary)',
+    borderLeftWidth: '2px',
   },
   '.cm-activeLine': {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'rgba(107, 140, 255, 0.08)',
   },
   '.cm-activeLineGutter': {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: 'rgba(107, 140, 255, 0.08)',
   },
   '.cm-gutters': {
     backgroundColor: 'var(--bg-secondary)',
@@ -62,13 +60,14 @@ const moyunTheme = EditorView.theme({
     borderRight: '1px solid var(--border-color)',
   },
   '.cm-lineNumbers .cm-gutterElement': {
-    padding: '0 12px 0 8px',
+    padding: '0 14px 0 10px',
+    fontSize: '13px',
   },
   '.cm-selectionBackground': {
-    backgroundColor: 'rgba(59, 130, 246, 0.3) !important',
+    backgroundColor: 'rgba(107, 140, 255, 0.25) !important',
   },
   '&.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'rgba(59, 130, 246, 0.3) !important',
+    backgroundColor: 'rgba(107, 140, 255, 0.25) !important',
   },
   '.cm-scroller': {
     overflow: 'auto',
@@ -78,7 +77,6 @@ const moyunTheme = EditorView.theme({
 function createEditor(content: string) {
   if (!codemirrorEl.value) return
 
-  // 销毁旧实例
   if (editorView) {
     editorView.destroy()
   }
@@ -108,7 +106,7 @@ function createEditor(content: string) {
       markdown(),
       syntaxHighlighting(defaultHighlightStyle),
       moyunTheme,
-      keymap.of([...defaultKeymap, ...historyKeymap]),
+      keymap.of([...defaultKeymap, ...historyKeymap] as unknown as import('@codemirror/view').KeyBinding[]),
       updateListener,
       EditorView.lineWrapping,
     ],
@@ -123,13 +121,10 @@ function createEditor(content: string) {
 function handleContentChange(content: string) {
   if (!fileStore.currentFile) return
 
-  // 更新 store
   editorStore.updateContent(fileStore.currentFile.path, content)
 
-  // 标记脏
   fileStore.markDirty(fileStore.currentFile.path)
 
-  // 防抖自动保存（3秒后）
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer)
   }
@@ -152,7 +147,6 @@ async function saveCurrentFile() {
   }
 }
 
-// 监听当前文件切换
 watch(
   () => fileStore.currentFile,
   async (file) => {
@@ -166,49 +160,7 @@ watch(
   }
 )
 
-// 监听格式化事件
-function handleFormatEvent(e: Event) {
-  const customEvent = e as CustomEvent<{ before: string; after: string }>
-  if (!editorView) return
-
-  const { before, after } = customEvent.detail
-  const { from, to } = editorView.state.selection.main
-  const selectedText = editorView.state.doc.sliceString(from, to)
-
-  editorView.dispatch({
-    changes: {
-      from,
-      to,
-      insert: before + selectedText + after,
-    },
-  })
-  editorView.focus()
-}
-
-// 监听插入事件
-function handleInsertEvent(e: Event) {
-  const customEvent = e as CustomEvent<string>
-  if (!editorView) return
-
-  const { from, to } = editorView.state.selection.main
-  editorView.dispatch({
-    changes: { from, to, insert: customEvent.detail },
-  })
-  editorView.focus()
-}
-
-// 监听 AI 生成事件
-function handleAIGenerateEvent() {
-  // 通知 ChatPanel 开始生成
-  window.dispatchEvent(new CustomEvent('chat:request-generate'))
-}
-
 onMounted(() => {
-  window.addEventListener('editor:format', handleFormatEvent)
-  window.addEventListener('editor:insert', handleInsertEvent)
-  window.addEventListener('editor:ai-generate', handleAIGenerateEvent)
-
-  // 初始创建
   if (fileStore.currentFile) {
     const content = editorStore.getContent(fileStore.currentFile.path) || ''
     createEditor(content)
@@ -216,10 +168,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('editor:format', handleFormatEvent)
-  window.removeEventListener('editor:insert', handleInsertEvent)
-  window.removeEventListener('editor:ai-generate', handleAIGenerateEvent)
-
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer)
   }
@@ -246,22 +194,27 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 20px;
   color: var(--text-muted);
+  padding: 40px;
 
   i {
-    font-size: 64px;
+    font-size: 72px;
     opacity: 0.3;
+    color: var(--accent-primary);
   }
 
   h3 {
     font-size: 18px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-secondary);
+    margin: 0;
   }
 
   p {
     font-size: 14px;
+    margin: 0;
+    opacity: 0.8;
   }
 }
 

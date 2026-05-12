@@ -17,6 +17,9 @@
     <!-- 内容区域 -->
     <div class="panel-content">
       <PromptPanel v-show="activeTab === 'prompt'" />
+      <StoryStatePanel v-show="activeTab === 'story'" />
+      <StyleGuidePanel v-show="activeTab === 'style'" />
+      <RecentContextPanel v-show="activeTab === 'context'" />
       <ExecutionPanel v-show="activeTab === 'execution'" />
     </div>
   </div>
@@ -26,11 +29,17 @@
 import { ref } from 'vue'
 import PromptPanel from './PromptPanel.vue'
 import ExecutionPanel from './ExecutionPanel.vue'
+import StoryStatePanel from '../global/StoryStatePanel.vue'
+import StyleGuidePanel from '../global/StyleGuidePanel.vue'
+import RecentContextPanel from '../global/RecentContextPanel.vue'
 
 const activeTab = ref('prompt')
 
 const tabs = [
-  { id: 'prompt', label: 'Prompt', icon: 'fa-solid fa-terminal' },
+  { id: 'prompt', label: '提示词', icon: 'fa-solid fa-terminal' },
+  { id: 'story', label: '故事状态', icon: 'fa-solid fa-book-open' },
+  { id: 'style', label: '文风指南', icon: 'fa-solid fa-feather' },
+  { id: 'context', label: '上下文', icon: 'fa-solid fa-clock-rotate-left' },
   { id: 'execution', label: '执行', icon: 'fa-solid fa-list-check' },
 ]
 </script>
@@ -44,36 +53,44 @@ const tabs = [
 
 .panel-tabs {
   display: flex;
+  padding: 8px;
+  gap: 6px;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .panel-tab {
   flex: 1;
+  min-width: max-content;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 12px;
+  padding: 10px 14px;
   font-size: 13px;
   cursor: pointer;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+  white-space: nowrap;
 
   i {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   &:hover {
     color: var(--text-primary);
-    background: var(--bg-card);
+    background: var(--bg-hover);
   }
 
   &.active {
-    color: var(--accent-primary);
-    border-bottom-color: var(--accent-primary);
+    color: white;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
 }
 

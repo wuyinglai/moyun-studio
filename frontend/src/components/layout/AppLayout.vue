@@ -1,6 +1,5 @@
 <template>
   <div class="app-layout">
-    <!-- Split.js 会在这三个 div 之间插入 gutter -->
     <div id="panel-left" class="panel-left">
       <FileTree />
     </div>
@@ -23,22 +22,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import Split from 'split.js'
-// CSS 已通过 index.html CDN 引入
 
-import FileTree from '@/components/file-tree/FileTree.vue'
-import EditorTabs from '@/components/editor/EditorTabs.vue'
-import EditorToolbar from '@/components/editor/EditorToolbar.vue'
-import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
-import ChatPanel from '@/components/chat/ChatPanel.vue'
-import RightPanel from '@/components/right-panel/RightPanel.vue'
+const FileTree = defineAsyncComponent(() => import('@/components/file-tree/FileTree.vue'))
+const EditorTabs = defineAsyncComponent(() => import('@/components/editor/EditorTabs.vue'))
+const EditorToolbar = defineAsyncComponent(() => import('@/components/editor/EditorToolbar.vue'))
+const MarkdownEditor = defineAsyncComponent(() => import('@/components/editor/MarkdownEditor.vue'))
+const ChatPanel = defineAsyncComponent(() => import('@/components/chat/ChatPanel.vue'))
+const RightPanel = defineAsyncComponent(() => import('@/components/right-panel/RightPanel.vue'))
 
-let hSplit: InstanceType<typeof Split> | null = null   // 水平分隔：左|中|右
-let vSplit: InstanceType<typeof Split> | null = null   // 垂直分隔：编辑区|聊天区
+let hSplit: any = null
+let vSplit: any = null
 
 onMounted(() => {
-  // 第一层：水平三栏（左 | 中 | 右）
   const savedSizes = localStorage.getItem('layout-sizes')
   const sizes = savedSizes ? JSON.parse(savedSizes) : [20, 55, 25]
 
@@ -51,7 +48,6 @@ onMounted(() => {
     }
   })
 
-  // 第二层：中间面板垂直分隔（编辑区 | 聊天区）
   const savedVSizes = localStorage.getItem('editor-chat-sizes')
   const vSizes = savedVSizes ? JSON.parse(savedVSizes) : [75, 25]
 
@@ -76,36 +72,73 @@ onBeforeUnmount(() => {
 .app-layout {
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
   background: var(--bg-primary);
   color: var(--text-primary);
+  display: flex;
 }
 
 .panel-left {
+  height: 100%;
   overflow-y: auto;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .panel-center {
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 
 .area-editor {
+  height: 100%;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .area-chat {
+  height: 100%;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   border-top: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
 }
 
 .panel-right {
+  height: 100%;
   overflow-y: auto;
   background: var(--bg-secondary);
-  border-left: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+:deep(.gutter) {
+  background-color: var(--border-color);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transition: background-color 0.2s;
+}
+
+:deep(.gutter:hover) {
+  background-color: var(--accent-primary);
+}
+
+:deep(.gutter.gutter-horizontal) {
+  cursor: col-resize;
+  width: 6px !important;
+}
+
+:deep(.gutter.gutter-vertical) {
+  cursor: row-resize;
+  height: 6px !important;
 }
 </style>

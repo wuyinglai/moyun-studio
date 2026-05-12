@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -20,10 +19,20 @@ export default defineConfig({
   },
   css: {
     preprocessorOptions: {
-      scss: {
-        // CSS 变量方案（base.css 中定义），SCSS 中通过 var() 引用
-        // 无需 additionalData
-      }
+      scss: {}
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('@codemirror')) return 'codemirror'
+          if (id.includes('ant-design-vue')) return 'antd'
+          if (id.includes('marked') || id.includes('dompurify')) return 'markup'
+          return undefined
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   }
 })

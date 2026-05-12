@@ -60,11 +60,24 @@ function formatTime(timestamp: number): string {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .chat-message {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   max-width: 100%;
+  padding: 12px 0;
+  animation: messageSlideIn 0.3s ease;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .role-user {
@@ -72,41 +85,45 @@ function formatTime(timestamp: number): string {
 }
 
 .message-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .role-user .message-avatar {
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   color: white;
 }
 
 .role-ai .message-avatar {
   background: var(--bg-card);
   color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .message-body {
   flex: 1;
   min-width: 0;
-  max-width: 80%;
+  max-width: 85%;
 }
 
 .role-user .message-body {
   align-items: flex-end;
+  display: flex;
+  flex-direction: column;
 }
 
 .message-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   font-size: 12px;
 }
 
@@ -116,23 +133,26 @@ function formatTime(timestamp: number): string {
 
 .message-role {
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .message-time {
   color: var(--text-muted);
   font-size: 11px;
+  opacity: 0.7;
 }
 
 .message-content {
-  padding: 10px 14px;
-  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  border-radius: 16px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   word-break: break-word;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .role-user .message-content {
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -140,34 +160,60 @@ function formatTime(timestamp: number): string {
 .role-ai .message-content {
   background: var(--bg-card);
   color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-bottom-left-radius: 4px;
 }
 
 .ai-content :deep(p:first-child) { margin-top: 0; }
 .ai-content :deep(p:last-child) { margin-bottom: 0; }
 .ai-content :deep(code) {
-  background: rgba(255,255,255,0.1);
-  padding: 1px 4px;
-  border-radius: 3px;
+  background: rgba(107, 140, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
   font-size: 0.9em;
+  color: var(--accent-primary);
+}
+.ai-content :deep(pre) {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid var(--border-color);
+}
+.ai-content :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  color: var(--text-primary);
+}
+.ai-content :deep(a) {
+  color: var(--accent-primary);
+  text-decoration: none;
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .message-thinking {
-  margin-top: 6px;
-  padding: 6px 10px;
+  margin-top: 8px;
+  padding: 10px 14px;
   background: var(--bg-secondary);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   font-size: 12px;
+  border: 1px dashed var(--border-color);
 }
 
 .thinking-label {
   color: var(--text-muted);
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-weight: 500;
 }
 
 .thinking-content {
   color: var(--text-secondary);
   white-space: pre-wrap;
+  font-family: var(--font-family-mono);
+  opacity: 0.9;
 }
 </style>

@@ -1,58 +1,101 @@
-/* ===== CSS 变量定义（默认：深邃夜紫 M0801）===== */
+/* ===== CSS 变量定义（默认：水墨丹青 M0801 - 优化版）===== */
 :root {
   /* 背景色 */
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-card: #0f3460;
+  --bg-primary: #0f1419;
+  --bg-secondary: #161c22;
+  --bg-card: #1c232a;
+  --bg-tertiary: #242d35;
+  --bg-hover: #2a353f;
 
   /* 强调色 */
-  --accent-primary: #3b82f6;
-  --accent-success: #4ade80;
+  --accent-primary: #6b8cff;
+  --accent-secondary: #8b5cf6;
+  --accent-success: #22c55e;
   --accent-warning: #f59e0b;
-  --accent-danger: #ef4444;
+  --accent-error: #ef4444;
 
   /* 文字色 */
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
   --text-muted: #64748b;
 
   /* 边框色 */
-  --border-color: #334155;
+  --border-color: #2d3748;
+  --divider-color: #1f2937;
+
+  /* 阴影 */
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 30px rgba(107, 140, 255, 0.15);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.15);
 
   /* 圆角 */
-  --radius-sm: 6px;   /* 输入框 M0902 */
-  --radius-md: 8px;   /* 按钮 M0902 */
-  --radius-lg: 12px;  /* 卡片 M0902 */
-  --radius-xl: 16px;  /* 模态框 M0902 */
+  --radius-sm: 6px;   /* 输入框 */
+  --radius-md: 10px;  /* 按钮 */
+  --radius-lg: 16px;  /* 卡片 */
+  --radius-xl: 24px;  /* 模态框 */
+  --radius-pill: 9999px; /* 胶囊按钮 */
+
+  /* 间距 */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* 动画 */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* 字体 */
-  --font-family-ch: "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-family-en: "Inter", "SF Pro", sans-serif;
+  --font-family-ch: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-family-en: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   --font-family-mono: "JetBrains Mono", "Fira Code", monospace;
 }
 
-/* ===== 主题：墨绿护眼（M0802）===== */
+/* ===== 主题：竹影轻风（浅色）===== */
 [data-theme="green"] {
-  --bg-primary: #1a1f1a;
-  --bg-secondary: #242a24;
-  --bg-card: #2d362d;
-  --accent-primary: #6ee7b7;
-  --accent-success: #34d399;
-  --text-primary: #e8f5e9;
-  --text-secondary: #a5d6a7;
-  --border-color: #2d362d;
+  --bg-primary: #f5f3f0;
+  --bg-secondary: #e8e4dd;
+  --bg-card: #faf9f7;
+  --bg-tertiary: #f0ede6;
+  --bg-hover: #e0ddd6;
+  
+  --accent-primary: #10b981;
+  --accent-secondary: #059669;
+  --accent-success: #22c55e;
+  --accent-warning: #f59e0b;
+  --accent-error: #ef4444;
+  
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  
+  --border-color: #e5e7eb;
+  --divider-color: #f3f4f6;
 }
 
-/* ===== 主题：经典炭灰（M0803）===== */
+/* ===== 主题：经典炭灰（优化版）===== */
 [data-theme="dark-gray"] {
-  --bg-primary: #1f1f1f;
-  --bg-secondary: #2d2d2d;
-  --bg-card: #3d3d3d;
+  --bg-primary: #181818;
+  --bg-secondary: #252525;
+  --bg-card: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
+  --bg-hover: #444444;
+  
   --accent-primary: #60a5fa;
+  --accent-secondary: #818cf8;
   --accent-success: #4ade80;
+  --accent-warning: #fbbf24;
+  --accent-error: #f87171;
+  
   --text-primary: #f5f5f5;
-  --text-secondary: #b0b0b0;
-  --border-color: #3d3d3d;
+  --text-secondary: #d4d4d4;
+  --text-muted: #a1a1aa;
+  
+  --border-color: #3f3f46;
+  --divider-color: #27272a;
 }
 
 /* ===== 基础样式重置 ===== */
@@ -139,4 +182,43 @@ select:focus {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* ===== 新增：增强样式（水墨丹青设计）===== */
+
+/* 装饰性分隔线 */
+.decorative-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+  opacity: 0.3;
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* 消息滑入动画 */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 渐变背景玻璃效果 */
+.glass-effect {
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  backdrop-filter: blur(10px);
 }

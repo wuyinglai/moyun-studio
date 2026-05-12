@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useLLMStore } from './llm'
 import { useTaskStore } from './task'
-import api from '@/services/api'
 
 export interface ChatMessage {
   id: string
@@ -90,6 +89,7 @@ export const useChatStore = defineStore('chat', () => {
    * 发送聊天消息
    */
   async function sendMessage(content: string) {
+    const llmStore = useLLMStore()
     generationMode.value = 'chat'
     llmStore.setGenerating(true)
     isStreaming.value = true
@@ -131,7 +131,6 @@ export const useChatStore = defineStore('chat', () => {
    */
   async function continueWriting(projectId: string, filePath: string, prompt?: string) {
     const taskStore = useTaskStore()
-    const llmStore = useLLMStore()
     generationMode.value = 'continue'
 
     // 添加任务

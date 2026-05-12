@@ -6,6 +6,7 @@
 """
 
 import logging
+import tiktoken
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -115,12 +116,10 @@ def _get_context_length(model: str) -> int:
 async def _count_tokens_async(text: str, model: str = "gpt-4") -> int:
     """异步计算Token数"""
     try:
-        import tiktoken as _tiktoken
-
         try:
-            enc = _tiktoken.encoding_for_model(model)
-        except (KeyError, _tiktoken.core.TiktokenError):
-            enc = _tiktoken.get_encoding("cl100k_base")
+            enc = tiktoken.encoding_for_model(model)
+        except (KeyError, tiktoken.TiktokenError):
+            enc = tiktoken.get_encoding("cl100k_base")
 
         tokens = len(enc.encode(text))
         return tokens

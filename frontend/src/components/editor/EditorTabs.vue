@@ -53,7 +53,6 @@ import { useEditorStore } from '@/stores/editor'
 
 const fileStore = useFileStore()
 const editorStore = useEditorStore()
-const notification = useNotificationStore()
 
 const isSaving = ref(false)
 
@@ -112,17 +111,18 @@ async function closeTab(path: string) {
 .editor-tabs {
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .tabs-bar {
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 12px;
   gap: 4px;
   overflow-x: auto;
-  min-height: 36px;
+  min-height: 40px;
 
   &::-webkit-scrollbar {
     height: 4px;
@@ -137,19 +137,21 @@ async function closeTab(path: string) {
 .tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 10px 14px;
   font-size: 13px;
+  font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  transition: all 0.15s;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s ease;
   max-width: 180px;
+  margin-bottom: -1px;
 
   &:hover {
-    background: var(--bg-card);
+    background: var(--bg-hover);
     color: var(--text-primary);
 
     .tab-close {
@@ -169,7 +171,7 @@ async function closeTab(path: string) {
 }
 
 .tab-icon {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -177,17 +179,25 @@ async function closeTab(path: string) {
 .tab-name {
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 13px;
 }
 
 .tab-dirty {
   color: var(--accent-warning);
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: bold;
   flex-shrink: 0;
+  animation: dirtyPulse 2s ease-in-out infinite;
+}
+
+@keyframes dirtyPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .tab-close {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,11 +208,11 @@ async function closeTab(path: string) {
   border-radius: 50%;
   font-size: 10px;
   opacity: 0;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
   flex-shrink: 0;
 
   &:hover {
-    background: var(--accent-danger);
+    background: var(--accent-error);
     color: white;
   }
 }
@@ -210,9 +220,9 @@ async function closeTab(path: string) {
 .tabs-status {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 4px 16px;
-  background: var(--bg-secondary);
+  gap: 20px;
+  padding: 6px 16px;
+  background: var(--bg-card);
   border-top: 1px solid var(--border-color);
   font-size: 11px;
   color: var(--text-muted);
@@ -221,10 +231,12 @@ async function closeTab(path: string) {
 .status-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  font-weight: 500;
 
   i {
-    font-size: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
   }
 
   &.status-save {

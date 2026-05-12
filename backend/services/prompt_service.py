@@ -5,10 +5,13 @@
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
 
+import aiofiles
 from jinja2 import Environment, FileSystemLoader
+from tiktoken import encoding_for_model
 
 from backend.config import get_settings
 from backend.core.exceptions import MoyunException, TemplateNotFoundError
@@ -20,7 +23,7 @@ logger = logging.getLogger(__name__)
 class PromptEngineService(PromptEngineInterface):
     """Prompt引擎服务实现"""
 
-    REFERENCE_PATTERN = __import__("re").compile(r"@\{([^}]+)\}")
+    REFERENCE_PATTERN = re.compile(r"@\{([^}]+)\}")
 
     def __init__(self):
         self.settings = get_settings()
@@ -183,19 +186,18 @@ class PromptEngineService(PromptEngineInterface):
         template_path.mkdir(parents=True, exist_ok=True)
 
         main_file = template_path / "main.md"
-        async with __import__("aiofiles").open(main_file, "w", encoding="utf-8") as f:
+        async with aiofiles.open(main_file, "w", encoding="utf-8") as f:
             await f.write(content)
 
         if description:
             readme_file = template_path / "README.md"
-            async with __import__("aiofiles").open(readme_file, "w", encoding="utf-8") as f:
+            async with aiofiles.open(readme_file, "w", encoding="utf-8") as f:
                 await f.write(description)
 
     def estimate_tokens(self, text: str) -> int:
         """估算token数"""
         try:
-            import tiktoken
-            enc = tiktoken.encoding_for_model("gpt-4")
+            enc = encoding_for_model("gpt-4")
             return len(enc.encode(text))
         except Exception:
             chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')

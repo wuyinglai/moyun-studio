@@ -12,6 +12,8 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import get_settings
 from backend.core.event_bus import EventBus
 from backend.core.exceptions import MoyunException
+from backend.api.sse import sse_manager
+from backend.core.watcher import FileWatcher
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,6 @@ async def lifespan(app: FastAPI):
     app.state.event_bus = event_bus
 
     # 初始化 SSE Manager 并挂载到 app.state
-    from backend.api.sse import sse_manager
     app.state.sse_manager = sse_manager
 
     # 启动 EventBus -> SSE 桥接任务
@@ -43,7 +44,6 @@ async def lifespan(app: FastAPI):
     # 初始化文件监听器（仅在项目目录存在时）
     watcher = None
     if settings.projects_path.exists():
-        from backend.core.watcher import FileWatcher
         watcher = FileWatcher(settings.projects_path, event_bus)
         watcher.start()  # 同步方法
         app.state.watcher = watcher

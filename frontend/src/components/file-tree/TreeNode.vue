@@ -45,7 +45,6 @@
 import { computed, ref } from 'vue'
 import { useFileStore } from '@/stores/file'
 import type { FileNode } from '@/stores/file'
-import { useEditorStore } from '@/stores/editor'
 
 const props = defineProps<{
   node: FileNode
@@ -57,7 +56,6 @@ const emit = defineEmits<{
 }>()
 
 const fileStore = useFileStore()
-const editorStore = useEditorStore()
 
 const isExpanded = ref(props.depth === 0) // 根目录默认展开
 
@@ -124,38 +122,44 @@ function handleClick() {
 .node-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
+  gap: 8px;
+  padding: 7px 12px;
+  margin: 0 4px;
   cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
+  border-radius: 8px;
+  transition: all 0.2s ease;
   font-size: 13px;
   color: var(--text-primary);
 
   &:hover {
-    background: var(--bg-card);
+    background: var(--bg-hover);
   }
 
   &.active {
-    background: var(--accent-primary);
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     color: white;
+    box-shadow: 0 2px 8px rgba(107, 140, 255, 0.3);
 
     .node-icon,
     .node-arrow {
       color: white;
     }
+
+    .node-dirty {
+      color: rgba(255, 255, 255, 0.9);
+    }
   }
 }
 
 .node-arrow {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
   color: var(--text-muted);
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
 
   &--spacer {
     visibility: hidden;
@@ -167,15 +171,15 @@ function handleClick() {
 }
 
 .node-icon {
-  width: 16px;
+  width: 18px;
   color: var(--text-muted);
   flex-shrink: 0;
+  transition: color 0.2s ease;
+}
 
-  // 文件夹颜色
-  .fa-folder,
-  .fa-folder-open {
-    color: var(--accent-warning);
-  }
+:deep(.fa-folder),
+:deep(.fa-folder-open) {
+  color: var(--accent-warning);
 }
 
 .node-name {
@@ -183,11 +187,23 @@ function handleClick() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 400;
 }
 
 .node-dirty {
   color: var(--accent-warning);
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: bold;
+  animation: dirtyPulse 2s ease-in-out infinite;
+}
+
+@keyframes dirtyPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .node-children {

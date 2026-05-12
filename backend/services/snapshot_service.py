@@ -3,6 +3,7 @@
 封装版本快照管理功能。
 """
 
+import difflib
 import json
 import logging
 import uuid
@@ -123,8 +124,6 @@ class SnapshotService(SnapshotServiceInterface):
         snapshot_id2: str
     ) -> str:
         """对比两个版本"""
-        import difflib
-
         project_path = self._resolve_project(project_id)
         snap1 = await self._find_snapshot(project_path, snapshot_id1)
         snap2 = await self._find_snapshot(project_path, snapshot_id2)

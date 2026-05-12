@@ -4,6 +4,7 @@
  */
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { countWords as countPlainWords } from './wordCount'
 
 // 配置 marked 选项
 marked.setOptions({
@@ -64,13 +65,5 @@ export function stripMarkdown(content: string): string {
  */
 export function countWords(content: string): number {
   const plain = stripMarkdown(content)
-  // 中文按字符计，英文按单词计
-  const chineseChars = (plain.match(/[\u4e00-\u9fa5]/g) || []).length
-  const englishWords = plain
-    .replace(/[\u4e00-\u9fa5]/g, '')
-    .replace(/[^\w\s]/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length
-  return chineseChars + englishWords
+  return countPlainWords(plain)
 }

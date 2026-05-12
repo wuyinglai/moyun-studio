@@ -3,7 +3,7 @@ import { ref } from 'vue'
 
 export interface Notification {
   id: string
-  type: 'success' | 'error' | 'warning'
+  type: 'success' | 'error' | 'warning' | 'info'
   message: string
   autoClose: boolean
 }
@@ -48,6 +48,10 @@ export const useNotificationStore = defineStore('notification', () => {
     addNotification({ type: 'warning', message, autoClose: true })
   }
 
+  function info(message: string) {
+    addNotification({ type: 'info', message, autoClose: true })
+  }
+
   return {
     notifications,
     addNotification,
@@ -55,5 +59,6 @@ export const useNotificationStore = defineStore('notification', () => {
     success,
     error,
     warning,
+    info,
   }
 })

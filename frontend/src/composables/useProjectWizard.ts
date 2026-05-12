@@ -20,7 +20,8 @@ export interface ChapterInfo {
 }
 
 export interface Outline {
-  content: string
+  content?: string
+  outline: string
   chapters: ChapterInfo[]
 }
 
