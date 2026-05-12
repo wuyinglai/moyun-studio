@@ -97,11 +97,14 @@ class LLMService:
 
             if stream:
                 async for chunk in response:
+                    if not chunk.choices:
+                        continue
                     content = chunk.choices[0].delta.content
                     if content:
                         yield content
             else:
-                yield response.choices[0].message.content
+                if response.choices:
+                    yield response.choices[0].message.content
 
         except Exception as e:
             raise LLMError(message=f"LLM调用失败: {str(e)}")

@@ -38,3 +38,10 @@ workspace/
 
 # 日志
 *.log
+
+# 截图和调试图片
+screenshot_*.png
+debug_*.png
+screenshots/
+test_screenshots/
+test_screenshots_v2/

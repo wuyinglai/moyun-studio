@@ -2,5 +2,5 @@
   "apiType": "deepseek",
   "apiKey": "sk-4ea45b73004f44a98c2f472d354430d1",
   "apiUrl": "https://api.deepseek.com",
-  "model": "deepseek/deepseek-v4-flash"
+  "model": "deepseek-v4-flash"
 }

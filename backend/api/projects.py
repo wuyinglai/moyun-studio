@@ -23,6 +23,11 @@ from backend.schemas.project import (
     ProjectCreateRequest,
     ProjectInfo,
     ProjectListResponse,
+    BookIdeaRequest,
+    BookIdeaResponse,
+    GenerateOutlineRequest,
+    OutlineResponse,
+    ConfirmOutlineRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -160,7 +165,7 @@ async def create_project(
     )
 
     # 创建基础子目录
-    for subdir in ["chapters", "characters", "materials/extracted", "backup"]:
+    for subdir in ["chapters", "characters", "materials/extracted", "backup", "revision-log", "feedback"]:
         (project_dir / subdir).mkdir(parents=True, exist_ok=True)
 
     # 初始化 style-guide.md / story-state.md / recent-context.md
@@ -212,6 +217,12 @@ async def delete_project(
     if not project_dir.exists():
         raise ProjectNotFoundError(project_id)
 
-    shutil.rmtree(project_dir)
+    try:
+        shutil.rmtree(project_dir)
+    except Exception as e:
+        logger.error("删除项目失败", extra={"project_id": project_id, "error": str(e)})
+        raise ProjectError(f"删除项目失败: {str(e)}")
+
     logger.info("项目已删除", extra={"project_id": project_id})
     return ApiResponse.ok(message=f"项目 {project_id} 已删除")
+

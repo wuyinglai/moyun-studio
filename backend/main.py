@@ -69,7 +69,7 @@ def create_app() -> FastAPI:
     # CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -107,6 +107,7 @@ def create_app() -> FastAPI:
     # ─── 注册路由 ─────────────────────────────────────────────────
     from backend.api import (
         projects,
+        wizard,
         files,
         llm,
         generate,
@@ -122,13 +123,16 @@ def create_app() -> FastAPI:
         backup,
         characters,
         materials,
+        sse,
     )
 
     app.include_router(projects.router, prefix="/api")
+    app.include_router(wizard.router, prefix="/api")
     app.include_router(files.router, prefix="/api")
     app.include_router(llm.router, prefix="/api")
     app.include_router(generate.router, prefix="/api")
     app.include_router(events.router, prefix="/api")
+    app.include_router(sse.router, prefix="/api")
     app.include_router(prompts.router, prefix="/api")
     app.include_router(style_guide.router, prefix="/api")
     app.include_router(story_state.router, prefix="/api")
@@ -141,45 +145,58 @@ def create_app() -> FastAPI:
     app.include_router(characters.router, prefix="/api")
     app.include_router(materials.router, prefix="/api")
 
-    # ─── 前端静态文件 & 单页入口 ──────────────────────────────────
-    frontend_dir = settings.workspace_path.parent / "frontend"
-    if frontend_dir.exists():
-        app.mount("/assets", StaticFiles(directory=str(frontend_dir / "assets")), name="assets")
-        app.mount("/css", StaticFiles(directory=str(frontend_dir / "css")), name="css")
-        app.mount("/js", StaticFiles(directory=str(frontend_dir / "js")), name="js")
+    # ── 前端静态文件 & 单页入口 ──────────────────────────────────
+    # 优先 serve Vue 构建产物 (dist/)，fallback 到 prototype.html
+    frontend_parent = settings.workspace_path.parent
+    frontend_dist = frontend_parent / "frontend" / "dist"
+    frontend_dev = frontend_parent / "frontend"
 
-    # 根路径返回主页面
-    prototype_html = settings.workspace_path.parent / "prototype.html"
+    # 1) 生产环境：Vue build 输出在 frontend/dist/，StaticFiles(html=True) 自动 serve index.html
+    if frontend_dist.exists():
+        app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend-dist")
+    else:
+        # 2) 开发环境：手动挂载 frontend/ 下的子目录，根路径 fallback 到 prototype.html
+        if frontend_dev.exists():
+            for mount_path, subdir in [("/assets", "assets"), ("/css", "css"), ("/js", "js")]:
+                subdir_path = frontend_dev / subdir
+                if subdir_path.exists():
+                    app.mount(mount_path, StaticFiles(directory=str(subdir_path)), name=subdir)
 
-    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-    async def serve_index():
-        if prototype_html.exists():
-            return HTMLResponse(prototype_html.read_text(encoding="utf-8"))
-        return HTMLResponse("<h1>墨韵</h1><p>前端文件不存在</p>")
+        prototype_html = frontend_parent / "prototype.html"
+
+        @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+        async def serve_index():
+            if prototype_html.exists():
+                return HTMLResponse(prototype_html.read_text(encoding="utf-8"))
+            return HTMLResponse("<h1>墨韵</h1><p>前端文件不存在</p>")
 
     return app
 
 
 def _moyun_to_http_status(error_code: str) -> int:
     _map = {
-        "PROJECT_NOT_FOUND": 404,
         "PROJECT_ERROR": 400,
-        "FILE_NOT_FOUND": 404,
+        "PROJECT_NOT_FOUND": 404,
         "FILE_ERROR": 400,
+        "FILE_NOT_FOUND": 404,
         "RESOURCE_NOT_FOUND": 404,
         "FILE_ALREADY_EXISTS": 409,
-        "TEMPLATE_NOT_FOUND": 404,
         "TEMPLATE_ERROR": 400,
+        "TEMPLATE_NOT_FOUND": 404,
         "INVALID_TEMPLATE": 422,
         "INVALID_VARIABLE": 422,
         "VALIDATION_ERROR": 422,
         "LLM_ERROR": 503,
         "LLM_TIMEOUT": 504,
         "TASK_ERROR": 400,
+        "TASK_NOT_FOUND": 404,
         "RATE_LIMIT": 429,
+        "CONFIG_ERROR": 400,
+        "CONTEXT_LENGTH_ERROR": 413,
     }
     return _map.get(error_code, 500)
 
 
 # 全局 app 实例（供 uvicorn 直接引用）
+# 测试时请使用 create_app() 创建隔离实例，不要直接 import 此变量
 app = create_app()

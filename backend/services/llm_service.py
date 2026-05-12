@@ -3,6 +3,7 @@
 封装LLM调用，提供统一的LLM接口。
 """
 
+import json
 import logging
 from pathlib import Path
 from typing import Any, AsyncGenerator
@@ -63,8 +64,13 @@ class LLMService(LLMServiceInterface):
         """流式生成"""
         model = model or self.model
 
+        # 处理 DeepSeek 模型格式
+        litellm_model = model
+        if self.provider == "deepseek" and not model.startswith("deepseek/"):
+            litellm_model = f"deepseek/{model}"
+
         kwargs = {
-            "model": model,
+            "model": litellm_model,
             "messages": messages,
             "stream": stream,
             "max_tokens": 4096,

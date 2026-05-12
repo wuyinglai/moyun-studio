@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>墨韵 (Moyun) - AI小说创作助手 | 项目文档中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #0f3460;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #4ade80;
+            --accent-purple: #a855f7;
+            --accent-orange: #f97316;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #1e3a5f;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* 顶部导航 */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(22, 33, 62, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-logo span {
+            font-size: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            margin-left: auto;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Hero 区域 */
+        .hero {
+            margin-top: 60px;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-primary);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* 区块标题 */
+        .section-title {
+            font-size: 2rem;
+            margin: 3rem 0 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title .icon {
+            font-size: 1.5rem;
+        }
+
+        /* 卡片网格 */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-primary);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 10px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .card-path {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-family: 'Courier New', monospace;
+        }
+
+        .card-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tag {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .tag.green {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--accent-secondary);
+        }
+
+        .tag.purple {
+            background: rgba(168, 85, 247, 0.15);
+            color: var(--accent-purple);
+        }
+
+        .tag.orange {
+            background: rgba(249, 115, 22, 0.15);
+            color: var(--accent-orange);
+        }
+
+        /* 快速导航 */
+        .quick-nav {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .quick-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .quick-nav-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s;
+        }
+
+        .quick-nav-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--accent-primary);
+        }
+
+        .quick-nav-item a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-nav-item p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* 架构图 */
+        .architecture-diagram {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            overflow-x: auto;
+        }
+
+        .arch-layer {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .arch-layer-title {
+            font-weight: bold;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .arch-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .arch-item {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        /* 表格 */
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 3rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: bold;
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        code {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-primary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        /* 页脚 */
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero-stats {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-card);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span>墨</span>
+            <span>墨韵 Moyun</span>
+        </div>
+        <div class="nav-links">
+            <a href="#overview">项目概述</a>
+            <a href="#documents">文档索引</a>
+            <a href="#architecture">技术架构</a>
+            <a href="#features">核心功能</a>
+            <a href="#workflow">开发流程</a>
+        </div>
+    </nav>
+
+    <!-- Hero 区域 -->
+    <section class="hero">
+        <h1>墨韵 (Moyun)</h1>
+        <p>AI 辅助小说创作助手 - 从零开始创作完整小说作品</p>
+        <p style="font-size: 1rem; max-width: 600px; margin: 0 auto;">
+            支持从项目创建、大纲生成、章节写作到内容润色的全流程自动化，
+            让 AI 成为你的专属写作搭档。
+        </p>
+        <div class="hero-stats">
+            <div class="stat-item">
+                <div class="stat-value">10+</div>
+                <div class="stat-label">产品文档</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">18</div>
+                <div class="stat-label">Prompt 模板</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">22+</div>
+                <div class="stat-label">API 端点</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">3</div>
+                <div class="stat-label">自动化等级</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- 快速导航 -->
+        <h2 class="section-title">
+            <span class="icon">📍</span>
+            快速导航
+        </h2>
+        <div class="quick-nav">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                根据你的需求，快速跳转到对应的文档章节：
+            </p>
+            <div class="quick-nav-grid">
+                <div class="quick-nav-item">
+                    <a href="#overview">📖 项目概述</a>
+                    <p>了解墨韵是什么、核心价值、目标用户</p>
+                </div>
+                <div class="quick-nav-item">
+                    <a href="#architecture">🏗️ 技术架构</a>
+                    <p>后端架构、前端技术栈、数据模型</p>
+                </div>
+                <div class="quick-nav-item">
+                    <a href="#api">🔌 API 端点</a>
+                    <p>RESTful API 设计、端点列表、响应格式</p>
+                </div>
+                <div class="quick-nav-item">
+                    <a href="#prompts">🎯 Prompt 系统</a>
+                    <p>模板分类、变量替换、渲染流程</p>
+                </div>
+                <div class="quick-nav-item">
+                    <a href="#files">📁 文件结构</a>
+                    <p>项目目录设计、命名规则、存储规范</p>
+                </div>
+                <div class="quick-nav-item">
+                    <a href="#features">✨ 核心功能</a>
+                    <p>功能清单、模块说明、执行逻辑</p>
+                </div>
+                <div class="quick-nav-item">
+                    <a href="#workflow">🔄 开发流程</a>
+                    <p>迭代循环模型、开发步骤、验收标准</p>
+                </div>
+                <div class="quick-nav-item">
+                    <a href="#documents">📚 文档索引</a>
+                    <p>所有文档列表、路径、说明</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 项目概述 -->
+        <h2 class="section-title" id="overview">
+            <span class="icon">📖</span>
+            项目概述
+        </h2>
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📘</div>
+                    <div>
+                        <div class="card-title">产品说明</div>
+                        <div class="card-path">产品说明.md</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>产品定位：</strong>面向中文小说创作者的 AI 辅助写作工具<br>
+                    <strong>核心价值：</strong>零门槛创作、灵活控制、实时协作、Prompt 可视化<br>
+                    <strong>目标用户：</strong>网文作者、写作爱好者、内容创作者
+                </div>
+                <div class="card-tags">
+                    <span class="tag">产品定位</span>
+                    <span class="tag">界面布局</span>
+                    <span class="tag">核心流程</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📝</div>
+                    <div>
+                        <div class="card-title">CLAUDE.md</div>
+                        <div class="card-path">CLAUDE.md</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>项目简介：</strong>墨韵是一个 AI 辅助小说创作平台<br>
+                    <strong>技术栈：</strong>Python FastAPI + HTML/JS 前端 + LiteLLM<br>
+                    <strong>快速开始：</strong>安装依赖 → 配置环境 → 启动服务器
+                </div>
+                <div class="card-tags">
+                    <span class="tag green">快速开始</span>
+                    <span class="tag">技术栈</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📚</div>
+                    <div>
+                        <div class="card-title">领域上下文</div>
+                        <div class="card-path">CONTEXT.md</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>核心术语：</strong>Project、Chapter、Volume、Workspace<br>
+                    <strong>Prompt 系统：</strong>Template、Generate、Extract、Transform<br>
+                    <strong>质量保障：</strong>Style Guide、Story State、Recent Context
+                </div>
+                <div class="card-tags">
+                    <span class="tag purple">术语定义</span>
+                    <span class="tag">数据流</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技术架构 -->
+        <h2 class="section-title" id="architecture">
+            <span class="icon">🏗️</span>
+            技术架构
+        </h2>
+        
+        <div class="architecture-diagram">
+            <h3 style="color: var(--accent-primary); margin-bottom: 1rem;">后端架构层次</h3>
+            
+            <div class="arch-layer">
+                <div class="arch-layer-title">📡 API 路由层 (api/)</div>
+                <div class="arch-items">
+                    <span class="arch-item">projects.py</span>
+                    <span class="arch-item">files.py</span>
+                    <span class="arch-item">llm.py</span>
+                    <span class="arch-item">generate.py</span>
+                    <span class="arch-item">prompts.py</span>
+                    <span class="arch-item">events.py</span>
+                    <span class="arch-item">style_guide.py</span>
+                    <span class="arch-item">story_state.py</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; color: var(--accent-primary); margin: 0.5rem 0;">⬇️ 依赖</div>
+
+            <div class="arch-layer">
+                <div class="arch-layer-title">🔌 Service 接口层 (services/)</div>
+                <div class="arch-items">
+                    <span class="arch-item">FileService (抽象)</span>
+                    <span class="arch-item">LLMService (抽象)</span>
+                    <span class="arch-item">PromptEngine (抽象)</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; color: var(--accent-primary); margin: 0.5rem 0;">⬇️ 实现</div>
+
+            <div class="arch-layer">
+                <div class="arch-layer-title">⚙️ 核心功能层 (core/)</div>
+                <div class="arch-items">
+                    <span class="arch-item">llm.py - LLM 调用</span>
+                    <span class="arch-item">file_ops.py - 文件操作</span>
+                    <span class="arch-item">prompt_engine.py - 模板渲染</span>
+                    <span class="arch-item">task_queue.py - 任务队列</span>
+                    <span class="arch-item">event_bus.py - 事件总线</span>
+                    <span class="arch-item">watcher.py - 文件监听</span>
+                    <span class="arch-item">snapshot.py - 版本快照</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; color: var(--accent-primary); margin: 0.5rem 0;">⬇️ 数据</div>
+
+            <div class="arch-layer">
+                <div class="arch-layer-title">📦 数据模型层 (models/)</div>
+                <div class="arch-items">
+                    <span class="arch-item">Project</span>
+                    <span class="arch-item">Chapter</span>
+                    <span class="arch-item">Character</span>
+                    <span class="arch-item">Material</span>
+                    <span class="arch-item">Task</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚙️</div>
+                    <div>
+                        <div class="card-title">后端架构设计</div>
+                        <div class="card-path">docs/后端架构设计.md</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>技术栈：</strong>FastAPI、LiteLLM、aiofiles、Jinja2、tiktoken、watchdog<br>
+                    <strong>核心模块：</strong>LLMService、FileService、PromptEngine、TaskQueue<br>
+                    <strong>数据模型：</strong>ProjectMeta、ChapterMeta、CharacterProfile
+                </div>
+                <div class="card-tags">
+                    <span class="tag">FastAPI</span>
+                    <span class="tag">LiteLLM</span>
+                    <span class="tag">异步处理</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎨</div>
+                    <div>
+                        <div class="card-title">前端技术栈</div>
+                        <div class="card-path">产品说明.md §八</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>技术选型：</strong>纯 HTML/CSS/JavaScript（无框架）<br>
+                    <strong>通信方式：</strong>SSE（Server-sent Events）实时通信<br>
+                    <strong>存储：</strong>localStorage 本地存储<br>
+                    <strong>图标：</strong>Font Awesome 6.4
+                </div>
+                <div class="card-tags">
+                    <span class="tag green">无框架</span>
+                    <span class="tag">SSE</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📦</div>
+                    <div>
+                        <div class="card-title">技术选型与依赖</div>
+                        <div class="card-path">docs/技术选型与依赖.md</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>后端依赖：</strong>fastapi、uvicorn、litellm、aiofiles、jinja2、tiktoken、watchdog、tenacity、pydantic-settings、python-frontmatter、difflib<br>
+                    <strong>前端依赖：</strong>CDN 引入（无 npm build）
+                </div>
+                <div class="card-tags">
+                    <span class="tag purple">依赖管理</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- API 端点 -->
+        <h2 class="section-title" id="api">
+            <span class="icon">🔌</span>
+            API 端点概览
+        </h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>模块</th>
+                        <th>端点</th>
+                        <th>方法</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>项目管理</strong></td>
+                        <td><code>/api/projects</code></td>
+                        <td>GET</td>
+                        <td>获取所有项目列表</td>
+                    </tr>
+                    <tr>
+                        <td>项目管理</td>
+                        <td><code>/api/projects</code></td>
+                        <td>POST</td>
+                        <td>新建项目</td>
+                    </tr>
+                    <tr>
+                        <td>项目管理</td>
+                        <td><code>/api/projects/open</code></td>
+                        <td>POST</td>
+                        <td>打开项目</td>
+                    </tr>
+                    <tr>
+                        <td><strong>文件操作</strong></td>
+                        <td><code>/api/tree</code></td>
+                        <td>GET</td>
+                        <td>获取文件树</td>
+                    </tr>
+                    <tr>
+                        <td>文件操作</td>
+                        <td><code>/api/file</code></td>
+                        <td>GET/POST/PUT</td>
+                        <td>读取/保存/创建文件</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LLM 配置</strong></td>
+                        <td><code>/api/llm/config</code></td>
+                        <td>GET/POST</td>
+                        <td>获取/保存 LLM 配置</td>
+                    </tr>
+                    <tr>
+                        <td>LLM 配置</td>
+                        <td><code>/api/llm/test</code></td>
+                        <td>POST</td>
+                        <td>测试 LLM 连接</td>
+                    </tr>
+                    <tr>
+                        <td><strong>生成任务</strong></td>
+                        <td><code>/api/generate</code></td>
+                        <td>POST</td>
+                        <td>提交生成任务</td>
+                    </tr>
+                    <tr>
+                        <td>生成任务</td>
+                        <td><code>/api/events</code></td>
+                        <td>GET</td>
+                        <td>SSE 事件流</td>
+                    </tr>
+                    <tr>
+                        <td><strong>质量保障</strong></td>
+                        <td><code>/api/style-guide</code></td>
+                        <td>GET/POST</td>
+                        <td>文风指南管理</td>
+                    </tr>
+                    <tr>
+                        <td>质量保障</td>
+                        <td><code>/api/story-state</code></td>
+                        <td>GET/POST</td>
+                        <td>故事状态管理</td>
+                    </tr>
+                    <tr>
+                        <td>质量保障</td>
+                        <td><code>/api/recent-context</code></td>
+                        <td>GET/POST</td>
+                        <td>近期上下文管理</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Prompt 系统 -->
+        <h2 class="section-title" id="prompts">
+            <span class="icon">🎯</span>
+            Prompt 模板系统
+        </h2>
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">✍️</div>
+                    <div>
+                        <div class="card-title">生成类模板 (10个)</div>
+                        <div class="card-path">workspace/prompts/generate/</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>title</strong> - 书名+创意生成<br>
+                    <strong>blueprint</strong> - 整体蓝图生成<br>
+                    <strong>outline</strong> - 大纲生成<br>
+                    <strong>worldbuilding</strong> - 世界观设定<br>
+                    <strong>character</strong> - 角色设定<br>
+                    <strong>chapter</strong> - 章节撰写<br>
+                    <strong>continuation</strong> - 续写<br>
+                    <strong>rewrite</strong> - 重写<br>
+                    <strong>dialogue</strong> - 对话生成<br>
+                    <strong>scene</strong> - 场景描写
+                </div>
+                <div class="card-tags">
+                    <span class="tag green">Generate</span>
+                    <span class="tag">10 个模板</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📤</div>
+                    <div>
+                        <div class="card-title">提取类模板 (4个)</div>
+                        <div class="card-path">workspace/prompts/extract/</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>character</strong> - 角色提取<br>
+                    <strong>plot</strong> - 情节提取<br>
+                    <strong>scene</strong> - 场景提取<br>
+                    <strong>summary</strong> - 摘要提取
+                </div>
+                <div class="card-tags">
+                    <span class="tag purple">Extract</span>
+                    <span class="tag">4 个模板</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔄</div>
+                    <div>
+                        <div class="card-title">转换类模板 (4个)</div>
+                        <div class="card-path">workspace/prompts/transform/</div>
+                    </div>
+                </div>
+                <div class="card-description">
+                    <strong>polish</strong> - 润色<br>
+                    <strong>translate</strong> - 翻译<br>
+                    <strong>expand</strong> - 扩写<br>
+                    <strong>shorten</strong> - 缩写
+                </div>
+                <div class="card-tags">
+                    <span class="tag orange">Transform</span>
+                    <span class="tag">4 个模板</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件结构 -->
+        <h2 class="section-title" id="files">
+            <span class="icon">📁</span>
+            文件系统设计
+        </h2>
+        <div class="card">
+            <div class="card-description">
+                <h3 style="color: var(--accent-primary); margin-bottom: 1rem;">项目目录结构</h3>
+                <pre style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; line-height: 1.8;">
+<strong>workspace/projects/{project_name}/</strong>
+├── meta.json                # 项目配置
+├── context.json             # 上下文统计
+├── outline.md              # 大纲文件
+├── <strong>style-guide.md</strong>          # 文风指南（新增）
+├── <strong>story-state.md</strong>           # 故事全局状态（新增）
+├── <strong>recent-context.md</strong>        # 近期上下文摘要（新增）
+├── chapters/               # 章节目录
+│   └── vol-{序号}/
+│       ├── vol-meta.json
+│       └── ch-{序号}/
+│           ├── ch-meta.json
+│           ├── sec-{序号}.md
+│           ├── <strong>feedback/</strong>      # 用户反馈（新增）
+│           └── <strong>revision-log/</strong>   # 修改日志（新增）
+├── characters/             # 角色档案
+├── materials/extracted/    # 提取结果
+└── backup/                 # 版本快照</pre>
+            </div>
+        </div>
+
+        <!-- 核心功能 -->
+        <h2 class="section-title" id="features">
+            <span class="icon">✨</span>
+            核心功能清单
+        </h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>模块编号</th>
+                        <th>功能名称</th>
+                        <th>说明</th>
+                        <th>位置</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>M01</code></td>
+                        <td>顶部工具栏</td>
+                        <td>Logo、项目名称、LLM 状态、操作按钮</td>
+                        <td>顶部</td>
+                    </tr>
+                    <tr>
+                        <td><code>M02</code></td>
+                        <td>左侧文件树</td>
+                        <td>项目文件结构、展开/折叠、文件操作</td>
+                        <td>左侧边栏</td>
+                    </tr>
+                    <tr>
+                        <td><code>M03</code></td>
+                        <td>中间编辑器区</td>
+                        <td>标签页、工具栏、编辑区、聊天区</td>
+                        <td>中间</td>
+                    </tr>
+                    <tr>
+                        <td><code>M04</code></td>
+                        <td>右侧面板</td>
+                        <td>Prompt 面板、执行面板</td>
+                        <td>右侧</td>
+                    </tr>
+                    <tr>
+                        <td><code>M05</code></td>
+                        <td>模态框</td>
+                        <td>新建项目、打开项目、设置</td>
+                        <td>弹窗</td>
+                    </tr>
+                    <tr>
+                        <td><code>G01</code></td>
+                        <td>版本快照系统</td>
+                        <td>自动备份、版本对比、前进/后退</td>
+                        <td>全局</td>
+                    </tr>
+                    <tr>
+                        <td><code>G01</code></td>
+                        <td>LLM 工作堆栈</td>
+                        <td>任务队列、顺序执行、L1/L2 模式</td>
+                        <td>全局</td>
+                    </tr>
+                    <tr>
+                        <td><code>G01</code></td>
+                        <td>SSE 事件处理</td>
+                        <td>实时更新、文件监听、任务状态</td>
+                        <td>全局</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 开发流程 -->
+        <h2 class="section-title" id="workflow">
+            <span class="icon">🔄</span>
+            开发流程（迭代循环模型）
+        </h2>
+        <div class="architecture-diagram">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <div style="background: var(--accent-primary); color: white; padding: 1rem 2rem; border-radius: 8px; font-weight: bold;">
+                        1. 思考深化
+                    </div>
+                    <div style="color: var(--accent-primary); font-size: 1.5rem;">→</div>
+                    <div style="background: var(--accent-secondary); color: var(--bg-primary); padding: 1rem 2rem; border-radius: 8px; font-weight: bold;">
+                        2. 文档更新
+                    </div>
+                    <div style="color: var(--accent-primary); font-size: 1.5rem;">→</div>
+                    <div style="background: var(--accent-purple); color: white; padding: 1rem 2rem; border-radius: 8px; font-weight: bold;">
+                        3. 同步检查
+                    </div>
+                    <div style="color: var(--accent-primary); font-size: 1.5rem;">→</div>
+                    <div style="background: var(--accent-orange); color: white; padding: 1rem 2rem; border-radius: 8px; font-weight: bold;">
+                        4. 代码实现
+                    </div>
+                    <div style="color: var(--accent-primary); font-size: 1.5rem;">→</div>
+                    <div style="background: #ef4444; color: white; padding: 1rem 2rem; border-radius: 8px; font-weight: bold;">
+                        5. 验收钩子
+                    </div>
+                    <div style="color: var(--accent-primary); font-size: 1.5rem;">→</div>
+                    <div style="background: var(--bg-card); color: var(--text-primary); padding: 1rem 2rem; border-radius: 8px; font-weight: bold; border: 2px solid var(--accent-primary);">
+                        6. 下一模块
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-title">📋 核心原则</div>
+                    <div class="card-description">
+                        ✅ 文档优先 - 所有代码实现前，先确认文档完备<br>
+                        ✅ 契约驱动 - 功能清单、API 契约 = 开发契约<br>
+                        ✅ Prompt 独立 - Prompt 必须独立存储，禁止硬编码<br>
+                        ✅ 验收钩子 - 每个模块开发完成后逐项打勾<br>
+                        ✅ 文档同步 - 每次更新文档，检查所有依赖<br>
+                        ✅ 追问到底 - "还有吗？"是口头禅
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📖 开发文档</div>
+                    <div class="card-description">
+                        <strong>开发步骤.md</strong> - 迭代循环模型、六个迭代步骤<br>
+                        <strong>功能清单.md</strong> - 每个模块的功能执行逻辑<br>
+                        <strong>API 契约.md</strong> - 前后端通信规范<br>
+                        <strong>编码规范.md</strong> - 代码编写规范
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文档索引 -->
+        <h2 class="section-title" id="documents">
+            <span class="icon">📚</span>
+            完整文档索引
+        </h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>文档名称</th>
+                        <th>路径</th>
+                        <th>说明</th>
+                        <th>类别</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>产品说明</strong></td>
+                        <td><code>产品说明.md</code></td>
+                        <td>产品概述、界面布局、核心功能流程</td>
+                        <td><span class="tag">产品</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>CLAUDE.md</strong></td>
+                        <td><code>CLAUDE.md</code></td>
+                        <td>项目概述、技术栈、快速开始</td>
+                        <td><span class="tag">概览</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>CONTEXT.md</strong></td>
+                        <td><code>CONTEXT.md</code></td>
+                        <td>领域术语、Prompt 系统、数据流</td>
+                        <td><span class="tag">领域</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>功能清单</strong></td>
+                        <td><code>docs/功能清单.md</code></td>
+                        <td>详细功能说明、模块执行逻辑</td>
+                        <td><span class="tag">功能</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>文件系统设计</strong></td>
+                        <td><code>docs/文件系统设计.md</code></td>
+                        <td>文件目录结构、命名规则</td>
+                        <td><span class="tag">设计</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>开发步骤</strong></td>
+                        <td><code>docs/开发步骤.md</code></td>
+                        <td>迭代循环模型、开发纲领</td>
+                        <td><span class="tag">开发</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>API 契约</strong></td>
+                        <td><code>docs/API契约.md</code></td>
+                        <td>API 端点定义、响应格式、错误码</td>
+                        <td><span class="tag">API</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Prompt 模板说明</strong></td>
+                        <td><code>docs/Prompt模板说明.md</code></td>
+                        <td>模板分类、变量说明、渲染流程</td>
+                        <td><span class="tag">Prompt</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>后端架构设计</strong></td>
+                        <td><code>docs/后端架构设计.md</code></td>
+                        <td>后端架构、模块划分、数据模型</td>
+                        <td><span class="tag">架构</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>技术选型与依赖</strong></td>
+                        <td><code>docs/技术选型与依赖.md</code></td>
+                        <td>技术选型说明、依赖列表</td>
+                        <td><span class="tag">技术</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>编码规范</strong></td>
+                        <td><code>docs/编码规范.md</code></td>
+                        <td>代码编写规范</td>
+                        <td><span class="tag">规范</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>原型生成说明</strong></td>
+                        <td><code>docs/原型生成说明.md</code></td>
+                        <td>高保真原型生成说明</td>
+                        <td><span class="tag">设计</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>文档索引</strong></td>
+                        <td><code>docs/文档索引.md</code></td>
+                        <td>所有文档的索引和导航</td>
+                        <td><span class="tag">索引</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="quick-nav" style="margin-top: 3rem;">
+            <h3 style="color: var(--accent-primary); margin-bottom: 1rem;">📌 如何使用本文档</h3>
+            <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
+                <li>使用顶部导航栏快速跳转到感兴趣的区域</li>
+                <li>点击卡片可以查看对应文档的详细说明（文档路径已标注）</li>
+                <li>API 端点表格列出了所有主要的后端接口</li>
+                <li>Prompt 模板系统支持生成、提取、转换三大类共 18 个模板</li>
+                <li>开发流程遵循迭代循环模型，确保文档与代码始终一致</li>
+                <li>完整文档索引表格列出了所有文档的路径和说明</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>墨韵 (Moyun) - AI 小说创作助手</p>
+        <p style="margin-top: 0.5rem;">
+            项目路径：D:\newmoyun | 
+            文档最后更新：2026-05-12 |
+            <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">返回顶部 ↑</a>
+        </p>
+    </footer>
+</body>
+</html>
