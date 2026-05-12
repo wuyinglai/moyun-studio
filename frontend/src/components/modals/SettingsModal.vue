@@ -42,13 +42,19 @@
             </a-form-item>
 
             <a-form-item label="模型">
-              <a-input
+              <a-select
                 v-model:value="config.model"
-                placeholder="gpt-4, claude-3-opus, llama3..."
-              />
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">
-                常用模型：gpt-4, gpt-3.5-turbo, claude-3-opus, claude-3-sonnet
-              </div>
+                style="width: 100%;"
+                placeholder="输入或选择模型名称"
+                show-search
+                :allow-clear="true"
+              >
+                <a-select-option
+                  v-for="m in llmStore.availableModels"
+                  :key="m"
+                  :value="m"
+                >{{ m }}</a-select-option>
+              </a-select>
             </a-form-item>
 
             <a-form-item>
@@ -60,10 +66,16 @@
               </div>
             </a-form-item>
 
+            <a-divider>连接测试</a-divider>
+
             <a-space>
               <a-button @click="testConnection" :loading="isTesting">
                 <i class="fa-solid fa-plug"></i>
                 测试连接
+              </a-button>
+              <a-button @click="fetchModels" :loading="isFetchingModels">
+                <i class="fa-solid fa-list"></i>
+                获取模型列表
               </a-button>
               <a-alert
                 v-if="testResult"
@@ -72,6 +84,34 @@
                 show-icon
               />
             </a-space>
+          </a-form>
+        </a-tab-pane>
+
+        <a-tab-pane key="automation" tab="自动化">
+          <template #tab>
+            <span><i class="fa-solid fa-robot"></i> 自动化</span>
+          </template>
+
+          <a-form layout="vertical">
+            <a-form-item label="自动化等级">
+              <div style="margin-bottom: 8px; font-size: 13px; color: var(--text-secondary);">
+                控制 AI 任务的执行方式
+              </div>
+              <a-radio-group v-model:value="autoMode" button-style="solid">
+                <a-radio-button value="L1">
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 8px;">
+                    <strong>L1 半自动</strong>
+                    <span style="font-size: 12px; opacity: 0.7;">每步需确认</span>
+                  </div>
+                </a-radio-button>
+                <a-radio-button value="L2">
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 8px;">
+                    <strong>L2 连续</strong>
+                    <span style="font-size: 12px; opacity: 0.7;">自动连续执行</span>
+                  </div>
+                </a-radio-button>
+              </a-radio-group>
+            </a-form-item>
           </a-form>
         </a-tab-pane>
 
@@ -115,6 +155,7 @@ const notification = useNotificationStore()
 const visible = computed(() => uiStore.modals.settings)
 const activeTab = ref('llm')
 const isTesting = ref(false)
+const isFetchingModels = ref(false)
 const testResult = ref<{ status: 'success' | 'error'; message: string } | null>(null)
 
 const config = ref({
@@ -132,12 +173,31 @@ const themes = [
   { id: 'gray', name: '经典炭灰', preview: 'linear-gradient(135deg, #1f1f1f, #2d2d2d, #3d3d3d)' },
 ]
 
+const autoMode = ref(localStorage.getItem('moyun-auto-mode') || 'L1')
+watch(autoMode, (val) => {
+  localStorage.setItem('moyun-auto-mode', val)
+})
+
 watch(visible, (val) => {
   if (val) {
     config.value = { ...llmStore.config }
     testResult.value = null
+    autoMode.value = localStorage.getItem('moyun-auto-mode') || 'L1'
   }
 })
+
+async function fetchModels() {
+  isFetchingModels.value = true
+  try {
+    await llmStore.saveConfig(config.value)
+    await llmStore.fetchModels()
+    notification.success(`已获取 ${llmStore.availableModels.length} 个可用模型`)
+  } catch {
+    notification.error('获取模型列表失败')
+  } finally {
+    isFetchingModels.value = false
+  }
+}
 
 async function testConnection() {
   isTesting.value = true

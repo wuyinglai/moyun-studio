@@ -38,6 +38,10 @@
                       <a-tag v-if="item.genre" :color="'blue'">{{ item.genre }}</a-tag>
                       <span class="meta-stat">{{ item.total_words?.toLocaleString() || 0 }} 字</span>
                     </div>
+                    <div class="project-stats">
+                      <span class="meta-stat"><i class="fa-solid fa-calendar"></i> {{ formatDate(item.created_at) }}</span>
+                      <span class="meta-stat"><i class="fa-solid fa-chart-line"></i> {{ item.completion_rate || 0 }}%</span>
+                    </div>
                     <p v-if="item.author" class="project-author">
                       <i class="fa-solid fa-user"></i> {{ item.author }}
                     </p>
@@ -129,6 +133,15 @@ async function deleteProject(project: Project) {
   }
 }
 
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '未知'
+  try {
+    return new Date(dateStr).toLocaleDateString('zh-CN')
+  } catch {
+    return dateStr
+  }
+}
+
 function close() {
   uiStore.closeOpenProject()
   selectedId.value = null
@@ -171,6 +184,19 @@ function close() {
   .meta-stat {
     font-size: 12px;
     color: var(--text-muted);
+  }
+
+  .project-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+
+    i {
+      font-size: 11px;
+      margin-right: 2px;
+    }
   }
 
   .project-author {

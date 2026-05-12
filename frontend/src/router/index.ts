@@ -63,8 +63,12 @@ const routes: RouteRecordRaw[] = [
       fileStore.openFile(node)
       editorStore.setCurrentFile(filePath)
 
-      const content = await fileStore.readFile(projectId, filePath)
-      editorStore.loadContent(filePath, content.content || '')
+      try {
+        const content = await fileStore.readFile(projectId, filePath)
+        editorStore.loadContent(filePath, content.content || '')
+      } catch {
+        console.warn('读取文件失败:', filePath)
+      }
     },
   },
 ]

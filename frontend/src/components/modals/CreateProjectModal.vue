@@ -20,30 +20,131 @@
       
       <a-form layout="vertical" style="margin-top: 16px;">
         <a-form-item label="题材 *">
+          <div class="param-header">
+            <span></span>
+            <button class="btn-edit-param" @click="toggleEditCategory('genre')" title="管理选项">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+          </div>
           <a-radio-group v-model:value="wizard.params.value.genre" button-style="solid">
             <a-radio-button v-for="opt in genreOptions" :key="opt" :value="opt">
               {{ opt }}
             </a-radio-button>
           </a-radio-group>
+          <div v-if="editingCategory === 'genre'" class="param-edit-row">
+            <a-input v-model:value="newOptionInput" placeholder="新增选项" size="small" @pressEnter="addCustomOption('genre')" />
+            <a-button size="small" type="primary" @click="addCustomOption('genre')">添加</a-button>
+            <div class="param-option-list">
+              <span v-for="opt in genreOptions" :key="opt" class="param-option-tag">
+                {{ opt }}
+                <button class="btn-remove-option" @click="removeCustomOption('genre', opt)">&times;</button>
+              </span>
+            </div>
+          </div>
         </a-form-item>
 
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="基调">
+              <div class="param-header">
+                <span></span>
+                <button class="btn-edit-param" @click="toggleEditCategory('tone')" title="管理选项">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              </div>
               <a-radio-group v-model:value="wizard.params.value.tone" button-style="solid">
                 <a-radio-button v-for="opt in toneOptions" :key="opt" :value="opt">
                   {{ opt }}
                 </a-radio-button>
               </a-radio-group>
+              <div v-if="editingCategory === 'tone'" class="param-edit-row">
+                <a-input v-model:value="newOptionInput" placeholder="新增选项" size="small" @pressEnter="addCustomOption('tone')" />
+                <a-button size="small" type="primary" @click="addCustomOption('tone')">添加</a-button>
+                <div class="param-option-list">
+                  <span v-for="opt in toneOptions" :key="opt" class="param-option-tag">
+                    {{ opt }}
+                    <button class="btn-remove-option" @click="removeCustomOption('tone', opt)">&times;</button>
+                  </span>
+                </div>
+              </div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="写作风格">
+              <div class="param-header">
+                <span></span>
+                <button class="btn-edit-param" @click="toggleEditCategory('writing_style')" title="管理选项">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              </div>
               <a-radio-group v-model:value="wizard.params.value.writing_style" button-style="solid">
                 <a-radio-button v-for="opt in styleOptions" :key="opt" :value="opt">
                   {{ opt }}
                 </a-radio-button>
               </a-radio-group>
+              <div v-if="editingCategory === 'writing_style'" class="param-edit-row">
+                <a-input v-model:value="newOptionInput" placeholder="新增选项" size="small" @pressEnter="addCustomOption('writing_style')" />
+                <a-button size="small" type="primary" @click="addCustomOption('writing_style')">添加</a-button>
+                <div class="param-option-list">
+                  <span v-for="opt in styleOptions" :key="opt" class="param-option-tag">
+                    {{ opt }}
+                    <button class="btn-remove-option" @click="removeCustomOption('writing_style', opt)">&times;</button>
+                  </span>
+                </div>
+              </div>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="背景">
+              <div class="param-header">
+                <span></span>
+                <button class="btn-edit-param" @click="toggleEditCategory('background')" title="管理选项">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              </div>
+              <a-radio-group v-model:value="wizard.params.value.background" button-style="solid">
+                <a-radio-button v-for="opt in bgOptions" :key="opt" :value="opt">
+                  {{ opt }}
+                </a-radio-button>
+              </a-radio-group>
+              <div v-if="editingCategory === 'background'" class="param-edit-row">
+                <a-input v-model:value="newOptionInput" placeholder="新增选项" size="small" @pressEnter="addCustomOption('background')" />
+                <a-button size="small" type="primary" @click="addCustomOption('background')">添加</a-button>
+                <div class="param-option-list">
+                  <span v-for="opt in bgOptions" :key="opt" class="param-option-tag">
+                    {{ opt }}
+                    <button class="btn-remove-option" @click="removeCustomOption('background', opt)">&times;</button>
+                  </span>
+                </div>
+              </div>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="主题">
+              <div class="param-header">
+                <span></span>
+                <button class="btn-edit-param" @click="toggleEditCategory('theme')" title="管理选项">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              </div>
+              <a-radio-group v-model:value="wizard.params.value.theme" button-style="solid">
+                <a-radio-button v-for="opt in themeOptions" :key="opt" :value="opt">
+                  {{ opt }}
+                </a-radio-button>
+              </a-radio-group>
+              <div v-if="editingCategory === 'theme'" class="param-edit-row">
+                <a-input v-model:value="newOptionInput" placeholder="新增选项" size="small" @pressEnter="addCustomOption('theme')" />
+                <a-button size="small" type="primary" @click="addCustomOption('theme')">添加</a-button>
+                <div class="param-option-list">
+                  <span v-for="opt in themeOptions" :key="opt" class="param-option-tag">
+                    {{ opt }}
+                    <button class="btn-remove-option" @click="removeCustomOption('theme', opt)">&times;</button>
+                  </span>
+                </div>
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
@@ -181,14 +282,37 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { useProjectWizard } from '@/composables/useProjectWizard'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
+import { useCustomParamsStore } from '@/stores/customParams'
 
 const wizard = useProjectWizard()
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
+const customParamsStore = useCustomParamsStore()
+
+// M0501-1~5 自定义参数管理
+const editingCategory = ref<string | null>(null)
+const newOptionInput = ref('')
+
+function toggleEditCategory(key: string) {
+  editingCategory.value = editingCategory.value === key ? null : key
+  newOptionInput.value = ''
+}
+
+function addCustomOption(key: string) {
+  const val = newOptionInput.value.trim()
+  if (val) {
+    customParamsStore.addOption(key, val)
+    newOptionInput.value = ''
+  }
+}
+
+function removeCustomOption(key: string, option: string) {
+  customParamsStore.removeOption(key, option)
+}
 
 // 监听 wizard 步骤变化，step=2 时自动触发大纲生成
 watch(
@@ -203,9 +327,11 @@ watch(
 
 const visible = computed(() => uiStore.modals.createProject)
 
-const genreOptions = ['都市', '玄幻', '修仙', '科幻', '悬疑', '历史', '言情', '武侠']
-const toneOptions = ['热血', '轻松', '悬疑', '治愈', '黑暗', '搞笑']
-const styleOptions = ['细腻', '简洁', '幽默', '严肃', '抒情', '快节奏']
+const genreOptions = computed(() => customParamsStore.getOptions('genre'))
+const toneOptions = computed(() => customParamsStore.getOptions('tone'))
+const styleOptions = computed(() => customParamsStore.getOptions('writing_style'))
+const bgOptions = computed(() => customParamsStore.getOptions('background'))
+const themeOptions = computed(() => customParamsStore.getOptions('theme'))
 const scaleOptions = [
   { label: '5万字', value: 50000, hint: '≈ 28章' },
   { label: '10万字', value: 100000, hint: '≈ 56章' },
@@ -260,5 +386,80 @@ function close() {
   font-size: 14px;
   color: var(--text-secondary);
   margin: 0 0 16px 0;
+}
+
+.param-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.btn-edit-param {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.btn-edit-param:hover {
+  background: var(--bg-card);
+  color: var(--accent-primary);
+}
+
+.param-edit-row {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.param-option-list {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.param-option-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.btn-remove-option {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-remove-option:hover {
+  color: var(--accent-danger);
 }
 </style>

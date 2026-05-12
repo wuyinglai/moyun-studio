@@ -66,7 +66,11 @@ async function sendMessage() {
   }
 
   inputText.value = ''
-  await chatStore.sendMessage(text)
+  try {
+    await chatStore.sendMessage(text)
+  } catch {
+    notification.error('发送消息失败')
+  }
 }
 
 // 取消生成
@@ -74,13 +78,8 @@ function cancelStream() {
   chatStore.cancelStream()
 }
 
-// 清空消息
-function clearMessages() {
-  chatStore.clearMessages()
-}
-
-// 监听编辑器发起的 AI 生成请求
-async function handleAIRequest() {
+// 监听编辑器发起的 AI 续写请求
+async function handleAIContinue() {
   const projectId = projectStore.currentProject?.id
   const filePath = fileStore.currentFile?.path
   if (!projectId || !filePath) {
@@ -90,16 +89,33 @@ async function handleAIRequest() {
   try {
     await chatStore.continueWriting(projectId, filePath)
   } catch {
-    notification.error('AI 生成失败')
+    notification.error('AI 续写失败')
+  }
+}
+
+// 监听编辑器发起的 AI 重写请求
+async function handleAIRewrite() {
+  const projectId = projectStore.currentProject?.id
+  const filePath = fileStore.currentFile?.path
+  if (!projectId || !filePath) {
+    notification.warning('请先打开项目和文件')
+    return
+  }
+  try {
+    await chatStore.rewriteContent(projectId, filePath)
+  } catch {
+    notification.error('AI 重写失败')
   }
 }
 
 onMounted(() => {
-  window.addEventListener('chat:request-generate', handleAIRequest)
+  window.addEventListener('chat:request-generate', handleAIContinue)
+  window.addEventListener('chat:request-rewrite', handleAIRewrite)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('chat:request-generate', handleAIRequest)
+  window.removeEventListener('chat:request-generate', handleAIContinue)
+  window.removeEventListener('chat:request-rewrite', handleAIRewrite)
 })
 </script>
 

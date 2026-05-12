@@ -3,6 +3,45 @@ import { ref } from 'vue'
 import { useLLMStore } from './llm'
 import { useTaskStore } from './task'
 
+function getAutoMode(): string {
+  return localStorage.getItem('moyun-auto-mode') || 'L1'
+}
+
+/**
+ * 解析 SSE 响应流，逐行提取 data: JSON 中的 delta 内容
+ */
+async function parseSSEStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onDelta: (delta: string) => void,
+): Promise<void> {
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || '' // 保留未完成行
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const parsed = JSON.parse(line.slice(6))
+          if (parsed.delta) {
+            onDelta(parsed.delta)
+          } else if (parsed.content) {
+            onDelta(parsed.content)
+          }
+        } catch {
+          // 跳过非 JSON 行
+        }
+      }
+    }
+  }
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'ai'
@@ -113,27 +152,25 @@ export const useChatStore = defineStore('chat', () => {
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
 
-      const decoder = new TextDecoder()
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const chunk = decoder.decode(value)
-        appendAIMessage(chunk)
-      }
-    } finally {
+      await parseSSEStream(reader, (delta) => {
+        appendAIMessage(delta)
+      })
       finishAIMessage()
+    } catch (e) {
+      finishAIMessage()
+      throw e
+    } finally {
       streamController = null
     }
   }
 
   /**
-   * 续写当前文件（写下一部分）
+   * 续写当前文件（调用 /api/generate 的 append 模式）
    */
   async function continueWriting(projectId: string, filePath: string, prompt?: string) {
     const taskStore = useTaskStore()
     generationMode.value = 'continue'
 
-    // 添加任务
     const taskId = `task-${Date.now()}`
     taskStore.addTask(taskId, `续写: ${filePath.split('/').pop()}`)
     taskStore.startTask(taskId)
@@ -142,10 +179,17 @@ export const useChatStore = defineStore('chat', () => {
     startAIMessage(taskId)
 
     try {
-      const response = await fetch('/api/generate/continue', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: projectId, path: filePath, prompt }),
+        body: JSON.stringify({
+          project_id: projectId,
+          file_path: filePath,
+          prompt_type: 'generate/chapter',
+          extra_vars: prompt ? { user_prompt: prompt } : {},
+          mode: 'append',
+          stream: true,
+        }),
         signal: streamController.signal,
       })
 
@@ -156,26 +200,28 @@ export const useChatStore = defineStore('chat', () => {
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
 
-      const decoder = new TextDecoder()
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const chunk = decoder.decode(value)
-        appendAIMessage(chunk)
-      }
+      await parseSSEStream(reader, (delta) => {
+        appendAIMessage(delta)
+      })
 
-      taskStore.completeTask(taskId)
+      // G0116: 根据自动化模式决定是否等待确认
+      if (getAutoMode() === 'L1') {
+        taskStore.waitForConfirm(taskId)
+      } else {
+        taskStore.completeTask(taskId)
+      }
+      finishAIMessage()
     } catch (e) {
       taskStore.failTask(taskId)
+      finishAIMessage()
       throw e
     } finally {
-      finishAIMessage()
       streamController = null
     }
   }
 
   /**
-   * 重写当前文件
+   * 重写当前文件（调用 /api/generate 的 rewrite 模式）
    */
   async function rewriteContent(projectId: string, filePath: string, prompt?: string) {
     const taskStore = useTaskStore()
@@ -189,10 +235,17 @@ export const useChatStore = defineStore('chat', () => {
     startAIMessage(taskId)
 
     try {
-      const response = await fetch('/api/generate/rewrite', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: projectId, path: filePath, prompt }),
+        body: JSON.stringify({
+          project_id: projectId,
+          file_path: filePath,
+          prompt_type: 'generate/chapter',
+          extra_vars: prompt ? { user_prompt: prompt } : {},
+          mode: 'rewrite',
+          stream: true,
+        }),
         signal: streamController.signal,
       })
 
@@ -203,20 +256,22 @@ export const useChatStore = defineStore('chat', () => {
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
 
-      const decoder = new TextDecoder()
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const chunk = decoder.decode(value)
-        appendAIMessage(chunk)
-      }
+      await parseSSEStream(reader, (delta) => {
+        appendAIMessage(delta)
+      })
 
-      taskStore.completeTask(taskId)
+      // G0116: 根据自动化模式决定是否等待确认
+      if (getAutoMode() === 'L1') {
+        taskStore.waitForConfirm(taskId)
+      } else {
+        taskStore.completeTask(taskId)
+      }
+      finishAIMessage()
     } catch (e) {
       taskStore.failTask(taskId)
+      finishAIMessage()
       throw e
     } finally {
-      finishAIMessage()
       streamController = null
     }
   }

@@ -6,6 +6,11 @@ import NotificationContainer from '@/components/layout/NotificationContainer.vue
 import CreateProjectModal from '@/components/modals/CreateProjectModal.vue'
 import OpenProjectModal from '@/components/modals/OpenProjectModal.vue'
 import SettingsModal from '@/components/modals/SettingsModal.vue'
+import TokenCountModal from '@/components/modals/TokenCountModal.vue'
+import CompareModal from '@/components/modals/CompareModal.vue'
+import FeedbackModal from '@/components/modals/FeedbackModal.vue'
+import RevisionLogModal from '@/components/modals/RevisionLogModal.vue'
+import { useNotificationStore } from '@/stores/notification'
 import { useAppInit } from '@/composables/useApp'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
@@ -37,19 +42,45 @@ onMounted(async () => {
       editorStore.setCurrentFile(filePath)
     }
   }
+
+  // beforeunload：刷新/关闭页面时拦截
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  // G0114 全局错误捕获
+  window.addEventListener('error', handleGlobalError)
+  window.addEventListener('unhandledrejection', handlePromiseRejection)
 })
 
 onUnmounted(() => {
   cleanupApp()
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('error', handleGlobalError)
+  window.removeEventListener('unhandledrejection', handlePromiseRejection)
 })
 
-// beforeunload：刷新/关闭页面时拦截
-window.addEventListener('beforeunload', (e) => {
+function handleBeforeUnload(e: BeforeUnloadEvent) {
   if (editorStore.isDirty) {
     e.preventDefault()
     e.returnValue = '有未保存的内容，确定要离开吗？'
   }
-})
+}
+
+// G0114 全局错误处理
+function handleGlobalError(event: ErrorEvent) {
+  console.error('未捕获的错误:', event.error || event.message)
+  // 避免通知过多，只对非调试错误进行提示
+  if (event.error && !event.message.includes('ResizeObserver')) {
+    try {
+      useNotificationStore().error(`发生错误: ${event.message}`)
+    } catch {}
+  }
+}
+
+function handlePromiseRejection(event: PromiseRejectionEvent) {
+  console.error('未捕获的 Promise 错误:', event.reason)
+  try {
+    useNotificationStore().error(`异步错误: ${(event.reason as any)?.message || '未知错误'}`)
+  } catch {}
+}
 
 // 路由守卫：路由跳转前拦截（Vue Router beforeEach 已在 router/index.ts 中处理）
 </script>
@@ -62,6 +93,10 @@ window.addEventListener('beforeunload', (e) => {
     <CreateProjectModal />
     <OpenProjectModal />
     <SettingsModal />
+    <TokenCountModal />
+    <CompareModal />
+    <FeedbackModal />
+    <RevisionLogModal />
   </div>
 </template>
 

@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useStyleGuideStore } from '@/stores/styleGuide'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
@@ -54,8 +54,12 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 
 // 同步 store 变化
-styleGuideStore.$subscribe(() => {
+const unsubscribe = styleGuideStore.$subscribe(() => {
   content.value = styleGuideStore.content
+})
+
+onUnmounted(() => {
+  unsubscribe()
 })
 
 async function loadGuide() {
@@ -125,7 +129,7 @@ defineExpose({ loadGuide })
   transition: background 0.2s;
 }
 
-.btn-action:hover:not(:disabled) { background: #2563eb; }
+.btn-action:hover:not(:disabled) { filter: brightness(1.15); }
 .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .panel-content {

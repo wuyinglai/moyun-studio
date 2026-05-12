@@ -18,7 +18,7 @@
       <div v-else class="entries-list">
         <div
           v-for="(entry, i) in entries"
-          :key="i"
+          :key="entry.time"
           class="context-entry"
         >
           <div class="entry-header">
@@ -67,12 +67,12 @@ const showAppendDialog = ref(false)
 const appendText = ref('')
 
 const entries = computed<ContextEntry[]>(() => {
-  // 简单解析：按 === 分隔，或直接返回单条
+  // 解析：按 ## 标题分隔（与 store appendChapter 格式一致）
   const raw = recentContextStore.content
   if (!raw) return []
-  return raw.split(/\n(?===)/).map((block) => {
+  return raw.split(/\n(?=## )/).map((block) => {
     const lines = block.trim().split('\n')
-    const time = lines[0] || ''
+    const time = (lines[0] || '').replace(/^##\s*/, '')
     const text = lines.slice(1).join('\n').trim()
     return { time, text }
   }).filter(e => e.time || e.text)
@@ -96,7 +96,7 @@ function handleAppend() {
 async function confirmAppend() {
   if (!appendText.value.trim() || !projectStore.currentProject) return
   const timestamp = new Date().toLocaleString('zh-CN')
-  const entry = `== ${timestamp} ==\n${appendText.value.trim()}\n`
+  const entry = `\n## ${timestamp}\n${appendText.value.trim()}\n`
   const newContent = recentContextStore.content
     ? recentContextStore.content + '\n' + entry
     : entry
@@ -111,8 +111,26 @@ async function confirmAppend() {
   }
 }
 
-function deleteEntry(_index: number) {
-  notification.warning('删除功能待实现')
+async function deleteEntry(index: number) {
+  if (!projectStore.currentProject) return
+  const raw = recentContextStore.content
+  if (!raw) return
+
+  // 过滤空块，与 entries computed 保持一致
+  const blocks = raw.split(/\n(?=## )/).filter(Boolean)
+  if (index < 0 || index >= blocks.length) return
+
+  blocks.splice(index, 1)
+  const newContent = blocks.join('')
+
+  recentContextStore.content = newContent
+  try {
+    await recentContextStore.save(projectStore.currentProject.id)
+    notification.success('已删除上下文记录')
+  } catch {
+    notification.error('删除失败')
+    recentContextStore.content = raw
+  }
 }
 
 defineExpose({ loadContext })

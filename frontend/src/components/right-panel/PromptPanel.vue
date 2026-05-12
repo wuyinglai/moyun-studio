@@ -3,7 +3,7 @@
     <!-- 编辑工具栏 -->
     <div class="panel-section">
       <div class="section-header">
-        <span class="section-title">当前 Prompt</span>
+        <span class="section-title">发送给LLM的Prompt</span>
       </div>
       <div class="toolbar-row">
         <a-button-group>
@@ -16,6 +16,22 @@
             前进
           </a-button>
         </a-button-group>
+        <a-select
+          v-model:value="selectedTemplate"
+          placeholder="加载模板..."
+          size="small"
+          style="min-width: 120px;"
+          :loading="isLoadingTemplate"
+          @change="loadTemplate"
+        >
+          <a-select-option v-for="t in templateList" :key="t.name" :value="t.name">
+            {{ t.name }}
+          </a-select-option>
+        </a-select>
+        <a-button type="primary" size="small" @click="sendToAI">
+          <template #icon><i class="fa-solid fa-paper-plane"></i></template>
+          发送
+        </a-button>
       </div>
       <a-textarea
         v-model:value="localPrompt"
@@ -27,28 +43,110 @@
       <div class="save-status" :class="{ saving: isSaving }">
         {{ isSaving ? '保存中...' : '已保存' }}
       </div>
+      <!-- M0402-3 引用文件链接 -->
+      <div v-if="fileReferences.length > 0" class="file-references">
+        <span class="ref-title">引用文件：</span>
+        <a
+          v-for="ref in fileReferences"
+          :key="ref.path"
+          class="ref-link"
+          @click="openReferencedFile(ref.path)"
+        >
+          <i class="fa-solid fa-file-lines"></i>
+          {{ ref.name }}
+        </a>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Button as AButton, ButtonGroup as AButtonGroup } from 'ant-design-vue'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { useNotificationStore } from '@/stores/notification'
 import { useChatStore } from '@/stores/chat'
+import { useFileStore } from '@/stores/file'
+import { useEditorStore } from '@/stores/editor'
+import { useProjectStore } from '@/stores/project'
+import api from '@/services/api'
 
 const rightPanelStore = useRightPanelStore()
 const notification = useNotificationStore()
 const chatStore = useChatStore()
+const fileStore = useFileStore()
+const editorStore = useEditorStore()
+const projectStore = useProjectStore()
 
 const localPrompt = ref('')
 const isSaving = ref(false)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
+// G0106: Prompt 模板加载
+interface PromptTemplate {
+  name: string
+  category: string
+  exists: boolean
+}
+const templateList = ref<PromptTemplate[]>([])
+const selectedTemplate = ref<string | null>(null)
+const isLoadingTemplate = ref(false)
+
+onMounted(async () => {
+  try {
+    const data = await api.get<{ prompts: PromptTemplate[]; total: number }>('/prompts')
+    templateList.value = data?.prompts || []
+  } catch {
+    // 静默失败，模板加载是可选的
+  }
+})
+
+async function loadTemplate(fullName: string) {
+  if (!fullName) return
+  isLoadingTemplate.value = true
+  selectedTemplate.value = fullName
+  try {
+    const [category, ...nameParts] = fullName.split('/')
+    const name = nameParts.join('/')
+    const data = await api.get<{ name: string; category: string; content: string }>(`/prompts/${category}/${name}`)
+    if (data?.content) {
+      localPrompt.value = data.content
+      rightPanelStore.loadPromptTemplate(data.content)
+      notification.success(`已加载模板: ${fullName}`)
+    }
+  } catch {
+    notification.error('加载模板失败')
+  } finally {
+    isLoadingTemplate.value = false
+  }
+}
+
+// M0402-3 — 解析 @{文件路径} 引用
+const fileReferences = computed(() => {
+  const refs: { path: string; name: string }[] = []
+  const regex = /@\{([^}]+)\}/g
+  let match
+  while ((match = regex.exec(localPrompt.value)) !== null) {
+    const path = match[1].trim()
+    if (path && !refs.find(r => r.path === path)) {
+      refs.push({ path, name: path.split('/').pop() || path })
+    }
+  }
+  return refs
+})
+
+function openReferencedFile(path: string) {
+  if (!projectStore.currentProject) return
+  fileStore.openFile({ name: path.split('/').pop() || '', path, type: 'file' })
+  editorStore.setCurrentFile(path)
+  fileStore.readFile(projectStore.currentProject.id, path).then(data => {
+    editorStore.loadContent(path, data.content || '')
+  })
+}
+
 const currentHistoryIndex = computed(() => rightPanelStore.currentHistoryIndex)
 const canGoBack = computed(() => currentHistoryIndex.value < rightPanelStore.promptHistory.length - 1)
-const canGoForward = computed(() => currentHistoryIndex.value > 0 || currentHistoryIndex.value === -1)
+const canGoForward = computed(() => currentHistoryIndex.value >= 0)
 
 watch(
   () => rightPanelStore.promptContent,
@@ -164,6 +262,44 @@ async function sendToAI() {
   &:disabled {
     color: var(--text-muted);
     opacity: 0.5;
+  }
+}
+
+.file-references {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.ref-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.ref-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--accent-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
   }
 }
 </style>

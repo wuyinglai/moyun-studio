@@ -57,7 +57,23 @@ const emit = defineEmits<{
 
 const fileStore = useFileStore()
 
-const isExpanded = ref(props.depth === 0) // 根目录默认展开
+const EXPANDED_KEY = 'moyun-expanded-dirs'
+
+function getExpandedDirs(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(EXPANDED_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveExpandedDirs(dirs: string[]) {
+  localStorage.setItem(EXPANDED_KEY, JSON.stringify(dirs))
+}
+
+const isExpanded = ref(
+  props.depth === 0 || getExpandedDirs().includes(props.node.path)
+)
 
 // 根据文件类型获取图标
 const iconClass = computed(() => {
@@ -103,6 +119,14 @@ const isDirty = computed(() => {
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
+  const dirs = getExpandedDirs()
+  if (isExpanded.value) {
+    if (!dirs.includes(props.node.path)) dirs.push(props.node.path)
+  } else {
+    const idx = dirs.indexOf(props.node.path)
+    if (idx !== -1) dirs.splice(idx, 1)
+  }
+  saveExpandedDirs(dirs)
 }
 
 function handleClick() {

@@ -17,16 +17,16 @@
     <!-- 内容区域 -->
     <div class="panel-content">
       <PromptPanel v-show="activeTab === 'prompt'" />
-      <StoryStatePanel v-show="activeTab === 'story'" />
-      <StyleGuidePanel v-show="activeTab === 'style'" />
-      <RecentContextPanel v-show="activeTab === 'context'" />
+      <StoryStatePanel v-show="activeTab === 'story'" ref="storyPanelRef" />
+      <StyleGuidePanel v-show="activeTab === 'style'" ref="styleGuidePanelRef" />
+      <RecentContextPanel v-show="activeTab === 'context'" ref="recentContextPanelRef" />
       <ExecutionPanel v-show="activeTab === 'execution'" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import PromptPanel from './PromptPanel.vue'
 import ExecutionPanel from './ExecutionPanel.vue'
 import StoryStatePanel from '../global/StoryStatePanel.vue'
@@ -35,6 +35,10 @@ import RecentContextPanel from '../global/RecentContextPanel.vue'
 
 const activeTab = ref('prompt')
 
+const storyPanelRef = ref<InstanceType<typeof StoryStatePanel>>()
+const styleGuidePanelRef = ref<InstanceType<typeof StyleGuidePanel>>()
+const recentContextPanelRef = ref<InstanceType<typeof RecentContextPanel>>()
+
 const tabs = [
   { id: 'prompt', label: '提示词', icon: 'fa-solid fa-terminal' },
   { id: 'story', label: '故事状态', icon: 'fa-solid fa-book-open' },
@@ -42,6 +46,12 @@ const tabs = [
   { id: 'context', label: '上下文', icon: 'fa-solid fa-clock-rotate-left' },
   { id: 'execution', label: '执行', icon: 'fa-solid fa-list-check' },
 ]
+
+onMounted(() => {
+  storyPanelRef.value?.loadState()
+  styleGuidePanelRef.value?.loadGuide()
+  recentContextPanelRef.value?.loadContext()
+})
 </script>
 
 <style scoped lang="scss">

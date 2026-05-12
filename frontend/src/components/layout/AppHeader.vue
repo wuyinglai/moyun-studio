@@ -7,7 +7,18 @@
         <span class="logo-text">墨韵</span>
       </div>
       <div class="project-name" v-if="projectStore.currentProject">
-        {{ projectStore.currentProject.name }}
+        <input
+          v-if="isEditingName"
+          ref="nameInputRef"
+          v-model="editingName"
+          class="project-name-input"
+          @blur="confirmNameEdit"
+          @keydown.enter="confirmNameEdit"
+          @keydown.escape="cancelNameEdit"
+        />
+        <span v-else class="project-name-text" @click="startNameEdit" :title="projectStore.currentProject.name">
+          {{ projectStore.currentProject.name }}
+        </span>
       </div>
       <div class="project-name project-name--empty" v-else>未打开项目</div>
     </div>
@@ -34,7 +45,7 @@
       <!-- LLM调用中动画 M0104 -->
       <div class="llm-generating" v-if="llmStore.isGenerating">
         <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>AI生成中...</span>
+        <span>{{ generatingLabel }}</span>
       </div>
 
       <!-- Thinking开关 M0107 -->
@@ -70,29 +81,63 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
 import { useSSE } from '@/composables/useSSE'
+import { useNotificationStore } from '@/stores/notification'
+import { useChatStore } from '@/stores/chat'
 
 const projectStore = useProjectStore()
 const llmStore = useLLMStore()
 const uiStore = useUIStore()
+const notification = useNotificationStore()
+const chatStore = useChatStore()
 const { isConnected: sseConnected, isReconnecting } = useSSE()
+
+// M0102 — 项目名可编辑
+const isEditingName = ref(false)
+const editingName = ref('')
+const nameInputRef = ref<HTMLInputElement | null>(null)
+
+function startNameEdit() {
+  editingName.value = projectStore.currentProject?.name || ''
+  isEditingName.value = true
+  nextTick(() => nameInputRef.value?.focus())
+}
+
+async function confirmNameEdit() {
+  if (!projectStore.currentProject) return
+  const newName = editingName.value.trim()
+  if (newName && newName !== projectStore.currentProject.name) {
+    try {
+      await projectStore.updateProject(projectStore.currentProject.id, { name: newName })
+      notification.success('项目名已更新')
+    } catch {
+      notification.error('更新项目名失败')
+    }
+  }
+  isEditingName.value = false
+}
+
+function cancelNameEdit() {
+  isEditingName.value = false
+}
+
+// M0104 — LLM 调用中动态操作名
+const generatingLabel = computed(() => {
+  if (!llmStore.isGenerating) return ''
+  const mode = chatStore.generationMode
+  if (mode === 'continue') return '正在续写章节...'
+  if (mode === 'rewrite') return '正在重写章节...'
+  return 'AI生成中...'
+})
 
 const connectionStatus = computed(() => {
   if (isReconnecting.value) return '重连中...'
   if (llmStore.isConnected && sseConnected.value) return '已连接'
   return '未连接'
-})
-
-onMounted(async () => {
-  // 加载 LLM 配置和连接状态
-  await llmStore.loadConfig()
-  if (llmStore.config.apiKey) {
-    await llmStore.testConnection()
-  }
 })
 
 async function toggleThinking() {
@@ -165,6 +210,27 @@ async function toggleThinking() {
     color: var(--text-muted);
     font-style: italic;
   }
+}
+
+.project-name-text {
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.2s;
+  &:hover {
+    border-bottom-color: var(--text-muted);
+  }
+}
+
+.project-name-input {
+  background: var(--bg-card);
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 2px 8px;
+  outline: none;
+  width: 200px;
 }
 
 .header-center {

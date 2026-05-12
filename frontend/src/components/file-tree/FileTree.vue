@@ -72,7 +72,7 @@ async function handleFileClick(node: FileNode) {
     try {
       const fileData = await fileStore.readFile(projectStore.currentProject!.id, node.path)
       fileStore.openFile(node)
-      editorStore.setContent(fileData.content)
+      editorStore.loadContent(node.path, fileData.content)
       editorStore.setCurrentFile(node.path)
     } catch (e) {
       notification.error(`无法打开文件: ${node.name}`)

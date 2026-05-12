@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useStoryStateStore } from '@/stores/storyState'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
@@ -40,8 +40,12 @@ const content = ref(storyStateStore.content)
 const isLoading = ref(false)
 const isSaving = ref(false)
 
-storyStateStore.$subscribe(() => {
+const unsubscribe = storyStateStore.$subscribe(() => {
   content.value = storyStateStore.content
+})
+
+onUnmounted(() => {
+  unsubscribe()
 })
 
 async function loadState() {

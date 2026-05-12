@@ -77,6 +77,7 @@ class SSEService {
   private reconnectDelay = INITIAL_RECONNECT_DELAY
   private isConnecting = false
   private manualClose = false
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   // 状态
   private _isConnected = ref(false)
@@ -183,7 +184,10 @@ class SSEService {
     switch (type) {
       case 'generation':
         // AI 生成内容 - 更新编辑器和聊天
-        if (data.content) {
+        // 后端发送格式: { delta: "...", content?: "..." }
+        if (data.delta) {
+          chatStore.appendAIMessage(data.delta)
+        } else if (data.content) {
           editorStore.appendContent(data.content)
           chatStore.appendAIMessage(data.content)
         }
@@ -205,9 +209,9 @@ class SSEService {
         break
 
       case 'file-renamed':
-        // 文件重命名 - 刷新文件树
-        if (data.oldPath && data.newPath && data.projectId) {
-          fileStore.renameFile(data.projectId, data.oldPath, data.newPath)
+        // 文件重命名 - 本地更新文件树（不做 API 调用，避免二次重命名）
+        if (data.oldPath && data.newPath) {
+          fileStore.handleFileRenamed(data.oldPath, data.newPath)
         }
         break
 
@@ -288,7 +292,7 @@ class SSEService {
 
     console.log(`${this.reconnectDelay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`)
 
-    setTimeout(() => {
+    this.reconnectTimer = setTimeout(() => {
       this.disconnect()
       this.connect()
     }, this.reconnectDelay)
@@ -302,6 +306,10 @@ class SSEService {
    */
   disconnect() {
     this.manualClose = true
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
     if (this.eventSource) {
       this.eventSource.close()
       this.eventSource = null

@@ -6,6 +6,7 @@ import { ref } from 'vue'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
+import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
 
 const DEBOUNCE_MS = 300
@@ -14,10 +15,12 @@ export function useAutoSave() {
   const fileStore = useFileStore()
   const editorStore = useEditorStore()
   const projectStore = useProjectStore()
+  const historyStore = useHistoryStore()
   const notification = useNotificationStore()
 
   const isSaving = ref(false)
   let timer: ReturnType<typeof setTimeout> | null = null
+  let snapshotTimer: ReturnType<typeof setTimeout> | null = null
 
   /** 标记文件已修改，启动防抖计时 */
   function triggerAutoSave(filePath: string) {
@@ -27,6 +30,17 @@ export function useAutoSave() {
     timer = setTimeout(() => {
       doSave(filePath)
     }, DEBOUNCE_MS)
+
+    // G0101: 版本快照 — 编辑10秒后生成快照
+    if (snapshotTimer) {
+      clearTimeout(snapshotTimer)
+    }
+    snapshotTimer = setTimeout(() => {
+      const content = editorStore.getContent(filePath)
+      if (content) {
+        historyStore.pushHistory(filePath, content)
+      }
+    }, 10000)
   }
 
   /** 执行保存 */
@@ -37,7 +51,11 @@ export function useAutoSave() {
 
     isSaving.value = true
     try {
+      // 保存前先生成版本快照
       const content = editorStore.getContent(filePath)
+      if (content) {
+        historyStore.pushHistory(filePath, content)
+      }
       await fileStore.saveFile(projectStore.currentProject.id, filePath, content)
     } catch {
       notification.error('自动保存失败')
@@ -60,6 +78,10 @@ export function useAutoSave() {
     if (timer) {
       clearTimeout(timer)
       timer = null
+    }
+    if (snapshotTimer) {
+      clearTimeout(snapshotTimer)
+      snapshotTimer = null
     }
   }
 

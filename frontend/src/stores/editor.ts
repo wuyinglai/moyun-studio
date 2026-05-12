@@ -11,7 +11,10 @@ export const useEditorStore = defineStore('editor', () => {
     const fileStore = useFileStore()
     return fileStore.unsavedFiles.size > 0
   })
-  const wordCount = ref(0)
+  const wordCount = computed(() => {
+    if (!currentFilePath.value) return 0
+    return countWords(contents.value[currentFilePath.value] || '')
+  })
   const cursorPosition = ref({ line: 1, col: 1 })
 
   function loadContent(path: string, content: string, fm?: Record<string, unknown>) {
@@ -19,19 +22,12 @@ export const useEditorStore = defineStore('editor', () => {
     if (fm) {
       frontmatter.value[path] = fm
     }
-    updateWordCount(path)
   }
 
   function updateContent(path: string, content: string) {
     contents.value[path] = content
-    updateWordCount(path)
     const fileStore = useFileStore()
     fileStore.markDirty(path)
-  }
-
-  function updateWordCount(path: string) {
-    const content = contents.value[path] || ''
-    wordCount.value = countWords(content)
   }
 
   function clearFile(path: string) {
@@ -46,7 +42,6 @@ export const useEditorStore = defineStore('editor', () => {
   function setContent(content: string) {
     if (currentFilePath.value) {
       contents.value[currentFilePath.value] = content
-      updateWordCount(currentFilePath.value)
     }
   }
 
@@ -58,18 +53,6 @@ export const useEditorStore = defineStore('editor', () => {
     if (currentFilePath.value) {
       const current = contents.value[currentFilePath.value] || ''
       contents.value[currentFilePath.value] = current + content
-      updateWordCount(currentFilePath.value)
-      const fileStore = useFileStore()
-      fileStore.markDirty(currentFilePath.value)
-    }
-  }
-
-  function insertContent(content: string) {
-    // 供 PromptPanel / AI 生成调用，追加内容到文件末尾
-    // 实际光标位置插入由 MarkdownEditor 组件通过 v-model 或 ref 完成
-    if (currentFilePath.value) {
-      contents.value[currentFilePath.value] = (contents.value[currentFilePath.value] || '') + content
-      updateWordCount(currentFilePath.value)
       const fileStore = useFileStore()
       fileStore.markDirty(currentFilePath.value)
     }
@@ -85,12 +68,10 @@ export const useEditorStore = defineStore('editor', () => {
     loadContent,
     updateContent,
     appendContent,
-    updateWordCount,
     clearFile,
     getContent,
     setContent,
     setCurrentFile,
-    insertContent,
   }
 }, {
   persist: {

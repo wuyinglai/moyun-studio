@@ -1,9 +1,13 @@
 <template>
   <div class="execution-panel">
-    <!-- 任务队列 -->
+    <!-- M0403-1 状态指示 -->
     <div class="panel-section">
       <div class="section-header">
         <span class="section-title">任务队列</span>
+        <span class="exec-status" :class="{ running: hasRunningTasks }">
+          <span class="status-dot"></span>
+          {{ hasRunningTasks ? '运行中' : '空闲' }}
+        </span>
         <button class="btn-icon" @click="clearAll" title="清空">
           <i class="fa-solid fa-trash-can"></i>
         </button>
@@ -32,13 +36,22 @@
 
           <div class="task-meta">
             <span class="task-time">{{ formatTime(task.createdAt) }}</span>
-            <button
-              v-if="task.status === 'pending' || task.status === 'running'"
-              class="btn-cancel"
-              @click="cancelTask(task.id)"
-            >
-              <i class="fa-solid fa-stop"></i>
-            </button>
+            <div class="task-actions">
+              <button
+                v-if="task.status === 'waiting'"
+                class="btn-confirm"
+                @click="confirmTask(task.id)"
+              >
+                <i class="fa-solid fa-play"></i> 继续
+              </button>
+              <button
+                v-if="task.status === 'pending' || task.status === 'running'"
+                class="btn-cancel"
+                @click="cancelTask(task.id)"
+              >
+                <i class="fa-solid fa-stop"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -85,6 +98,7 @@ const logContainer = ref<HTMLElement | null>(null)
 
 const tasks = computed(() => taskStore.tasks)
 const logs = computed(() => taskStore.logs)
+const hasRunningTasks = computed(() => tasks.value.some(t => t.status === 'running'))
 
 const statusText: Record<string, string> = {
   pending: '等待中',
@@ -92,6 +106,7 @@ const statusText: Record<string, string> = {
   done: '已完成',
   failed: '失败',
   cancelled: '已取消',
+  waiting: '待确认',
 }
 
 // 自动滚动到最新日志
@@ -110,6 +125,11 @@ function formatTime(timestamp: number): string {
 function cancelTask(taskId: string) {
   taskStore.cancelTask(taskId)
   notification.warning('任务已取消')
+}
+
+function confirmTask(taskId: string) {
+  taskStore.confirmTask(taskId)
+  notification.success('已确认，继续执行')
 }
 
 function clearAll() {
@@ -149,6 +169,42 @@ function clearLogs() {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  gap: 8px;
+}
+
+.exec-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: auto;
+
+  &.running {
+    color: var(--accent-primary);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+
+    .running & {
+      background: var(--accent-success);
+      animation: pulse 2s infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes pulse-waiting {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .section-title {
@@ -226,6 +282,11 @@ function clearLogs() {
     border-left: 3px solid var(--text-muted);
     opacity: 0.6;
   }
+
+  &.waiting {
+    border-left: 3px solid var(--accent-warning);
+    animation: pulse-waiting 1.5s infinite;
+  }
 }
 
 .task-header {
@@ -258,6 +319,11 @@ function clearLogs() {
     color: white;
   }
 
+  .waiting & {
+    background: var(--accent-warning);
+    color: white;
+  }
+
   .failed & {
     background: var(--accent-danger);
     color: white;
@@ -282,6 +348,29 @@ function clearLogs() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.task-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-confirm:hover {
+  opacity: 0.85;
 }
 
 .task-time {

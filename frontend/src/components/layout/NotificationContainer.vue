@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
+import { watch, onUnmounted } from 'vue'
 import { notification } from 'ant-design-vue'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -13,7 +13,7 @@ let notificationKeys = new Map()
 
 function showAntNotification(notificationItem: any) {
   const key = notificationItem.id
-  
+
   const config: any = {
     message: '',
     description: notificationItem.message,
@@ -38,24 +38,26 @@ function showAntNotification(notificationItem: any) {
   notificationKeys.set(key, true)
 }
 
-// 监听新通知添加
+// 监听新通知添加，同时清理已关闭通知的 key
 watch(
   () => store.notifications.length,
   () => {
+    // 显示最新通知
     const latestNotification = store.notifications[store.notifications.length - 1]
     if (latestNotification && !notificationKeys.has(latestNotification.id)) {
       showAntNotification(latestNotification)
     }
+    // 清理已关闭的通知 key
+    if (notificationKeys.size > store.notifications.length) {
+      const existingIds = new Set(store.notifications.map(n => n.id))
+      notificationKeys.forEach((_, key) => {
+        if (!existingIds.has(key)) notificationKeys.delete(key)
+      })
+    }
   }
 )
 
-// 清理已关闭的通知
-setInterval(() => {
-  const existingIds = store.notifications.map(n => n.id)
-  notificationKeys.forEach((_, key) => {
-    if (!existingIds.includes(key)) {
-      notificationKeys.delete(key)
-    }
-  })
-}, 1000)
+onUnmounted(() => {
+  notificationKeys = new Map()
+})
 </script>

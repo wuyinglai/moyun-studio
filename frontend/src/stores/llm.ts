@@ -35,8 +35,9 @@ export const useLLMStore = defineStore('llm', () => {
   }
 
   async function saveConfig(cfg: Partial<LLMConfig>) {
-    const data = await api.post<LLMConfig>('/llm/config', { ...config.value, ...cfg })
-    config.value = data
+    await api.post('/llm/config', { ...config.value, ...cfg })
+    // 合并本地配置（后端仅保存，不返回完整配置）
+    Object.assign(config.value, cfg)
   }
 
   async function testConnection(): Promise<boolean> {
@@ -52,8 +53,8 @@ export const useLLMStore = defineStore('llm', () => {
 
   async function fetchModels() {
     try {
-      const data = await api.get<string[]>('/llm/models')
-      availableModels.value = data || []
+      const data = await api.get<{ models: Array<{ id: string; name: string }> }>('/llm/models')
+      availableModels.value = (data?.models || []).map((m) => m.id)
     } catch {
       availableModels.value = []
     }

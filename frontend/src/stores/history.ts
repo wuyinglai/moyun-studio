@@ -9,16 +9,16 @@ export interface HistoryItem {
 }
 
 export const useHistoryStore = defineStore('history', () => {
-  const historyMap = ref<Map<string, HistoryItem[]>>(new Map())
-  const currentIndexMap = ref<Map<string, number>>(new Map())
+  const historyMap = ref<Record<string, HistoryItem[]>>({})
+  const currentIndexMap = ref<Record<string, number>>({})
   const MAX_HISTORY = 20
 
   function getHistory(path: string): HistoryItem[] {
-    return historyMap.value.get(path) || []
+    return historyMap.value[path] || []
   }
 
   function getCurrentIndex(path: string): number {
-    return currentIndexMap.value.get(path) ?? -1
+    return currentIndexMap.value[path] ?? -1
   }
 
   function pushHistory(path: string, content: string) {
@@ -44,8 +44,8 @@ export const useHistoryStore = defineStore('history', () => {
       history.shift()
     }
 
-    historyMap.value.set(path, history)
-    currentIndexMap.value.set(path, history.length - 1)
+    historyMap.value[path] = history
+    currentIndexMap.value[path] = history.length - 1
   }
 
   const canGoBack = (path?: string): boolean => {
@@ -68,7 +68,7 @@ export const useHistoryStore = defineStore('history', () => {
 
     if (idx > 0) {
       idx--
-      currentIndexMap.value.set(path, idx)
+      currentIndexMap.value[path] = idx
       return history[idx]?.content || null
     }
     return null
@@ -81,7 +81,7 @@ export const useHistoryStore = defineStore('history', () => {
 
     if (idx >= 0 && idx < history.length - 1) {
       idx++
-      currentIndexMap.value.set(path, idx)
+      currentIndexMap.value[path] = idx
       return history[idx]?.content || null
     }
     return null
@@ -89,11 +89,11 @@ export const useHistoryStore = defineStore('history', () => {
 
   function clearHistory(path?: string) {
     if (path) {
-      historyMap.value.delete(path)
-      currentIndexMap.value.delete(path)
+      delete historyMap.value[path]
+      delete currentIndexMap.value[path]
     } else {
-      historyMap.value.clear()
-      currentIndexMap.value.clear()
+      historyMap.value = {}
+      currentIndexMap.value = {}
     }
   }
 

@@ -2,17 +2,12 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const useRightPanelStore = defineStore('rightPanel', () => {
-  const activeTab = ref<'prompt' | 'execution'>('prompt')
   const promptContent = ref('')
   const promptHistory = ref<string[]>([])
   const currentHistoryIndex = ref(-1)
   const executionLogs = ref<string[]>([])
 
   const currentPrompt = computed(() => promptContent.value)
-
-  function setActiveTab(tab: 'prompt' | 'execution') {
-    activeTab.value = tab
-  }
 
   function loadPromptTemplate(content: string) {
     promptContent.value = content
@@ -61,13 +56,11 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
   }
 
   return {
-    activeTab,
     promptContent,
     promptHistory,
     currentHistoryIndex,
     currentPrompt,
     executionLogs,
-    setActiveTab,
     loadPromptTemplate,
     updatePrompt,
     goPromptHistoryBack,
@@ -79,6 +72,6 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
 }, {
   persist: {
     storage: localStorage,
-    pick: ['promptHistory', 'activeTab', 'promptContent'],
+    pick: ['promptHistory', 'promptContent'],
   },
 })

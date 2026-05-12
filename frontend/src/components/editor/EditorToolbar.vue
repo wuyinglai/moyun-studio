@@ -1,16 +1,16 @@
 <template>
   <div class="editor-toolbar">
     <a-space>
-      <a-button size="small" @click="handleUndo" :disabled="!canUndo">
+      <a-button size="small" @click="handleBack" :disabled="!canGoBack">
         <template #icon><i class="fa-solid fa-rotate-left"></i></template>
         后退
       </a-button>
-      <a-button size="small" @click="handleRedo" :disabled="!canRedo">
+      <a-button size="small" @click="handleForward" :disabled="!canGoForward">
         <template #icon><i class="fa-solid fa-rotate-right"></i></template>
         前进
       </a-button>
       <a-divider type="vertical" />
-      <a-button v-if="isGenerating" type="danger" size="small" @click="handleStop">
+      <a-button v-if="isGenerating" danger size="small" @click="handleStop">
         <template #icon><i class="fa-solid fa-stop"></i></template>
         停止
       </a-button>
@@ -23,40 +23,105 @@
           <template #icon><i class="fa-solid fa-forward"></i></template>
           生成下一个文件
         </a-button>
+        <a-divider type="vertical" />
+        <a-button size="small" @click="handleTokenCount">
+          <template #icon><i class="fa-solid fa-calculator"></i></template>
+          Token
+        </a-button>
+        <a-button size="small" @click="handleCompare">
+          <template #icon><i class="fa-solid fa-code-compare"></i></template>
+          对比
+        </a-button>
+        <a-button size="small" @click="handleFeedback">
+          <template #icon><i class="fa-solid fa-comment"></i></template>
+          反馈
+        </a-button>
+        <a-button size="small" @click="handleRevisionLog">
+          <template #icon><i class="fa-solid fa-clock-rotate-left"></i></template>
+          修改日志
+        </a-button>
       </template>
     </a-space>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { Button as AButton, Space as ASpace, Divider as ADivider } from 'ant-design-vue'
 import { useChatStore } from '@/stores/chat'
+import { useHistoryStore } from '@/stores/history'
+import { useEditorStore } from '@/stores/editor'
+import { useNotificationStore } from '@/stores/notification'
+import { useUIStore } from '@/stores/ui'
 
 const chatStore = useChatStore()
+const historyStore = useHistoryStore()
+const editorStore = useEditorStore()
+const notification = useNotificationStore()
+const uiStore = useUIStore()
 
-const canUndo = ref(false)
-const canRedo = ref(false)
 const isGenerating = computed(() => chatStore.isStreaming)
 
-function handleUndo() {
-  document.execCommand('undo')
+// M0302-4: 后退 — 恢复到上一个版本快照
+function handleBack() {
+  const path = editorStore.currentFilePath
+  if (!path) return
+  const content = historyStore.goBack(path)
+  if (content !== null) {
+    editorStore.setContent(content)
+    notification.info('已恢复到上一个版本')
+  } else {
+    notification.warning('没有更早的版本')
+  }
 }
 
-function handleRedo() {
-  document.execCommand('redo')
+// M0302-3: 前进 — 恢复下一个版本快照
+function handleForward() {
+  const path = editorStore.currentFilePath
+  if (!path) return
+  const content = historyStore.goForward(path)
+  if (content !== null) {
+    editorStore.setContent(content)
+    notification.info('已恢复到下一个版本')
+  } else {
+    notification.warning('没有更新的版本')
+  }
 }
+
+const canGoBack = computed(() => {
+  return historyStore.canGoBack(editorStore.currentFilePath || undefined)
+})
+
+const canGoForward = computed(() => {
+  return historyStore.canGoForward(editorStore.currentFilePath || undefined)
+})
 
 function handleRegenerate() {
-  window.dispatchEvent(new CustomEvent('chat:request-regenerate'))
+  window.dispatchEvent(new CustomEvent('chat:request-rewrite'))
 }
 
 function handleGenerateNext() {
-  window.dispatchEvent(new CustomEvent('chat:request-next'))
+  window.dispatchEvent(new CustomEvent('chat:request-generate'))
 }
 
 function handleStop() {
   chatStore.cancelStream()
+}
+
+function handleTokenCount() {
+  uiStore.openTokenCount()
+}
+
+function handleCompare() {
+  uiStore.openCompare()
+}
+
+function handleFeedback() {
+  uiStore.openFeedback()
+}
+
+function handleRevisionLog() {
+  uiStore.openRevisionLog()
 }
 </script>
 

@@ -14,22 +14,19 @@
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
-import { useProjectStore } from '@/stores/project'
-import { useNotificationStore } from '@/stores/notification'
+import { useAutoSave } from '@/composables/useAutoSave'
 
 const fileStore = useFileStore()
 const editorStore = useEditorStore()
-const projectStore = useProjectStore()
-const notification = useNotificationStore()
+const { triggerAutoSave, cleanup: cleanupAutoSave } = useAutoSave()
 
 const codemirrorEl = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
-let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const moyunTheme = EditorView.theme({
   '&': {
@@ -122,29 +119,9 @@ function handleContentChange(content: string) {
   if (!fileStore.currentFile) return
 
   editorStore.updateContent(fileStore.currentFile.path, content)
-
   fileStore.markDirty(fileStore.currentFile.path)
 
-  if (autoSaveTimer) {
-    clearTimeout(autoSaveTimer)
-  }
-  autoSaveTimer = setTimeout(async () => {
-    await saveCurrentFile()
-  }, 3000)
-}
-
-async function saveCurrentFile() {
-  if (!projectStore.currentProject || !fileStore.currentFile) return
-
-  const path = fileStore.currentFile.path
-  if (!fileStore.unsavedFiles.has(path)) return
-
-  const content = editorStore.getContent(path)
-  try {
-    await fileStore.saveFile(projectStore.currentProject.id, path, content)
-  } catch (e) {
-    notification.error('自动保存失败')
-  }
+  triggerAutoSave(fileStore.currentFile.path)
 }
 
 watch(
@@ -161,6 +138,8 @@ watch(
 )
 
 onMounted(() => {
+  window.addEventListener('editor:undo', handleUndo)
+  window.addEventListener('editor:redo', handleRedo)
   if (fileStore.currentFile) {
     const content = editorStore.getContent(fileStore.currentFile.path) || ''
     createEditor(content)
@@ -168,14 +147,23 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (autoSaveTimer) {
-    clearTimeout(autoSaveTimer)
-  }
+  window.removeEventListener('editor:undo', handleUndo)
+  window.removeEventListener('editor:redo', handleRedo)
+  cleanupAutoSave()
 
   if (editorView) {
     editorView.destroy()
   }
 })
+
+// 监听外部 undo/redo 请求（来自 EditorToolbar）
+function handleUndo() {
+  if (editorView) undo(editorView)
+}
+
+function handleRedo() {
+  if (editorView) redo(editorView)
+}
 </script>
 
 <style scoped lang="scss">

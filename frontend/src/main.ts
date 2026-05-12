@@ -6,7 +6,7 @@ import 'ant-design-vue/dist/reset.css'
 import router from './router'
 import './assets/styles/base.css'
 import App from './App.vue'
-import { useTheme } from './composables/useTheme'
+import { useUIStore } from './stores/ui'
 
 const pinia = createPinia()
 pinia.use(piniaPersistedstate)
@@ -16,7 +16,7 @@ app.use(pinia)
 app.use(router)
 app.use(Antd)
 
-const { initTheme } = useTheme()
-initTheme()
+// 初始化主题（Pinia persist 恢复后自动 applyTheme）
+useUIStore()
 
 app.mount('#app')

@@ -13,7 +13,7 @@
         <i :class="getFileIcon(file.name)" class="tab-icon"></i>
 
         <!-- 文件名 -->
-        <span class="tab-name">{{ getFileName(file.name) }}</span>
+        <span class="tab-name">{{ file.name }}</span>
 
         <!-- 脏标记 -->
         <span v-if="fileStore.unsavedFiles.has(file.path)" class="tab-dirty">●</span>
@@ -68,10 +68,6 @@ const saveStatusText = computed(() => {
   if (fileStore.unsavedFiles.has(fileStore.currentFile?.path || '')) return '未保存'
   return '已保存'
 })
-
-function getFileName(name: string): string {
-  return name
-}
 
 function getFileIcon(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase()

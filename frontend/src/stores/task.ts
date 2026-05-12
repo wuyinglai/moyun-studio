@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type TaskStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
+export type TaskStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled' | 'waiting'
 
 export interface Task {
   id: string
@@ -48,6 +48,22 @@ export const useTaskStore = defineStore('task', () => {
       task.progress = 100
     }
     queue.value = queue.value.filter((qid) => qid !== id)
+  }
+
+  // G0116: L1 模式下等待确认
+  function waitForConfirm(id: string) {
+    const task = tasks.value.find((t) => t.id === id)
+    if (task) {
+      task.status = 'waiting'
+      task.progress = 100
+    }
+  }
+
+  function confirmTask(id: string) {
+    const task = tasks.value.find((t) => t.id === id)
+    if (task && task.status === 'waiting') {
+      task.status = 'done'
+    }
   }
 
   function failTask(id: string) {
@@ -118,6 +134,8 @@ export const useTaskStore = defineStore('task', () => {
     completeTask,
     failTask,
     cancelTask,
+    waitForConfirm,
+    confirmTask,
     clearTasks,
     addLog,
     clearLogs,

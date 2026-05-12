@@ -19,11 +19,4 @@ export interface Notification {
 }
 
 // 主题类型
-export type ThemeName = 'dark-purple' | 'green' | 'dark-gray'
-
-// UI 状态
-export interface PanelSizes {
-  left: number
-  right: number
-  editorChat: number // 编辑区比例（0-100）
-}
+export type ThemeName = 'dark' | 'green' | 'gray'

@@ -50,7 +50,7 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function saveFile(projectId: string, path: string, content: string) {
-    await api.post('/file', { project_id: projectId, path, content })
+    await api.post(`/file?project_id=${projectId}`, { path, content })
     unsavedFiles.value.delete(path)
     fileContents.value[path] = { content }
   }
