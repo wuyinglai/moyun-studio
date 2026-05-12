@@ -30,7 +30,17 @@ export const useEditorStore = defineStore('editor', () => {
 
   function updateWordCount(path: string) {
     const content = contents.value[path] || ''
-    const text = content.replace(/[#*`_~\[\]()]/g, '').trim()
+    // 去除 markdown 格式字符后统计字数
+    const text = content
+      .replace(/#/g, '')
+      .replace(/\*/g, '')
+      .replace(/_/g, '')
+      .replace(/~/g, '')
+      .replace(/\[/g, '')
+      .replace(/\]/g, '')
+      .replace(/\(/g, '')
+      .replace(/\)/g, '')
+      .trim()
     wordCount.value = text.length
   }
 
@@ -65,9 +75,8 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function insertContent(content: string) {
-    // 供 PromptPanel / AI 生成调用，插入到当前光标位置
-    // 实际插入由 MarkdownEditor 组件通过 v-model 或ref完成
-    // 此 action 负责更新 store 中的内容
+    // 供 PromptPanel / AI 生成调用，追加内容到文件末尾
+    // 实际光标位置插入由 MarkdownEditor 组件通过 v-model 或 ref 完成
     if (currentFilePath.value) {
       contents.value[currentFilePath.value] = (contents.value[currentFilePath.value] || '') + content
       updateWordCount(currentFilePath.value)

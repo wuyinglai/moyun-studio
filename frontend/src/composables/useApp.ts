@@ -26,8 +26,12 @@ export function useAppInit() {
     // 1. 加载 LLM 配置
     await llmStore.loadConfig()
 
-    // 2. 测试 LLM 连接
-    await llmStore.testConnection()
+    // 2. 测试 LLM 连接（失败不阻断初始化）
+    try {
+      await llmStore.testConnection()
+    } catch {
+      console.warn('LLM 连接测试失败，部分功能可能不可用')
+    }
 
     // 3. 连接 SSE
     sseService.connect()
@@ -104,15 +108,24 @@ export function useAutomation() {
 
   /**
    * L1 模式：等待用户确认
+   * 带超时兜底（5分钟），防止无限轮询导致内存泄漏
    */
   async function waitForUserConfirm(): Promise<boolean> {
     return new Promise((resolve) => {
-      // 这里需要 UI 组件配合，显示确认按钮
-      // 暂时返回 false，等待用户点击
-      const checkResume = setInterval(() => {
-        if (!isPaused.value) {
-          clearInterval(checkResume)
+      const MAX_WAIT = 5 * 60 * 1000 // 5 分钟超时
+      const deadline = Date.now() + MAX_WAIT
+      let resolved = false
+
+      const check = setInterval(() => {
+        if (!isPaused.value && !resolved) {
+          resolved = true
+          clearInterval(check)
           resolve(true)
+        }
+        if (Date.now() > deadline && !resolved) {
+          resolved = true
+          clearInterval(check)
+          resolve(false) // 超时，不继续
         }
       }, 100)
     })

@@ -39,11 +39,11 @@ const routes: RouteRecordRaw[] = [
       const filePath = '/' + (to.params.pathMatch as string[]).join('/')
 
       // 脏状态检查：路由跳转前确认
+      // TODO: 应改为组件级 beforeRouteLeave 守卫，
+      // 使用自定义 Modal 替代 window.confirm（当前会阻塞 UI 线程）
       if (editorStore.isDirty) {
         const confirmed = window.confirm('有未保存的内容，确定要离开吗？')
         if (!confirmed) return false
-        // 用户确认后，保存或丢弃
-        // 这里只阻止路由，保存由用户自行决定
       }
 
       if (!projectStore.currentProject || projectStore.currentProject.id !== projectId) {

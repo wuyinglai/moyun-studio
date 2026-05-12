@@ -7,14 +7,21 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// 响应拦截器：统一处理 { success, data, message }
+// 响应拦截器：兼容两种格式
+// 格式1: { success: true, data: ..., message: '...' }  (标准封装)
+// 格式2: 直接返回数据 (数组/对象/字符串等)
 api.interceptors.response.use(
   (response) => {
-    const { success, data, message } = response.data
-    if (!success) {
-      throw new Error(message || '请求失败')
+    const body = response.data
+    // 判断是否是标准封装格式（有 success 字段且为 boolean 类型）
+    if (body && typeof body === 'object' && 'success' in body) {
+      if (!body.success) {
+        throw new Error(body.message || '请求失败')
+      }
+      return body.data
     }
-    return data
+    // 非标准格式，直接返回原始数据
+    return body
   },
   (error) => {
     const message = error.response?.data?.message || error.message

@@ -149,7 +149,7 @@ export const useProjectStore = defineStore('project', () => {
 }, {
   persist: {
     storage: localStorage,
-    pick: ['projects', 'currentProject', 'createStep'],
+    pick: ['currentProject', 'createStep'],
   },
 })
 
