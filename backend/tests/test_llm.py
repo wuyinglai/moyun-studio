@@ -249,14 +249,12 @@ class TestLLMService:
     async def test_complete_sync_joins_chunks(self):
         config = LLMConfig()
         svc = LLMService(config)
-        svc.complete = AsyncMock()
 
         async def mock_complete(messages, model=None, stream=True):
-            yield "A"
-            yield "B"
-            yield "C"
+            for chunk in ["A", "B", "C"]:
+                yield chunk
 
-        svc.complete.side_effect = mock_complete
+        svc.complete = mock_complete
         result = await svc.complete_sync([{"role": "user", "content": "test"}])
         assert result == "ABC"
 

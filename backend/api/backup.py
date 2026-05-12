@@ -170,7 +170,7 @@ async def create_backup(
     # 创建备份
     backup_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
     backup_path = _ensure_backup_dir(project_dir) / backup_id
-    _create_backup_snapshot(project_dir, backup_path)
+    await asyncio.to_thread(_create_backup_snapshot, project_dir, backup_path)
 
     # 写入 meta.json
     file_count = _count_files(backup_path)
@@ -182,7 +182,7 @@ async def create_backup(
         "created_at": now,
         "file_count": file_count,
     }
-    _save_backup_meta(backup_path, meta)
+    await asyncio.to_thread(_save_backup_meta, backup_path, meta)
 
     info = BackupInfo(
         backup_id=backup_id,

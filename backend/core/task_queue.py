@@ -4,16 +4,13 @@
 TaskQueue只负责状态管理，TaskExecutor负责具体执行。
 """
 
-from typing import Any, TYPE_CHECKING
 import asyncio
 import uuid
 from datetime import datetime
+from typing import Any
 
 from backend.core.exceptions import ContextLengthError
 from backend.core.prompt_engine import PromptEngine
-
-if TYPE_CHECKING:
-    from backend.services.base import LLMServiceInterface, FileServiceInterface, EventBusInterface
 
 
 class TaskExecutor:
@@ -21,9 +18,9 @@ class TaskExecutor:
 
     def __init__(
         self,
-        llm_service: "LLMServiceInterface",
-        file_service: "FileServiceInterface",
-        event_bus: "EventBusInterface",
+        llm_service: Any,
+        file_service: Any,
+        event_bus: Any,
     ):
         self.llm = llm_service
         self.file_service = file_service
@@ -159,14 +156,14 @@ class TaskQueue:
         except asyncio.TimeoutError:
             return None
 
-    async def start_task(self, task_id: str) -> None:
+    def start_task(self, task_id: str) -> None:
         """标记任务开始执行"""
         if task_id in self._tasks:
             self._tasks[task_id]["status"] = "running"
             self._tasks[task_id]["started_at"] = datetime.now().isoformat()
             self._running.add(task_id)
 
-    async def complete_task(self, task_id: str, result: Any) -> None:
+    def complete_task(self, task_id: str, result: Any) -> None:
         """标记任务完成"""
         if task_id in self._tasks:
             self._tasks[task_id]["status"] = "completed"
@@ -174,7 +171,7 @@ class TaskQueue:
             self._tasks[task_id]["result"] = result
             self._running.discard(task_id)
 
-    async def fail_task(self, task_id: str, error: str) -> None:
+    def fail_task(self, task_id: str, error: str) -> None:
         """标记任务失败"""
         if task_id in self._tasks:
             self._tasks[task_id]["status"] = "failed"
@@ -182,7 +179,7 @@ class TaskQueue:
             self._tasks[task_id]["error"] = error
             self._running.discard(task_id)
 
-    async def cancel_task(self, task_id: str) -> bool:
+    def cancel_task(self, task_id: str) -> bool:
         """取消任务"""
         if task_id in self._tasks:
             task = self._tasks[task_id]
@@ -209,9 +206,9 @@ class TaskQueue:
 
 async def run_task_worker(
     task_queue: TaskQueue,
-    llm_service: "LLMServiceInterface",
-    file_service: "FileServiceInterface",
-    event_bus: "EventBusInterface"
+    llm_service: Any,
+    file_service: Any,
+    event_bus: Any
 ) -> None:
     """任务工作器 - 持续从队列取任务并执行"""
     executor = TaskExecutor(llm_service, file_service, event_bus)
@@ -227,10 +224,10 @@ async def run_task_worker(
         if task is None:
             continue
 
-        await task_queue.start_task(task_id)
+        task_queue.start_task(task_id)
 
         try:
             result = await executor.execute_task(task)
-            await task_queue.complete_task(task_id, result)
+            task_queue.complete_task(task_id, result)
         except Exception as e:
-            await task_queue.fail_task(task_id, str(e))
+            task_queue.fail_task(task_id, str(e))

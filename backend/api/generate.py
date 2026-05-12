@@ -16,13 +16,11 @@ from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 from backend.config import Settings, get_settings
 from backend.core.llm import (
+    LLMService,
     load_llm_config_from_workspace,
-    normalize_model_for_provider,
-    build_litellm_kwargs,
 )
 from backend.core.file_ops import FileService
 from backend.core.prompt_engine import PromptEngine
-import litellm
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import GenerateRequest, ChatRequest
 
@@ -79,29 +77,24 @@ async def generate(
             # 调用 LLM
             
             llm_cfg = load_llm_config_from_workspace(settings)
-            model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
+            svc = LLMService.from_workspace_config(llm_cfg)
             thinking = llm_cfg.get("thinking", settings.llm_thinking)
 
             messages = [{"role": "user", "content": prompt_text}]
             extra_kwargs = {}
-            if thinking and "claude" in model:
+            if thinking and "claude" in svc.config.model:
                 extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
 
-            kwargs = build_litellm_kwargs(llm_cfg, model, messages, timeout=180, stream=True, **extra_kwargs)
-
+            stop_event = _stop_signals[task_id]
             generated_text = ""
-            async for chunk in litellm.acompletion(**kwargs):
-                if _stop_signals[task_id].is_set():
-                    break
-                delta = chunk.choices[0].delta.content or ""
-                generated_text += delta
-                if delta:
-                    yield {
-                        "event": "generation",
-                        "data": json.dumps({"delta": delta, "task_id": task_id}),
-                    }
-                    if event_bus:
-                        await event_bus.publish("generation", {"delta": delta, "task_id": task_id})
+            async for content in svc.complete(messages, stop_event=stop_event, timeout=180, **extra_kwargs):
+                generated_text += content
+                yield {
+                    "event": "generation",
+                    "data": json.dumps({"delta": content, "task_id": task_id}),
+                }
+                if event_bus:
+                    await event_bus.publish("generation", {"delta": content, "task_id": task_id})
 
             # 保存生成内容
             if generated_text and not _stop_signals[task_id].is_set():
@@ -146,18 +139,14 @@ async def chat(
         try:
             
             llm_cfg = load_llm_config_from_workspace(settings)
-            model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
+            svc = LLMService.from_workspace_config(llm_cfg)
 
             messages = [{"role": "user", "content": req.message}]
-            kwargs = build_litellm_kwargs(llm_cfg, model, messages, timeout=120, stream=True)
-
-            async for chunk in litellm.acompletion(**kwargs):
-                delta = chunk.choices[0].delta.content or ""
-                if delta:
-                    yield {
-                        "event": "generation",
-                        "data": json.dumps({"delta": delta, "task_id": task_id, "type": "chat"}),
-                    }
+            async for content in svc.complete(messages, timeout=120):
+                yield {
+                    "event": "generation",
+                    "data": json.dumps({"delta": content, "task_id": task_id, "type": "chat"}),
+                }
 
             yield {"event": "done", "data": json.dumps({"task_id": task_id})}
 

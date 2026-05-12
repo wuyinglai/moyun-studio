@@ -7,6 +7,7 @@
   DELETE /api/projects/{id}      删除项目
 """
 
+import asyncio
 import json
 import logging
 import shutil
@@ -127,7 +128,7 @@ async def create_project(
     logger.info("创建新项目", extra={"project_id": project_id, "name": req.name, "genre": req.genre})
 
     project_dir = settings.projects_path / project_id
-    project_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(project_dir.mkdir, parents=True, exist_ok=True)
 
     # 写 meta.json
     meta = {
@@ -143,8 +144,10 @@ async def create_project(
         "created_at": now,
         "updated_at": now,
     }
-    _meta_path(project_dir).write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
+    await asyncio.to_thread(
+        _meta_path(project_dir).write_text,
+        json.dumps(meta, ensure_ascii=False, indent=2),
+        "utf-8",
     )
 
     # 写 context.json
@@ -160,31 +163,26 @@ async def create_project(
         },
         "updated_at": now,
     }
-    _context_path(project_dir).write_text(
-        json.dumps(context, ensure_ascii=False, indent=2), encoding="utf-8"
+    await asyncio.to_thread(
+        _context_path(project_dir).write_text,
+        json.dumps(context, ensure_ascii=False, indent=2),
+        "utf-8",
     )
 
     # 创建基础子目录
     for subdir in ["chapters", "characters", "materials/extracted", "backup", "revision-log", "feedback"]:
-        (project_dir / subdir).mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread((project_dir / subdir).mkdir, parents=True, exist_ok=True)
 
     # 初始化 style-guide.md / story-state.md / recent-context.md
-    (project_dir / "style-guide.md").write_text(
-        "# 文风指南\n\n在此描述写作风格、语气、叙事视角等要求。\n",
-        encoding="utf-8",
-    )
-    (project_dir / "story-state.md").write_text(
-        "# 故事状态\n\n## 主角状态\n\n## 势力关系\n\n## 伏笔追踪\n\n## 主线进度\n",
-        encoding="utf-8",
-    )
-    (project_dir / "recent-context.md").write_text(
-        "# 近期上下文\n\n（最近5章摘要，由系统自动维护）\n",
-        encoding="utf-8",
-    )
-    (project_dir / "outline.md").write_text(
-        f"# {req.name} - 大纲\n\n",
-        encoding="utf-8",
-    )
+    for filename, content in [
+        ("style-guide.md", "# 文风指南\n\n在此描述写作风格、语气、叙事视角等要求。\n"),
+        ("story-state.md", "# 故事状态\n\n## 主角状态\n\n## 势力关系\n\n## 伏笔追踪\n\n## 主线进度\n"),
+        ("recent-context.md", "# 近期上下文\n\n（最近5章摘要，由系统自动维护）\n"),
+        ("outline.md", f"# {req.name} - 大纲\n\n"),
+    ]:
+        await asyncio.to_thread(
+            (project_dir / filename).write_text, content, "utf-8",
+        )
 
     info = _project_info(project_dir)
     return ApiResponse.ok(info, message="项目创建成功")
@@ -218,7 +216,7 @@ async def delete_project(
         raise ProjectNotFoundError(project_id)
 
     try:
-        shutil.rmtree(project_dir)
+        await asyncio.to_thread(shutil.rmtree, project_dir)
     except Exception as e:
         logger.error("删除项目失败", extra={"project_id": project_id, "error": str(e)})
         raise ProjectError(f"删除项目失败: {str(e)}")

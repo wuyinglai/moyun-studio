@@ -138,21 +138,21 @@ class TestSnapshotManagerRestore:
             await mgr.restore_snapshot("nonexistent")
 
     @pytest.mark.asyncio
-    async def test_restore_uses_file_service(self, mock_file_service):
-        snapshot_json = json.dumps({
+    async def test_restore_uses_file_service(self, mock_file_service, tmp_path):
+        # _find_snapshot uses direct filesystem access, so write snapshot file to disk
+        snap_dir = tmp_path / ".snapshots" / "chapters" / "test.md"
+        snap_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_data = {
             "snapshot_id": "snap-001",
             "file_path": "chapters/test.md",
             "content": "# 恢复的内容",
             "metadata": {"title": "第一章"},
             "label": "v1",
             "created_at": "2026-01-01",
-        })
-        # read_file 第一次返回 index，第二次返回快照数据
-        mock_file_service.read_file = AsyncMock()
-        mock_file_service.read_file.side_effect = [
-            (json.dumps({"snapshots": [{"snapshot_id": "snap-001"}]}), None),
-            (snapshot_json, None),
-        ]
+        }
+        (snap_dir / "snap-001.json").write_text(
+            json.dumps(snapshot_data, ensure_ascii=False), encoding="utf-8"
+        )
 
         mgr = SnapshotManager(mock_file_service)
         await mgr.restore_snapshot("snap-001")

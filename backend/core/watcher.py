@@ -4,6 +4,7 @@
 仅负责监听，不负责事件发布逻辑。
 """
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,41 +34,44 @@ class FileWatcher:
 
     def start(self) -> None:
         """启动监听"""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
         class Handler(FileSystemEventHandler):
-            def __init__(self, watcher: FileWatcher):
+            def __init__(self, watcher: FileWatcher, loop: asyncio.AbstractEventLoop):
                 super().__init__()
                 self._watcher = watcher
+                self._loop = loop
+
+            def _publish(self, event_type: str, data: dict) -> None:
+                """从 watchdog 线程向异步 EventBus 发布事件的同步包装"""
+                asyncio.run_coroutine_threadsafe(
+                    self._watcher.event_bus.publish(event_type, data),
+                    self._loop,
+                )
 
             def on_created(self, event):
                 if not event.is_directory:
-                    self._watcher.event_bus.publish(
-                        "file:created",
-                        {"path": event.src_path}
-                    )
+                    self._publish("file:created", {"path": event.src_path})
 
             def on_modified(self, event):
                 if not event.is_directory:
-                    self._watcher.event_bus.publish(
-                        "file:modified",
-                        {"path": event.src_path}
-                    )
+                    self._publish("file:modified", {"path": event.src_path})
 
             def on_deleted(self, event):
                 if not event.is_directory:
-                    self._watcher.event_bus.publish(
-                        "file:deleted",
-                        {"path": event.src_path}
-                    )
+                    self._publish("file:deleted", {"path": event.src_path})
 
             def on_moved(self, event):
                 if not event.is_directory:
-                    self._watcher.event_bus.publish(
-                        "file:modified",
-                        {"path": event.dest_path, "old_path": event.src_path}
-                    )
+                    self._publish("file:modified",
+                                  {"path": event.dest_path, "old_path": event.src_path})
 
         self._observer = Observer()
-        handler = Handler(self)
+        handler = Handler(self, loop)
         self._observer.schedule(handler, str(self.workspace), recursive=True)
         self._observer.start()
 

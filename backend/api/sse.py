@@ -20,6 +20,28 @@ MAX_SSE_CONNECTIONS = 100
 
 class SSEManager:
     """SSE 连接管理器，集成EventBus"""
+
+    # EventBus → 前端事件名映射
+    _EVENT_MAP = {
+        "file:created": "file-created",
+        "file:modified": "file-updated",
+        "file:deleted": "file-deleted",
+        "task:started": "task",
+        "task:progress": "task",
+        "task:completed": "task",
+        "task:failed": "error",
+        "project:created": "file-created",
+        "project:updated": "file-updated",
+        "generation": "generation",
+        "done": "done",
+        "error": "error",
+        "llm-status": "llm-status",
+        "thinking": "thinking",
+    }
+
+    @staticmethod
+    def _map_event_type(bus_event: str) -> str:
+        return SSEManager._EVENT_MAP.get(bus_event, bus_event)
     
     def __init__(self):
         self.connections: set[asyncio.Queue] = set()
@@ -40,8 +62,9 @@ class SSEManager:
             logger.info(f"SSE 连接已断开 (当前: {len(self.connections)})")
 
     async def broadcast(self, event_type: str, data: dict):
-        """广播事件到所有连接"""
-        message = f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+        """广播事件到所有连接（自动映射 EventBus 事件名到前端格式）"""
+        frontend_type = self._map_event_type(event_type)
+        message = f"event: {frontend_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
         dead_queues = []
         for queue in list(self.connections):
             try:

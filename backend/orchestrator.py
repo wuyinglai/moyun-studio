@@ -9,7 +9,10 @@
   Branch   — 条件分支（根据上一步结果决定下一步）
 """
 
+import logging
 from typing import Callable, Dict, List, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # ── 上下文：步骤间共享数据 ──────────────────────────────────
@@ -41,7 +44,7 @@ class Step:
         self.fn = fn
 
     def run(self, ctx: Ctx) -> Ctx:
-        print(f"  ▶ {self.name}")
+        logger.info("  ▶ %s", self.name)
         result = self.fn(ctx)
         for k, v in result.items():
             ctx.set(k, v)
@@ -57,10 +60,10 @@ class Pipeline:
         self.steps = steps
 
     def run(self, ctx: Ctx) -> Ctx:
-        print(f"▶ 管道: {self.name}")
+        logger.info("▶ 管道: %s", self.name)
         for step in self.steps:
             ctx = step.run(ctx)
-        print(f"✓ {self.name} 完成\n")
+        logger.info("✓ %s 完成", self.name)
         return ctx
 
 
@@ -79,9 +82,9 @@ class Branch:
         self.branches = branches
 
     def run(self, ctx: Ctx) -> Ctx:
-        print(f"  ◆ 判断: {self.name}")
+        logger.info("  ◆ 判断: %s", self.name)
         key = self.condition(ctx)
-        print(f"  → 进入: {key}")
+        logger.info("  → 进入: %s", key)
         return self.branches[key].run(ctx)
 
 

@@ -8,7 +8,6 @@
 
 import json
 import logging
-import litellm
 import re
 from pathlib import Path
 from datetime import datetime, timezone
@@ -17,9 +16,8 @@ from fastapi import APIRouter, Depends
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError
 from backend.core.llm import (
+    LLMService,
     load_llm_config_from_workspace,
-    normalize_model_for_provider,
-    build_litellm_kwargs,
 )
 from backend.api.projects import _load_meta, _project_info, _meta_path
 from backend.core.prompt_engine import PromptEngine
@@ -63,15 +61,13 @@ async def generate_book_idea(
 
     try:
         llm_cfg = load_llm_config_from_workspace(settings)
-        model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
+        svc = LLMService.from_workspace_config(llm_cfg)
 
-        logger.info("Wizard LLM配置", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": model, "has_key": bool(llm_cfg.get("apiKey"))})
+        logger.info("Wizard LLM配置", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": svc.config.model, "has_key": bool(llm_cfg.get("apiKey"))})
 
-        kwargs = build_litellm_kwargs(llm_cfg, model, [{"role": "user", "content": prompt}], temperature=0.7)
-
-        logger.info("调用LLM生成书名", extra={"model": model})
-        response = await litellm.acompletion(**kwargs)
-        content = response.choices[0].message.content.strip()
+        logger.info("调用LLM生成书名", extra={"model": svc.config.model})
+        content = await svc.complete_sync([{"role": "user", "content": prompt}], temperature=0.7)
+        content = content.strip()
         logger.info("LLM返回内容", extra={"content_length": len(content), "content_preview": content[:100]})
 
         if content.startswith("```"):
@@ -127,15 +123,13 @@ async def generate_outline(
 
     try:
         llm_cfg = load_llm_config_from_workspace(settings)
-        model = normalize_model_for_provider(llm_cfg.get("model", settings.llm_model), llm_cfg.get("apiType", "openai"))
+        svc = LLMService.from_workspace_config(llm_cfg)
 
-        logger.info("Wizard LLM配置(大纲)", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": model, "has_key": bool(llm_cfg.get("apiKey"))})
+        logger.info("Wizard LLM配置(大纲)", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": svc.config.model, "has_key": bool(llm_cfg.get("apiKey"))})
 
-        kwargs = build_litellm_kwargs(llm_cfg, model, [{"role": "user", "content": prompt}], temperature=0.7, max_tokens=4000)
-
-        logger.info("调用LLM生成大纲", extra={"model": model, "chapters": chapters})
-        response = await litellm.acompletion(**kwargs)
-        outline_content = response.choices[0].message.content.strip()
+        logger.info("调用LLM生成大纲", extra={"model": svc.config.model, "chapters": chapters})
+        outline_content = await svc.complete_sync([{"role": "user", "content": prompt}], temperature=0.7, max_tokens=4000)
+        outline_content = outline_content.strip()
         logger.info("LLM返回大纲内容", extra={"content_length": len(outline_content), "content_preview": outline_content[:200]})
 
         chapters_info = []

@@ -212,7 +212,12 @@ class TestFileServiceProjectInfo:
     """项目信息测试"""
 
     @pytest.mark.asyncio
-    async def test_get_project_info(self, fs):
+    async def test_get_project_info(self, fs, temp_workspace):
+        # FileService.get_project_info 查找 .project.json
+        proj_dir = temp_workspace / "projects" / "test-project"
+        (proj_dir / ".project.json").write_text(
+            '{"project_id": "test-project", "name": "测试项目"}', encoding="utf-8"
+        )
         info = await fs.get_project_info("projects/test-project")
         assert info is not None
         assert info["project_id"] == "test-project"

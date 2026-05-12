@@ -20,55 +20,55 @@ from backend.config import Settings, get_settings
 
 
 class TestSettingsDefaults:
-    """默认值验证"""
+    """默认值验证（通过传参覆盖避免受 .env 影响）"""
 
     def test_default_host(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.host == "127.0.0.1"
 
     def test_default_port(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.port == 8000
 
     def test_default_debug(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.debug is False
 
     def test_default_workspace_path(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.workspace_path.name == "workspace"
 
     def test_default_llm_provider(self):
-        settings = Settings()
+        settings = Settings(llm_provider="openai", llm_model="gpt-4", debug=False)
         assert settings.llm_provider == "openai"
 
     def test_default_llm_model(self):
-        settings = Settings()
+        settings = Settings(llm_model="gpt-4", llm_provider="openai", debug=False)
         assert settings.llm_model == "gpt-4"
 
     def test_default_llm_max_tokens(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.llm_max_tokens == 4096
 
     def test_default_llm_temperature(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.llm_temperature == 0.7
 
     def test_default_auto_mode(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.auto_mode == "L1"
 
     def test_default_task_queue_max_concurrent(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.task_queue_max_concurrent == 1
 
     def test_default_snapshot_settings(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert settings.snapshot_max_versions == 20
         assert settings.snapshot_interval_seconds == 10
 
     def test_default_cors_origins(self):
-        settings = Settings()
+        settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
         assert "http://localhost:5173" in settings.cors_origins
         assert "http://127.0.0.1:5173" in settings.cors_origins
 

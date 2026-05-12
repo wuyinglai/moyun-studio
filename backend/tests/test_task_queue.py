@@ -72,7 +72,7 @@ class TestTaskQueueStateFlow:
     async def test_pending_to_running(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
+        tq.start_task(task_id)
         task = tq.get_task(task_id)
         assert task["status"] == "running"
         assert "started_at" in task
@@ -81,8 +81,8 @@ class TestTaskQueueStateFlow:
     async def test_running_to_completed(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
-        await tq.complete_task(task_id, {"content": "result"})
+        tq.start_task(task_id)
+        tq.complete_task(task_id, {"content": "result"})
         task = tq.get_task(task_id)
         assert task["status"] == "completed"
         assert task["result"] == {"content": "result"}
@@ -92,8 +92,8 @@ class TestTaskQueueStateFlow:
     async def test_running_to_failed(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
-        await tq.fail_task(task_id, "LLM timeout")
+        tq.start_task(task_id)
+        tq.fail_task(task_id, "LLM timeout")
         task = tq.get_task(task_id)
         assert task["status"] == "failed"
         assert task["error"] == "LLM timeout"
@@ -102,7 +102,7 @@ class TestTaskQueueStateFlow:
     async def test_pending_to_cancelled(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        result = await tq.cancel_task(task_id)
+        result = tq.cancel_task(task_id)
         assert result is True
         task = tq.get_task(task_id)
         assert task["status"] == "cancelled"
@@ -111,8 +111,8 @@ class TestTaskQueueStateFlow:
     async def test_running_to_cancelled(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
-        result = await tq.cancel_task(task_id)
+        tq.start_task(task_id)
+        result = tq.cancel_task(task_id)
         assert result is True
         task = tq.get_task(task_id)
         assert task["status"] == "cancelled"
@@ -121,15 +121,15 @@ class TestTaskQueueStateFlow:
     async def test_cannot_cancel_completed_task(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
-        await tq.complete_task(task_id, {"content": "done"})
-        result = await tq.cancel_task(task_id)
+        tq.start_task(task_id)
+        tq.complete_task(task_id, {"content": "done"})
+        result = tq.cancel_task(task_id)
         assert result is False
 
     @pytest.mark.asyncio
     async def test_cannot_cancel_nonexistent_task(self):
         tq = TaskQueue()
-        result = await tq.cancel_task("nonexistent")
+        result = tq.cancel_task("nonexistent")
         assert result is False
 
 
@@ -145,31 +145,31 @@ class TestTaskQueueRunningCount:
     async def test_running_count_increments(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
+        tq.start_task(task_id)
         assert tq.running_count == 1
 
     @pytest.mark.asyncio
     async def test_running_count_decrements_on_complete(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
-        await tq.complete_task(task_id, {"content": "done"})
+        tq.start_task(task_id)
+        tq.complete_task(task_id, {"content": "done"})
         assert tq.running_count == 0
 
     @pytest.mark.asyncio
     async def test_running_count_decrements_on_fail(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
-        await tq.fail_task(task_id, "error")
+        tq.start_task(task_id)
+        tq.fail_task(task_id, "error")
         assert tq.running_count == 0
 
     @pytest.mark.asyncio
     async def test_running_count_decrements_on_cancel(self):
         tq = TaskQueue()
         task_id = await tq.enqueue({"template_category": "generate"})
-        await tq.start_task(task_id)
-        await tq.cancel_task(task_id)
+        tq.start_task(task_id)
+        tq.cancel_task(task_id)
         assert tq.running_count == 0
 
 

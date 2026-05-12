@@ -3,6 +3,7 @@
 封装LiteLLM调用，提供流式输出和重试机制。
 """
 
+import asyncio
 import logging
 from typing import Any, AsyncGenerator, TYPE_CHECKING
 
@@ -132,6 +133,26 @@ class LLMService:
         self.config = config
         self._client = None
 
+    @classmethod
+    def from_workspace_config(cls, config_dict: dict, model: str | None = None) -> "LLMService":
+        """从 workspace 配置字典创建 LLMService
+
+        Args:
+            config_dict: load_llm_config_from_workspace() 返回的配置字典
+            model: 可选，覆盖模型名称
+        """
+        provider = config_dict.get("apiType", "openai")
+        model = model or config_dict.get("model", "gpt-4")
+        model = normalize_model_for_provider(model, provider)
+
+        config = LLMConfig(
+            provider=provider,
+            api_key=config_dict.get("apiKey"),
+            api_base=config_dict.get("apiBase"),
+            model=model,
+        )
+        return cls(config)
+
     @property
     def client(self):
         """懒加载LiteLLM客户端"""
@@ -144,7 +165,9 @@ class LLMService:
         self,
         messages: list[dict],
         model: str | None = None,
-        stream: bool = True
+        stream: bool = True,
+        stop_event: asyncio.Event | None = None,
+        **kwargs,
     ) -> AsyncGenerator[str, None]:
         """流式生成
 
@@ -152,13 +175,15 @@ class LLMService:
             messages: 消息列表
             model: 模型名称，默认使用配置中的模型
             stream: 是否流式输出
+            stop_event: 可选的停止信号，设置后停止后续输出
+            **kwargs: 传递给 litellm 的额外参数（如 timeout, thinking 等）
 
         Yields:
             生成的文本片段
         """
         model = model or self.config.model
 
-        kwargs = {
+        call_kwargs = {
             "model": model,
             "messages": messages,
             "stream": stream,
@@ -167,15 +192,18 @@ class LLMService:
         }
 
         if self.config.api_key:
-            kwargs["api_key"] = self.config.api_key
+            call_kwargs["api_key"] = self.config.api_key
         if self.config.api_base:
-            kwargs["api_base"] = self.config.api_base
+            call_kwargs["api_base"] = self.config.api_base
+        call_kwargs.update(kwargs)
 
         try:
-            response = await self._call_with_retry(**kwargs)
+            response = await self._call_with_retry(**call_kwargs)
 
             if stream:
                 async for chunk in response:
+                    if stop_event and stop_event.is_set():
+                        break
                     if not chunk.choices:
                         continue
                     content = chunk.choices[0].delta.content
@@ -203,11 +231,12 @@ class LLMService:
     async def complete_sync(
         self,
         messages: list[dict],
-        model: str | None = None
+        model: str | None = None,
+        **kwargs,
     ) -> str:
-        """同步生成"""
+        """同步生成（非流式）"""
         chunks = []
-        async for chunk in self.complete(messages, model=model, stream=True):
+        async for chunk in self.complete(messages, model=model, stream=False, **kwargs):
             chunks.append(chunk)
         return "".join(chunks)
 

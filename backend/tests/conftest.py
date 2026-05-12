@@ -201,18 +201,15 @@ def prompt_engine_no_fs(temp_workspace):
 def mock_llm_service():
     """Mock LLMService，不发起真实 HTTP 请求"""
     svc = MagicMock()
-    svc.complete = AsyncMock()
 
-    async def _complete_messages(messages, model=None, stream=True):
+    async def _complete(messages, model=None, stream=True):
         if stream:
-            yield "测"
-            yield "试"
-            yield "内"
-            yield "容"
+            for chunk in ["测", "试", "内", "容"]:
+                yield chunk
         else:
             yield "测试内容"
 
-    svc.complete.side_effect = _complete_messages
+    svc.complete = _complete
     svc.complete_sync = AsyncMock(return_value="测试内容")
     svc.count_tokens = AsyncMock(return_value=100)
     return svc

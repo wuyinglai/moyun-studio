@@ -150,7 +150,6 @@ def create_app() -> FastAPI:
         files,
         llm,
         generate,
-        events,
         prompts,
         style_guide,
         story_state,
@@ -170,7 +169,6 @@ def create_app() -> FastAPI:
     app.include_router(files.router, prefix="/api")
     app.include_router(llm.router, prefix="/api")
     app.include_router(generate.router, prefix="/api")
-    app.include_router(events.router, prefix="/api")
     app.include_router(sse.router, prefix="/api")
     app.include_router(prompts.router, prefix="/api")
     app.include_router(style_guide.router, prefix="/api")

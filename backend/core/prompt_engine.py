@@ -7,12 +7,9 @@
 import re
 import tiktoken
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
-
-if TYPE_CHECKING:
-    from backend.services.base import FileServiceInterface
 
 
 class PromptEngine:
@@ -31,7 +28,7 @@ class PromptEngine:
     def __init__(
         self,
         prompts_path: Path | str | None = None,
-        file_service: "FileServiceInterface | None" = None,
+        file_service: Any = None,
     ):
         if prompts_path is None:
             prompts_path = Path("workspace/prompts")
@@ -43,7 +40,7 @@ class PromptEngine:
             autoescape=False,
         )
 
-    def set_file_service(self, file_service: "FileServiceInterface") -> None:
+    def set_file_service(self, file_service: Any) -> None:
         """设置文件服务（用于依赖注入）"""
         self.file_service = file_service
 
