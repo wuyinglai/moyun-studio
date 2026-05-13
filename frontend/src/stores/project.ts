@@ -38,7 +38,6 @@ export const useProjectStore = defineStore('project', () => {
   const currentProject = ref<Project | null>(null)
   const isLoading = ref(false)
   const isCreating = ref(false)
-  const createStep = ref(1) // 1: 创作参数, 2: 生成大纲, 3: 确认大纲
 
   async function loadProjects() {
     isLoading.value = true
@@ -52,7 +51,6 @@ export const useProjectStore = defineStore('project', () => {
 
   async function createProject(params: CreateProjectParams) {
     isCreating.value = true
-    createStep.value = 1
     try {
       const raw = await api.post<Record<string, unknown>>('/projects', {
         name: params.name || '新项目',
@@ -71,26 +69,6 @@ export const useProjectStore = defineStore('project', () => {
     } finally {
       isCreating.value = false
     }
-  }
-
-  async function generateBookIdea(params: CreateProjectParams) {
-    createStep.value = 1
-    return await api.post<{ name: string; description: string }>('/wizard/generate-idea', params)
-  }
-
-  async function generateOutline(projectId: string, params: CreateProjectParams & { book_name?: string; book_description?: string }) {
-    createStep.value = 2
-    const result = await api.post<{ outline: string; chapters: ChapterInfo[] }>(`/wizard/${projectId}/generate-outline`, {
-      project_id: projectId,
-      ...params,
-    })
-    createStep.value = 2.5
-    return result
-  }
-
-  async function confirmOutlineAndCreate(projectId: string, outline: string) {
-    createStep.value = 3
-    await api.post(`/wizard/${projectId}/confirm-outline`, { project_id: projectId, outline })
   }
 
   async function openProject(id: string) {
@@ -135,12 +113,8 @@ export const useProjectStore = defineStore('project', () => {
     currentProject,
     isLoading,
     isCreating,
-    createStep,
     loadProjects,
     createProject,
-    generateBookIdea,
-    generateOutline,
-    confirmOutlineAndCreate,
     openProject,
     deleteProject,
     updateProject,
@@ -150,15 +124,9 @@ export const useProjectStore = defineStore('project', () => {
 }, {
   persist: {
     storage: localStorage,
-    pick: ['currentProject', 'createStep'],
+    pick: ['currentProject'],
   },
 })
-
-interface ChapterInfo {
-  id: string
-  name: string
-  sections: number
-}
 
 function normalizeProject(p: Record<string, unknown>): Project {
   const pid = (p.project_id as string) || (p.id as string)
