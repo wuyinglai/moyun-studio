@@ -163,8 +163,8 @@
     <template #footer>
       <a-button
         type="primary"
-        :disabled="!wizard.params.value.genre || wizard.isGenerating.value"
-        :loading="wizard.isGenerating.value"
+        :disabled="!wizard.params.value.genre || wizard.isGenerating.value || creatingFile"
+        :loading="wizard.isGenerating.value || creatingFile"
         @click="handleCreate"
       >
         <template #icon>
@@ -197,6 +197,7 @@ const notification = useNotificationStore()
 // M0501-1~5 自定义参数管理
 const editingCategory = ref<string | null>(null)
 const newOptionInput = ref('')
+const creatingFile = ref(false)
 
 function toggleEditCategory(key: string) {
   editingCategory.value = editingCategory.value === key ? null : key
@@ -230,12 +231,20 @@ const scaleOptions = [
 ]
 
 async function handleCreate() {
+  creatingFile.value = true
   try {
     const project = await wizard.createProject(wizard.params.value)
     if (!project) return
 
-    // 创建书名与创意文件
-    await fileStore.createFile(project.id, '书名与创意.md', '')
+    try {
+      // 创建书名与创意文件
+      await fileStore.createFile(project.id, '书名与创意.md', '')
+    } catch {
+      notification.error('项目已创建，但初始化文件失败')
+      close()
+      router.push(`/project/${project.id}`)
+      return
+    }
 
     // 记录需要在项目打开后自动生成
     projectStore.setPendingGeneration({
@@ -250,6 +259,8 @@ async function handleCreate() {
     router.push(`/project/${project.id}`)
   } catch (e: any) {
     notification.error(e.message || '创建项目失败')
+  } finally {
+    creatingFile.value = false
   }
 }
 
