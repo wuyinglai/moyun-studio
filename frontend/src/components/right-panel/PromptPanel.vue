@@ -1,5 +1,16 @@
 <template>
   <div class="prompt-panel">
+    <!-- 生成状态提示 -->
+    <div v-if="fileGen.isGenerating.value" class="generation-banner">
+      <div class="generation-header">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span class="generation-title">AI 正在生成...</span>
+      </div>
+      <div class="generation-prompt">
+        <div class="prompt-label">当前 Prompt</div>
+        <div class="prompt-text">{{ fileGen.currentPrompt.value }}</div>
+      </div>
+    </div>
     <!-- 编辑工具栏 -->
     <div class="panel-section">
       <div class="section-header">
@@ -69,6 +80,7 @@ import { useChatStore } from '@/stores/chat'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
+import { useFileGeneration } from '@/composables/useFileGeneration'
 import api from '@/services/api'
 
 const rightPanelStore = useRightPanelStore()
@@ -77,6 +89,7 @@ const chatStore = useChatStore()
 const fileStore = useFileStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
+const fileGen = useFileGeneration()
 
 const localPrompt = ref('')
 const isSaving = ref(false)
@@ -301,5 +314,44 @@ async function sendToAI() {
     color: white;
     border-color: var(--accent-primary);
   }
+}
+
+.generation-banner {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-primary));
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.generation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.generation-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.generation-prompt {
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.prompt-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.prompt-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-break: break-word;
 }
 </style>
