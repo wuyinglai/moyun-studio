@@ -63,6 +63,9 @@ export function useFileGeneration() {
 
       await parseSSEStream(reader, (delta) => {
         editorStore.appendContent(delta)
+      }, (prompt) => {
+        _currentPrompt.value = prompt
+        editorStore.setFilePrompt(filePath, prompt)
       })
 
       _isGenerating.value = false
@@ -84,14 +87,67 @@ export function useFileGeneration() {
   }
 
   /**
+   * 运行管线（流式输出到编辑器）
+   */
+  async function runPipeline(
+    projectId: string,
+    filePath: string,
+    pipelineName: string,
+  ) {
+    if (_isGenerating.value) return
+
+    _isGenerating.value = true
+    _currentPrompt.value = ''
+    _abortController = new AbortController()
+
+    try {
+      editorStore.setCurrentFile(filePath)
+
+      const response = await fetch('/api/pipeline/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pipeline: pipelineName,
+          project_id: projectId,
+          target_file: filePath,
+          output_mode: pipelineName === 'generate' ? 'append' : 'overwrite',
+        }),
+        signal: _abortController.signal,
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('无法读取响应流')
+
+      await parseSSEStream(reader, (delta) => {
+        editorStore.appendContent(delta)
+      }, (prompt) => {
+        _currentPrompt.value = prompt
+        editorStore.setFilePrompt(filePath, prompt)
+      })
+
+    } catch (e: any) {
+      if (e.name !== 'AbortError') throw e
+    } finally {
+      _isGenerating.value = false
+      _abortController = null
+    }
+  }
+
+  /**
    * 解析 SSE 流，提取 delta 内容
    */
   async function parseSSEStream(
     reader: ReadableStreamDefaultReader<Uint8Array>,
     onDelta: (delta: string) => void,
+    onPrompt?: (prompt: string) => void,
   ): Promise<void> {
     const decoder = new TextDecoder()
     let buffer = ''
+    let currentEvent = ''
 
     while (true) {
       const { done, value } = await reader.read()
@@ -102,10 +158,14 @@ export function useFileGeneration() {
       buffer = lines.pop() || ''
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim()
+        } else if (line.startsWith('data: ')) {
           try {
             const parsed = JSON.parse(line.slice(6))
-            if (parsed.delta) {
+            if (currentEvent === 'prompt' && parsed.prompt && onPrompt) {
+              onPrompt(parsed.prompt)
+            } else if (parsed.delta) {
               onDelta(parsed.delta)
             } else if (parsed.content) {
               onDelta(parsed.content)
@@ -122,6 +182,7 @@ export function useFileGeneration() {
     isGenerating: _isGenerating,
     currentPrompt: _currentPrompt,
     generateToFile,
+    runPipeline,
     cancelGeneration,
   }
 }
