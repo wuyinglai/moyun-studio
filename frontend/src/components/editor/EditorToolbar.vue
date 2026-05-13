@@ -15,44 +15,58 @@
         停止
       </a-button>
       <template v-else>
-        <a-button size="small" @click="handleRegenerate">
-          <template #icon><i class="fa-solid fa-redo"></i></template>
-          重写
+        <a-button size="small" type="primary" ghost @click="runPipeline('polish')">
+          ✏️ 润色
         </a-button>
-        <a-button size="small" @click="handleGenerateNext">
-          <template #icon><i class="fa-solid fa-forward"></i></template>
-          生成下一个文件
+        <a-button size="small" type="primary" ghost @click="runPipeline('generate')">
+          📝 生成
         </a-button>
+        <a-button size="small" type="primary" ghost @click="runPipeline('rewrite')">
+          📦 重写
+        </a-button>
+        <a-button size="small" type="primary" ghost @click="runPipeline('extract')">
+          🌟 提取
+        </a-button>
+        <a-dropdown>
+          <a-button size="small">➕ 自定义 <i class="fa-solid fa-chevron-down"></i></a-button>
+          <template #overlay>
+            <a-menu @click="handleCustomPipeline">
+              <a-menu-item v-for="p in customPipelines" :key="p.name">
+                {{ p.label }}
+              </a-menu-item>
+              <a-menu-item v-if="customPipelines.length === 0" disabled>
+                暂无自定义管线
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
         <a-divider type="vertical" />
-        <a-button size="small" @click="handleTokenCount">
-          <template #icon><i class="fa-solid fa-calculator"></i></template>
-          Token
-        </a-button>
-        <a-button size="small" @click="handleCompare">
-          <template #icon><i class="fa-solid fa-code-compare"></i></template>
-          对比
-        </a-button>
-        <a-button size="small" @click="handleFeedback">
-          <template #icon><i class="fa-solid fa-comment"></i></template>
-          反馈
-        </a-button>
-        <a-button size="small" @click="handleRevisionLog">
-          <template #icon><i class="fa-solid fa-clock-rotate-left"></i></template>
-          修改日志
-        </a-button>
-        <a-divider type="vertical" />
-        <a-button size="small" @click="handleBatchGenerate">
-          <template #icon><i class="fa-solid fa-wand-magic-sparkles"></i></template>
-          批量生成
-        </a-button>
-        <a-button size="small" @click="handleQualityReview">
-          <template #icon><i class="fa-solid fa-check-circle"></i></template>
-          质量审查
-        </a-button>
-        <a-button size="small" @click="handleExtract">
-          <template #icon><i class="fa-solid fa-brain"></i></template>
-          提取
-        </a-button>
+        <a-dropdown>
+          <a-button size="small">更多 <i class="fa-solid fa-chevron-down"></i></a-button>
+          <template #overlay>
+            <a-menu>
+              <a-menu-item @click="handleTokenCount">
+                <i class="fa-solid fa-calculator"></i> Token
+              </a-menu-item>
+              <a-menu-item @click="handleCompare">
+                <i class="fa-solid fa-code-compare"></i> 对比
+              </a-menu-item>
+              <a-menu-item @click="handleFeedback">
+                <i class="fa-solid fa-comment"></i> 反馈
+              </a-menu-item>
+              <a-menu-item @click="handleRevisionLog">
+                <i class="fa-solid fa-clock-rotate-left"></i> 修改日志
+              </a-menu-item>
+              <a-menu-divider />
+              <a-menu-item @click="handleBatchGenerate">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 批量生成
+              </a-menu-item>
+              <a-menu-item @click="handleQualityReview">
+                <i class="fa-solid fa-check-circle"></i> 质量审查
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
       </template>
     </a-space>
   </div>
@@ -60,22 +74,33 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Button as AButton, Space as ASpace, Divider as ADivider } from 'ant-design-vue'
+import { Button as AButton, Space as ASpace, Divider as ADivider, Dropdown as ADropdown, Menu as AMenu, MenuItem as AMenuItem, MenuDivider as AMenuDivider } from 'ant-design-vue'
 import { useChatStore } from '@/stores/chat'
 import { useHistoryStore } from '@/stores/history'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
 import { useUIStore } from '@/stores/ui'
+import { useRightPanelStore } from '@/stores/rightPanel'
+import { useProjectStore } from '@/stores/project'
+import { usePipelineStore } from '@/stores/pipeline'
+import { useFileGeneration } from '@/composables/useFileGeneration'
 
 const chatStore = useChatStore()
 const historyStore = useHistoryStore()
 const editorStore = useEditorStore()
 const notification = useNotificationStore()
 const uiStore = useUIStore()
+const rightPanelStore = useRightPanelStore()
+const projectStore = useProjectStore()
+const pipelineStore = usePipelineStore()
+const fileGen = useFileGeneration()
 
 const isGenerating = computed(() => chatStore.isStreaming)
 
-// M0302-4: 后退 — 恢复到上一个版本快照
+const customPipelines = computed(() =>
+  pipelineStore.pipelines.filter(p => p.source === 'custom')
+)
+
 function handleBack() {
   const path = editorStore.currentFilePath
   if (!path) return
@@ -88,7 +113,6 @@ function handleBack() {
   }
 }
 
-// M0302-3: 前进 — 恢复下一个版本快照
 function handleForward() {
   const path = editorStore.currentFilePath
   if (!path) return
@@ -109,45 +133,41 @@ const canGoForward = computed(() => {
   return historyStore.canGoForward(editorStore.currentFilePath || undefined)
 })
 
-function handleRegenerate() {
-  window.dispatchEvent(new CustomEvent('chat:request-rewrite'))
-}
-
-function handleGenerateNext() {
-  window.dispatchEvent(new CustomEvent('chat:request-generate'))
-}
-
 function handleStop() {
   chatStore.cancelStream()
 }
 
-function handleTokenCount() {
-  uiStore.openTokenCount()
+async function runPipeline(name: string) {
+  if (!projectStore.currentProject || !editorStore.currentFilePath) {
+    notification.warning('请先打开一个文件')
+    return
+  }
+
+  rightPanelStore.setPipelineTab('quick')
+
+  try {
+    await fileGen.runPipeline(
+      projectStore.currentProject.id,
+      editorStore.currentFilePath,
+      name,
+    )
+  } catch (e: any) {
+    if (e.name !== 'AbortError') {
+      notification.error('管线运行失败')
+    }
+  }
 }
 
-function handleCompare() {
-  uiStore.openCompare()
+function handleCustomPipeline(e: { key: string }) {
+  runPipeline(e.key)
 }
 
-function handleFeedback() {
-  uiStore.openFeedback()
-}
-
-function handleRevisionLog() {
-  uiStore.openRevisionLog()
-}
-
-function handleBatchGenerate() {
-  uiStore.openBatchGenerate()
-}
-
-function handleQualityReview() {
-  uiStore.openQualityReview()
-}
-
-function handleExtract() {
-  uiStore.openExtract()
-}
+function handleTokenCount() { uiStore.openTokenCount() }
+function handleCompare() { uiStore.openCompare() }
+function handleFeedback() { uiStore.openFeedback() }
+function handleRevisionLog() { uiStore.openRevisionLog() }
+function handleBatchGenerate() { uiStore.openBatchGenerate() }
+function handleQualityReview() { uiStore.openQualityReview() }
 </script>
 
 <style scoped lang="scss">
@@ -164,13 +184,13 @@ function handleExtract() {
   color: var(--text-primary);
   background: transparent;
   border: 1px solid var(--border-color);
-  
+
   &:hover:not(:disabled) {
     color: var(--accent-primary);
     border-color: var(--accent-primary);
     background: var(--bg-hover);
   }
-  
+
   &:disabled {
     color: var(--text-muted);
     opacity: 0.5;
