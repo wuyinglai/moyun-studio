@@ -38,6 +38,7 @@ export const useProjectStore = defineStore('project', () => {
   const currentProject = ref<Project | null>(null)
   const isLoading = ref(false)
   const isCreating = ref(false)
+  const pendingGeneration = ref<{ filePath: string; prompt: string } | null>(null)
 
   async function loadProjects() {
     isLoading.value = true
@@ -103,6 +104,10 @@ export const useProjectStore = defineStore('project', () => {
     currentProject.value = null
   }
 
+  function setPendingGeneration(val: { filePath: string; prompt: string } | null) {
+    pendingGeneration.value = val
+  }
+
   function calculateCompletion(project: Project): number {
     if (!project.target_word_count) return 0
     return Math.round((project.total_words / project.target_word_count) * 100)
@@ -120,6 +125,8 @@ export const useProjectStore = defineStore('project', () => {
     updateProject,
     closeProject,
     calculateCompletion,
+    pendingGeneration,
+    setPendingGeneration,
   }
 }, {
   persist: {
