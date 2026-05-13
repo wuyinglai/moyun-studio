@@ -6,6 +6,8 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
   const promptHistory = ref<string[]>([])
   const currentHistoryIndex = ref(-1)
   const executionLogs = ref<string[]>([])
+  const activePipelineTab = ref<'quick' | 'editor'>('quick')
+  const isPipelineRunning = ref(false)
 
   const currentPrompt = computed(() => promptContent.value)
 
@@ -55,12 +57,22 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
     currentHistoryIndex.value = -1
   }
 
+  function setPipelineTab(tab: 'quick' | 'editor') {
+    activePipelineTab.value = tab
+  }
+
+  function setPipelineRunning(running: boolean) {
+    isPipelineRunning.value = running
+  }
+
   return {
     promptContent,
     promptHistory,
     currentHistoryIndex,
     currentPrompt,
     executionLogs,
+    activePipelineTab,
+    isPipelineRunning,
     loadPromptTemplate,
     updatePrompt,
     goPromptHistoryBack,
@@ -68,6 +80,8 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
     appendLog,
     clearLogs,
     clearHistory,
+    setPipelineTab,
+    setPipelineRunning,
   }
 }, {
   persist: {
