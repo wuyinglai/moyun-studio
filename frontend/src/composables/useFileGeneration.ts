@@ -1,12 +1,13 @@
 import { ref } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 
+// Module-level singleton refs -- shared across all consumers
+const _isGenerating = ref(false)
+const _currentPrompt = ref('')
+let _abortController: AbortController | null = null
+
 export function useFileGeneration() {
   const editorStore = useEditorStore()
-  const isGenerating = ref(false)
-  const currentPrompt = ref('')
-  const progress = ref({ current: 0, total: 0 })
-  let abortController: AbortController | null = null
 
   /**
    * 对指定文件进行流式生成
@@ -16,11 +17,11 @@ export function useFileGeneration() {
     filePath: string,
     prompt?: string,
   ) {
-    if (isGenerating.value) return
+    if (_isGenerating.value) return
 
-    isGenerating.value = true
-    currentPrompt.value = prompt || ''
-    abortController = new AbortController()
+    _isGenerating.value = true
+    _currentPrompt.value = prompt || ''
+    _abortController = new AbortController()
 
     try {
       // 确保编辑器已打开该文件
@@ -37,7 +38,7 @@ export function useFileGeneration() {
           mode: 'append',
           stream: true,
         }),
-        signal: abortController.signal,
+        signal: _abortController.signal,
       })
 
       if (!response.ok) {
@@ -51,7 +52,7 @@ export function useFileGeneration() {
         editorStore.appendContent(delta)
       })
 
-      isGenerating.value = false
+      _isGenerating.value = false
     } catch (e: any) {
       if (e.name === 'AbortError') {
         // 用户取消，不报错
@@ -59,14 +60,14 @@ export function useFileGeneration() {
         throw e
       }
     } finally {
-      isGenerating.value = false
-      abortController = null
+      _isGenerating.value = false
+      _abortController = null
     }
   }
 
   function cancelGeneration() {
-    abortController?.abort()
-    isGenerating.value = false
+    _abortController?.abort()
+    _isGenerating.value = false
   }
 
   /**
@@ -105,9 +106,8 @@ export function useFileGeneration() {
   }
 
   return {
-    isGenerating,
-    currentPrompt,
-    progress,
+    isGenerating: _isGenerating,
+    currentPrompt: _currentPrompt,
     generateToFile,
     cancelGeneration,
   }
