@@ -13,6 +13,7 @@
 import asyncio
 import json
 import logging
+import uuid
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -111,7 +112,7 @@ class PipelineRunner:
         pipeline = self.load_pipeline(pipeline_name)
         extra_vars = extra_vars or {}
 
-        task_id = f"pipeline-{pipeline_name}-{id(self)}"
+        task_id = f"pipeline-{pipeline_name}-{uuid.uuid4().hex[:8]}"
         step_outputs: dict[str, str] = {}
 
         total_steps = len(pipeline.steps)
@@ -143,8 +144,8 @@ class PipelineRunner:
                     try:
                         content, _ = await self.file_service.read_file(f"{project_id}/{target_file}")
                         file_content = content
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("无法读取目标文件 %s/%s: %s", project_id, target_file, e)
 
                 # 准备模板变量
                 step_vars = {
@@ -152,14 +153,14 @@ class PipelineRunner:
                     "file_path": target_file or "",
                     "project_id": project_id,
                     "user_input": user_input or "",
-                    "previous_output": step_outputs.get(step.fallback or ""),
+                    "previous_output": step_outputs.get(step.fallback) if step.fallback else None,
                     "style_guide": "",
                     "story_state": "",
                     **extra_vars,
                 }
 
-                # 渲染 prompt 模板
-                prompt_relative = f"pipeline/{pipeline_name}/{step.id}.md"
+                # 渲染 prompt 模板（使用 step.prompt 保证与 YAML 定义一致）
+                prompt_relative = f"{step.prompt}.md"
                 prompt_text = self._render_prompt(prompt_relative, step_vars)
 
                 # 发送渲染后的 prompt
@@ -231,14 +232,16 @@ class PipelineRunner:
                 orig, fm = await self.file_service.read_file(f"{project_id}/{target_file}")
                 original_content = orig
                 frontmatter = fm
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("重新读取文件 %s/%s 失败: %s", project_id, target_file, e)
 
             if output_mode in ("rewrite", "overwrite"):
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
             elif output_mode == "append":
                 new_content = (original_content + "\n\n" + final_output).strip()
                 await self.file_service.write_file(f"{project_id}/{target_file}", new_content, frontmatter)
+            elif output_mode == "dimension_file":
+                await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
 
         yield {"event": "done", "data": json.dumps({
             "task_id": task_id,
