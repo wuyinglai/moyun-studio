@@ -1,0 +1,27 @@
+name: generate
+label: 生成
+steps:
+  - id: context
+    label: 整合上下文
+    prompt: pipeline/generate/context
+    fallback: null
+  - id: outline
+    label: 大纲对齐
+    prompt: pipeline/generate/outline
+    fallback: context
+  - id: draft
+    label: 写作初稿
+    prompt: pipeline/generate/draft
+    fallback: context
+  - id: depai
+    label: 去AI味
+    prompt: pipeline/generate/depai
+    fallback: draft
+  - id: logic
+    label: 逻辑修正
+    prompt: pipeline/generate/logic
+    fallback: depai
+  - id: rhythm
+    label: 优化节奏
+    prompt: pipeline/generate/rhythm
+    fallback: logic

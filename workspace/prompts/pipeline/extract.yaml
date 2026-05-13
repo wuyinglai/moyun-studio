@@ -1,0 +1,19 @@
+name: extract
+label: 提取
+steps:
+  - id: worldbuilding
+    label: 世界观
+    prompt: pipeline/extract/worldbuilding
+    fallback: null
+  - id: characters
+    label: 角色关系
+    prompt: pipeline/extract/characters
+    fallback: null
+  - id: plots
+    label: 情节场景
+    prompt: pipeline/extract/plots
+    fallback: null
+  - id: summary
+    label: 章节摘要
+    prompt: pipeline/extract/summary
+    fallback: null

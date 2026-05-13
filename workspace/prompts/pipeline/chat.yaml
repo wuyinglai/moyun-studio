@@ -1,0 +1,15 @@
+name: chat
+label: 对话
+steps:
+  - id: understand
+    label: 意图理解
+    prompt: pipeline/chat/understand
+    fallback: null
+  - id: draft
+    label: 生成
+    prompt: pipeline/chat/draft
+    fallback: null
+  - id: validate
+    label: 校验
+    prompt: pipeline/chat/validate
+    fallback: draft

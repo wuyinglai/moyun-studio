@@ -1,0 +1,23 @@
+name: rewrite
+label: 重写
+steps:
+  - id: diagnose
+    label: 诊断问题
+    prompt: pipeline/rewrite/diagnose
+    fallback: null
+  - id: draft
+    label: 重写初稿
+    prompt: pipeline/rewrite/draft
+    fallback: null
+  - id: depai
+    label: 去AI味
+    prompt: pipeline/rewrite/depai
+    fallback: draft
+  - id: logic
+    label: 逻辑修正
+    prompt: pipeline/rewrite/logic
+    fallback: depai
+  - id: rhythm
+    label: 优化节奏
+    prompt: pipeline/rewrite/rhythm
+    fallback: logic

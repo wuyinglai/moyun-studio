@@ -1,0 +1,19 @@
+name: polish
+label: 润色
+steps:
+  - id: depai
+    label: 去AI味
+    prompt: pipeline/polish/depai
+    fallback: null
+  - id: prose
+    label: 提升文笔
+    prompt: pipeline/polish/prose
+    fallback: depai
+  - id: logic
+    label: 修正逻辑
+    prompt: pipeline/polish/logic
+    fallback: prose
+  - id: rhythm
+    label: 优化节奏
+    prompt: pipeline/polish/rhythm
+    fallback: logic
