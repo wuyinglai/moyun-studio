@@ -1,71 +1,58 @@
 <template>
   <div class="prompt-panel">
-    <!-- 生成状态提示 -->
-    <div v-if="fileGen.isGenerating.value" class="generation-banner">
-      <div class="generation-header">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <span class="generation-title">AI 正在生成...</span>
-      </div>
-      <div class="generation-prompt">
-        <div class="prompt-label">当前 Prompt</div>
-        <div class="prompt-text">{{ fileGen.currentPrompt.value }}</div>
-      </div>
+    <!-- 管线选择器 + 运行按钮 -->
+    <div class="pipeline-selector">
+      <a-select
+        v-model:value="selectedPipeline"
+        style="flex: 1; min-width: 0;"
+        size="small"
+        @change="onPipelineChange"
+      >
+        <a-select-option v-for="p in storePipelines" :key="p.name" :value="p.name">
+          {{ p.label }}
+        </a-select-option>
+      </a-select>
+      <a-button
+        type="primary"
+        size="small"
+        :loading="isPipelineRunning"
+        @click="runCurrentPipeline"
+      >
+        ▶ 运行
+      </a-button>
     </div>
-    <!-- 编辑工具栏 -->
-    <div class="panel-section">
-      <div class="section-header">
-        <span class="section-title">发送给LLM的Prompt</span>
-      </div>
-      <div class="toolbar-row">
-        <a-button-group>
-          <a-button size="small" @click="goBack" :disabled="!canGoBack">
-            <template #icon><i class="fa-solid fa-chevron-left"></i></template>
-            后退
-          </a-button>
-          <a-button size="small" @click="goForward" :disabled="!canGoForward">
-            <template #icon><i class="fa-solid fa-chevron-right"></i></template>
-            前进
-          </a-button>
-        </a-button-group>
-        <a-select
-          v-model:value="selectedTemplate"
-          placeholder="加载模板..."
-          size="small"
-          style="min-width: 120px;"
-          :loading="isLoadingTemplate"
-          @change="loadTemplate"
-        >
-          <a-select-option v-for="t in templateList" :key="t.name" :value="t.name">
-            {{ t.name }}
-          </a-select-option>
-        </a-select>
-        <a-button type="primary" size="small" @click="sendToAI">
-          <template #icon><i class="fa-solid fa-paper-plane"></i></template>
-          发送
-        </a-button>
-      </div>
+
+    <!-- 步骤标签 -->
+    <div class="step-tabs" v-if="storeSteps.length > 0">
+      <button
+        v-for="(step, index) in storeSteps"
+        :key="step.id"
+        class="step-tab"
+        :class="{ active: index === currentStepIndex }"
+        @click="onStepChange(index)"
+      >
+        {{ step.label }}
+      </button>
+    </div>
+
+    <!-- 生成状态提示 -->
+    <div v-if="isPipelineRunning" class="generation-status">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      <span>AI 正在生成...</span>
+    </div>
+
+    <!-- Prompt 编辑区 -->
+    <div class="editor-section">
+      <div class="editor-label">当前步骤 Prompt（可直接编辑）</div>
       <a-textarea
         v-model:value="localPrompt"
-        placeholder="在此输入您的 Prompt..."
-        :auto-size="{ minRows: 10, maxRows: 20 }"
-        @input="handleInput"
+        placeholder="选择管线步骤查看 Prompt..."
+        :auto-size="{ minRows: 8, maxRows: 16 }"
+        @input="handlePromptInput"
         class="prompt-editor"
       />
-      <div class="save-status" :class="{ saving: isSaving }">
-        {{ isSaving ? '保存中...' : '已保存' }}
-      </div>
-      <!-- M0402-3 引用文件链接 -->
-      <div v-if="fileReferences.length > 0" class="file-references">
-        <span class="ref-title">引用文件：</span>
-        <a
-          v-for="ref in fileReferences"
-          :key="ref.path"
-          class="ref-link"
-          @click="openReferencedFile(ref.path)"
-        >
-          <i class="fa-solid fa-file-lines"></i>
-          {{ ref.name }}
-        </a>
+      <div class="editor-hint">
+        提示：使用 <code>[文件名.md]</code> 引用文件，<code>{{ '{{变量名}}' }}</code> 使用系统变量
       </div>
     </div>
   </div>
@@ -73,136 +60,80 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { Button as AButton, ButtonGroup as AButtonGroup } from 'ant-design-vue'
+import { usePipelineStore } from '@/stores/pipeline'
 import { useRightPanelStore } from '@/stores/rightPanel'
-import { useNotificationStore } from '@/stores/notification'
-import { useChatStore } from '@/stores/chat'
-import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileGeneration } from '@/composables/useFileGeneration'
-import api from '@/services/api'
 
+const pipelineStore = usePipelineStore()
 const rightPanelStore = useRightPanelStore()
-const notification = useNotificationStore()
-const chatStore = useChatStore()
-const fileStore = useFileStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const fileGen = useFileGeneration()
 
 const localPrompt = ref('')
-const isSaving = ref(false)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
-// G0106: Prompt 模板加载
-interface PromptTemplate {
-  name: string
-  category: string
-  exists: boolean
-}
-const templateList = ref<PromptTemplate[]>([])
-const selectedTemplate = ref<string | null>(null)
-const isLoadingTemplate = ref(false)
-
-onMounted(async () => {
-  try {
-    const data = await api.get<{ prompts: PromptTemplate[]; total: number }>('/prompts')
-    templateList.value = data?.prompts || []
-  } catch {
-    // 静默失败，模板加载是可选的
-  }
+const storePipelines = computed(() => pipelineStore.pipelines)
+const storeSteps = computed(() => pipelineStore.currentDetail?.steps || [])
+const currentStepIndex = computed(() => pipelineStore.currentStepIndex)
+const isPipelineRunning = computed(() => rightPanelStore.isPipelineRunning)
+const selectedPipeline = computed({
+  get: () => pipelineStore.currentPipelineName,
+  set: (val: string) => pipelineStore.selectPipeline(val),
 })
 
-async function loadTemplate(fullName: string) {
-  if (!fullName) return
-  isLoadingTemplate.value = true
-  selectedTemplate.value = fullName
-  try {
-    const [category, ...nameParts] = fullName.split('/')
-    const name = nameParts.join('/')
-    const data = await api.get<{ name: string; category: string; content: string }>(`/prompts/${category}/${name}`)
-    if (data?.content) {
-      localPrompt.value = data.content
-      rightPanelStore.loadPromptTemplate(data.content)
-      notification.success(`已加载模板: ${fullName}`)
-    }
-  } catch {
-    notification.error('加载模板失败')
-  } finally {
-    isLoadingTemplate.value = false
+onMounted(() => {
+  if (pipelineStore.pipelines.length === 0) {
+    pipelineStore.fetchPipelines()
   }
-}
-
-// M0402-3 — 解析 @{文件路径} 引用
-const fileReferences = computed(() => {
-  const refs: { path: string; name: string }[] = []
-  const regex = /@\{([^}]+)\}/g
-  let match
-  while ((match = regex.exec(localPrompt.value)) !== null) {
-    const path = match[1].trim()
-    if (path && !refs.find(r => r.path === path)) {
-      refs.push({ path, name: path.split('/').pop() || path })
-    }
+  if (pipelineStore.currentPipelineName && !pipelineStore.currentDetail) {
+    pipelineStore.fetchPipelineDetail(pipelineStore.currentPipelineName)
   }
-  return refs
 })
-
-function openReferencedFile(path: string) {
-  if (!projectStore.currentProject) return
-  fileStore.openFile({ name: path.split('/').pop() || '', path, type: 'file' })
-  editorStore.setCurrentFile(path)
-  fileStore.readFile(projectStore.currentProject.id, path).then(data => {
-    editorStore.loadContent(path, data.content || '')
-  })
-}
-
-const currentHistoryIndex = computed(() => rightPanelStore.currentHistoryIndex)
-const canGoBack = computed(() => currentHistoryIndex.value < rightPanelStore.promptHistory.length - 1)
-const canGoForward = computed(() => currentHistoryIndex.value >= 0)
 
 watch(
-  () => rightPanelStore.promptContent,
-  (newVal) => {
-    localPrompt.value = newVal
+  () => pipelineStore.currentPromptContent,
+  (val) => {
+    localPrompt.value = val || ''
   },
   { immediate: true }
 )
 
-function handleInput() {
-  if (saveTimeout) {
-    clearTimeout(saveTimeout)
-  }
-  isSaving.value = true
+function onPipelineChange(name: string) {
+  pipelineStore.selectPipeline(name)
+}
+
+function onStepChange(index: number) {
+  pipelineStore.selectStep(index)
+}
+
+function handlePromptInput() {
+  if (saveTimeout) clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
-    savePrompt()
+    const step = pipelineStore.currentStep
+    if (step) {
+      pipelineStore.saveStepPrompt(step.id, localPrompt.value)
+    }
   }, 500)
 }
 
-function savePrompt() {
-  rightPanelStore.updatePrompt(localPrompt.value)
-  isSaving.value = false
-}
+async function runCurrentPipeline() {
+  if (!projectStore.currentProject || !editorStore.currentFilePath) return
+  if (isPipelineRunning.value) return
 
-function goBack() {
-  rightPanelStore.goPromptHistoryBack()
-  localPrompt.value = rightPanelStore.promptContent
-}
-
-function goForward() {
-  rightPanelStore.goPromptHistoryForward()
-  localPrompt.value = rightPanelStore.promptContent
-}
-
-async function sendToAI() {
-  if (!localPrompt.value) {
-    notification.warning('暂无 Prompt 内容')
-    return
-  }
+  rightPanelStore.setPipelineRunning(true)
   try {
-    await chatStore.sendMessage(localPrompt.value)
-  } catch (e) {
-    notification.error('发送失败')
+    await fileGen.runPipeline(
+      projectStore.currentProject.id,
+      editorStore.currentFilePath,
+      pipelineStore.currentPipelineName,
+    )
+  } catch (e: any) {
+    console.warn('管线运行失败:', e)
+  } finally {
+    rightPanelStore.setPipelineRunning(false)
   }
 }
 </script>
@@ -213,145 +144,85 @@ async function sendToAI() {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  padding: 12px;
 }
 
-.panel-section {
-  padding: 16px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.section-header {
+.pipeline-selector {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
-.section-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.toolbar-row {
+.step-tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
-}
-
-.prompt-editor {
-  width: 100%;
-  flex: 1;
-}
-
-.save-status {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-  text-align: right;
-
-  &.saving {
-    color: var(--accent-warning);
-  }
-}
-
-.prompt-panel :deep(.ant-btn) {
-  color: var(--text-primary);
-  background: transparent;
-  border: 1px solid var(--border-color);
-  
-  &:hover:not(:disabled) {
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
-    background: var(--bg-hover);
-  }
-  
-  &:disabled {
-    color: var(--text-muted);
-    opacity: 0.5;
-  }
-}
-
-.file-references {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: var(--bg-primary);
-  border-radius: var(--radius-sm);
-}
-
-.ref-title {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.ref-link {
-  display: inline-flex;
-  align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.step-tab {
+  padding: 4px 10px;
   font-size: 12px;
-  color: var(--accent-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
-  text-decoration: none;
 
   &:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+
+  &.active {
     background: var(--accent-primary);
     color: white;
     border-color: var(--accent-primary);
   }
 }
 
-.generation-banner {
-  padding: 12px 16px;
-  background: linear-gradient(135deg, var(--bg-card), var(--bg-primary));
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.generation-header {
+.generation-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-}
-
-.generation-title {
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  margin-bottom: 12px;
   font-size: 13px;
-  font-weight: 600;
   color: var(--accent-primary);
 }
 
-.generation-prompt {
-  background: var(--bg-primary);
-  border-radius: 6px;
-  padding: 8px 10px;
+.editor-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.prompt-label {
+.editor-label {
   font-size: 11px;
   color: var(--text-muted);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
-.prompt-text {
-  font-size: 12px;
-  color: var(--text-secondary);
+.prompt-editor {
+  flex: 1;
+  width: 100%;
+}
+
+.editor-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
   line-height: 1.5;
-  word-break: break-word;
+
+  code {
+    background: var(--bg-primary);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
 }
 </style>
