@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import NotificationContainer from '@/components/layout/NotificationContainer.vue'
@@ -10,14 +10,21 @@ import TokenCountModal from '@/components/modals/TokenCountModal.vue'
 import CompareModal from '@/components/modals/CompareModal.vue'
 import FeedbackModal from '@/components/modals/FeedbackModal.vue'
 import RevisionLogModal from '@/components/modals/RevisionLogModal.vue'
+import BatchGenerateModal from '@/components/modals/BatchGenerateModal.vue'
+import ExtractModal from '@/components/modals/ExtractModal.vue'
+import QualityReviewModal from '@/components/modals/QualityReviewModal.vue'
 import { useNotificationStore } from '@/stores/notification'
 import { useAppInit } from '@/composables/useApp'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
+import { useFileStore } from '@/stores/file'
+import { useFileGeneration } from '@/composables/useFileGeneration'
 
 const { initApp, cleanupApp } = useAppInit()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
+const fileStore = useFileStore()
+const fileGen = useFileGeneration()
 const route = useRoute()
 
 // 初始化应用
@@ -83,10 +90,46 @@ function handlePromiseRejection(event: PromiseRejectionEvent) {
 }
 
 // 路由守卫：路由跳转前拦截（Vue Router beforeEach 已在 router/index.ts 中处理）
+
+// 监听 pendingGeneration：项目创建后自动触发流式生成
+watch(
+  () => projectStore.pendingGeneration,
+  async (pending) => {
+    if (!pending || !projectStore.currentProject) return
+
+    const projectId = projectStore.currentProject.id
+    const { filePath, prompt } = pending
+
+    // 等待路由导航完成 + 文件树加载
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // 打开文件
+    const node = { name: filePath.split('/').pop() || '', path: filePath, type: 'file' as const }
+    fileStore.openFile(node)
+    editorStore.setCurrentFile(filePath)
+
+    try {
+      // 读取文件（刚创建的空文件）
+      await fileStore.readFile(projectId, filePath)
+    } catch {
+      // 文件可能尚未在后端就绪，忽略
+    }
+
+    // 触发流式生成
+    try {
+      await fileGen.generateToFile(projectId, filePath, prompt)
+    } catch (e: any) {
+      console.error('自动生成失败:', e)
+    }
+
+    // 清除 pending 标记
+    projectStore.setPendingGeneration(null)
+  },
+)
 </script>
 
 <template>
-  <div id="app">
+  <div class="app-shell">
     <AppHeader />
     <router-view />
     <NotificationContainer />
@@ -97,11 +140,14 @@ function handlePromiseRejection(event: PromiseRejectionEvent) {
     <CompareModal />
     <FeedbackModal />
     <RevisionLogModal />
+    <BatchGenerateModal />
+    <ExtractModal />
+    <QualityReviewModal />
   </div>
 </template>
 
 <style scoped>
-#app {
+.app-shell {
   height: 100vh;
   display: flex;
   flex-direction: column;
