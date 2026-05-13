@@ -19,12 +19,14 @@ import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useRightPanelStore } from '@/stores/rightPanel'
 
 const { initApp, cleanupApp } = useAppInit()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
 const fileGen = useFileGeneration()
+const rightPanelStore = useRightPanelStore()
 const route = useRoute()
 
 // 初始化应用
@@ -103,27 +105,52 @@ watch(
     // 等待路由导航完成 + 文件树加载
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    // 打开文件
+    // 打开文件（需先保存 prompt，以便右侧面板能立即加载）
+    editorStore.setFilePrompt(filePath, prompt)
     const node = { name: filePath.split('/').pop() || '', path: filePath, type: 'file' as const }
     fileStore.openFile(node)
     editorStore.setCurrentFile(filePath)
 
     try {
-      // 读取文件（刚创建的空文件）
-      await fileStore.readFile(projectId, filePath)
+      // 读取文件（刚创建的空文件），并加载到编辑器
+      const fileContent = await fileStore.readFile(projectId, filePath)
+      if (fileContent) {
+        editorStore.loadContent(filePath, fileContent.content || '')
+      }
     } catch {
       // 文件可能尚未在后端就绪，忽略
     }
 
     // 触发流式生成
     try {
-      await fileGen.generateToFile(projectId, filePath, prompt)
+      await fileGen.generateToFile(projectId, filePath, prompt, pending.extraVars, pending.promptType)
+
+      // 生成完成后，从磁盘重新加载内容到编辑器
+      try {
+        const result = await fileStore.readFile(projectId, filePath)
+        if (result && result.content) {
+          editorStore.loadContent(filePath, result.content)
+        }
+      } catch {}
     } catch (e: any) {
       console.error('自动生成失败:', e)
     }
 
     // 清除 pending 标记
     projectStore.setPendingGeneration(null)
+  },
+)
+
+// 切换文件时，在右侧面板显示该文件关联的 prompt
+watch(
+  () => editorStore.currentFilePath,
+  (path) => {
+    if (path) {
+      const prompt = editorStore.getFilePrompt(path)
+      if (prompt) {
+        rightPanelStore.updatePrompt(prompt)
+      }
+    }
   },
 )
 </script>

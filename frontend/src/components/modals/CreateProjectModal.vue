@@ -250,6 +250,14 @@ async function handleCreate() {
     projectStore.setPendingGeneration({
       filePath: '书名与创意.md',
       prompt: `你是一位专业的小说创作助手。用户选择了「${wizard.params.value.genre}」题材，请生成一个吸引人的书名和创意描述。`,
+      promptType: 'generate/title',
+      extraVars: {
+        genre: wizard.params.value.genre || '',
+        tone: wizard.params.value.tone || '',
+        theme: wizard.params.value.theme || '',
+        background: wizard.params.value.background || '',
+        writing_style: wizard.params.value.writing_style || '',
+      },
     })
 
     // 关闭弹窗

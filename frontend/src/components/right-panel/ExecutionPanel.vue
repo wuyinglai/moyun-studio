@@ -87,14 +87,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
 import { useNotificationStore } from '@/stores/notification'
+import { useFileStore } from '@/stores/file'
 
 const taskStore = useTaskStore()
 const notification = useNotificationStore()
+const fileStore = useFileStore()
 
 const logContainer = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  taskStore.startPolling(5000)
+})
+
+onUnmounted(() => {
+  taskStore.stopPolling()
+})
 
 const tasks = computed(() => taskStore.tasks)
 const logs = computed(() => taskStore.logs)
@@ -122,9 +132,14 @@ function formatTime(timestamp: number): string {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-function cancelTask(taskId: string) {
-  taskStore.cancelTask(taskId)
-  notification.warning('任务已取消')
+async function cancelTask(taskId: string) {
+  try {
+    await fileStore.cancelTask(taskId)
+    taskStore.cancelTask(taskId)
+    notification.warning('任务已取消')
+  } catch {
+    notification.error('取消失败')
+  }
 }
 
 function confirmTask(taskId: string) {

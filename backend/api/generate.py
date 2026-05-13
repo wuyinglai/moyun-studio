@@ -1,15 +1,18 @@
 """墨韵 - 生成任务 API
 
 端点：
-  POST /api/generate    发起LLM生成任务（流式SSE）
-  POST /api/chat        发起聊天（流式SSE）
-  POST /api/stop        停止当前任务
-  GET  /api/tasks       获取任务队列状态
+  POST /api/generate         发起LLM生成任务（流式SSE）
+  POST /api/generate/batch   批量生成章节内容
+  POST /api/chat             发起聊天（流式SSE）
+  POST /api/stop             停止当前任务
+  GET  /api/tasks            获取任务队列状态
 """
 
 import asyncio
 import json
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request
@@ -22,7 +25,13 @@ from backend.core.llm import (
 from backend.core.file_ops import FileService
 from backend.core.prompt_engine import PromptEngine
 from backend.schemas.common import ApiResponse
-from backend.schemas.llm import GenerateRequest, ChatRequest
+from backend.schemas.llm import (
+    GenerateRequest,
+    ChatRequest,
+    BatchGenerateRequest,
+    BatchGenerateResponse,
+    BatchGenerateItem,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["generate"])
@@ -120,6 +129,187 @@ async def generate(
     return EventSourceResponse(_stream())
 
 
+@router.post("/generate/batch", response_model=ApiResponse[BatchGenerateResponse])
+async def batch_generate(
+    req: BatchGenerateRequest,
+    settings: Settings = Depends(get_settings),
+):
+    """批量生成章节内容
+
+    根据卷/章/节筛选条件，对目标章节逐节调用LLM生成内容。
+    每节使用 generate/chapter 模板，模板变量自动从项目文件中提取。
+    """
+    project_dir = settings.projects_path / req.project_id
+    if not project_dir.exists():
+        from backend.core.exceptions import ProjectNotFoundError
+        raise ProjectNotFoundError(req.project_id)
+
+    logger.info("批量生成开始", extra={
+        "project_id": req.project_id,
+        "volume": req.volume_number,
+        "chapter": req.chapter_number,
+        "sections": req.section_numbers,
+    })
+
+    # 列出所有目标文件：chapters/vol-{v}/ch-{c}/sec-{s}.md
+    chapters_dir = project_dir / "chapters"
+    targets: list[dict] = []
+
+    # 确定卷范围
+    if req.volume_number:
+        vol_dirs = [chapters_dir / f"vol-{req.volume_number:02d}"]
+    else:
+        vol_dirs = sorted(chapters_dir.glob("vol-*"))
+
+    for vol_dir in vol_dirs:
+        if not vol_dir.is_dir():
+            continue
+        vol_match = vol_dir.name  # vol-XX
+
+        # 确定章范围
+        if req.chapter_number:
+            ch_dirs = [vol_dir / f"ch-{req.chapter_number:03d}"]
+        else:
+            ch_dirs = sorted(vol_dir.glob("ch-*"))
+
+        for ch_dir in ch_dirs:
+            if not ch_dir.is_dir():
+                continue
+
+            # 解析章节号
+            ch_match = ch_dir.name  # ch-XXX
+            ch_num = int(ch_match.split("-")[1])
+
+            # 确定节范围
+            if req.section_numbers:
+                sec_nums = req.section_numbers
+            else:
+                # 所有未写的节
+                sec_nums = []
+                for sec_file in sorted(ch_dir.glob("sec-*.md")):
+                    sec_num = int(sec_file.stem.split("-")[1])
+                    sec_nums.append(sec_num)
+
+            for sec_num in sec_nums:
+                sec_file = ch_dir / f"sec-{sec_num:03d}.md"
+                if sec_file.exists():
+                    targets.append({
+                        "vol_dir": vol_dir,
+                        "ch_dir": ch_dir,
+                        "ch_num": ch_num,
+                        "sec_num": sec_num,
+                        "target_file": f"{req.project_id}/chapters/{vol_dir.name}/{ch_dir.name}/sec-{sec_num:03d}.md",
+                    })
+
+    if not targets:
+        return ApiResponse.ok(
+            BatchGenerateResponse(tasks=[], total=0, succeeded=0, failed=0),
+            message="未找到匹配的生成目标",
+        )
+
+    # 加载 LLM 配置和服务
+    llm_cfg = load_llm_config_from_workspace(settings)
+    svc = LLMService.from_workspace_config(llm_cfg)
+    file_service = FileService(settings.projects_path)
+    prompt_engine = PromptEngine(settings.prompts_path, file_service)
+
+    # 读取共享上下文（只读一次）
+    shared_vars = {}
+    for ctx_file, var_name in [
+        ("style-guide.md", "style_guide"),
+        ("story-state.md", "story_state"),
+        ("recent-context.md", "recent_context"),
+    ]:
+        try:
+            content, _ = await file_service.read_file(f"{req.project_id}/{ctx_file}")
+            shared_vars[var_name] = content
+        except Exception:
+            shared_vars[var_name] = ""
+
+    # 读取项目 meta 获取 pov
+    pov = "第三人称"  # 默认值
+    meta_file = project_dir / "meta.json"
+    if meta_file.exists():
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            pov = meta.get("writing_style") or meta.get("pov", "第三人称")
+        except Exception:
+            pass
+
+    tasks: list[BatchGenerateItem] = []
+    succeeded = 0
+    failed = 0
+
+    for tgt in targets:
+        item = BatchGenerateItem(target_file=tgt["target_file"])
+
+        try:
+            # 读取章节 meta
+            ch_meta = {}
+            ch_meta_file = tgt["ch_dir"] / "ch-meta.json"
+            if ch_meta_file.exists():
+                ch_meta = json.loads(ch_meta_file.read_text(encoding="utf-8"))
+
+            chapter_title = ch_meta.get("title", f"第{tgt['ch_num']}章")
+
+            # 构建模板变量
+            variables = {
+                "chapter_name": f"第{tgt['ch_num']}章 {chapter_title}",
+                "chapter_number": str(tgt["ch_num"]),
+                "section_number": str(tgt["sec_num"]),
+                "goal": ch_meta.get("goal", ""),
+                "pov": pov,
+                **shared_vars,
+            }
+
+            # 渲染 prompt
+            prompt_text = await prompt_engine.render(req.prompt_type, variables)
+
+            # 保存 prompt 到返回项，供前端右侧面板展示
+            item.prompt = prompt_text
+
+            # 调用 LLM
+            messages = [{"role": "user", "content": prompt_text}]
+            generated = await svc.complete_sync(
+                messages, temperature=req.temperature, max_tokens=4000, timeout=180
+            )
+
+            # 写入文件
+            await file_service.write_file(tgt["target_file"], generated.strip())
+
+            word_count = len(generated.replace(" ", ""))
+            item.status = "success"
+            item.word_count = word_count
+            succeeded += 1
+
+            logger.info("章节生成完成", extra={
+                "target": tgt["target_file"],
+                "words": word_count,
+            })
+
+        except Exception as e:
+            logger.error("章节生成失败", extra={
+                "target": tgt["target_file"],
+                "error": str(e)[:200],
+            })
+            item.status = "error"
+            item.error = str(e)[:200]
+            failed += 1
+
+        tasks.append(item)
+
+    logger.info("批量生成完成", extra={
+        "total": len(targets),
+        "succeeded": succeeded,
+        "failed": failed,
+    })
+
+    return ApiResponse.ok(
+        BatchGenerateResponse(tasks=tasks, total=len(tasks), succeeded=succeeded, failed=failed),
+        message=f"批量生成完成：成功 {succeeded}，失败 {failed}",
+    )
+
+
 @router.post("/chat")
 async def chat(
     req: ChatRequest,
@@ -169,11 +359,11 @@ async def stop_task(task_id: str | None = None):
     return ApiResponse.ok(message="所有任务已停止")
 
 
-@router.get("/tasks", response_model=ApiResponse[dict])
-async def get_tasks():
-    """获取当前任务队列"""
-    tasks = [
+@router.get("/generate-tasks", response_model=ApiResponse[dict], include_in_schema=False)
+async def get_generate_tasks():
+    """当前运行的生成任务（旧端点，新端点在 /api/tasks）"""
+    running = [
         {"task_id": tid, "status": "running" if not sig.is_set() else "stopping"}
         for tid, sig in _stop_signals.items()
     ]
-    return ApiResponse.ok({"tasks": tasks, "count": len(tasks)})
+    return ApiResponse.ok({"tasks": running, "count": len(running)})

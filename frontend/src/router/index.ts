@@ -3,35 +3,40 @@ import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { Modal } from 'ant-design-vue'
+import AppLayout from '@/components/layout/AppLayout.vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: () => import('@/components/layout/AppLayout.vue'),
+    component: AppLayout,
     children: [],
   },
   {
     path: '/project/:projectId',
     name: 'project',
-    component: () => import('@/components/layout/AppLayout.vue'),
+    component: AppLayout,
     children: [],
     beforeEnter: async (to) => {
       const projectStore = useProjectStore()
       const fileStore = useFileStore()
       const projectId = to.params.projectId as string
-      if (!projectStore.currentProject || projectStore.currentProject.id !== projectId) {
-        await projectStore.openProject(projectId)
-      }
-      if (projectStore.currentProject) {
-        await fileStore.loadTree(projectId)
+      try {
+        if (!projectStore.currentProject || projectStore.currentProject.id !== projectId) {
+          await projectStore.openProject(projectId)
+        }
+        if (projectStore.currentProject) {
+          await fileStore.loadTree(projectId)
+        }
+      } catch (e) {
+        console.warn('项目加载失败（页面仍可渲染）:', e)
       }
     },
   },
   {
     path: '/project/:projectId/file/*',
     name: 'file',
-    component: () => import('@/components/layout/AppLayout.vue'),
+    component: AppLayout,
     beforeEnter: async (to) => {
       const projectStore = useProjectStore()
       const fileStore = useFileStore()
@@ -54,9 +59,13 @@ const routes: RouteRecordRaw[] = [
         if (!confirmed) return false
       }
 
-      if (!projectStore.currentProject || projectStore.currentProject.id !== projectId) {
-        await projectStore.openProject(projectId)
-        await fileStore.loadTree(projectId)
+      try {
+        if (!projectStore.currentProject || projectStore.currentProject.id !== projectId) {
+          await projectStore.openProject(projectId)
+          await fileStore.loadTree(projectId)
+        }
+      } catch (e) {
+        console.warn('项目加载失败:', e)
       }
 
       const node = { name: filePath.split('/').pop() || '', path: filePath, type: 'file' as const }

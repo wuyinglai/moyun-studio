@@ -19,6 +19,9 @@ export interface ModalState {
   compare: boolean
   feedback: boolean
   revisionLog: boolean
+  batchGenerate: boolean
+  extract: boolean
+  qualityReview: boolean
 }
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -40,6 +43,9 @@ export const useUIStore = defineStore('ui', () => {
     compare: false,
     feedback: false,
     revisionLog: false,
+    batchGenerate: false,
+    extract: false,
+    qualityReview: false,
   })
 
   // 初始化时应用主题
@@ -135,6 +141,30 @@ export const useUIStore = defineStore('ui', () => {
     modals.value.revisionLog = false
   }
 
+  function openBatchGenerate() {
+    modals.value.batchGenerate = true
+  }
+
+  function closeBatchGenerate() {
+    modals.value.batchGenerate = false
+  }
+
+  function openExtract() {
+    modals.value.extract = true
+  }
+
+  function closeExtract() {
+    modals.value.extract = false
+  }
+
+  function openQualityReview() {
+    modals.value.qualityReview = true
+  }
+
+  function closeQualityReview() {
+    modals.value.qualityReview = false
+  }
+
   return {
     theme,
     modals,
@@ -156,6 +186,12 @@ export const useUIStore = defineStore('ui', () => {
     closeFeedback,
     openRevisionLog,
     closeRevisionLog,
+    openBatchGenerate,
+    closeBatchGenerate,
+    openExtract,
+    closeExtract,
+    openQualityReview,
+    closeQualityReview,
   }
 }, {
   persist: {

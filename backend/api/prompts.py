@@ -43,7 +43,7 @@ async def list_prompts(settings: Settings = Depends(get_settings)):
         if cat_path.exists():
             for d in sorted(cat_path.iterdir()):
                 if d.is_dir():
-                    prompt_file = d / "prompt.md"
+                    prompt_file = d / "main.md"
                     prompts.append({
                         "name": f"{category}/{d.name}",
                         "category": category,
@@ -63,7 +63,7 @@ async def get_prompt(
 ):
     """获取指定Prompt内容"""
     prompt_key = f"{category}/{name}"
-    prompt_file = settings.prompts_path / category / name / "prompt.md"
+    prompt_file = settings.prompts_path / category / name / "main.md"
 
     if not prompt_file.exists():
         raise TemplateNotFoundError(template=f"{category}/{name}")
@@ -87,7 +87,7 @@ async def save_prompt(
     """保存Prompt内容"""
     prompt_dir = settings.prompts_path / category / name
     prompt_dir.mkdir(parents=True, exist_ok=True)
-    prompt_file = prompt_dir / "prompt.md"
+    prompt_file = prompt_dir / "main.md"
     prompt_file.write_text(req.content, encoding="utf-8")
 
     return ApiResponse.ok(message=f"Prompt {category}/{name} 已保存")

@@ -20,21 +20,23 @@ if TYPE_CHECKING:
 def load_llm_config_from_workspace(settings) -> dict:
     """从工作区加载 LLM 配置
 
-    优先读取工作区根目录下的 llm_config.json，
-    若不存在则回退到 Settings 中的全局配置。
+    按优先级读取：
+    1. workspace/llm_config.json（旧格式）
+    2. workspace/.config.json 下的 "llm" 键（LLM API 保存的格式）
+    3. 回退到 Settings（.env 中的全局配置）
 
     返回 dict，包含键：apiType, apiKey, apiBase, model, thinking
     """
     import json
 
+    # 1) 旧格式 llm_config.json
     config_file = settings.workspace_path / "llm_config.json"
     if config_file.exists():
         try:
             data = json.loads(config_file.read_text(encoding="utf-8"))
-            # 统一字段名（支持驼峰和蛇形）
             return {
                 "apiType": data.get("apiType", data.get("api_type", settings.llm_provider)),
-                "apiKey": data.get("apiKey", data.get("api_key", settings.llm_api_key)),
+                "apiKey": data.get("apiKey") or data.get("api_key") or settings.llm_api_key,
                 "apiBase": data.get("apiBase", data.get("api_base", settings.llm_api_base or "")),
                 "model": data.get("model", settings.llm_model),
                 "thinking": data.get("thinking", settings.llm_thinking),
@@ -42,7 +44,24 @@ def load_llm_config_from_workspace(settings) -> dict:
         except Exception:
             pass
 
-    # 回退到 Settings
+    # 2) .config.json（LLM API 保存到此文件）
+    dot_config = settings.workspace_path / ".config.json"
+    if dot_config.exists():
+        try:
+            full = json.loads(dot_config.read_text(encoding="utf-8"))
+            data = full.get("llm") or {}
+            if data.get("apiKey") or data.get("model"):
+                return {
+                    "apiType": data.get("apiType", data.get("api_type", settings.llm_provider)),
+                    "apiKey": data.get("apiKey") or data.get("api_key") or settings.llm_api_key,
+                    "apiBase": data.get("apiBase") or data.get("apiUrl") or data.get("api_base") or settings.llm_api_base or "",
+                    "model": data.get("model", settings.llm_model),
+                    "thinking": data.get("thinking", settings.llm_thinking),
+                }
+        except Exception:
+            pass
+
+    # 3) 回退到 Settings
     return {
         "apiType": settings.llm_provider,
         "apiKey": settings.llm_api_key,
@@ -56,17 +75,25 @@ def normalize_model_for_provider(model: str, api_type: str) -> str:
     """为 LiteLLM 调用规范化模型名称
 
     LiteLLM 使用 ``provider/model`` 格式路由请求。
-    若模型名已包含 ``/``，视为已规范化，直接返回。
+    DeepSeek API 兼容 OpenAI 格式，但 LiteLLM 1.x 不支持 ``deepseek/`` 前缀，
+    所以 deepseek provider 使用 ``openai/`` 前缀。
     """
+    api_type = (api_type or "").lower()
+
+    # 处理 api_type == deepseek 但模型已有 deepseek/ 前缀的情况
+    if api_type == "deepseek" and model.startswith("deepseek/"):
+        return "openai/" + model[len("deepseek/"):]
+
     if "/" in model:
         return model
-
-    api_type = (api_type or "").lower()
 
     if api_type == "ollama":
         return f"ollama/{model}"
     if api_type == "anthropic":
         return f"anthropic/{model}"
+    if api_type == "deepseek":
+        # DeepSeek API 兼容 OpenAI 格式，LiteLLM 1.x 不支持 deepseek/ 前缀
+        return f"openai/{model}"
     if api_type == "openai":
         # openai/ 前缀可省略，但显式加上更清晰
         return f"openai/{model}"

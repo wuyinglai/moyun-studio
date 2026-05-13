@@ -124,6 +124,7 @@ function handleContentChange(content: string) {
   triggerAutoSave(fileStore.currentFile.path)
 }
 
+// 监听文件切换：打开文件时创建编辑器
 watch(
   () => fileStore.currentFile,
   async (file) => {
@@ -133,6 +134,23 @@ watch(
       if (!editorView || editorView.state.doc.toString() !== content) {
         createEditor(content)
       }
+    }
+  }
+)
+
+// 监听外部内容变更（流式生成、文件重载等），更新编辑器但不触发循环
+let _externalUpdate = false
+watch(
+  () => fileStore.currentFile ? editorStore.contents[fileStore.currentFile.path] : undefined,
+  (content) => {
+    if (content === undefined || !editorView || _externalUpdate) return
+    const current = editorView.state.doc.toString()
+    if (current !== content) {
+      _externalUpdate = true
+      editorView.dispatch({
+        changes: { from: 0, to: current.length, insert: content },
+      })
+      nextTick(() => { _externalUpdate = false })
     }
   }
 )

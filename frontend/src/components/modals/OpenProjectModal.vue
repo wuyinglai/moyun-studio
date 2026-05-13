@@ -4,7 +4,6 @@
     title="打开项目"
     :width="700"
     @cancel="close"
-    :footer="null"
   >
     <div class="open-project-modal">
       <a-spin :spinning="isLoading">

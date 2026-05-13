@@ -170,6 +170,7 @@ async def create_backup(
     # 创建备份
     backup_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
     backup_path = _ensure_backup_dir(project_dir) / backup_id
+    backup_path.mkdir(parents=True, exist_ok=True)
     await asyncio.to_thread(_create_backup_snapshot, project_dir, backup_path)
 
     # 写入 meta.json

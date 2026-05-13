@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
+import type { BatchGenerateRequest, BatchGenerateResponse, ExtractTaskRequest, ExtractTaskResponse, ReviewRequest, ReviewResponse, BatchReviewRequest, BatchReviewResponse } from '@/types/chat'
+import type { TaskSubmitRequest, TaskQueueListResponse } from '@/types/task'
 import { useProjectStore } from './project'
 
 export interface FileNode {
@@ -36,10 +38,24 @@ export const useFileStore = defineStore('file', () => {
   async function loadTree(projectId: string) {
     isLoading.value = true
     try {
-      const data = await api.get<FileNode[]>('/tree', { params: { project_id: projectId } })
-      tree.value = data || []
+      const data = await api.get<any>('/tree', { params: { project_id: projectId } })
+      tree.value = (data && data.tree) || []
+      // 后端 tree 路径包含 project_id 前缀（如 "abc123/书名.md"），需剥离
+      const prefix = projectId + '/'
+      stripTreePathPrefix(tree.value, prefix)
     } finally {
       isLoading.value = false
+    }
+  }
+
+  function stripTreePathPrefix(nodes: FileNode[], prefix: string) {
+    for (const node of nodes) {
+      if (node.path.startsWith(prefix)) {
+        node.path = node.path.slice(prefix.length)
+      }
+      if (node.children) {
+        stripTreePathPrefix(node.children, prefix)
+      }
     }
   }
 
@@ -140,6 +156,48 @@ export const useFileStore = defineStore('file', () => {
     fileContents.value[path] = { content }
   }
 
+  // ─── 新后端 API 封装 ────────────────────────────────────────────
+
+  async function batchGenerate(req: BatchGenerateRequest): Promise<BatchGenerateResponse> {
+    return await api.post<BatchGenerateResponse>('/generate/batch', req)
+  }
+
+  async function extractTask(req: ExtractTaskRequest): Promise<ExtractTaskResponse> {
+    return await api.post<ExtractTaskResponse>('/extract', req)
+  }
+
+  async function submitTask(req: TaskSubmitRequest): Promise<{ task_id: string; status: string }> {
+    return await api.post('/tasks', req)
+  }
+
+  async function listTasks(): Promise<TaskQueueListResponse> {
+    return await api.get<TaskQueueListResponse>('/tasks')
+  }
+
+  async function getTask(taskId: string): Promise<Record<string, unknown>> {
+    return await api.get(`/tasks/${taskId}`)
+  }
+
+  async function cancelTask(taskId: string): Promise<void> {
+    return await api.post(`/tasks/${taskId}/cancel`)
+  }
+
+  // ─── 质量审查 (G0112) ───────────────────────────────────────────
+
+  async function reviewChapter(req: ReviewRequest): Promise<ReviewResponse> {
+    const res = await api.post<ReviewResponse>('/quality/review', req)
+    return res
+  }
+
+  async function reviewBatch(req: BatchReviewRequest): Promise<BatchReviewResponse> {
+    const res = await api.post<BatchReviewResponse>('/quality/review-batch', req)
+    return res
+  }
+
+  async function listReviews(projectId: string): Promise<{ reviews: Record<string, unknown>[]; total: number }> {
+    return await api.get(`/quality/reviews/${projectId}`)
+  }
+
   return {
     tree,
     openFiles,
@@ -166,6 +224,15 @@ export const useFileStore = defineStore('file', () => {
     handleDirectoryCreated,
     handleFileRenamed,
     handleFileUpdated,
+    batchGenerate,
+    extractTask,
+    submitTask,
+    listTasks,
+    getTask,
+    cancelTask,
+    reviewChapter,
+    reviewBatch,
+    listReviews,
   }
 }, {
   persist: {

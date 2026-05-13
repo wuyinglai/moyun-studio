@@ -16,6 +16,8 @@ export function useFileGeneration() {
     projectId: string,
     filePath: string,
     prompt?: string,
+    extraVars?: Record<string, string>,
+    promptType?: string,
   ) {
     if (_isGenerating.value) return
 
@@ -23,21 +25,32 @@ export function useFileGeneration() {
     _currentPrompt.value = prompt || ''
     _abortController = new AbortController()
 
+    // 记录当前 prompt 与该文件的关联
+    if (prompt) {
+      editorStore.setFilePrompt(filePath, prompt)
+    }
+
     try {
       // 确保编辑器已打开该文件
       editorStore.setCurrentFile(filePath)
 
+      const body: Record<string, unknown> = {
+        project_id: projectId,
+        file_path: filePath,
+        prompt_type: promptType || 'generate/continuation',
+        extra_vars: { ...(extraVars || {}) },
+        mode: 'append',
+        stream: true,
+      }
+
+      if (prompt) {
+        body.extra_vars = { ...(body.extra_vars as Record<string, string>), user_prompt: prompt }
+      }
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          file_path: filePath,
-          prompt_type: 'generate/chapter',
-          extra_vars: prompt ? { user_prompt: prompt } : {},
-          mode: 'append',
-          stream: true,
-        }),
+        body: JSON.stringify(body),
         signal: _abortController.signal,
       })
 

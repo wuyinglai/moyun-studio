@@ -7,6 +7,8 @@ export const useEditorStore = defineStore('editor', () => {
   const contents = ref<Record<string, string>>({})
   const frontmatter = ref<Record<string, Record<string, unknown>>>({})
   const currentFilePath = ref<string | null>(null)
+  // 文件路径 → 最后一次用于生成该文件的 prompt
+  const filePrompts = ref<Record<string, string>>({})
   const isDirty = computed(() => {
     const fileStore = useFileStore()
     return fileStore.unsavedFiles.size > 0
@@ -58,9 +60,20 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
+  function setFilePrompt(path: string, prompt: string) {
+    if (prompt) {
+      filePrompts.value[path] = prompt
+    }
+  }
+
+  function getFilePrompt(path: string): string {
+    return filePrompts.value[path] || ''
+  }
+
   return {
     contents,
     frontmatter,
+    filePrompts,
     isDirty,
     wordCount,
     cursorPosition,
@@ -72,10 +85,12 @@ export const useEditorStore = defineStore('editor', () => {
     getContent,
     setContent,
     setCurrentFile,
+    setFilePrompt,
+    getFilePrompt,
   }
 }, {
   persist: {
     storage: localStorage,
-    pick: ['currentFilePath'],
+    pick: ['currentFilePath', 'filePrompts'],
   },
 })

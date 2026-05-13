@@ -4,7 +4,7 @@
   GET    /api/materials/{type}             获取提取结果列表
   GET    /api/materials/{type}/{id}        获取提取结果详情
   POST   /api/materials/{type}              创建提取结果（手动录入）
-  POST   /api/extract                       提交提取任务
+  POST   /api/extract                       提交提取任务（LLM自动提取）
   DELETE /api/materials/{type}/{id}        删除提取结果
 """
 
@@ -20,6 +20,9 @@ from pydantic import BaseModel
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError, ValidationError
+from backend.core.file_ops import FileService
+from backend.core.llm import LLMService, load_llm_config_from_workspace
+from backend.core.prompt_engine import PromptEngine
 from backend.schemas.common import ApiResponse
 
 logger = logging.getLogger(__name__)
@@ -273,37 +276,122 @@ async def create_material(
     return ApiResponse.ok(data, message="素材创建成功")
 
 
-@router.post("/extract", response_model=ApiResponse[dict], status_code=202)
+@router.post("/extract", response_model=ApiResponse[dict], status_code=200)
 async def submit_extract_task(
     req: ExtractTaskRequest,
     settings: Settings = Depends(get_settings),
 ):
-    """提交提取任务（占位：实际提取由 LLM 和 TaskQueue 处理）
-
-    后续会集成到 generate.py 的任务队列中
-    """
-    logger.info("提交提取任务", extra={"type": req.type, "source_file": req.source_file, "project_id": req.project_id})
+    """提交提取任务 - 使用LLM从源文件中提取角色/情节/场景/摘要"""
+    logger.info("提取任务开始", extra={
+        "type": req.type,
+        "source_file": req.source_file,
+        "project_id": req.project_id,
+    })
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
+
+    # 验证提取类型
+    valid_types = {"character", "plot", "scene", "summary"}
+    if req.type not in valid_types:
+        raise ValidationError(message=f"不支持的提取类型: {req.type}，支持: {', '.join(valid_types)}")
 
     # 验证源文件存在
     source_path = project_dir / req.source_file
     if not source_path.exists():
         raise ResourceNotFoundError(resource="file", identifier=req.source_file)
 
-    # 占位：创建提取任务记录
-    task_id = str(uuid.uuid4())[:8]
-    now = datetime.now(timezone.utc).isoformat()
+    try:
+        # 读取源文件
+        file_service = FileService(settings.projects_path)
+        source_content, _ = await file_service.read_file(f"{req.project_id}/{req.source_file}")
 
-    return ApiResponse.ok({
-        "task_id": task_id,
-        "status": "pending",
-        "type": req.type,
-        "source_file": req.source_file,
-        "created_at": now,
-        "message": "提取任务已提交，将在后台处理"
-    }, message="提取任务已提交")
+        # 读取 style-guide
+        style_guide = ""
+        try:
+            content, _ = await file_service.read_file(f"{req.project_id}/style-guide.md")
+            style_guide = content
+        except Exception:
+            pass
+
+        # 渲染提取 prompt
+        prompt_engine = PromptEngine(settings.prompts_path, file_service)
+        variables = {
+            "text": source_content,
+            "style_guide": style_guide,
+        }
+        prompt_text = await prompt_engine.render(f"extract/{req.type}", variables)
+
+        # 调用 LLM（提取任务使用较低温度）
+        llm_cfg = load_llm_config_from_workspace(settings)
+        svc = LLMService.from_workspace_config(llm_cfg)
+
+        logger.info("LLM提取中", extra={
+            "type": req.type,
+            "source": req.source_file,
+            "text_length": len(source_content),
+        })
+
+        result = await svc.complete_sync(
+            [{"role": "user", "content": prompt_text}],
+            temperature=0.3,
+            max_tokens=4000,
+            timeout=180,
+        )
+        result = result.strip()
+
+        # 保存提取结果
+        now = datetime.now(timezone.utc).isoformat()
+        item_id = str(uuid.uuid4())[:8]
+
+        # 摘要用源文件标识，其他类型用随机 ID
+        if req.type == "summary":
+            save_id = Path(req.source_file).stem  # sec-001 → sec-001
+        else:
+            save_id = item_id
+
+        save_type = f"{req.type}s"  # character → characters
+        if req.type == "summary":
+            # 摘要保存为 markdown
+            _save_material(project_dir, "summaries", save_id, {
+                "summary": result,
+                "source_file": req.source_file,
+                "created_at": now,
+            })
+        else:
+            # 角色/情节/场景保存为带 content 字段的 JSON
+            _save_material(project_dir, save_type, save_id, {
+                f"{req.type}_id": save_id,
+                "content": result,
+                "source_file": req.source_file,
+                "created_at": now,
+            })
+
+        # 尝试从结果中提取名称/标题用于列表显示
+        title = result.split("\n")[0].strip("# \t")[:60] if result else ""
+
+        logger.info("提取完成", extra={
+            "type": req.type,
+            "source": req.source_file,
+            "result_length": len(result),
+        })
+
+        return ApiResponse.ok({
+            "id": save_id,
+            "type": req.type,
+            "title": title,
+            "content": result,
+            "source_file": req.source_file,
+            "created_at": now,
+        }, message="提取完成")
+
+    except Exception as e:
+        logger.error("提取失败", extra={
+            "type": req.type,
+            "source": req.source_file,
+            "error": str(e)[:200],
+        })
+        raise
 
 
 @router.delete("/materials/{material_type}/{item_id}", response_model=ApiResponse[None])

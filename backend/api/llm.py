@@ -18,7 +18,8 @@ import litellm
 from fastapi import APIRouter, Depends, Request
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import MoyunException, RateLimitError
+from backend.core.exceptions import RateLimitError
+from backend.core.llm import normalize_model_for_provider
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
     LLMConfigRequest,
@@ -130,15 +131,14 @@ async def test_connection(
     _rate_limit_store[client_ip] = now
 
     cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
-    api_key = cfg.get("apiKey", settings.llm_api_key)
-    model = cfg.get("model", settings.llm_model)
-    api_type = cfg.get("apiType", settings.llm_provider)
-    api_base = cfg.get("apiUrl", settings.llm_api_base) or None
+    api_key = cfg.get("apiKey") or settings.llm_api_key
+    model = cfg.get("model") or settings.llm_model
+    api_type = cfg.get("apiType") or settings.llm_provider
+    api_base = cfg.get("apiUrl") or cfg.get("apiBase") or settings.llm_api_base or None
 
     try:
-        # 对于 deepseek，使用完整模型名
-        if api_type == "deepseek" and not model.startswith("deepseek/"):
-            model = "deepseek/" + model
+        # DeepSeek API 兼容 OpenAI 格式，LiteLLM 1.x 不支持 deepseek/ 前缀
+        model = normalize_model_for_provider(model, api_type)
 
         logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
@@ -187,9 +187,9 @@ async def get_models(settings: Settings = Depends(get_settings)):
             ModelInfo(id="claude-3-opus-20240229", name="Claude 3 Opus"),
         ],
         "deepseek": [
-            ModelInfo(id="deepseek/deepseek-v4-flash", name="DeepSeek V4 Flash (推荐)"),
-            ModelInfo(id="deepseek/deepseek-chat", name="DeepSeek Chat"),
-            ModelInfo(id="deepseek/deepseek-coder", name="DeepSeek Coder"),
+            ModelInfo(id="openai/deepseek-v4-flash", name="DeepSeek V4 Flash (推荐)"),
+            ModelInfo(id="openai/deepseek-chat", name="DeepSeek Chat"),
+            ModelInfo(id="openai/deepseek-coder", name="DeepSeek Coder"),
         ],
         "ollama": [
             ModelInfo(id="llama3.2", name="Llama 3.2"),

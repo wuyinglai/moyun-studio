@@ -28,3 +28,27 @@ export interface ExecutionLog {
   message: string
   timestamp: string
 }
+
+// 任务队列 API 类型
+export interface TaskQueueItem {
+  task_id: string
+  status: string
+  template: string
+  created_at?: string
+  completed_at?: string
+  error?: string
+}
+
+export interface TaskQueueListResponse {
+  tasks: TaskQueueItem[]
+  total: number
+  running: number
+}
+
+export interface TaskSubmitRequest {
+  template_category: string
+  template_type: string
+  project_id: string
+  target_file?: string | null
+  variables?: Record<string, unknown>
+}

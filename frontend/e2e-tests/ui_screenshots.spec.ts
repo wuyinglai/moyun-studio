@@ -297,3 +297,260 @@ test.afterAll(async () => {
   files.forEach(f => console.log(`  ${f}`))
   console.log(`共 ${files.length} 张截图，保存在 ${SCREENSHOT_DIR}`)
 })
+
+// ─── 生成流程测试 ──────────────────────────────────────
+
+test('10 - 从新建到项目页面完整流程', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('http://localhost:3000', { waitUntil: 'load' })
+  await page.waitForTimeout(1500)
+
+  // 打开新建项目弹窗
+  const newProjectBtn = page.locator('button').filter({ hasText: '新建项目' }).first()
+  await expect(newProjectBtn).toBeVisible()
+  await newProjectBtn.click()
+  await page.waitForTimeout(500)
+
+  // 选择题材（genre 是必选）
+  const genreRadio = page.locator('.ant-radio-group').first()
+  await expect(genreRadio).toBeVisible()
+  const firstGenreBtn = genreRadio.locator('.ant-radio-button-wrapper').first()
+  await firstGenreBtn.click()
+  await page.waitForTimeout(200)
+
+  // 点击"生成并打开"
+  const generateBtn = page.locator('button').filter({ hasText: '生成并打开' }).first()
+  await expect(generateBtn).toBeEnabled({ timeout: 5000 })
+  await generateBtn.click()
+
+  // 弹窗应关闭，页面应导航到项目页
+  await page.waitForTimeout(3000)
+  const modalCount = await page.locator('.ant-modal').count()
+  console.log(`[CHECK] 弹窗数量（应为0）: ${modalCount}`)
+
+  // 检查是否在项目页（URL 包含 /project/）
+  const currentUrl = page.url()
+  console.log(`[CHECK] 当前 URL: ${currentUrl}`)
+  const isProjectPage = currentUrl.includes('/project/')
+  console.log(`[CHECK] 是否在项目页: ${isProjectPage}`)
+
+  // 文件树应已加载
+  const treeItems = await page.locator('.file-tree-item, [class*="tree-node"]').count()
+  console.log(`[CHECK] 文件树节点: ${treeItems}`)
+  const treeText = await page.locator('.file-tree-item, [class*="tree-node"]').first().textContent().catch(() => '')
+  console.log(`[CHECK] 文件树首个节点: ${treeText?.trim()}`)
+
+  // 编辑器应打开（内容可能正在流式生成）
+  const editor = page.locator('.cm-editor, .CodeMirror').first()
+  const editorVisible = await editor.isVisible().catch(() => false)
+  console.log(`[CHECK] 编辑器可见: ${editorVisible}`)
+
+  // 等待生成，检查编辑器内容是否出现
+  let hasContent = false
+  for (let i = 0; i < 30; i++) {
+    await page.waitForTimeout(1000)
+    const editorContent = await editor.textContent().catch(() => '') || ''
+    if (editorContent.length > 50) {
+      hasContent = true
+      console.log(`[CHECK] ✅ 编辑器内容已出现 (${editorContent.length} 字符，等待 ${i + 1}s)`)
+      break
+    }
+  }
+  if (!hasContent) {
+    console.log('[ISSUE] ❌ 生成超时（30s），编辑器内容为空')
+    // 检查控制台错误
+    page.on('console', msg => {
+      if (msg.type() === 'error') console.log(`  [CONSOLE_ERROR] ${msg.text()}`)
+    })
+  }
+
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, '10-generation-result.png'), fullPage: false })
+})
+
+test('11 - 正文生成全流程', async ({ page, request }) => {
+  test.setTimeout(300000)
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('http://localhost:3000', { waitUntil: 'load' })
+  await page.waitForTimeout(1500)
+
+  // ─── 创建项目（沿用 test 10 流程） ──────────────────
+  const newProjectBtn = page.locator('button').filter({ hasText: '新建项目' }).first()
+  await expect(newProjectBtn).toBeVisible()
+  await newProjectBtn.click()
+  await page.waitForTimeout(500)
+
+  // 选择题材
+  const genreRadio = page.locator('.ant-radio-group').first()
+  await expect(genreRadio).toBeVisible()
+  const firstGenreBtn = genreRadio.locator('.ant-radio-button-wrapper').first()
+  const genreText = await firstGenreBtn.textContent()
+  await firstGenreBtn.click()
+  await page.waitForTimeout(200)
+
+  // 点击"生成并打开"
+  const generateBtn = page.locator('button').filter({ hasText: '生成并打开' }).first()
+  await expect(generateBtn).toBeEnabled({ timeout: 5000 })
+  await generateBtn.click()
+
+  // 等待导航到项目页
+  await page.waitForURL(/\/project\//, { timeout: 10000 })
+  await page.waitForTimeout(2000)
+
+  // 等待标题生成完成
+  const editor = page.locator('.cm-content').first()
+  let titleContent = ''
+  for (let i = 0; i < 60; i++) {
+    await page.waitForTimeout(1000)
+    titleContent = await editor.textContent().catch(() => '') || ''
+    if (titleContent.length > 50) {
+      console.log(`[CHECK] ✅ 标题已生成 (${titleContent.length} 字符，等待 ${i + 1}s)`)
+      break
+    }
+  }
+  expect(titleContent.length).toBeGreaterThan(50)
+  console.log(`[CHECK] 标题内容预览: "${titleContent.substring(0, 80)}..."`)
+
+  // 从 URL 获取 projectId
+  const currentUrl = page.url()
+  const projectId = currentUrl.match(/\/project\/([^/]+)/)?.[1] || ''
+  expect(projectId).toBeTruthy()
+  console.log(`[CHECK] projectId: ${projectId}`)
+
+  // ─── 通过 API 完成大纲流程 ──────────────────────────
+
+  // 步骤 A: 生成大纲
+  const cleanGenre = genreText?.trim() || ''
+  console.log('[CHECK] 正在生成大纲...')
+  const outlineResp = await request.post(
+    `http://localhost:8000/api/wizard/${projectId}/generate-outline`,
+    {
+      data: {
+        genre: cleanGenre,
+        tone: '正剧',
+        theme: '成长',
+        background: '架空世界',
+        writing_style: '细腻描写',
+        target_word_count: 50000,
+        book_name: '',
+        book_description: '',
+      },
+      timeout: 120000,
+    }
+  )
+  expect(outlineResp.ok()).toBeTruthy()
+  const outlineData = await outlineResp.json()
+  const outline = outlineData?.data?.outline || ''
+  expect(outline.length).toBeGreaterThan(100)
+  console.log(`[CHECK] ✅ 大纲已生成 (${outline.length} 字符)`)
+
+  // 步骤 B: 确认大纲，创建章节文件
+  console.log('[CHECK] 正在确认大纲，创建章节文件...')
+  const confirmResp = await request.post(
+    `http://localhost:8000/api/wizard/${projectId}/confirm-outline`,
+    {
+      data: { outline },
+    }
+  )
+  expect(confirmResp.ok()).toBeTruthy()
+  console.log('[CHECK] ✅ 大纲已确认，章节文件已创建')
+
+  // ─── 通过 batch generate API 生成正文 ──────────
+
+  const sectionPath = 'chapters/vol-01/ch-001/sec-001.md'
+
+  // 验证章节文件存在
+  const fileCheckResp = await request.get(
+    `http://localhost:8000/api/file?project_id=${projectId}&path=${sectionPath}`
+  )
+  expect(fileCheckResp.ok()).toBeTruthy()
+  let fileData = await fileCheckResp.json()
+  let fileContent = fileData?.data?.content || ''
+  console.log(`[CHECK] 生成前章节文件: ${fileContent.length} 字符 — "${fileContent.substring(0, 50)}..."`)
+
+  // 调用 batch generate API 生成正文（使用 generate/chapter 模板）
+  console.log('[CHECK] ⏳ 正在生成正文（batch generate），预计 30-120 秒...')
+  const batchResp = await request.post(
+    `http://localhost:8000/api/generate/batch`,
+    {
+      data: {
+        project_id: projectId,
+        volume_number: 1,
+        chapter_number: 1,
+        section_numbers: [1],
+        prompt_type: 'generate/chapter',
+        temperature: 0.7,
+      },
+      timeout: 180000, // 最长 3 分钟
+    }
+  )
+  expect(batchResp.ok()).toBeTruthy()
+  const batchData = await batchResp.json()
+  console.log('[CHECK] ✅ 正文生成完成:', JSON.stringify(batchData).substring(0, 200))
+
+  // 验证生成后的文件内容
+  const afterGenResp = await request.get(
+    `http://localhost:8000/api/file?project_id=${projectId}&path=${sectionPath}`
+  )
+  expect(afterGenResp.ok()).toBeTruthy()
+  const afterData = await afterGenResp.json()
+  const bodyContent = afterData?.data?.content || ''
+  console.log(`[CHECK] 生成后章节文件: ${bodyContent.length} 字符`)
+  console.log(`[CHECK] 内容预览: "${bodyContent.substring(0, 100)}..."`)
+
+  // ─── 正文质量验证 ────────────────────────────────
+  console.log(`[CHECK] 最终正文长度: ${bodyContent.length} 字符`)
+  expect(bodyContent.length).toBeGreaterThan(300)
+
+  // 段落检查
+  const paragraphs = bodyContent.split(/\n\s*\n/).filter(p => p.trim().length > 0)
+  console.log(`[CHECK] 段落数: ${paragraphs.length}`)
+  expect(paragraphs.length).toBeGreaterThanOrEqual(3)
+
+  // 叙事标点检查
+  const hasPeriod = bodyContent.includes('。')
+  const hasComma = bodyContent.includes('，')
+  const hasQuote = bodyContent.includes('「') || bodyContent.includes('"') || bodyContent.includes('"')
+  console.log(`[CHECK] 句号: ${hasPeriod}, 逗号: ${hasComma}, 引号: ${hasQuote}`)
+  expect(hasPeriod).toBeTruthy()
+
+  // ─── UI 验证：刷新页面，点击文件树，编辑器应显示正文 ──
+  console.log('[CHECK] 🔄 刷新页面，验证文件树展示和编辑器加载...')
+  await page.reload({ waitUntil: 'load' })
+  await page.waitForTimeout(2000)
+
+  // 等待文件树出现
+  const treeNode = page.locator('[class*="tree-node"]').first()
+  await expect(treeNode).toBeVisible({ timeout: 10000 })
+
+  // 在文件树中找到"第1节"并点击
+  const secOne = page.locator('[class*="tree-node"] .node-name, .node-name').filter({ hasText: '第1节' }).first()
+  await expect(secOne).toBeVisible({ timeout: 10000 })
+  await secOne.click()
+  await page.waitForTimeout(1500)
+
+  // 验证编辑器显示文件内容
+  const editorAfter = page.locator('.cm-content').first()
+  let uiContent = ''
+  for (let i = 0; i < 10; i++) {
+    await page.waitForTimeout(500)
+    uiContent = await editorAfter.textContent().catch(() => '') || ''
+    if (uiContent.length > 50) {
+      console.log(`[CHECK] ✅ UI 编辑器已显示内容 (${uiContent.length} 字符，等待 ${(i + 1) * 0.5}s)`)
+      break
+    }
+  }
+  console.log(`[CHECK] UI 编辑器最终内容: ${uiContent.length} 字符`)
+  if (uiContent.length > 50) {
+    console.log(`[CHECK] UI 内容预览: "${uiContent.substring(0, 100)}..."`)
+  } else {
+    console.log('[ISSUE] ⚠️ 编辑器内容为空或不足 50 字符')
+  }
+
+  // 截图（编辑器应显示正文）
+  await page.screenshot({
+    path: path.join(SCREENSHOT_DIR, '11-body-text-generation.png'),
+    fullPage: false,
+  })
+  console.log('[CHECK] ✅ 截图已保存: 11-body-text-generation.png')
+})

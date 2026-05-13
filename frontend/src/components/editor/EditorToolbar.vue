@@ -40,6 +40,19 @@
           <template #icon><i class="fa-solid fa-clock-rotate-left"></i></template>
           修改日志
         </a-button>
+        <a-divider type="vertical" />
+        <a-button size="small" @click="handleBatchGenerate">
+          <template #icon><i class="fa-solid fa-wand-magic-sparkles"></i></template>
+          批量生成
+        </a-button>
+        <a-button size="small" @click="handleQualityReview">
+          <template #icon><i class="fa-solid fa-check-circle"></i></template>
+          质量审查
+        </a-button>
+        <a-button size="small" @click="handleExtract">
+          <template #icon><i class="fa-solid fa-brain"></i></template>
+          提取
+        </a-button>
       </template>
     </a-space>
   </div>
@@ -122,6 +135,18 @@ function handleFeedback() {
 
 function handleRevisionLog() {
   uiStore.openRevisionLog()
+}
+
+function handleBatchGenerate() {
+  uiStore.openBatchGenerate()
+}
+
+function handleQualityReview() {
+  uiStore.openQualityReview()
+}
+
+function handleExtract() {
+  uiStore.openExtract()
 }
 </script>
 

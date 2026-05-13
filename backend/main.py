@@ -12,6 +12,9 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import get_settings
 from backend.core.event_bus import EventBus
 from backend.core.exceptions import MoyunException
+from backend.core.llm import LLMService, load_llm_config_from_workspace
+from backend.core.file_ops import FileService
+from backend.core.task_queue import TaskQueue, run_task_worker
 from backend.api.sse import sse_manager
 from backend.core.watcher import FileWatcher
 
@@ -48,6 +51,19 @@ async def lifespan(app: FastAPI):
         watcher.start()  # 同步方法
         app.state.watcher = watcher
 
+    # 初始化任务队列和工作线程
+    task_queue = TaskQueue()
+    app.state.task_queue = task_queue
+
+    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_service = LLMService.from_workspace_config(llm_cfg)
+    file_service = FileService(settings.projects_path)
+
+    worker_task = asyncio.create_task(
+        run_task_worker(task_queue, llm_service, file_service, event_bus)
+    )
+    app.state.task_worker_task = worker_task
+
     logger.info(
         "墨韵后端启动完成 — workspace: %s",
         settings.workspace_path,
@@ -60,6 +76,14 @@ async def lifespan(app: FastAPI):
         app.state.sse_bridge_task.cancel()
         try:
             await app.state.sse_bridge_task
+        except asyncio.CancelledError:
+            pass
+
+    # 关闭时停止任务队列工作线程
+    if hasattr(app.state, 'task_worker_task'):
+        app.state.task_worker_task.cancel()
+        try:
+            await app.state.task_worker_task
         except asyncio.CancelledError:
             pass
 
@@ -162,6 +186,8 @@ def create_app() -> FastAPI:
         characters,
         materials,
         sse,
+        tasks,
+        quality,
     )
 
     app.include_router(projects.router, prefix="/api")
@@ -181,6 +207,8 @@ def create_app() -> FastAPI:
     app.include_router(backup.router, prefix="/api")
     app.include_router(characters.router, prefix="/api")
     app.include_router(materials.router, prefix="/api")
+    app.include_router(tasks.router, prefix="/api")
+    app.include_router(quality.router, prefix="/api")
 
     # ── 前端静态文件 & 单页入口 ──────────────────────────────────
     # 优先 serve Vue 构建产物 (dist/)，fallback 到 prototype.html

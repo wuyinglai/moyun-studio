@@ -22,7 +22,7 @@
       <i :class="iconClass" class="node-icon"></i>
 
       <!-- 文件名 -->
-      <span class="node-name">{{ node.name }}</span>
+      <span class="node-name" :title="node.name">{{ displayName }}</span>
 
       <!-- 脏标记 -->
       <span v-if="isDirty" class="node-dirty" title="有未保存的更改">●</span>
@@ -72,8 +72,26 @@ function saveExpandedDirs(dirs: string[]) {
 }
 
 const isExpanded = ref(
-  props.depth === 0 || getExpandedDirs().includes(props.node.path)
+  props.depth === 0 ||
+  props.node.name.match(/^vol-\d+$/) !== null ||
+  props.node.name.match(/^ch-\d+$/) !== null ||
+  getExpandedDirs().includes(props.node.path)
 )
+
+// 显示友好的目录名：vol-01 → 第1卷, ch-001 → 第1章, sec-001.md → 第1节
+const displayName = computed(() => {
+  const name = props.node.name
+  if (props.node.type === 'directory') {
+    const volMatch = name.match(/^vol-0*(\d+)$/)
+    if (volMatch) return `第${volMatch[1]}卷`
+    const chMatch = name.match(/^ch-0*(\d+)$/)
+    if (chMatch) return `第${chMatch[1]}章`
+  } else {
+    const secMatch = name.match(/^sec-0*(\d+)\.md$/)
+    if (secMatch) return `第${secMatch[1]}节`
+  }
+  return name
+})
 
 // 根据文件类型获取图标
 const iconClass = computed(() => {

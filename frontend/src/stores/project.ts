@@ -38,7 +38,7 @@ export const useProjectStore = defineStore('project', () => {
   const currentProject = ref<Project | null>(null)
   const isLoading = ref(false)
   const isCreating = ref(false)
-  const pendingGeneration = ref<{ filePath: string; prompt: string } | null>(null)
+  const pendingGeneration = ref<{ filePath: string; prompt: string; promptType?: string; extraVars?: Record<string, string> } | null>(null)
 
   async function loadProjects() {
     isLoading.value = true
@@ -104,7 +104,7 @@ export const useProjectStore = defineStore('project', () => {
     currentProject.value = null
   }
 
-  function setPendingGeneration(val: { filePath: string; prompt: string } | null) {
+  function setPendingGeneration(val: { filePath: string; prompt: string; promptType?: string; extraVars?: Record<string, string> } | null) {
     pendingGeneration.value = val
   }
 

@@ -1,0 +1,93 @@
+<h2>Prompt 库设计方案</h2>
+<p class="subtitle">三级 Prompt 体系：全局 → 类型 → 项目</p>
+
+<div class="section">
+  <h3>Prompt 分类体系</h3>
+  <div style="display:flex;gap:12px;margin-top:8px;">
+    <div style="flex:1;background:#1a1a3e;border-radius:8px;padding:12px;border-top:3px solid #4af;">
+      <div style="font-weight:600;color:#4af;margin-bottom:6px;">🌐 全局 Prompt</div>
+      <div style="font-size:12px;color:#aaa;">所有项目可用，写得好就长期保留</div>
+      <div style="margin-top:8px;font-size:12px;color:#888;">
+        • 情节逻辑检查<br>
+        • 文风润色<br>
+        • 角色一致性<br>
+        • 设定偏移检测
+      </div>
+    </div>
+    <div style="flex:1;background:#1a1a3e;border-radius:8px;padding:12px;border-top:3px solid #8f8;">
+      <div style="font-weight:600;color:#8f8;margin-bottom:6px;">📚 按类型 Prompt</div>
+      <div style="font-size:12px;color:#aaa;">特定题材的专属 Prompt</div>
+      <div style="margin-top:8px;font-size:12px;color:#888;">
+        • 言情小说: 情感描写<br>
+        • 科幻小说: 世界观构建<br>
+        • 悬疑小说: 伏笔设计
+      </div>
+    </div>
+    <div style="flex:1;background:#1a1a3e;border-radius:8px;padding:12px;border-top:3px solid #ff8;">
+      <div style="font-weight:600;color:#ff8;margin-bottom:6px;">📄 项目 Prompt</div>
+      <div style="font-size:12px;color:#aaa;">仅当前项目的自定义 Prompt</div>
+      <div style="margin-top:8px;font-size:12px;color:#888;">
+        • 本书专用写作指引<br>
+        • 特定角色语气模板<br>
+        • 用户自己写的小众需求
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>核心交互</h3>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div style="background:#1a1a3e;border-radius:6px;padding:10px;font-size:13px;">
+      <strong>① 浏览 Prompt 库</strong><br>
+      <span style="color:#aaa;">右侧面板「提示词」Tab 变成 Prompt 库，三级分类切换</span>
+    </div>
+    <div style="background:#1a1a3e;border-radius:6px;padding:10px;font-size:13px;">
+      <strong>② 应用到文章</strong><br>
+      <span style="color:#aaa;">选中 Prompt → 点「应用」→ AI 根据 Prompt 修改当前文件内容 → 流式出结果</span>
+    </div>
+    <div style="background:#1a1a3e;border-radius:6px;padding:10px;font-size:13px;">
+      <strong>③ 拖拽归类</strong><br>
+      <span style="color:#aaa;">写好一个 Prompt 可以拖到全局/类型/项目下，自由归类</span>
+    </div>
+    <div style="background:#1a1a3e;border-radius:6px;padding:10px;font-size:13px;">
+      <strong>④ 迭代优化</strong><br>
+      <span style="color:#aaa;">用过之后觉得效果一般？编辑 Prompt 内容，保存即更新，越用越好用</span>
+    </div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:12px;">
+  <div class="mockup-header">右侧面板 — Prompt 库</div>
+  <div style="display:flex;height:280px;">
+    <!-- 分类导航 -->
+    <div style="width:100px;background:#16213e;padding:8px;border-right:1px solid #333;font-size:12px;">
+      <div style="color:#888;margin-bottom:6px;">分类</div>
+      <div style="background:#2a2a5e;padding:4px 8px;border-radius:4px;color:#4af;">🌐 全局</div>
+      <div style="padding:4px 8px;border-radius:4px;color:#aaa;">📚 按类型</div>
+      <div style="padding:4px 8px;border-radius:4px;color:#aaa;">📄 项目</div>
+    </div>
+    <!-- Prompt 列表 -->
+    <div style="flex:1;padding:8px;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">全局 Prompt (6)</div>
+      <div style="background:#1a1a3e;border-radius:4px;padding:6px;margin-bottom:4px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;">📋 情节逻辑检查</span>
+        <span style="font-size:10px;color:#888;">↗ 应用</span>
+      </div>
+      <div style="background:#1a1a3e;border-radius:4px;padding:6px;margin-bottom:4px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;">✏️ 文风润色</span>
+        <span style="font-size:10px;color:#888;">↗ 应用</span>
+      </div>
+      <div style="background:#1a1a3e;border-radius:4px;padding:6px;margin-bottom:4px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;">🎭 角色一致性</span>
+        <span style="font-size:10px;color:#888;">↗ 应用</span>
+      </div>
+      <div style="background:#1a1a3e;border-radius:4px;padding:6px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;">🌍 设定偏移检测</span>
+        <span style="font-size:10px;color:#888;">↗ 应用</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size:13px;color:#aaa;margin-top:16px;">你觉得这个方向对不对？重点想先讨论 Prompt 的层级结构，还是「应用 Prompt 到文章」的具体交互方式？</p>

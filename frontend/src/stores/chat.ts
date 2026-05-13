@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useLLMStore } from './llm'
 import { useTaskStore } from './task'
+import { useFileStore } from './file'
+import { useEditorStore } from './editor'
 
 function getAutoMode(): string {
   return localStorage.getItem('moyun-auto-mode') || 'L1'
@@ -51,6 +53,22 @@ export interface ChatMessage {
 }
 
 export type GenerationMode = 'continue' | 'rewrite' | 'chat'
+
+/**
+ * 重新加载文件内容到编辑器（生成/重写完成后调用）
+ */
+async function reloadFileIntoEditor(projectId: string, filePath: string) {
+  try {
+    const fileStore = useFileStore()
+    const editorStore = useEditorStore()
+    const result = await fileStore.readFile(projectId, filePath)
+    if (result && result.content) {
+      editorStore.loadContent(filePath, result.content)
+    }
+  } catch (e) {
+    console.warn('重新加载文件到编辑器失败:', e)
+  }
+}
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
@@ -171,6 +189,11 @@ export const useChatStore = defineStore('chat', () => {
     const taskStore = useTaskStore()
     generationMode.value = 'continue'
 
+    // 记录 prompt 与文件的关联
+    if (prompt) {
+      useEditorStore().setFilePrompt(filePath, prompt)
+    }
+
     const taskId = `task-${Date.now()}`
     taskStore.addTask(taskId, `续写: ${filePath.split('/').pop()}`)
     taskStore.startTask(taskId)
@@ -185,7 +208,7 @@ export const useChatStore = defineStore('chat', () => {
         body: JSON.stringify({
           project_id: projectId,
           file_path: filePath,
-          prompt_type: 'generate/chapter',
+          prompt_type: 'generate/continuation',
           extra_vars: prompt ? { user_prompt: prompt } : {},
           mode: 'append',
           stream: true,
@@ -211,6 +234,9 @@ export const useChatStore = defineStore('chat', () => {
         taskStore.completeTask(taskId)
       }
       finishAIMessage()
+
+      // 生成完成后，重新加载文件内容到编辑器
+      await reloadFileIntoEditor(projectId, filePath)
     } catch (e) {
       taskStore.failTask(taskId)
       finishAIMessage()
@@ -227,6 +253,11 @@ export const useChatStore = defineStore('chat', () => {
     const taskStore = useTaskStore()
     generationMode.value = 'rewrite'
 
+    // 记录 prompt 与文件的关联
+    if (prompt) {
+      useEditorStore().setFilePrompt(filePath, prompt)
+    }
+
     const taskId = `task-${Date.now()}`
     taskStore.addTask(taskId, `重写: ${filePath.split('/').pop()}`)
     taskStore.startTask(taskId)
@@ -241,7 +272,7 @@ export const useChatStore = defineStore('chat', () => {
         body: JSON.stringify({
           project_id: projectId,
           file_path: filePath,
-          prompt_type: 'generate/chapter',
+          prompt_type: 'generate/rewrite',
           extra_vars: prompt ? { user_prompt: prompt } : {},
           mode: 'rewrite',
           stream: true,
@@ -267,6 +298,9 @@ export const useChatStore = defineStore('chat', () => {
         taskStore.completeTask(taskId)
       }
       finishAIMessage()
+
+      // 生成完成后，重新加载文件内容到编辑器
+      await reloadFileIntoEditor(projectId, filePath)
     } catch (e) {
       taskStore.failTask(taskId)
       finishAIMessage()
