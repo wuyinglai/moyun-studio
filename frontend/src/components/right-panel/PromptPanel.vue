@@ -52,7 +52,7 @@
         class="prompt-editor"
       />
       <div class="editor-hint">
-        提示：使用 <code>[文件名.md]</code> 引用文件，<code>{{ '{{变量名}}' }}</code> 使用系统变量
+        提示：使用 <code>[文件名.md]</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量
       </div>
     </div>
   </div>
@@ -73,6 +73,7 @@ const projectStore = useProjectStore()
 const fileGen = useFileGeneration()
 
 const localPrompt = ref('')
+const varHint = '{{变量名}}'
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
 const storePipelines = computed(() => pipelineStore.pipelines)

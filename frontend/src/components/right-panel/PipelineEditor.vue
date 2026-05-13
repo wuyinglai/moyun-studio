@@ -6,7 +6,7 @@
         v-model:value="selectedPipelineName"
         style="flex: 1; min-width: 0;"
         size="small"
-        @change="onPipelineSelect"
+        @change="(val: any) => onPipelineSelect(String(val))"
       >
         <a-select-option v-for="p in pipelineStore.pipelines" :key="p.name" :value="p.name">
           {{ p.label }}

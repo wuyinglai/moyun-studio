@@ -158,8 +158,8 @@ async function runPipeline(name: string) {
   }
 }
 
-function handleCustomPipeline(e: { key: string }) {
-  runPipeline(e.key)
+function handleCustomPipeline(info: any) {
+  runPipeline(info.key as string)
 }
 
 function handleTokenCount() { uiStore.openTokenCount() }
