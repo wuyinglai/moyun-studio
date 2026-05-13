@@ -170,7 +170,7 @@
         <template #icon>
           <i v-if="!wizard.isGenerating.value" class="fa-solid fa-magic"></i>
         </template>
-        {{ wizard.isGenerating.value ? '创建中...' : '创建项目' }}
+        {{ wizard.isGenerating.value ? '创建中...' : '生成并打开' }}
       </a-button>
     </template>
   </a-modal>
@@ -178,15 +178,19 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProjectWizard } from '@/composables/useProjectWizard'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
+import { useFileStore } from '@/stores/file'
 import { useCustomParamsStore } from '@/stores/customParams'
 import { useNotificationStore } from '@/stores/notification'
 
+const router = useRouter()
 const wizard = useProjectWizard()
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
+const fileStore = useFileStore()
 const customParamsStore = useCustomParamsStore()
 const notification = useNotificationStore()
 
@@ -228,9 +232,22 @@ const scaleOptions = [
 async function handleCreate() {
   try {
     const project = await wizard.createProject(wizard.params.value)
-    projectStore.currentProject = project
-    notification.success('项目创建成功！')
+    if (!project) return
+
+    // 创建书名与创意文件
+    await fileStore.createFile(project.id, '书名与创意.md', '')
+
+    // 记录需要在项目打开后自动生成
+    projectStore.setPendingGeneration({
+      filePath: '书名与创意.md',
+      prompt: `你是一位专业的小说创作助手。用户选择了「${wizard.params.value.genre}」题材，请生成一个吸引人的书名和创意描述。`,
+    })
+
+    // 关闭弹窗
     close()
+
+    // 跳转到编辑器
+    router.push(`/project/${project.id}`)
   } catch (e: any) {
     notification.error(e.message || '创建项目失败')
   }
