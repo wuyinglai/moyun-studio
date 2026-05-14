@@ -23,6 +23,7 @@ import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useRightPanelStore } from '@/stores/rightPanel'
+import { useLLMStore } from '@/stores/llm'
 
 const { initApp, cleanupApp } = useAppInit()
 useKeyboardShortcuts()
@@ -101,6 +102,14 @@ watch(
   () => projectStore.pendingGeneration,
   async (pending) => {
     if (!pending || !projectStore.currentProject) return
+
+    // 检查 LLM 是否已配置
+    const llmStore = useLLMStore()
+    if (!llmStore.isConnected) {
+      useNotificationStore().warning('LLM 未配置，跳过自动生成')
+      projectStore.setPendingGeneration(null)
+      return
+    }
 
     const projectId = projectStore.currentProject.id
     const { filePath, prompt } = pending

@@ -126,12 +126,14 @@ import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
+import { useLLMStore } from '@/stores/llm'
 import type { BatchGenerateItem } from '@/types/chat'
 
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
 const notification = useNotificationStore()
+const llmStore = useLLMStore()
 
 const visible = computed(() => uiStore.modals.batchGenerate)
 
@@ -215,6 +217,10 @@ watch(visible, (v) => {
 
 async function handleGenerate() {
   if (!projectStore.currentProject) return
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    return
+  }
 
   isGenerating.value = true
   progressDone.value = 0

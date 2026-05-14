@@ -111,6 +111,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { useNotificationStore } from '@/stores/notification'
+import { useLLMStore } from '@/stores/llm'
 import type { QualityReviewResult } from '@/types/chat'
 
 const uiStore = useUIStore()
@@ -118,6 +119,7 @@ const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
 const notification = useNotificationStore()
+const llmStore = useLLMStore()
 
 const visible = computed(() => uiStore.modals.qualityReview)
 
@@ -158,6 +160,10 @@ function useCurrentFile() {
 
 async function handleReview() {
   if (!projectStore.currentProject || !targetFile.value) return
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    return
+  }
 
   isReviewing.value = true
   result.value = null

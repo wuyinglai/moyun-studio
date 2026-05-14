@@ -164,6 +164,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
+import { useLLMStore } from '@/stores/llm'
 
 const rightPanelStore = useRightPanelStore()
 const editorStore = useEditorStore()
@@ -172,6 +173,7 @@ const notification = useNotificationStore()
 const fileStore = useFileStore()
 const fileGen = useFileGeneration()
 const guide = useWorkflowGuide()
+const llmStore = useLLMStore()
 
 const localPrompt = ref('')
 const varHint = '{{变量名}}'
@@ -210,6 +212,10 @@ function stepIcon(status: string): string {
 
 /** 一键开始 */
 async function handleStartWorkflow() {
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    return
+  }
   const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
   const filePath = editorStore.currentFilePath
   if (!projectId || !filePath) {
@@ -221,6 +227,10 @@ async function handleStartWorkflow() {
 
 /** 单步执行 */
 async function handleRunStep(idx: number) {
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    return
+  }
   const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
   const filePath = editorStore.currentFilePath
   if (!projectId || !filePath) {

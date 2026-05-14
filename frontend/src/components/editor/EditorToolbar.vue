@@ -85,6 +85,7 @@ import { useChatStore } from '@/stores/chat'
 import { useHistoryStore } from '@/stores/history'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
+import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { useProjectStore } from '@/stores/project'
@@ -99,6 +100,7 @@ const chatStore = useChatStore()
 const historyStore = useHistoryStore()
 const editorStore = useEditorStore()
 const notification = useNotificationStore()
+const llmStore = useLLMStore()
 const uiStore = useUIStore()
 const rightPanelStore = useRightPanelStore()
 const projectStore = useProjectStore()
@@ -170,6 +172,11 @@ async function runPipeline(name: string) {
     notification.warning('请先打开一个文件')
     return
   }
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    uiStore.openSettings()
+    return
+  }
 
   rightPanelStore.setPipelineTab('quick')
 
@@ -199,6 +206,11 @@ function handleCustomPipeline(info: any) {
 }
 
 async function handleGenerateNext() {
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    uiStore.openSettings()
+    return
+  }
   // L1：确认任何等待中的任务
   const taskStore = useTaskStore()
   const waitingTask = taskStore.tasks.find((t: any) => t.status === 'waiting')
