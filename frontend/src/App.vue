@@ -147,13 +147,42 @@ watch(
 // 切换文件时，在右侧面板显示该文件关联的 prompt
 watch(
   () => editorStore.currentFilePath,
-  (path) => {
+  async (path) => {
     if (path) {
-      const prompt = editorStore.getFilePrompt(path)
-      rightPanelStore.updatePrompt(prompt || '')
+      const saved = editorStore.getFilePrompt(path)
+      if (saved) {
+        rightPanelStore.updatePrompt(saved)
+        return
+      }
+      // 没有已保存的 prompt，根据文件类型加载默认模板
+      const promptType = guessPromptType(path)
+      if (!promptType) return
+      try {
+        const res = await fetch(`/api/prompts/${promptType}?project_id=${projectStore.currentProject?.id || ''}`)
+        const json = await res.json()
+        if (json?.data?.content) {
+          editorStore.setFilePrompt(path, json.data.content)
+          rightPanelStore.updatePrompt(json.data.content)
+        }
+      } catch {
+        // 静默失败，右侧面板保持空白
+      }
     }
   },
 )
+
+/** 根据文件路径推测对应的 Prompt 模板类型 */
+function guessPromptType(filePath: string): string | null {
+  if (/\/sec-\d+\.md$/.test(filePath)) return 'generate/chapter'
+  if (/outline\.md$/i.test(filePath)) return 'generate/outline'
+  if (/style-guide\.md$/i.test(filePath)) return 'generate/continuation'
+  if (/story-state\.md$/i.test(filePath)) return 'generate/continuation'
+  if (/recent-context\.md$/i.test(filePath)) return 'generate/continuation'
+  if (/\.json$/.test(filePath) && filePath.includes('characters')) return 'extract/character'
+  if (/worldbuilding\.md$/i.test(filePath)) return 'generate/worldbuilding'
+  if (/\.md$/.test(filePath)) return 'generate/continuation'
+  return null
+}
 </script>
 
 <template>

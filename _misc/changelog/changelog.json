@@ -116,6 +116,19 @@
       "files": [
         "frontend/src/components/editor/MarkdownEditor.vue"
       ],
+      "commit": "f4c78a0"
+    },
+    {
+      "id": 8,
+      "timestamp": "2026-05-14T20:30:00+08:00",
+      "type": "fix",
+      "scope": "G007",
+      "module": "Prompt同步",
+      "description": "点击文件时从后端加载默认 Prompt 模板",
+      "reason": "首次打开文件时右侧面板 Prompt 为空，无已保存的 prompt",
+      "files": [
+        "frontend/src/App.vue"
+      ],
       "commit": ""
     }
   ]
