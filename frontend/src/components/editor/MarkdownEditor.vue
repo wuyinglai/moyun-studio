@@ -180,10 +180,18 @@ watch(
     if (editorStore.contentSource !== 'external') return
     const current = editorView.state.doc.toString()
     if (current !== content) {
+      const scroller = editorView.scrollDOM
+      const prevScrollTop = scroller.scrollTop
+
       editorView.dispatch({
         changes: { from: 0, to: current.length, insert: content },
       })
       editorStore.markLocalEdit()
+
+      // AI 生成时保持滚动位置不变，防止编辑框跳动
+      requestAnimationFrame(() => {
+        scroller.scrollTop = prevScrollTop
+      })
     }
   }
 )

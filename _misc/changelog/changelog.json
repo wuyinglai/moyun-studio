@@ -103,6 +103,19 @@
       "files": [
         "docs/前端功能清单_完整版V2.md"
       ],
+      "commit": "b6c1e01"
+    },
+    {
+      "id": 7,
+      "timestamp": "2026-05-14T20:00:00+08:00",
+      "type": "fix",
+      "scope": "E008",
+      "module": "Markdown编辑器",
+      "description": "AI生成内容时保持编辑框滚动位置不变",
+      "reason": "生成内容时编辑框自动滚动影响用户阅读已有内容",
+      "files": [
+        "frontend/src/components/editor/MarkdownEditor.vue"
+      ],
       "commit": ""
     }
   ]
