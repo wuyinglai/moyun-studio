@@ -101,7 +101,9 @@ async def _bridge_events_to_sse(event_bus: EventBus, sse_manager) -> None:
         while True:
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=5.0)
-                event_type = event.get("type", "unknown")
+                raw_type = event.get("type", "unknown")
+                # 标准化事件类型：file:created → file-created（匹配前端预期）
+                event_type = raw_type.replace(":", "-")
                 data = event.get("data", {})
                 await sse_manager.broadcast(event_type, data)
             except asyncio.TimeoutError:
@@ -189,6 +191,9 @@ def create_app() -> FastAPI:
         tasks,
         quality,
         pipeline,
+        snapshots,
+        config,
+        workflows,
     )
 
     app.include_router(projects.router, prefix="/api")
@@ -211,6 +216,9 @@ def create_app() -> FastAPI:
     app.include_router(tasks.router, prefix="/api")
     app.include_router(quality.router, prefix="/api")
     app.include_router(pipeline.router, prefix="/api")
+    app.include_router(snapshots.router, prefix="/api")
+    app.include_router(config.router, prefix="/api")
+    app.include_router(workflows.router, prefix="/api")
 
     # ── 前端静态文件 & 单页入口 ──────────────────────────────────
     # 优先 serve Vue 构建产物 (dist/)，fallback 到 prototype.html

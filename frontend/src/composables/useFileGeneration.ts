@@ -163,6 +163,9 @@ export function useFileGeneration() {
         } else if (line.startsWith('data: ')) {
           try {
             const parsed = JSON.parse(line.slice(6))
+            if (currentEvent === 'error') {
+              throw new Error(parsed.message || '管线执行出错')
+            }
             if (currentEvent === 'prompt' && parsed.prompt && onPrompt) {
               onPrompt(parsed.prompt)
             } else if (parsed.delta) {

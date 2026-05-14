@@ -1,0 +1,139 @@
+<h2>管线引擎架构</h2>
+<p class="subtitle">Pipeline Engine — 通用多步骤 AI 管线</p>
+
+<div class="section">
+  <h3>一条管线 = N 个有序步骤</h3>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0;">
+    <div class="card" style="flex:1;min-width:120px;text-align:center;padding:12px;">
+      <div style="font-size:24px;margin-bottom:8px;">📝</div>
+      <div style="font-weight:600;">draft</div>
+      <div style="font-size:11px;color:var(--text-muted);">初稿生成</div>
+    </div>
+    <div style="font-size:24px;color:var(--text-muted);">→</div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center;padding:12px;">
+      <div style="font-size:24px;margin-bottom:8px;">🔍</div>
+      <div style="font-weight:600;">self_review</div>
+      <div style="font-size:11px;color:var(--text-muted);">自检问题</div>
+    </div>
+    <div style="font-size:24px;color:var(--text-muted);">→</div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center;padding:12px;">
+      <div style="font-size:24px;margin-bottom:8px;">🔧</div>
+      <div style="font-weight:600;">fix</div>
+      <div style="font-size:11px;color:var(--text-muted);">修复问题</div>
+    </div>
+    <div style="font-size:24px;color:var(--text-muted);">→</div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center;padding:12px;">
+      <div style="font-size:24px;margin-bottom:8px;">✨</div>
+      <div style="font-weight:600;">polish</div>
+      <div style="font-size:11px;color:var(--text-muted);">最终润色</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>四条初期管线</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border-color);">
+        <th style="text-align:left;padding:8px;">管线</th>
+        <th style="text-align:left;padding:8px;">用途</th>
+        <th style="text-align:left;padding:8px;">步骤</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">generate</td>
+        <td style="padding:8px;">生成章节</td>
+        <td style="padding:8px;">draft → review → fix → polish</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">polish</td>
+        <td style="padding:8px;">润色已有内容</td>
+        <td style="padding:8px;">draft → review → fix</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">rewrite</td>
+        <td style="padding:8px;">重写</td>
+        <td style="padding:8px;">draft → review → fix → polish</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;font-weight:600;">extract</td>
+        <td style="padding:8px;">信息提取</td>
+        <td style="padding:8px;">extract → validate → format</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h3>流式策略</h3>
+  <p>前端零感知：中间步骤静默运行，只发 <code>thinking</code> 事件告知状态</p>
+  <div class="pros-cons" style="margin-top:8px;">
+    <div class="pros">
+      <h4>发往前端</h4>
+      <ul>
+        <li><code>thinking</code> — "正在生成初稿..."</li>
+        <li><code>thinking</code> — "正在检查一致性..."</li>
+        <li><code>generation</code> — 最终内容（流式）</li>
+        <li><code>done</code> — 完成</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>后台静默</h4>
+      <ul>
+        <li>draft 阶段原始输出</li>
+        <li>self_review 的检查结果</li>
+        <li>fix 阶段中间内容</li>
+        <li>任何失败/重试</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>配置</h3>
+  <p>每条管线一个 YAML 文件，存储在 <code>workspace/prompts/pipeline/</code></p>
+  <pre style="background:var(--bg-primary);padding:12px;border-radius:8px;font-size:12px;overflow-x:auto;">
+# workspace/prompts/pipeline/generate.yaml
+steps:
+  - name: draft
+    prompt: pipeline/generate/draft
+    fallback: null
+
+  - name: self_review
+    prompt: pipeline/generate/self_review
+    fallback: draft_text
+
+  - name: fix
+    prompt: pipeline/generate/fix
+    fallback: draft_text
+
+  - name: polish
+    prompt: pipeline/generate/polish
+    fallback: prev_text</pre>
+</div>
+
+<div class="section">
+  <h3>后端改动</h3>
+  <div class="cards" style="margin-top:8px;">
+    <div class="card">
+      <div class="card-body">
+        <strong>新增</strong><br>
+        <code>core/pipeline.py</code> — PipelineRunner 引擎<br>
+        <code>config/pipeline/</code> — 管线定义 YAML<br>
+        <code>workspace/prompts/pipeline/</code> — 每步的 prompt 模板
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <strong>修改</strong><br>
+        <code>api/generate.py</code> — 接入管线引擎<br>
+        <code>schemas/llm.py</code> — 新请求/响应类型
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-color);">
+  <p style="color:var(--text-muted);">http://localhost:64486 — 这部分架构方向对吗？</p>
+</div>

@@ -147,9 +147,7 @@ watch(
   (path) => {
     if (path) {
       const prompt = editorStore.getFilePrompt(path)
-      if (prompt) {
-        rightPanelStore.updatePrompt(prompt)
-      }
+      rightPanelStore.updatePrompt(prompt || '')
     }
   },
 )

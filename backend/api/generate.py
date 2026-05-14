@@ -83,6 +83,9 @@ async def generate(
             except Exception as e:
                 prompt_text = f"请根据以下内容进行创作：\n\n{content}"
 
+            # 先把渲染后的真实 prompt 发回前端
+            yield {"event": "prompt", "data": json.dumps({"prompt": prompt_text, "task_id": task_id})}
+
             # 调用 LLM
             
             llm_cfg = load_llm_config_from_workspace(settings)

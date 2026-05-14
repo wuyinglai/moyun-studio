@@ -41,6 +41,10 @@
           </template>
         </a-dropdown>
         <a-divider type="vertical" />
+        <a-button size="small" type="primary" ghost @click="handleGenerateNext">
+          📄 生成下一个
+        </a-button>
+        <a-divider type="vertical" />
         <a-dropdown>
           <a-button size="small">更多 <i class="fa-solid fa-chevron-down"></i></a-button>
           <template #overlay>
@@ -153,13 +157,17 @@ async function runPipeline(name: string) {
     )
   } catch (e: any) {
     if (e.name !== 'AbortError') {
-      notification.error('管线运行失败')
+      notification.error('管线运行失败: ' + (e.message || ''))
     }
   }
 }
 
 function handleCustomPipeline(info: any) {
   runPipeline(info.key as string)
+}
+
+function handleGenerateNext() {
+  window.dispatchEvent(new CustomEvent('chat:request-generate'))
 }
 
 function handleTokenCount() { uiStore.openTokenCount() }

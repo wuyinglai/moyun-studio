@@ -8,6 +8,7 @@
         size="small"
         @change="onPipelineChange"
       >
+        <a-select-option key="_free" value="_free">📝 自由编辑</a-select-option>
         <a-select-option v-for="p in storePipelines" :key="p.name" :value="p.name">
           {{ p.label }}
         </a-select-option>
@@ -18,12 +19,12 @@
         :loading="isPipelineRunning"
         @click="runCurrentPipeline"
       >
-        ▶ 运行
+        ▶ {{ isFreeMode ? '发送' : '运行' }}
       </a-button>
     </div>
 
-    <!-- 步骤标签 -->
-    <div class="step-tabs" v-if="storeSteps.length > 0">
+    <!-- 步骤标签（仅管线模式） -->
+    <div class="step-tabs" v-if="!isFreeMode && storeSteps.length > 0">
       <button
         v-for="(step, index) in storeSteps"
         :key="step.id"
@@ -40,13 +41,16 @@
       <i class="fa-solid fa-spinner fa-spin"></i>
       <span>AI 正在生成...</span>
     </div>
+    <div v-else-if="fileGen.currentPrompt.value" class="generation-status generation-done">
+      <span>上次生成 prompt: {{ fileGen.currentPrompt.value.substring(0, 120) }}...</span>
+    </div>
 
     <!-- Prompt 编辑区 -->
     <div class="editor-section">
-      <div class="editor-label">当前步骤 Prompt（可直接编辑）</div>
+      <div class="editor-label">{{ isFreeMode ? '提示词（自由编辑）' : '当前步骤 Prompt（可直接编辑）' }}</div>
       <a-textarea
         v-model:value="localPrompt"
-        placeholder="选择管线步骤查看 Prompt..."
+        :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"
         :auto-size="{ minRows: 8, maxRows: 16 }"
         @input="handlePromptInput"
         class="prompt-editor"
@@ -64,46 +68,66 @@ import { usePipelineStore } from '@/stores/pipeline'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
+import { useNotificationStore } from '@/stores/notification'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 
 const pipelineStore = usePipelineStore()
 const rightPanelStore = useRightPanelStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
+const notification = useNotificationStore()
 const fileGen = useFileGeneration()
 
 const localPrompt = ref('')
 const varHint = '{{变量名}}'
+const isFreeMode = ref(true)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
 const storePipelines = computed(() => pipelineStore.pipelines)
 const storeSteps = computed(() => pipelineStore.currentDetail?.steps || [])
 const currentStepIndex = computed(() => pipelineStore.currentStepIndex)
 const isPipelineRunning = computed(() => rightPanelStore.isPipelineRunning)
-const selectedPipeline = computed({
-  get: () => pipelineStore.currentPipelineName,
-  set: (val: string) => pipelineStore.selectPipeline(val),
-})
+
+const selectedPipeline = ref('_free')
 
 onMounted(() => {
   if (pipelineStore.pipelines.length === 0) {
     pipelineStore.fetchPipelines()
   }
-  if (pipelineStore.currentPipelineName && !pipelineStore.currentDetail) {
-    pipelineStore.fetchPipelineDetail(pipelineStore.currentPipelineName)
-  }
+  // 初始显示右侧面板保存的 prompt（切换文件时自动更新）
+  localPrompt.value = rightPanelStore.promptContent || ''
 })
 
+// 切换文件时，右侧面板 promptContent 由 App.vue 更新，此处同步到编辑器
 watch(
-  () => pipelineStore.currentPromptContent,
+  () => rightPanelStore.promptContent,
   (val) => {
-    localPrompt.value = val || ''
+    if (isFreeMode.value) {
+      localPrompt.value = val || ''
+    }
   },
-  { immediate: true }
+)
+
+// 管线步骤切换时，显示该步骤的 prompt 模板
+watch(
+  () => pipelineStore.currentStep,
+  (step) => {
+    if (!isFreeMode.value && step?.prompt_content) {
+      localPrompt.value = step.prompt_content
+    }
+  },
+  { deep: true },
 )
 
 function onPipelineChange(name: string) {
-  pipelineStore.selectPipeline(name)
+  selectedPipeline.value = name
+  if (name === '_free') {
+    isFreeMode.value = true
+    localPrompt.value = rightPanelStore.promptContent || ''
+  } else {
+    isFreeMode.value = false
+    pipelineStore.selectPipeline(name)
+  }
 }
 
 function onStepChange(index: number) {
@@ -113,25 +137,42 @@ function onStepChange(index: number) {
 function handlePromptInput() {
   if (saveTimeout) clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
-    const step = pipelineStore.currentStep
-    if (step) {
-      pipelineStore.saveStepPrompt(step.id, localPrompt.value)
+    if (isFreeMode.value) {
+      rightPanelStore.updatePrompt(localPrompt.value)
+    } else {
+      const step = pipelineStore.currentStep
+      if (step) {
+        pipelineStore.saveStepPrompt(step.id, localPrompt.value)
+      }
     }
   }, 500)
 }
 
 async function runCurrentPipeline() {
-  if (!projectStore.currentProject || !editorStore.currentFilePath) return
+  if (!projectStore.currentProject || !editorStore.currentFilePath) {
+    notification.warning('请先打开一个文件')
+    return
+  }
   if (isPipelineRunning.value) return
 
   rightPanelStore.setPipelineRunning(true)
   try {
-    await fileGen.runPipeline(
-      projectStore.currentProject.id,
-      editorStore.currentFilePath,
-      pipelineStore.currentPipelineName,
-    )
+    if (isFreeMode.value) {
+      // 自由编辑模式：使用默认管线生成
+      await fileGen.runPipeline(
+        projectStore.currentProject.id,
+        editorStore.currentFilePath,
+        'polish',
+      )
+    } else {
+      await fileGen.runPipeline(
+        projectStore.currentProject.id,
+        editorStore.currentFilePath,
+        selectedPipeline.value,
+      )
+    }
   } catch (e: any) {
+    notification.error('管线运行失败: ' + (e.message || '未知错误'))
     console.warn('管线运行失败:', e)
   } finally {
     rightPanelStore.setPipelineRunning(false)
@@ -194,6 +235,11 @@ async function runCurrentPipeline() {
   margin-bottom: 12px;
   font-size: 13px;
   color: var(--accent-primary);
+}
+
+.generation-done {
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .editor-section {

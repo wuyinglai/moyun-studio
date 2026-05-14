@@ -1,0 +1,79 @@
+<h2>完整界面布局</h2>
+<p class="subtitle">工具栏 + 右侧面板的最终方案</p>
+
+<div class="section">
+  <h3>顶部工具栏 (精简为 5 个按钮)</h3>
+  <div style="display:flex;align-items:center;gap:12px;background:var(--bg-card);padding:8px 16px;border-radius:8px;margin:12px 0;">
+    <span style="font-size:13px;color:var(--text-secondary);margin-right:auto;">墨韵 | 我的小说</span>
+    <button class="mock-button" style="background:var(--accent-success);color:white;">✏️ 润色</button>
+    <button class="mock-button" style="background:var(--accent-primary);color:white;">📝 生成</button>
+    <button class="mock-button" style="background:var(--accent-warning);color:white;">📦 重写</button>
+    <button class="mock-button" style="color:var(--text-primary);">🌟 提取</button>
+    <button class="mock-button" style="color:var(--text-muted);">➕ 自定义</button>
+  </div>
+  <p style="font-size:12px;color:var(--text-muted);">每个按钮 = 一条管线。点击直接运行，中间结果静默处理</p>
+</div>
+
+<div class="section">
+  <h3>右侧面板 (5 个标签)</h3>
+  <div style="background:var(--bg-card);border-radius:8px;padding:16px;margin:12px 0;">
+    <div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--border-color);padding-bottom:8px;">
+      <span style="padding:6px 14px;background:var(--accent-primary);color:white;border-radius:8px;font-size:12px;">⚡ 快捷</span>
+      <span style="padding:6px 14px;background:var(--bg-primary);border-radius:8px;font-size:12px;color:var(--text-muted);">🔧 管线编辑</span>
+      <span style="padding:6px 14px;background:var(--bg-primary);border-radius:8px;font-size:12px;color:var(--text-muted);">📖 故事状态</span>
+      <span style="padding:6px 14px;background:var(--bg-primary);border-radius:8px;font-size:12px;color:var(--text-muted);">🪶 文风</span>
+      <span style="padding:6px 14px;background:var(--bg-primary);border-radius:8px;font-size:12px;color:var(--text-muted);">📋 执行</span>
+    </div>
+
+    <h4 style="font-size:13px;margin-bottom:8px;">⚡ 快捷标签页内容</h4>
+    <div style="background:var(--bg-primary);border-radius:8px;padding:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <span style="font-size:12px;color:var(--text-muted);">当前管线:</span>
+        <select style="flex:1;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;color:var(--text-primary);font-size:12px;">
+          <option>润色</option>
+          <option>生成</option>
+          <option>重写</option>
+          <option>提取</option>
+        </select>
+        <button style="background:var(--accent-primary);color:white;border:none;border-radius:6px;padding:4px 14px;font-size:12px;cursor:pointer;">▶ 运行</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">当前步骤 Prompt（可直接编辑）</div>
+      <textarea style="width:100%;min-height:80px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px;color:var(--text-primary);font-family:monospace;font-size:12px;">请对以下文本进行润色：
+1. 删除以下AI高频套路词：「突然」「不禁」「心中一震」
+2. 检查逻辑连贯性
+3. 优化句式节奏，长短句交替
+4. 保持原意不改变</textarea>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">提示：在 prompt 中使用 <code>[文件名.md]</code> 引用文件，<code>{{变量名}}</code> 使用系统变量</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>引用机制</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="border-bottom:2px solid var(--border-color);">
+      <th style="text-align:left;padding:8px;">语法</th>
+      <th style="text-align:left;padding:8px;">作用</th>
+      <th style="text-align:left;padding:8px;">示例</th>
+    </tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;"><code>[文件名.md]</code></td>
+        <td style="padding:8px;">引用项目文件，自动注入内容</td>
+        <td style="padding:8px;">参考 <code>[style-guide.md]</code> 的文风</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;"><code>{{变量名}}</code></td>
+        <td style="padding:8px;">系统变量，自动填充</td>
+        <td style="padding:8px;">当前文件：<code>{{current_file}}</code></td>
+      </tr>
+      <tr>
+        <td style="padding:8px;">拖拽</td>
+        <td style="padding:8px;">从文件树拖入，生成引用</td>
+        <td style="padding:8px;">拖拽 <code>第3章.md</code> → 生成 <code>[第3章.md]</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p>这个完整方案你觉得还有什么要调整的吗？没问题我写正式设计文档</p>

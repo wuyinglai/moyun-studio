@@ -1,0 +1,90 @@
+<h2>右侧面板 Tab 规划</h2>
+<p class="subtitle">最常用的放前面，管线编辑独立</p>
+
+<div class="section">
+  <h3>Tab 结构</h3>
+  <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;">
+    <div class="card" style="flex:1;min-width:100px;text-align:center;padding:12px;border:2px solid var(--accent-primary);">
+      <div style="font-size:20px;margin-bottom:4px;">⚡</div>
+      <div style="font-weight:600;font-size:13px;">快捷</div>
+      <div style="font-size:11px;color:var(--text-muted);">管线选择+执行</div>
+    </div>
+    <div class="card" style="flex:1;min-width:100px;text-align:center;padding:12px;border:2px solid var(--accent-warning);">
+      <div style="font-size:20px;margin-bottom:4px;">🔧</div>
+      <div style="font-weight:600;font-size:13px;">管线编辑</div>
+      <div style="font-size:11px;color:var(--text-muted);">步骤+prompt管理</div>
+    </div>
+    <div class="card" style="flex:1;min-width:100px;text-align:center;padding:12px;">
+      <div style="font-size:20px;margin-bottom:4px;">📖</div>
+      <div style="font-weight:600;font-size:13px;">故事状态</div>
+      <div style="font-size:11px;color:var(--text-muted);">已有</div>
+    </div>
+    <div class="card" style="flex:1;min-width:100px;text-align:center;padding:12px;">
+      <div style="font-size:20px;margin-bottom:4px;">🪶</div>
+      <div style="font-weight:600;font-size:13px;">文风指南</div>
+      <div style="font-size:11px;color:var(--text-muted);">已有</div>
+    </div>
+    <div class="card" style="flex:1;min-width:100px;text-align:center;padding:12px;">
+      <div style="font-size:20px;margin-bottom:4px;">📋</div>
+      <div style="font-weight:600;font-size:13px;">执行</div>
+      <div style="font-size:11px;color:var(--text-muted);">已有</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>⚡ 快捷 标签页</h3>
+  <p>日常使用入口，简约不复杂</p>
+  <div style="background:var(--bg-card);border-radius:8px;padding:16px;margin:8px 0;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:12px;color:var(--text-muted);">当前管线:</span>
+      <select style="flex:1;padding:4px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);">
+        <option>润色</option>
+        <option>生成</option>
+        <option>重写</option>
+        <option>提取</option>
+      </select>
+      <button class="mock-button" style="padding:4px 12px;">▶ 运行</button>
+    </div>
+    <div style="background:var(--bg-primary);border-radius:6px;padding:12px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">当前步骤 Prompt</div>
+      <div style="font-size:12px;color:var(--text-secondary);font-family:monospace;line-height:1.5;">
+        请对以下文本进行润色，去除AI常见的套路化表达...
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔧 管线编辑 标签页</h3>
+  <p>深度编辑：选管线 → 看步骤 → 改 prompt → 保存即生效</p>
+  <div style="background:var(--bg-card);border-radius:8px;padding:16px;margin:8px 0;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select style="flex:1;padding:4px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);">
+        <option>润色</option>
+        <option>生成</option>
+        <option>重写</option>
+        <option>提取</option>
+      </select>
+      <button class="mock-button">+ 新建管线</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="mock-button" style="background:var(--accent-primary);color:white;">去AI味</button>
+      <button class="mock-button">提升文笔</button>
+      <button class="mock-button">修正逻辑</button>
+      <button class="mock-button">优化节奏</button>
+    </div>
+    <div style="background:var(--bg-primary);border-radius:6px;padding:12px;margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">步骤 Prompt (可直接编辑)</div>
+      <textarea style="width:100%;min-height:100px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:4px;padding:8px;color:var(--text-primary);font-family:monospace;font-size:12px;" readonly disabled>删除以下AI常见的套路化表达：「突然」「不禁」「心中一震」「莫名地」「不知为何」
+保持原文的核心信息和逻辑结构。
+输出的文字不应该让读者感觉到是AI生成的。</textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="mock-button">添加步骤</button>
+      <button class="mock-button" style="background:var(--accent-primary);color:white;">保存</button>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:16px;">删掉了"上下文"标签（故事状态够用），整合为 5 个标签，你觉得合理吗？</p>

@@ -5,8 +5,8 @@
 用户意图：{{ user_input }}
 
 ## 项目上下文
-文风指南：{{ style_guide if exists }}
-故事状态：{{ story_state if exists }}
+文风指南：{% if style_guide %}{{ style_guide }}{% endif %}
+故事状态：{% if story_state %}{{ story_state }}{% endif %}
 
 ## 任务
 请整合以上上下文信息，提取与当前章节相关的关键元素：

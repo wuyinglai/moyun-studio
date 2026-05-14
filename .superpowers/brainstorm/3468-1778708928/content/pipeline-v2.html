@@ -1,0 +1,99 @@
+<h2>更新：对话管线 + 步骤可编排</h2>
+
+<div class="section">
+  <h3>💬 对话管线</h3>
+  <p>和其他管线一样输出到当前文件，但输入是自然语言指令</p>
+  <div style="background:var(--bg-card);border-radius:8px;padding:16px;margin:12px 0;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="card" style="text-align:center;padding:10px;flex:1;min-width:100px;">
+        <div style="font-weight:600;font-size:13px;">🧠 意图理解</div>
+        <div style="font-size:11px;color:var(--text-muted);">解析用户指令</div>
+      </div>
+      <div style="font-size:20px;color:var(--text-muted);">→</div>
+      <div class="card" style="text-align:center;padding:10px;flex:1;min-width:100px;">
+        <div style="font-weight:600;font-size:13px;">📝 生成</div>
+        <div style="font-size:11px;color:var(--text-muted);">执行修改</div>
+      </div>
+      <div style="font-size:20px;color:var(--text-muted);">→</div>
+      <div class="card" style="text-align:center;padding:10px;flex:1;min-width:100px;">
+        <div style="font-weight:600;font-size:13px;">✅ 校验</div>
+        <div style="font-size:11px;color:var(--text-muted);">检查是否符合指令</div>
+      </div>
+    </div>
+    <p style="margin-top:12px;font-size:12px;color:var(--text-muted);">输出到当前文件，流式写入</p>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔧 管线编辑支持步骤编排</h3>
+  <div style="background:var(--bg-card);border-radius:8px;padding:16px;margin:12px 0;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select style="flex:1;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;color:var(--text-primary);font-size:12px;">
+        <option>润色</option>
+        <option>生成</option>
+        <option>重写</option>
+        <option>提取</option>
+        <option>对话</option>
+      </select>
+      <button style="background:var(--accent-primary);color:white;border:none;border-radius:6px;padding:4px 12px;font-size:12px;">+ 新建管线</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-primary);border-radius:6px;padding:8px 12px;">
+        <span style="cursor:grab;color:var(--text-muted);">⠿</span>
+        <span style="flex:1;font-size:13px;">🧠 意图理解</span>
+        <span style="font-size:11px;color:var(--text-muted);">prompt: pipeline/chat/understand</span>
+        <button style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-primary);border-radius:6px;padding:8px 12px;">
+        <span style="cursor:grab;color:var(--text-muted);">⠿</span>
+        <span style="flex:1;font-size:13px;">📝 生成</span>
+        <span style="font-size:11px;color:var(--text-muted);">prompt: pipeline/chat/draft</span>
+        <button style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-primary);border-radius:6px;padding:8px 12px;">
+        <span style="cursor:grab;color:var(--text-muted);">⠿</span>
+        <span style="flex:1;font-size:13px;">✅ 校验</span>
+        <span style="font-size:11px;color:var(--text-muted);">prompt: pipeline/chat/validate</span>
+        <button style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;">✕</button>
+      </div>
+    </div>
+    <button style="margin-top:8px;background:transparent;border:1px dashed var(--border-color);border-radius:6px;padding:6px;width:100%;color:var(--text-muted);font-size:12px;cursor:pointer;">+ 添加步骤</button>
+  </div>
+  <p style="font-size:12px;color:var(--text-muted);">用户可拖拽排序步骤、删除/添加步骤、编辑每一步的 prompt 模板</p>
+</div>
+
+<div class="section">
+  <h3>5 条管线完整列表</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="border-bottom:2px solid var(--border-color);">
+      <th style="text-align:left;padding:8px;">管线</th>
+      <th style="text-align:left;padding:8px;">输入</th>
+      <th style="text-align:left;padding:8px;">输出</th>
+      <th style="text-align:left;padding:8px;">步骤</th>
+    </tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">✏️ 润色</td><td>当前文件</td><td>覆盖当前文件</td>
+        <td style="padding:8px;">去AI味 → 提升文笔 → 修逻辑 → 优化节奏</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">📝 生成</td><td>大纲+上下文</td><td>追加到当前文件</td>
+        <td style="padding:8px;">整合上下文 → 大纲对齐 → 写作 → 去AI味 → 逻辑修正 → 节奏</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">📦 重写</td><td>当前文件</td><td>覆盖当前文件</td>
+        <td style="padding:8px;">诊断 → 重写初稿 → 去AI味 → 逻辑修正 → 节奏</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">💬 对话</td><td>用户指令</td><td>覆盖/追加当前文件</td>
+        <td style="padding:8px;">意图理解 → 生成 → 校验</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;font-weight:600;">🌟 提取</td><td>当前文件</td><td>写入维度文件</td>
+        <td style="padding:8px;">逐维度提取(世界观→角色→情节→摘要)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p>浏览器 <code>http://localhost:64486</code> — 这样可以写设计文档了吗？</p>

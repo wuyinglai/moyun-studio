@@ -17,6 +17,7 @@
     <div class="panel-content">
       <PromptPanel v-show="activeTab === 'prompt'" />
       <PipelineEditor v-show="activeTab === 'pipeline'" />
+      <WorkflowPanel v-show="activeTab === 'workflow'" />
       <StoryStatePanel v-show="activeTab === 'story'" ref="storyPanelRef" />
       <StyleGuidePanel v-show="activeTab === 'style'" ref="styleGuidePanelRef" />
       <ExecutionPanel v-show="activeTab === 'execution'" />
@@ -28,6 +29,7 @@
 import { ref, onMounted } from 'vue'
 import PromptPanel from './PromptPanel.vue'
 import PipelineEditor from './PipelineEditor.vue'
+import WorkflowPanel from './WorkflowPanel.vue'
 import ExecutionPanel from './ExecutionPanel.vue'
 import StoryStatePanel from '../global/StoryStatePanel.vue'
 import StyleGuidePanel from '../global/StyleGuidePanel.vue'
@@ -40,6 +42,7 @@ const styleGuidePanelRef = ref<InstanceType<typeof StyleGuidePanel>>()
 const tabs = [
   { id: 'prompt', label: '⚡ 快捷' },
   { id: 'pipeline', label: '🔧 管线编辑' },
+  { id: 'workflow', label: '📋 工作流' },
   { id: 'story', label: '📖 故事状态' },
   { id: 'style', label: '🪶 文风' },
   { id: 'execution', label: '📋 执行' },

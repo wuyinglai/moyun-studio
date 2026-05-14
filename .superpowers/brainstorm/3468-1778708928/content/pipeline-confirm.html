@@ -1,0 +1,61 @@
+<h2>管线引擎 — 设计确认</h2>
+<p class="subtitle">已经确定的部分</p>
+
+<div class="section">
+  <h3>✅ 架构</h3>
+  <ul>
+    <li>PipelineRunner 独立模块 <code>core/pipeline.py</code></li>
+    <li>每条管线一个 YAML 配置，定义步骤</li>
+    <li>每步独立的 Prompt 模板</li>
+    <li>失败容忍：某步挂了 fallback 到上一步</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>✅ 流式策略</h3>
+  <ul>
+    <li>中间步骤：静默运行，只发 <code>thinking</code> 事件</li>
+    <li>最终步骤：正常流式输出</li>
+    <li>前端零感知</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>✅ 四条管线</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border-color);">
+        <th style="text-align:left;padding:8px;">管线</th>
+        <th style="text-align:left;padding:8px;">步骤</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">polish</td>
+        <td style="padding:8px;">去AI味 → 提升文笔 → 修逻辑漏洞 → 优化节奏</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">generate</td>
+        <td style="padding:8px;">整合上下文 → 大纲对齐 → 写作初稿 → 去AI味 → 逻辑修正 → 节奏优化</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:8px;font-weight:600;">rewrite</td>
+        <td style="padding:8px;">诊断问题 → 重写初稿 → 去AI味 → 逻辑修正 → 节奏调整</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;font-weight:600;">extract</td>
+        <td style="padding:8px;">每轮一个维度：角色+关系 → 情节+场景 → 世界观 → 摘要</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h3>❓ 待确认</h3>
+  <ul>
+    <li>extract 的维度顺序会不会调整？先世界观再角色更合理？</li>
+    <li>extract 的结果是追加到一个文件，还是每个维度独立文件？</li>
+  </ul>
+</div>
+
+<p>还缺什么吗？没问题的话我继续设计前端 Prompt 体系部分</p>

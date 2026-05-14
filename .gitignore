@@ -50,3 +50,6 @@ test_screenshots_v2/
 # 杂项归档（无需进版本控制）
 _misc/archive/
 _misc/scripts/
+
+# 测试产物
+test-results/
