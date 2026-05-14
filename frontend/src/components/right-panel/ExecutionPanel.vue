@@ -40,14 +40,14 @@
               <button
                 v-if="task.status === 'waiting'"
                 class="btn-confirm"
-                @click="confirmTask(task.id)"
+                @click="handleConfirmTask(task.id)"
               >
                 <i class="fa-solid fa-play"></i> 继续
               </button>
               <button
                 v-if="task.status === 'pending' || task.status === 'running'"
                 class="btn-cancel"
-                @click="cancelTask(task.id)"
+                @click="handleCancelTask(task.id)"
               >
                 <i class="fa-solid fa-stop"></i>
               </button>
@@ -91,6 +91,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
 import { useNotificationStore } from '@/stores/notification'
 import { useFileStore } from '@/stores/file'
+import { confirmTask, cancelQueuedTask } from '@/composables/useTaskQueue'
 
 const taskStore = useTaskStore()
 const notification = useNotificationStore()
@@ -132,18 +133,18 @@ function formatTime(timestamp: number): string {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-async function cancelTask(taskId: string) {
+async function handleCancelTask(taskId: string) {
   try {
     await fileStore.cancelTask(taskId)
-    taskStore.cancelTask(taskId)
+    cancelQueuedTask(taskId)
     notification.warning('任务已取消')
   } catch {
     notification.error('取消失败')
   }
 }
 
-function confirmTask(taskId: string) {
-  taskStore.confirmTask(taskId)
+function handleConfirmTask(taskId: string) {
+  confirmTask(taskId)
   notification.success('已确认，继续执行')
 }
 

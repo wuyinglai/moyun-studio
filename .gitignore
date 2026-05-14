@@ -37,6 +37,10 @@ wheels/
 # 工作区（用户数据）
 workspace/
 
+# 工具临时目录
+.claude/
+.sisyphus/
+
 # 日志
 *.log
 

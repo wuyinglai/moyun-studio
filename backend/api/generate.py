@@ -24,6 +24,7 @@ from backend.core.llm import (
 )
 from backend.core.file_ops import FileService
 from backend.core.prompt_engine import PromptEngine
+from backend.core.pipeline import PipelineRunner, PipelineError
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
     GenerateRequest,
@@ -40,38 +41,83 @@ router = APIRouter(tags=["generate"])
 _stop_signals: dict[str, asyncio.Event] = {}
 
 
+# prompt_type → pipeline 映射
+_GENERATE_PIPELINE_MAP = {
+    "generate/continuation": ("generate", "append"),
+    "generate/rewrite": ("rewrite", "overwrite"),
+}
+
+
 @router.post("/generate")
 async def generate(
     req: GenerateRequest,
     request: Request,
     settings: Settings = Depends(get_settings),
 ):
-    """LLM 生成任务（流式输出，SSE 格式）"""
+    """LLM 生成任务（流式输出，SSE 格式）
+
+    支持两种模式：
+    1. 管线模式：prompt_type 匹配 _GENERATE_PIPELINE_MAP 时，走 PipelineRunner
+    2. 回退模式：其余情况走原有的 PromptEngine + 直接 LLM 调用
+    """
 
     async def _stream() -> AsyncGenerator[dict, None]:
         event_bus = getattr(request.app.state, "event_bus", None)
         task_id = f"gen-{id(req)}"
         _stop_signals[task_id] = asyncio.Event()
 
+        # 检测是否可路由到管线
+        if req.prompt_type in _GENERATE_PIPELINE_MAP:
+            pipeline_name, output_mode = _GENERATE_PIPELINE_MAP[req.prompt_type]
+            try:
+                file_service = FileService(settings.projects_path)
+                llm_cfg = load_llm_config_from_workspace(settings)
+                svc = LLMService.from_workspace_config(llm_cfg)
+                runner = PipelineRunner(settings.prompts_path, svc, file_service)
+
+                # 构建 LLM 额外参数（含 thinking 配置）
+                llm_extra_kwargs = {}
+                thinking = llm_cfg.get("thinking", settings.llm_thinking)
+                if thinking and "claude" in svc.config.model:
+                    llm_extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
+
+                async for event in runner.run(
+                    pipeline_name=pipeline_name,
+                    project_id=req.project_id,
+                    target_file=req.file_path,
+                    user_input=req.extra_vars.get("user_prompt", ""),
+                    output_mode=output_mode,
+                    extra_vars=req.extra_vars,
+                    stop_event=_stop_signals[task_id],
+                    llm_extra_kwargs=llm_extra_kwargs,
+                ):
+                    yield event
+                    if event_bus and event.get("event") in ("generation", "done", "error"):
+                        await event_bus.publish(event["event"], json.loads(event["data"]))
+            except PipelineError as e:
+                logger.error("管线生成失败: %s", e)
+                yield {"event": "error", "data": json.dumps({"message": str(e), "task_id": task_id})}
+            finally:
+                _stop_signals.pop(task_id, None)
+            return
+
+        # ——— 回退模式（旧逻辑） ———
         if event_bus:
             await event_bus.publish("task", {"task_id": task_id, "status": "running", "name": f"生成 {req.file_path}"})
 
         yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
 
         try:
-            # 加载 Prompt 模板
             file_service = FileService(settings.projects_path)
             prompt_engine = PromptEngine(settings.prompts_path, file_service)
 
             logger.info("开始生成任务", extra={"task_id": task_id, "project_id": req.project_id, "file_path": req.file_path})
 
-            # 读取目标文件内容
             try:
                 content, fm = await file_service.read_file(f"{req.project_id}/{req.file_path}")
             except Exception:
                 content, fm = "", None
 
-            # 渲染 Prompt
             variables = {
                 "file_content": content,
                 "file_path": req.file_path,
@@ -83,11 +129,22 @@ async def generate(
             except Exception as e:
                 prompt_text = f"请根据以下内容进行创作：\n\n{content}"
 
-            # 先把渲染后的真实 prompt 发回前端
             yield {"event": "prompt", "data": json.dumps({"prompt": prompt_text, "task_id": task_id})}
 
-            # 调用 LLM
-            
+            # G0118: 自动 token 检查
+            try:
+                import tiktoken
+                enc = tiktoken.get_encoding("cl100k_base")
+                prompt_tokens = len(enc.encode(prompt_text))
+                if prompt_tokens > 120000:
+                    yield {"event": "error", "data": json.dumps({
+                        "message": f"Prompt 过长（约 {prompt_tokens} tokens），可能超出模型上下文限制",
+                        "task_id": task_id,
+                        "warning": True,
+                    })}
+            except Exception:
+                pass
+
             llm_cfg = load_llm_config_from_workspace(settings)
             svc = LLMService.from_workspace_config(llm_cfg)
             thinking = llm_cfg.get("thinking", settings.llm_thinking)
@@ -108,7 +165,6 @@ async def generate(
                 if event_bus:
                     await event_bus.publish("generation", {"delta": content, "task_id": task_id})
 
-            # 保存生成内容
             if generated_text and not _stop_signals[task_id].is_set():
                 if req.mode == "rewrite":
                     await file_service.write_file(f"{req.project_id}/{req.file_path}", generated_text, fm)
@@ -319,32 +375,28 @@ async def chat(
     request: Request,
     settings: Settings = Depends(get_settings),
 ):
-    """聊天对话（流式SSE）"""
+    """聊天对话（流式SSE），使用 chat 管线"""
 
     async def _stream() -> AsyncGenerator[dict, None]:
-        event_bus = getattr(request.app.state, "event_bus", None)
-        task_id = f"chat-{id(req)}"
-
-        logger.info("开始聊天任务", extra={"task_id": task_id, "message_length": len(req.message)})
-
-        yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
+        logger.info("开始聊天任务", extra={"project_id": req.project_id, "message_length": len(req.message)})
 
         try:
-            
+            file_service = FileService(settings.projects_path)
             llm_cfg = load_llm_config_from_workspace(settings)
             svc = LLMService.from_workspace_config(llm_cfg)
+            runner = PipelineRunner(settings.prompts_path, svc, file_service)
 
-            messages = [{"role": "user", "content": req.message}]
-            async for content in svc.complete(messages, timeout=120):
-                yield {
-                    "event": "generation",
-                    "data": json.dumps({"delta": content, "task_id": task_id, "type": "chat"}),
-                }
+            async for event in runner.run(
+                pipeline_name="chat",
+                project_id=req.project_id,
+                target_file=req.context_file,
+                user_input=req.message,
+                output_mode="append",
+            ):
+                yield event
 
-            yield {"event": "done", "data": json.dumps({"task_id": task_id})}
-
-        except Exception as e:
-            logger.error(f"聊天任务异常: {e}", exc_info=True)
+        except PipelineError as e:
+            logger.error("聊天管线失败: %s", e)
             yield {"event": "error", "data": json.dumps({"message": str(e)})}
 
     return EventSourceResponse(_stream())

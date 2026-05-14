@@ -12,7 +12,7 @@ steps:
   - id: draft
     label: 写作初稿
     prompt: pipeline/generate/draft
-    fallback: context
+    fallback: outline
   - id: depai
     label: 去AI味
     prompt: pipeline/generate/depai

@@ -78,7 +78,16 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   // 模态框控制
+  function _closeAllModals() {
+    for (const key of Object.keys(modals.value)) {
+      if (key !== 'editingProject') {
+        (modals.value as any)[key] = false
+      }
+    }
+  }
+
   function openSettings() {
+    _closeAllModals()
     modals.value.settings = true
   }
 
@@ -87,6 +96,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openCreateProject() {
+    _closeAllModals()
     modals.value.createProject = true
     modals.value.editingProject = null
   }
@@ -97,6 +107,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openOpenProject() {
+    _closeAllModals()
     modals.value.openProject = true
   }
 
@@ -105,11 +116,13 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openEditProject(project: Project) {
+    _closeAllModals()
     modals.value.editingProject = project
     modals.value.createProject = true
   }
 
   function openTokenCount() {
+    _closeAllModals()
     modals.value.tokenCount = true
   }
 
@@ -118,6 +131,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openCompare() {
+    _closeAllModals()
     modals.value.compare = true
   }
 
@@ -126,6 +140,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openFeedback() {
+    _closeAllModals()
     modals.value.feedback = true
   }
 
@@ -134,6 +149,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openRevisionLog() {
+    _closeAllModals()
     modals.value.revisionLog = true
   }
 
@@ -142,6 +158,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openBatchGenerate() {
+    _closeAllModals()
     modals.value.batchGenerate = true
   }
 
@@ -150,6 +167,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openExtract() {
+    _closeAllModals()
     modals.value.extract = true
   }
 
@@ -158,6 +176,7 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   function openQualityReview() {
+    _closeAllModals()
     modals.value.qualityReview = true
   }
 

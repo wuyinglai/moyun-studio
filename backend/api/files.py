@@ -12,7 +12,7 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
@@ -86,6 +86,7 @@ async def read_file(
 @router.post("/file", response_model=ApiResponse[None])
 async def write_file(
     req: FileWriteRequest,
+    request: Request,
     project_id: str = Query(..., description="项目ID"),
     fs: FileService = Depends(_get_file_service),
 ):
@@ -98,12 +99,22 @@ async def write_file(
         raise
 
     logger.info("文件已保存", extra={"project_id": project_id, "path": req.path})
+
+    # 发布文件更新事件
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        await event_bus.publish("file-updated", {
+            "path": f"{project_id}/{req.path}",
+            "content": req.content,
+        })
+
     return ApiResponse.ok(message="文件已保存")
 
 
 @router.post("/file/create", response_model=ApiResponse[None])
 async def create_file(
     req: CreateFileRequest,
+    request: Request,
     fs: FileService = Depends(_get_file_service),
     settings: Settings = Depends(get_settings),
 ):
@@ -120,12 +131,21 @@ async def create_file(
         raise
 
     logger.info("文件已创建", extra={"path": req.path})
+
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        await event_bus.publish("file-created", {
+            "path": full_path,
+            "name": req.path.split("/")[-1],
+        })
+
     return ApiResponse.ok(message="文件已创建")
 
 
 @router.post("/file/rename", response_model=ApiResponse[None])
 async def rename_file(
     req: RenameFileRequest,
+    request: Request,
     fs: FileService = Depends(_get_file_service),
     settings: Settings = Depends(get_settings),
 ):
@@ -144,12 +164,21 @@ async def rename_file(
     old_full.rename(new_full)
 
     logger.info("文件已重命名", extra={"from": req.old_path, "to": req.new_path})
+
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        await event_bus.publish("file-renamed", {
+            "oldPath": f"{req.project_id}/{req.old_path}",
+            "newPath": f"{req.project_id}/{req.new_path}",
+        })
+
     return ApiResponse.ok(message="文件已重命名")
 
 
 @router.post("/directory/create", response_model=ApiResponse[None])
 async def create_directory(
     req: CreateDirectoryRequest,
+    request: Request,
     settings: Settings = Depends(get_settings),
 ):
     """创建新目录"""
@@ -161,6 +190,14 @@ async def create_directory(
     dir_path.mkdir(parents=True, exist_ok=True)
 
     logger.info("目录已创建", extra={"path": req.path})
+
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        await event_bus.publish("directory-created", {
+            "path": f"{req.project_id}/{req.path}",
+            "name": req.path.split("/")[-1],
+        })
+
     return ApiResponse.ok(message="目录已创建")
 
 

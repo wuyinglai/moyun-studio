@@ -35,6 +35,16 @@ class ProjectListResponse(BaseModel):
     total: int
 
 
+class ProjectStatsResponse(BaseModel):
+    """项目统计信息"""
+    total_sections: int = 0
+    completed_sections: int = 0
+    total_words: int = 0
+    chapter_count: int = 0
+    volume_count: int = 0
+    completion_rate: float = 0.0
+
+
 # ─── Wizard 流程 Schemas ──────────────────────────────────────────
 
 class BookIdeaRequest(BaseModel):

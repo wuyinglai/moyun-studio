@@ -243,6 +243,10 @@ async def confirm_outline(
                     "section_count": ch['sections'],
                     "word_count": 0,
                     "status": "draft",
+                    "memory": "",
+                    "story_state": "",
+                    "pending_foreshadowing": [],
+                    "active_quests": [],
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 }, ensure_ascii=False, indent=2),
                 encoding="utf-8"

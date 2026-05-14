@@ -54,7 +54,7 @@ class SnapshotManager:
     - 生成版本差异
     """
 
-    SNAPSHOT_DIR = ".snapshots"
+    SNAPSHOT_DIR = "backup/snapshots"
 
     def __init__(self, file_service: "FileService"):
         self.file_service = file_service

@@ -11,11 +11,19 @@
 """
 
 import asyncio
+import difflib
 import json
 import logging
+import re
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator
+
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -31,6 +39,9 @@ class PipelineError(Exception):
     pass
 
 
+REFERENCE_PATTERN = re.compile(r"@\{([^}]+)\}")
+
+
 class PipelineRunner:
     """管线执行引擎"""
 
@@ -39,10 +50,12 @@ class PipelineRunner:
         prompts_path: Path,
         llm_service: LLMService,
         file_service: FileService,
+        source: str = "system",
     ):
         self.prompts_path = Path(prompts_path)
         self.llm_service = llm_service
         self.file_service = file_service
+        self.source = source
         self.env = Environment(
             loader=FileSystemLoader(str(self.prompts_path)),
             autoescape=False,
@@ -61,6 +74,82 @@ class PipelineRunner:
         """使用 Jinja2 渲染 prompt 模板"""
         template = self.env.get_template(relative_path)
         return template.render(**variables)
+
+    async def _resolve_references(self, text: str, project_id: str) -> str:
+        """解析 @{path} 引用为文件内容
+
+        @{style-guide.md} -> 读取 {project_id}/style-guide.md 的内容
+        只做单层解析（不递归处理被引用文件中的 @{}）。
+        """
+        if not text:
+            return text
+
+        result = text
+        while True:
+            match = REFERENCE_PATTERN.search(result)
+            if not match:
+                break
+            file_path = match.group(1)
+            try:
+                content, _ = await self.file_service.read_file(f"{project_id}/{file_path}")
+                replacement = content if content else ""
+            except Exception:
+                replacement = f"\n<!-- 文件 {file_path} 不存在 -->\n"
+            result = result[:match.start()] + replacement + result[match.end():]
+
+        return result
+
+    async def _load_system_variables(self, project_id: str) -> dict:
+        """从项目目录加载系统变量
+
+        返回 {变量名: 文件内容} 字典，文件不存在或读取失败时返回空字符串。
+
+        额外从 target_file 对应的 ch-meta.json 加载 pending_foreshadowing 和 active_quests。
+        """
+        system_file_map = {
+            "style_guide": "style-guide.md",
+            "story_state": "story-state.md",
+            "recent_context": "recent-context.md",
+            "outline": "outline.md",
+        }
+        vars = {}
+        for var_name, rel_path in system_file_map.items():
+            try:
+                content, _ = await self.file_service.read_file(f"{project_id}/{rel_path}")
+                vars[var_name] = content
+            except Exception:
+                vars[var_name] = ""
+        return vars
+
+    async def _load_chapter_vars(self, project_id: str, target_file: str) -> dict:
+        """从章节元数据加载模板变量
+
+        从 target_file（如 chapters/vol-01/ch-001/sec-001.md）推导 ch-meta.json 路径，
+        提取 pending_foreshadowing 和 active_quests。
+        """
+        vars = {
+            "pending_foreshadowing": "",
+            "active_quests": "",
+        }
+        if not target_file or "/sec-" not in target_file:
+            return vars
+
+        parts = target_file.split("/")
+        if len(parts) < 3:
+            return vars
+        chapter_dir = "/".join(parts[:-1])
+        meta_path = f"{project_id}/{chapter_dir}/ch-meta.json"
+        try:
+            content, _ = await self.file_service.read_file(meta_path)
+            if content:
+                meta = json.loads(content)
+                foreshadowing = meta.get("pending_foreshadowing", [])
+                vars["pending_foreshadowing"] = json.dumps(foreshadowing, ensure_ascii=False) if foreshadowing else ""
+                quests = meta.get("active_quests", [])
+                vars["active_quests"] = json.dumps(quests, ensure_ascii=False) if quests else ""
+        except Exception:
+            pass
+        return vars
 
     def load_pipeline(self, name: str) -> PipelineDef:
         """加载管线 YAML 定义"""
@@ -96,6 +185,7 @@ class PipelineRunner:
         output_mode: str = "overwrite",
         extra_vars: dict | None = None,
         stop_event: asyncio.Event | None = None,
+        llm_extra_kwargs: dict | None = None,
     ) -> AsyncGenerator[dict, None]:
         """执行管线
 
@@ -111,6 +201,12 @@ class PipelineRunner:
         """
         pipeline = self.load_pipeline(pipeline_name)
         extra_vars = extra_vars or {}
+
+        # 加载系统变量（文风指南、故事状态、近期上下文、大纲）
+        system_vars = await self._load_system_variables(project_id)
+
+        # 加载章节变量（pending_foreshadowing, active_quests）
+        chapter_vars = await self._load_chapter_vars(project_id, target_file or "")
 
         task_id = f"pipeline-{pipeline_name}-{uuid.uuid4().hex[:8]}"
         step_outputs: dict[str, str] = {}
@@ -154,14 +250,17 @@ class PipelineRunner:
                     "project_id": project_id,
                     "user_input": user_input or "",
                     "previous_output": step_outputs.get(step.fallback) if step.fallback else None,
-                    "style_guide": "",
-                    "story_state": "",
+                    **system_vars,
+                    **chapter_vars,
                     **extra_vars,
                 }
 
                 # 渲染 prompt 模板（使用 step.prompt 保证与 YAML 定义一致）
                 prompt_relative = f"{step.prompt}.md"
                 prompt_text = self._render_prompt(prompt_relative, step_vars)
+
+                # 解析 @{path} 引用为文件内容
+                prompt_text = await self._resolve_references(prompt_text, project_id)
 
                 # 发送渲染后的 prompt
                 yield {"event": "prompt", "data": json.dumps({
@@ -170,14 +269,25 @@ class PipelineRunner:
                     "step_id": step.id,
                 })}
 
+                # G0118: 自动 token 检查 — 估算 prompt token 数，超限时发出警告
+                prompt_tokens = self._estimate_tokens(prompt_text)
+                if prompt_tokens > 120000:
+                    yield {"event": "error", "data": json.dumps({
+                        "message": f"Prompt 过长（约 {prompt_tokens} tokens），可能超出模型上下文限制",
+                        "task_id": task_id,
+                        "warning": True,
+                    })}
+
                 # 调用 LLM
                 messages = [{"role": "user", "content": prompt_text}]
                 step_output = ""
+                extra_kwargs = dict(llm_extra_kwargs or {})
 
                 async for chunk in self.llm_service.complete(
                     messages,
                     stop_event=stop_event,
                     timeout=180,
+                    **extra_kwargs,
                 ):
                     step_output += chunk
                     # 只有最终步骤才流式输出到前端
@@ -243,10 +353,107 @@ class PipelineRunner:
             elif output_mode == "dimension_file":
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
 
+        # 生成完成后自动更新 story-state 和 recent-context
+        if target_file and final_output:
+            await self._update_after_generation(project_id, target_file, final_output, original_content)
+
         yield {"event": "done", "data": json.dumps({
             "task_id": task_id,
             "message": "管线执行完成",
         })}
+
+    async def _update_after_generation(self, project_id: str, target_file: str, content: str, original_content: str = "") -> None:
+        """生成完成后更新 story-state.md、recent-context.md 和 revision-log"""
+
+        # — 更新 recent-context.md —
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            file_name = target_file.split("/")[-1]
+            summary = content[:300].strip()
+            entry = f"\n## {timestamp} - {file_name}\n{summary}\n"
+
+            try:
+                existing, _ = await self.file_service.read_file(f"{project_id}/recent-context.md")
+                # 分隔条目，保留最近 5 条
+                blocks = [b for b in existing.split("\n## ") if b.strip()]
+                blocks = blocks[-4:]  # 保留旧条目 + 新条目的空间
+                new_content = "\n## ".join(blocks).strip()
+                if not new_content.startswith("# "):
+                    new_content = "# 近期上下文\n" + new_content
+                new_content += entry
+            except Exception:
+                new_content = f"# 近期上下文\n{entry}"
+
+            await self.file_service.write_file(f"{project_id}/recent-context.md", new_content, None)
+        except Exception as e:
+            logger.warning("更新 recent-context.md 失败: %s", e)
+
+        # — 更新 story-state.md —
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            note = f"\n\n## 自动更新 - {timestamp}\n已生成: {target_file}\n"
+
+            try:
+                existing, _ = await self.file_service.read_file(f"{project_id}/story-state.md")
+                new_content = existing + note
+            except Exception:
+                new_content = f"# 故事全局状态{note}"
+
+            await self.file_service.write_file(f"{project_id}/story-state.md", new_content, None)
+        except Exception as e:
+            logger.warning("更新 story-state.md 失败: %s", e)
+
+        # — 创建修改日志（仅当内容有变化且目标文件是章节文件） —
+        if original_content and content != original_content and "/sec-" in target_file:
+            try:
+                # 从 target_file (如 chapters/vol-01/ch-001/sec-001.md) 提取章节目录
+                parts = target_file.split("/")
+                if len(parts) >= 3:
+                    chapter_dir = "/".join(parts[:-1])  # chapters/vol-01/ch-001
+
+                    # 生成 diff
+                    before_lines = original_content.splitlines(keepends=True)
+                    after_lines = content.splitlines(keepends=True)
+                    diff = "".join(difflib.unified_diff(
+                        before_lines, after_lines,
+                        fromfile="修改前", tofile="修改后", lineterm=""
+                    ))
+
+                    # 统计字数
+                    def _wc(text: str) -> int:
+                        return len(re.findall(r'[一-鿿]', text)) + len(re.findall(r'[a-zA-Z]+', text))
+
+                    log_entry = {
+                        "id": f"rev-{uuid.uuid4().hex[:8]}",
+                        "chapter_path": target_file,
+                        "revision_type": "ai_rewrite",
+                        "description": f"管线生成: {target_file.split('/')[-1]}",
+                        "word_count_before": _wc(original_content),
+                        "word_count_after": _wc(content),
+                        "diff": diff,
+                        "created_at": datetime.now().isoformat(),
+                    }
+
+                    log_path = f"{project_id}/{chapter_dir}/revision-log/{log_entry['id']}.json"
+                    await self.file_service.write_file(log_path, json.dumps(log_entry, ensure_ascii=False, indent=2), None)
+            except Exception as e:
+                logger.warning("创建修改日志失败: %s", e)
+
+    def _estimate_tokens(self, text: str) -> int:
+        """估算文本的 token 数
+
+        优先使用 tiktoken，回退到字符估算。
+        """
+        if tiktoken:
+            try:
+                enc = tiktoken.get_encoding("cl100k_base")
+                return len(enc.encode(text))
+            except Exception:
+                pass
+        # 回退：中文字符 ≈ 0.5 token，其他字符 ≈ 0.25 token
+        chinese = len(re.findall(r'[一-鿿]', text))
+        other = len(text) - chinese
+        return int(chinese * 0.5 + other * 0.25)
 
     def get_pipeline_detail(self, name: str) -> dict:
         """获取管线详情（含每步 prompt 内容）"""
@@ -266,6 +473,7 @@ class PipelineRunner:
         return {
             "name": pipeline.name,
             "label": pipeline.label,
+            "source": self.source,
             "steps": steps,
         }
 

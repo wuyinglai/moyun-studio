@@ -12,6 +12,7 @@ import json
 import logging
 import shutil
 import uuid
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from backend.schemas.project import (
     ProjectCreateRequest,
     ProjectInfo,
     ProjectListResponse,
+    ProjectStatsResponse,
     BookIdeaRequest,
     BookIdeaResponse,
     GenerateOutlineRequest,
@@ -66,6 +68,75 @@ def _compute_completion(meta: dict, context: dict) -> tuple[float, int]:
     completed = stats.get("completed_sections", 0)
     rate = (completed / total) if total > 0 else 0.0
     return rate, stats.get("total_words", 0)
+
+
+def _count_words(text: str) -> int:
+    """统计字数（中英文混合）"""
+    chinese_chars = len(re.findall(r'[一-鿿]', text))
+    english_words = len(re.findall(r'[a-zA-Z]+', text))
+    return chinese_chars + english_words
+
+
+def _recalculate_stats(project_dir: Path) -> dict:
+    """扫描 chapters/ 下实际文件，重新计算项目统计信息
+
+    完成度 = 有内容的节文件数 / 大纲中计划的节总数
+    - 节文件有实际内容（字数 > 0）才算完成
+    - 空文件不计入完成数
+    - ch-meta.json 中 status 为 discarded 的章节不计入总数
+    """
+    chapters_dir = project_dir / "chapters"
+    total_sections = 0
+    completed_sections = 0
+    total_words = 0
+    chapter_count = 0
+    volume_count = 0
+
+    if not chapters_dir.exists():
+        return {"total_sections": 0, "completed_sections": 0, "total_words": 0,
+                "chapter_count": 0, "volume_count": 0}
+
+    for vol_dir in sorted(chapters_dir.glob("vol-*")):
+        if not vol_dir.is_dir():
+            continue
+        volume_count += 1
+
+        for ch_dir in sorted(vol_dir.glob("ch-*")):
+            if not ch_dir.is_dir():
+                continue
+            chapter_count += 1
+
+            # 读取 ch-meta.json 检查废弃状态
+            ch_meta = {}
+            ch_meta_file = ch_dir / "ch-meta.json"
+            if ch_meta_file.exists():
+                try:
+                    ch_meta = json.loads(ch_meta_file.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+
+            # 废弃章不计入统计
+            if ch_meta.get("status") == "discarded":
+                continue
+
+            for sec_file in sorted(ch_dir.glob("sec-*.md")):
+                total_sections += 1
+                try:
+                    text = sec_file.read_text(encoding="utf-8")
+                    wc = _count_words(text)
+                    if wc > 0:
+                        completed_sections += 1
+                        total_words += wc
+                except Exception:
+                    pass
+
+    return {
+        "total_sections": total_sections,
+        "completed_sections": completed_sections,
+        "total_words": total_words,
+        "chapter_count": chapter_count,
+        "volume_count": volume_count,
+    }
 
 
 def _project_info(project_dir: Path) -> ProjectInfo | None:
@@ -203,6 +274,53 @@ async def get_project(
         logger.error("项目meta损坏", extra={"project_id": project_id})
         raise ProjectNotFoundError(project_id)
     return ApiResponse.ok(info)
+
+
+@router.post("/projects/{project_id}/recalculate-stats", response_model=ApiResponse[ProjectStatsResponse])
+async def recalculate_project_stats(
+    project_id: str,
+    settings: Settings = Depends(get_settings),
+):
+    """重新计算项目完成度统计
+
+    扫描 chapters/ 下所有 sec-*.md 文件，统计：
+    - 总节数、已完成节数（字数 > 0）
+    - 总字数
+    - 章数、卷数
+    - 更新 context.json 并返回最新统计
+    """
+    project_dir = settings.projects_path / project_id
+    if not project_dir.exists():
+        raise ProjectNotFoundError(project_id)
+
+    stats = _recalculate_stats(project_dir)
+    completion_rate = (stats["completed_sections"] / stats["total_sections"]) if stats["total_sections"] > 0 else 0.0
+
+    # 更新 context.json
+    context = _load_context(project_dir)
+    context["stats"] = stats
+    context["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await asyncio.to_thread(
+        _context_path(project_dir).write_text,
+        json.dumps(context, ensure_ascii=False, indent=2),
+        "utf-8",
+    )
+
+    logger.info("项目统计已重新计算", extra={
+        "project_id": project_id,
+        "total_sections": stats["total_sections"],
+        "completed_sections": stats["completed_sections"],
+        "total_words": stats["total_words"],
+    })
+
+    return ApiResponse.ok(ProjectStatsResponse(
+        total_sections=stats["total_sections"],
+        completed_sections=stats["completed_sections"],
+        total_words=stats["total_words"],
+        chapter_count=stats["chapter_count"],
+        volume_count=stats["volume_count"],
+        completion_rate=round(completion_rate, 4),
+    ))
 
 
 @router.delete("/projects/{project_id}", response_model=ApiResponse[None])

@@ -42,7 +42,8 @@
       <span>AI 正在生成...</span>
     </div>
     <div v-else-if="fileGen.currentPrompt.value" class="generation-status generation-done">
-      <span>上次生成 prompt: {{ fileGen.currentPrompt.value.substring(0, 120) }}...</span>
+      <i class="fa-solid fa-check"></i>
+      <span>上次生成完成，prompt 已填入下方编辑框</span>
     </div>
 
     <!-- Prompt 编辑区 -->
@@ -55,8 +56,24 @@
         @input="handlePromptInput"
         class="prompt-editor"
       />
+      <!-- @{path} 引用文件列表 -->
+      <div v-if="fileRefs.length > 0" class="file-refs">
+        <div class="file-refs-label">引用文件</div>
+        <div class="file-refs-list">
+          <a
+            v-for="ref in fileRefs"
+            :key="ref.path"
+            class="file-ref-chip"
+            @click="openReferencedFile(ref.path)"
+            title="点击打开该文件"
+          >
+            <i class="fa-solid fa-file-lines"></i>
+            {{ ref.path }}
+          </a>
+        </div>
+      </div>
       <div class="editor-hint">
-        提示：使用 <code>[文件名.md]</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量
+        提示：使用 <code>@{文件路径}</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量
       </div>
     </div>
   </div>
@@ -69,19 +86,37 @@ import { useRightPanelStore } from '@/stores/rightPanel'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
+import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useTaskQueue } from '@/composables/useTaskQueue'
 
 const pipelineStore = usePipelineStore()
 const rightPanelStore = useRightPanelStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
+const fileStore = useFileStore()
 const fileGen = useFileGeneration()
+const taskQueue = useTaskQueue()
 
 const localPrompt = ref('')
 const varHint = '{{变量名}}'
 const isFreeMode = ref(true)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
+
+// 从 prompt 文本中提取 @{path} 引用
+const fileRefs = computed(() => {
+  const refs: { path: string }[] = []
+  const pattern = /@\{([^}]+)\}/g
+  let match: RegExpExecArray | null
+  while ((match = pattern.exec(localPrompt.value)) !== null) {
+    const path = match[1].trim()
+    if (path && !refs.some(r => r.path === path)) {
+      refs.push({ path })
+    }
+  }
+  return refs
+})
 
 const storePipelines = computed(() => pipelineStore.pipelines)
 const storeSteps = computed(() => pipelineStore.currentDetail?.steps || [])
@@ -119,6 +154,17 @@ watch(
   { deep: true },
 )
 
+// 管线运行时，将每次生成的 prompt 实时显示到编辑框
+watch(
+  () => fileGen.currentPrompt.value,
+  (val) => {
+    if (val && isPipelineRunning.value) {
+      localPrompt.value = val
+      rightPanelStore.updatePrompt(val)
+    }
+  },
+)
+
 function onPipelineChange(name: string) {
   selectedPipeline.value = name
   if (name === '_free') {
@@ -132,6 +178,14 @@ function onPipelineChange(name: string) {
 
 function onStepChange(index: number) {
   pipelineStore.selectStep(index)
+}
+
+function openReferencedFile(path: string) {
+  const name = path.split('/').pop() || path
+  const node = { name, path, type: 'file' as const }
+  fileStore.openFile(node)
+  editorStore.setCurrentFile(path)
+  notification.info(`已打开: ${path}`)
 }
 
 function handlePromptInput() {
@@ -156,21 +210,20 @@ async function runCurrentPipeline() {
   if (isPipelineRunning.value) return
 
   rightPanelStore.setPipelineRunning(true)
+  const fileName = editorStore.currentFilePath.split('/').pop() || ''
+  const pipelineName = isFreeMode.value ? 'polish' : selectedPipeline.value
+
   try {
-    if (isFreeMode.value) {
-      // 自由编辑模式：使用默认管线生成
-      await fileGen.runPipeline(
-        projectStore.currentProject.id,
-        editorStore.currentFilePath,
-        'polish',
-      )
-    } else {
-      await fileGen.runPipeline(
-        projectStore.currentProject.id,
-        editorStore.currentFilePath,
-        selectedPipeline.value,
-      )
-    }
+    await taskQueue.enqueue(
+      async () => {
+        await fileGen.runPipeline(
+          projectStore.currentProject!.id,
+          editorStore.currentFilePath!,
+          pipelineName,
+        )
+      },
+      `${pipelineName}: ${fileName}`,
+    )
   } catch (e: any) {
     notification.error('管线运行失败: ' + (e.message || '未知错误'))
     console.warn('管线运行失败:', e)
@@ -257,6 +310,46 @@ async function runCurrentPipeline() {
 .prompt-editor {
   flex: 1;
   width: 100%;
+}
+
+.file-refs {
+  margin-top: 6px;
+}
+
+.file-refs-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.file-refs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.file-ref-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  font-size: 11px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--accent-primary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-primary);
+  }
+
+  i {
+    font-size: 10px;
+  }
 }
 
 .editor-hint {

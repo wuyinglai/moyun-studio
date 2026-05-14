@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import api from '@/services/api'
 
 export interface CustomParamCategory {
   key: string
@@ -16,6 +17,35 @@ export const useCustomParamsStore = defineStore('customParams', () => {
     { key: 'background', label: '背景', options: ['现代都市', '古代架空', '未来世界', '异界大陆', '校园生活', '末世废土', '西方奇幻'] },
     { key: 'theme', label: '主题', options: ['成长冒险', '爱恨情仇', '权谋斗争', '探索揭秘', '逆袭崛起', '团队协作', '文明冲突'] },
   ])
+  const loaded = ref(false)
+
+  /** 从后端加载自定义参数 */
+  async function loadFromBackend() {
+    try {
+      const data: { categories: CustomParamCategory[] } = await api.get('/config/custom-params')
+      if (data.categories && data.categories.length > 0) {
+        categories.value = data.categories
+      }
+    } catch {
+      // 首次启动无后端数据时使用默认值
+    }
+    loaded.value = true
+  }
+
+  /** 同步到后端 */
+  async function syncToBackend() {
+    try {
+      await api.put('/config/custom-params', {
+        categories: categories.value.map(c => ({
+          key: c.key,
+          label: c.label,
+          options: c.options,
+        })),
+      })
+    } catch {
+      // 静默失败，下次会重试
+    }
+  }
 
   function getOptions(key: string): string[] {
     return categories.value.find(c => c.key === key)?.options || []
@@ -25,6 +55,7 @@ export const useCustomParamsStore = defineStore('customParams', () => {
     const cat = categories.value.find(c => c.key === key)
     if (cat && !cat.options.includes(option)) {
       cat.options.push(option)
+      syncToBackend()
     }
   }
 
@@ -32,6 +63,7 @@ export const useCustomParamsStore = defineStore('customParams', () => {
     const cat = categories.value.find(c => c.key === key)
     if (cat) {
       cat.options = cat.options.filter(o => o !== option)
+      syncToBackend()
     }
   }
 
@@ -46,10 +78,14 @@ export const useCustomParamsStore = defineStore('customParams', () => {
     for (const cat of categories.value) {
       cat.options = defaults[cat.key] || []
     }
+    syncToBackend()
   }
 
   return {
     categories,
+    loaded,
+    loadFromBackend,
+    syncToBackend,
     getOptions,
     addOption,
     removeOption,

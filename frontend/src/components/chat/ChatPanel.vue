@@ -67,7 +67,11 @@ async function sendMessage() {
 
   inputText.value = ''
   try {
-    await chatStore.sendMessage(text)
+    await chatStore.sendMessage(
+      text,
+      projectStore.currentProject?.id,
+      fileStore.currentFile?.path,
+    )
   } catch {
     notification.error('发送消息失败')
   }

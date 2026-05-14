@@ -42,7 +42,7 @@
         </a-dropdown>
         <a-divider type="vertical" />
         <a-button size="small" type="primary" ghost @click="handleGenerateNext">
-          📄 生成下一个
+          📄 写下一部分
         </a-button>
         <a-divider type="vertical" />
         <a-dropdown>
@@ -87,7 +87,10 @@ import { useUIStore } from '@/stores/ui'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { useProjectStore } from '@/stores/project'
 import { usePipelineStore } from '@/stores/pipeline'
+import { useTaskStore } from '@/stores/task'
+import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 
 const chatStore = useChatStore()
 const historyStore = useHistoryStore()
@@ -98,8 +101,11 @@ const rightPanelStore = useRightPanelStore()
 const projectStore = useProjectStore()
 const pipelineStore = usePipelineStore()
 const fileGen = useFileGeneration()
+const taskQueue = useTaskQueue()
 
-const isGenerating = computed(() => chatStore.isStreaming)
+const isGenerating = computed(() =>
+  chatStore.isStreaming || fileGen.isGenerating.value || taskQueue.isProcessing.value,
+)
 
 const customPipelines = computed(() =>
   pipelineStore.pipelines.filter(p => p.source === 'custom')
@@ -139,6 +145,14 @@ const canGoForward = computed(() => {
 
 function handleStop() {
   chatStore.cancelStream()
+  fileGen.cancelGeneration()
+  // 只取消当前正在运行的任务（其余排队任务保留）
+  const taskStore = useTaskStore()
+  const running = taskStore.tasks.find(t => t.status === 'running')
+  if (running) {
+    cancelQueuedTask(running.id)
+  }
+  notification.info('已停止当前任务')
 }
 
 async function runPipeline(name: string) {
@@ -149,17 +163,25 @@ async function runPipeline(name: string) {
 
   rightPanelStore.setPipelineTab('quick')
 
-  try {
-    await fileGen.runPipeline(
-      projectStore.currentProject.id,
-      editorStore.currentFilePath,
-      name,
-    )
-  } catch (e: any) {
-    if (e.name !== 'AbortError') {
-      notification.error('管线运行失败: ' + (e.message || ''))
-    }
+  const labelMap: Record<string, string> = {
+    polish: '润色',
+    generate: '生成',
+    rewrite: '重写',
+    extract: '提取',
   }
+  const fileName = editorStore.currentFilePath.split('/').pop() || ''
+  const pipelineLabel = labelMap[name] || name
+
+  await taskQueue.enqueue(
+    async () => {
+      await fileGen.runPipeline(
+        projectStore.currentProject!.id,
+        editorStore.currentFilePath!,
+        name,
+      )
+    },
+    `${pipelineLabel}: ${fileName}`,
+  )
 }
 
 function handleCustomPipeline(info: any) {
@@ -167,7 +189,71 @@ function handleCustomPipeline(info: any) {
 }
 
 function handleGenerateNext() {
-  window.dispatchEvent(new CustomEvent('chat:request-generate'))
+  if (!projectStore.currentProject || !editorStore.currentFilePath) {
+    notification.warning('请先打开一个文件')
+    return
+  }
+
+  const currentPath = editorStore.currentFilePath
+  const dir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1)
+  const currentName = currentPath.split('/').pop() || ''
+
+  // 尝试递增文件名中的数字（如 chapter-1.md → chapter-2.md）
+  const match = currentName.match(/^(.*?)(\d+)(\.[^.]+)$/)
+  let newName: string
+  if (match) {
+    const prefix = match[1]
+    const num = parseInt(match[2], 10)
+    const ext = match[3]
+    newName = `${prefix}${num + 1}${ext}`
+  } else {
+    const dotIndex = currentName.lastIndexOf('.')
+    const ext = dotIndex >= 0 ? currentName.slice(dotIndex) : ''
+    const base = dotIndex >= 0 ? currentName.slice(0, dotIndex) : currentName
+    newName = `${base}-2${ext}`
+  }
+
+  const newPath = dir + newName
+  createAndGenerateFile(newPath)
+}
+
+async function createAndGenerateFile(filePath: string) {
+  if (!projectStore.currentProject) return
+
+  const fileStore = useFileStore()
+  try {
+    await fileStore.createFile(projectStore.currentProject.id, filePath, '')
+
+    const node = { name: filePath.split('/').pop() || '', path: filePath, type: 'file' as const }
+    fileStore.openFile(node)
+    editorStore.setCurrentFile(filePath)
+
+    rightPanelStore.setPipelineTab('quick')
+
+    const fileName = filePath.split('/').pop() || ''
+    await taskQueue.enqueue(
+      async () => {
+        await fileGen.runPipeline(
+          projectStore.currentProject!.id,
+          filePath,
+          'generate',
+        )
+      },
+      `生成新文件: ${fileName}`,
+    )
+
+    // 生成完成后从磁盘刷新内容
+    setTimeout(async () => {
+      try {
+        const result = await fileStore.readFile(projectStore.currentProject.id, filePath)
+        if (result?.content) {
+          editorStore.loadContent(filePath, result.content)
+        }
+      } catch {}
+    }, 500)
+  } catch (e: any) {
+    notification.error('创建文件失败: ' + (e.message || ''))
+  }
 }
 
 function handleTokenCount() { uiStore.openTokenCount() }

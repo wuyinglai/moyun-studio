@@ -143,9 +143,9 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /**
-   * 发送聊天消息
+   * 发送聊天消息（走 chat 管线）
    */
-  async function sendMessage(content: string) {
+  async function sendMessage(content: string, projectId?: string, contextFile?: string) {
     const llmStore = useLLMStore()
     generationMode.value = 'chat'
     llmStore.setGenerating(true)
@@ -159,7 +159,11 @@ export const useChatStore = defineStore('chat', () => {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({
+          message: content,
+          project_id: projectId || '',
+          context_file: contextFile || null,
+        }),
         signal: streamController.signal,
       })
 

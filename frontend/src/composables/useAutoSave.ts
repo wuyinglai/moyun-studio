@@ -1,6 +1,7 @@
 /**
  * useAutoSave - 自动保存 composable
  * 防抖机制：300ms 内不触发，超过后自动保存
+ * 编辑10秒后自动创建后端版本快照
  */
 import { ref } from 'vue'
 import { useFileStore } from '@/stores/file'
@@ -8,8 +9,19 @@ import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
+import api from '@/services/api'
 
 const DEBOUNCE_MS = 300
+
+/** 在后台创建版本快照（不阻塞调用方） */
+function createBackendSnapshot(projectId: string, filePath: string, label?: string) {
+  api.post(`/snapshots/${projectId}`, {
+    file_path: filePath,
+    label: label || null,
+  }).catch(() => {
+    // 快照创建失败不应影响编辑体验，静默忽略
+  })
+}
 
 export function useAutoSave() {
   const fileStore = useFileStore()
@@ -31,7 +43,7 @@ export function useAutoSave() {
       doSave(filePath)
     }, DEBOUNCE_MS)
 
-    // G0101: 版本快照 — 编辑10秒后生成快照
+    // G0101: 版本快照 — 编辑10秒后生成快照（内存 + 后端持久化）
     if (snapshotTimer) {
       clearTimeout(snapshotTimer)
     }
@@ -39,6 +51,10 @@ export function useAutoSave() {
       const content = editorStore.getContent(filePath)
       if (content) {
         historyStore.pushHistory(filePath, content)
+        // 同步创建后端快照
+        if (projectStore.currentProject) {
+          createBackendSnapshot(projectStore.currentProject.id, filePath)
+        }
       }
     }, 10000)
   }
@@ -55,6 +71,7 @@ export function useAutoSave() {
       const content = editorStore.getContent(filePath)
       if (content) {
         historyStore.pushHistory(filePath, content)
+        createBackendSnapshot(projectStore.currentProject.id, filePath, '自动保存')
       }
       await fileStore.saveFile(projectStore.currentProject.id, filePath, content)
     } catch {
