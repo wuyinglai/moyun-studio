@@ -23,9 +23,6 @@
         <a-button size="small" type="primary" ghost @click="runPipeline('polish')">
           ✏️ 润色
         </a-button>
-        <a-button size="small" type="primary" ghost @click="runPipeline('generate')">
-          📝 生成
-        </a-button>
         <a-button size="small" type="primary" ghost @click="runPipeline('rewrite')">
           📦 重写
         </a-button>

@@ -129,6 +129,19 @@
       "files": [
         "frontend/src/App.vue"
       ],
+      "commit": "2bd8d33"
+    },
+    {
+      "id": 9,
+      "timestamp": "2026-05-14T20:50:00+08:00",
+      "type": "refactor",
+      "scope": "TB006",
+      "module": "编辑器工具栏",
+      "description": "移除"生成"按钮，仅保留润色/重写/提取",
+      "reason": "生成(append)功能已包含在\"写下一部分\"工作流中，与重写(overwrite)按钮冗余",
+      "files": [
+        "frontend/src/components/editor/EditorToolbar.vue"
+      ],
       "commit": ""
     }
   ]
