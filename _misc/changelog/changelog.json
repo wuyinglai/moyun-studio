@@ -78,6 +78,19 @@
         "frontend/package-lock.json"
       ],
       "commit": ""
+    },
+    {
+      "id": 5,
+      "timestamp": "2026-05-14T19:30:00+08:00",
+      "type": "docs",
+      "scope": "other",
+      "module": "文档",
+      "description": "修正前端功能清单完整版V2：更新CSS变量名、补全SSE事件、修正状态指示描述等",
+      "reason": "对照实际代码修正文档中的事实错误",
+      "files": [
+        "docs/前端功能清单_完整版V2.md"
+      ],
+      "commit": ""
     }
   ]
 }
