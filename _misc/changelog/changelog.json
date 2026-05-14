@@ -1,0 +1,83 @@
+{
+  "version": "1.0",
+  "entries": [
+    {
+      "id": 1,
+      "timestamp": "2026-05-14T10:30:00+08:00",
+      "type": "refactor",
+      "scope": "api",
+      "module": "后端API",
+      "description": "重构 generate.py：移除 PromptEngine 依赖，共享 PipelineRunner 实例",
+      "reason": "统一 LLM 调用路径，管线模式和回退模式共用 PipelineRunner",
+      "files": [
+        "backend/api/generate.py",
+        "backend/core/pipeline.py",
+        "backend/tests/test_pipeline.py"
+      ],
+      "commit": ""
+    },
+    {
+      "id": 2,
+      "timestamp": "2026-05-14T10:35:00+08:00",
+      "type": "style",
+      "scope": "M0901",
+      "module": "视觉风格",
+      "description": "全面重建设计系统为水墨丹青主题，重构全局 CSS 变量和组件样式",
+      "reason": "统一视觉风格，以中国水墨美学为灵感优化暗色界面",
+      "files": [
+        "frontend/src/assets/styles/base.css",
+        "frontend/src/App.vue",
+        "frontend/src/components/chat/ChatInput.vue",
+        "frontend/src/components/chat/ChatMessage.vue",
+        "frontend/src/components/chat/ChatMessages.vue",
+        "frontend/src/components/chat/ChatPanel.vue",
+        "frontend/src/components/editor/EditorTabs.vue",
+        "frontend/src/components/editor/EditorToolbar.vue",
+        "frontend/src/components/editor/MarkdownEditor.vue",
+        "frontend/src/components/file-tree/FileTree.vue",
+        "frontend/src/components/file-tree/TreeNode.vue",
+        "frontend/src/components/layout/AppHeader.vue",
+        "frontend/src/components/layout/AppLayout.vue",
+        "frontend/src/components/right-panel/ExecutionPanel.vue",
+        "frontend/src/components/right-panel/RightPanel.vue",
+        "frontend/src/components/right-panel/WorkflowPanel.vue"
+      ],
+      "commit": ""
+    },
+    {
+      "id": 3,
+      "timestamp": "2026-05-14T10:40:00+08:00",
+      "type": "refactor",
+      "scope": "G0113",
+      "module": "编辑器状态管理",
+      "description": "清理前端代码：移除未使用的导入和注释，优化 SSE 和任务队列逻辑",
+      "reason": "减少死代码，提升可维护性",
+      "files": [
+        "frontend/src/composables/useSSE.ts",
+        "frontend/src/composables/useTaskQueue.ts",
+        "frontend/src/composables/useKeyboardShortcuts.ts",
+        "frontend/src/stores/chat.ts",
+        "frontend/src/stores/editor.ts",
+        "frontend/src/composables/useFileGeneration.ts",
+        "frontend/src/composables/useWorkflow.ts",
+        "frontend/src/utils/semanticHighlight.ts",
+        "frontend/src/composables/useProjectWizard.ts",
+        "frontend/vite.config.ts"
+      ],
+      "commit": ""
+    },
+    {
+      "id": 4,
+      "timestamp": "2026-05-14T10:45:00+08:00",
+      "type": "chore",
+      "scope": "other",
+      "module": "工程配置",
+      "description": "移除旧的 package-lock.json 依赖快照",
+      "reason": "清理不再需要的依赖锁定文件",
+      "files": [
+        "frontend/package-lock.json"
+      ],
+      "commit": ""
+    }
+  ]
+}

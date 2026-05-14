@@ -65,40 +65,40 @@ let editorView: EditorView | null = null
 const moyunTheme = EditorView.theme({
   '&': {
     height: '100%',
-    background: 'var(--bg-primary)',
-    color: 'var(--text-primary)',
+    background: 'var(--ink-deep)',
+    color: 'var(--text-ink)',
     fontSize: '15px',
   },
   '.cm-content': {
     fontFamily: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
     lineHeight: '1.85',
     padding: '24px 32px',
-    caretColor: 'var(--accent-primary)',
+    caretColor: 'var(--gold-primary)',
   },
   '.cm-cursor': {
-    borderLeftColor: 'var(--accent-primary)',
+    borderLeftColor: 'var(--gold-primary)',
     borderLeftWidth: '2px',
   },
   '.cm-activeLine': {
-    backgroundColor: 'rgba(107, 140, 255, 0.08)',
+    backgroundColor: 'rgba(201, 169, 110, 0.04)',
   },
   '.cm-activeLineGutter': {
-    backgroundColor: 'rgba(107, 140, 255, 0.08)',
+    backgroundColor: 'rgba(201, 169, 110, 0.04)',
   },
   '.cm-gutters': {
-    backgroundColor: 'var(--bg-secondary)',
-    color: 'var(--text-muted)',
-    borderRight: '1px solid var(--border-color)',
+    backgroundColor: 'var(--ink-dark)',
+    color: 'var(--text-faint)',
+    borderRight: '1px solid var(--border-ink)',
   },
   '.cm-lineNumbers .cm-gutterElement': {
     padding: '0 14px 0 10px',
     fontSize: '13px',
   },
   '.cm-selectionBackground': {
-    backgroundColor: 'rgba(107, 140, 255, 0.25) !important',
+    backgroundColor: 'rgba(201, 169, 110, 0.2) !important',
   },
   '&.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'rgba(107, 140, 255, 0.25) !important',
+    backgroundColor: 'rgba(201, 169, 110, 0.2) !important',
   },
   '.cm-scroller': {
     overflow: 'auto',
@@ -155,13 +155,11 @@ function handleContentChange(content: string) {
 
   editorStore.updateContent(fileStore.currentFile.path, content)
   fileStore.markDirty(fileStore.currentFile.path)
-  // 标记本地编辑，防止外部更新覆盖
   editorStore.markLocalEdit()
 
   triggerAutoSave(fileStore.currentFile.path)
 }
 
-// 监听文件切换：打开文件时创建编辑器
 watch(
   () => fileStore.currentFile,
   async (file) => {
@@ -175,28 +173,23 @@ watch(
   }
 )
 
-// 监听外部内容变更（流式生成等），更新编辑器
-// 只有 contentSource === 'external' 时才更新，防止覆盖用户正在编辑的内容
 watch(
   () => fileStore.currentFile ? editorStore.contents[fileStore.currentFile.path] : undefined,
   (content) => {
     if (content === undefined || !editorView) return
-    // 只有外部更新才触发编辑器更新
     if (editorStore.contentSource !== 'external') return
     const current = editorView.state.doc.toString()
     if (current !== content) {
       editorView.dispatch({
         changes: { from: 0, to: current.length, insert: content },
       })
-      // 更新完成后标记为本地来源
       editorStore.markLocalEdit()
     }
   }
 )
 
-// 预览模式下，内容变化时更新预览
 watch(
-  () => editorStore.currentFile ? editorStore.getContent(editorStore.currentFile.path) : undefined,
+  () => fileStore.currentFile ? editorStore.getContent(fileStore.currentFile.path) : undefined,
   () => {
     if (isPreviewMode.value) {
       updatePreview()
@@ -225,7 +218,6 @@ onBeforeUnmount(() => {
   }
 })
 
-// 监听外部 undo/redo 请求（来自 EditorToolbar）
 function handleUndo() {
   if (editorView) undo(editorView)
 }
@@ -255,7 +247,7 @@ function handleJumpToLine(e: Event) {
   width: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--ink-deep);
   overflow: hidden;
 }
 
@@ -265,6 +257,7 @@ function handleJumpToLine(e: Event) {
   align-items: center;
   justify-content: center;
   padding: 40px;
+  position: relative;
 }
 
 .welcome-card {
@@ -274,31 +267,35 @@ function handleJumpToLine(e: Event) {
   gap: 12px;
   max-width: 480px;
   text-align: center;
+  animation: fade-in-up 0.5s ease;
 }
 
 .welcome-icon {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(107, 140, 255, 0.15), rgba(168, 85, 247, 0.15));
-  border-radius: 24px;
+  font-size: 32px;
+  color: var(--gold-primary);
+  background: linear-gradient(135deg, rgba(201, 169, 110, 0.12), rgba(201, 169, 110, 0.03));
+  border: 1px solid rgba(201, 169, 110, 0.1);
+  border-radius: 20px;
   margin-bottom: 8px;
-  font-size: 36px;
-  color: var(--accent-primary);
 }
 
 .welcome-title {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-warm-white);
   margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: 2px;
 }
 
 .welcome-desc {
-  font-size: 15px;
-  color: var(--text-secondary);
+  font-size: 14px;
+  color: var(--text-muted-ink);
   margin: 0 0 16px 0;
   line-height: 1.6;
 }
@@ -308,10 +305,17 @@ function handleJumpToLine(e: Event) {
   gap: 12px;
 }
 
+.welcome-actions:deep(.ant-btn) {
+  height: 40px;
+  padding: 0 24px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
 .welcome-features {
   display: flex;
   gap: 32px;
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .feature-item {
@@ -319,98 +323,97 @@ function handleJumpToLine(e: Event) {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text-faint);
+}
 
-  i {
-    font-size: 20px;
-    color: var(--accent-primary);
-    opacity: 0.7;
-  }
+.feature-item i {
+  font-size: 20px;
+  color: var(--gold-primary);
+  opacity: 0.5;
 }
 
 .codemirror-container {
   flex: 1;
   overflow: hidden;
-
-  :deep(.cm-editor) {
-    height: 100%;
-  }
-
-  :deep(.cm-scroller) {
-    overflow: auto;
-  }
-
-  /* ── 语义着色 ── */
-  :deep(.cm-semantic-dialogue) {
-    color: #7ecf8a !important;
-  }
-  :deep(.cm-semantic-character) {
-    color: #6b8cff !important;
-  }
-  :deep(.cm-semantic-scene) {
-    color: #c084fc !important;
-  }
 }
+
+.codemirror-container:deep(.cm-editor) { height: 100%; }
+.codemirror-container:deep(.cm-scroller) { overflow: auto; }
+
+.codemirror-container:deep(.cm-semantic-dialogue) { color: var(--jade-light) !important; }
+.codemirror-container:deep(.cm-semantic-character) { color: var(--gold-primary) !important; }
+.codemirror-container:deep(.cm-semantic-scene) { color: #c084fc !important; }
 
 .preview-container {
   flex: 1;
   overflow: auto;
-  padding: 24px 32px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  padding: 32px 40px;
+  background: var(--ink-deep);
+  color: var(--text-ink);
+  font-family: var(--font-body);
   line-height: 1.85;
   font-size: 15px;
+}
 
-  :deep(h1) {
-    font-size: 1.8em;
-    font-weight: 700;
-    margin: 0.8em 0;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.3em;
-  }
+.preview-container:deep(h1) {
+  font-family: var(--font-display);
+  font-size: 1.8em;
+  font-weight: 700;
+  margin: 0.8em 0;
+  border-bottom: 1px solid var(--border-ink);
+  padding-bottom: 0.3em;
+  color: var(--text-warm-white);
+  letter-spacing: 1px;
+}
 
-  :deep(h2) {
-    font-size: 1.5em;
-    font-weight: 600;
-    margin: 0.8em 0;
-  }
+.preview-container:deep(h2) {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.8em 0;
+  color: var(--text-warm-white);
+}
 
-  :deep(h3) {
-    font-size: 1.25em;
-    font-weight: 600;
-    margin: 0.6em 0;
-  }
+.preview-container:deep(h3) {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0.6em 0;
+  color: var(--text-warm-white);
+}
 
-  :deep(p) {
-    margin: 0.8em 0;
-  }
+.preview-container:deep(p) { margin: 0.8em 0; }
 
-  :deep(blockquote) {
-    border-left: 4px solid var(--accent-primary);
-    padding-left: 1em;
-    margin: 1em 0;
-    color: var(--text-secondary);
-  }
+.preview-container:deep(blockquote) {
+  border-left: 2px solid var(--gold-primary);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--text-muted-ink);
+  font-style: italic;
+}
 
-  :deep(code) {
-    background: var(--bg-secondary);
-    padding: 0.2em 0.4em;
-    border-radius: 3px;
-    font-family: 'Fira Code', monospace;
-  }
+.preview-container:deep(code) {
+  background: var(--ink-mid);
+  padding: 0.2em 0.4em;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  color: var(--gold-primary);
+}
 
-  :deep(pre) {
-    background: var(--bg-secondary);
-    padding: 1em;
-    border-radius: 6px;
-    overflow-x: auto;
+.preview-container:deep(pre) {
+  background: var(--ink-dark);
+  padding: 1em;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  border: 1px solid var(--border-ink);
+}
 
-    :deep(code) {
-      background: none;
-      padding: 0;
-    }
-  }
+.preview-container:deep(pre) code {
+  background: none;
+  padding: 0;
+  color: var(--text-ink);
+}
+
+.preview-container:deep(a) {
+  color: var(--gold-primary);
 }
 </style>

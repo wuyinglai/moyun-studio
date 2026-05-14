@@ -18,21 +18,21 @@ export const useProjectWizard = () => {
 
   const isGenerating = ref(false)
 
-  async function createProject(params: typeof params.value) {
-    if (!params.genre) {
+  async function createProject(p: typeof params.value) {
+    if (!p.genre) {
       throw new Error('请选择题材')
     }
     isGenerating.value = true
     try {
       const project = await projectStore.createProject({
-        name: params.name || '新项目',
-        genre: params.genre,
-        tone: params.tone,
-        background: params.background,
-        theme: params.theme,
-        writing_style: params.writing_style,
-        author: params.author,
-        target_word_count: params.target_word_count,
+        name: p.name || '新项目',
+        genre: p.genre,
+        tone: p.tone,
+        background: p.background,
+        theme: p.theme,
+        writing_style: p.writing_style,
+        author: p.author,
+        target_word_count: p.target_word_count,
       })
       return project
     } finally {

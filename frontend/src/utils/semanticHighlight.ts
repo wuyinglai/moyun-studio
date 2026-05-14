@@ -9,9 +9,9 @@
 import { StateField, StateEffect, type Extension } from '@codemirror/state'
 import {
   Decoration,
-  DecorationSet,
   EditorView,
 } from '@codemirror/view'
+import type { DecorationSet } from '@codemirror/view'
 
 // ─── 效果 ──────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ export function semanticHighlight(initialCharacters: string[] = []): Extension {
 // ─── 装饰计算 ───────────────────────────────────────────────────
 
 function computeDecorations(text: string, characterNames: string[]): DecorationSet {
-  const decos: ReturnType<typeof Decoration.mark>[] = []
+  const decos: ReturnType<Decoration['range']>[] = []
 
   // 为节省性能，跳过过长文本
   if (text.length > 200_000) {

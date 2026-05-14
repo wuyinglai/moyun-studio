@@ -39,11 +39,9 @@ export function restoreInterruptedTasks() {
 
   const taskStore = useTaskStore()
   for (const meta of metas) {
-    // 标记为中断状态，用户可选择重新执行
     taskStore.addTask(meta.id, `[中断] ${meta.name}`)
     taskStore.markInterrupted(meta.id)
   }
-  // 清空已恢复的持久化数据
   localStorage.removeItem(PREFIX + 'queue')
 }
 
@@ -72,11 +70,9 @@ async function processQueue() {
       // L1：暂停等待用户确认
       if (getAutoMode() === 'L1') {
         taskStore.waitForConfirm(task.id)
-        taskStore.addLog('info', `等待确认: ${task.name}`)
         await new Promise<void>((resolve) => {
           _confirmResolvers.set(task.id, resolve)
         })
-        // 用户已确认，标记完成
         taskStore.completeTask(task.id)
       }
 
@@ -95,9 +91,6 @@ async function processQueue() {
 
 /* ─── 导出函数 ──────────────────────────────────────────── */
 
-/**
- * 将任务加入执行队列（L1 逐确认 / L2 自动连续）
- */
 export function enqueueTask(
   executor: () => Promise<void>,
   name: string,
@@ -115,9 +108,7 @@ export function enqueueTask(
   return id
 }
 
-/**
- * 外部确认当前暂停的任务（ExecutionPanel 的确认按钮调用）
- */
+/** 确认当前暂停的任务（由编辑器按钮触发） */
 export function confirmTask(taskId: string) {
   const resolver = _confirmResolvers.get(taskId)
   if (resolver) {
@@ -126,9 +117,6 @@ export function confirmTask(taskId: string) {
   }
 }
 
-/**
- * 取消队列中的任务
- */
 export function cancelQueuedTask(taskId: string) {
   const resolver = _confirmResolvers.get(taskId)
   if (resolver) {
@@ -147,7 +135,6 @@ export function cancelQueuedTask(taskId: string) {
 export function useTaskQueue() {
   return {
     enqueue: enqueueTask,
-    confirmTask: confirmTask,
     cancelTask: cancelQueuedTask,
     restoreInterruptedTasks,
     isProcessing: _isProcessing,

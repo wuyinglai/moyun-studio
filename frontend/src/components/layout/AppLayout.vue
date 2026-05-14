@@ -1,15 +1,15 @@
 <template>
   <div class="app-layout">
-    <!-- 左栏 -->
-    <div class="panel-left" :style="{ width: leftWidth }">
+    <!-- 左栏：文件导航 -->
+    <nav class="panel-left" :style="{ width: leftWidth }" aria-label="文件导航">
       <FileTree />
-    </div>
+    </nav>
 
     <!-- 中栏分隔条 -->
     <div class="divider divider-v" @mousedown="startHDrag"></div>
 
-    <!-- 中栏 -->
-    <div class="panel-center" :style="{ width: centerWidth }">
+    <!-- 中栏：主编辑区 -->
+    <main class="panel-center" :style="{ width: centerWidth }">
       <div class="center-top" :style="{ height: topHeight }">
         <div class="area-editor">
           <EditorTabs />
@@ -23,20 +23,20 @@
           <ChatPanel />
         </div>
       </div>
-    </div>
+    </main>
 
     <!-- 右栏分隔条 -->
     <div class="divider divider-v" @mousedown="startRightDrag"></div>
 
-    <!-- 右栏 -->
-    <div class="panel-right" :style="{ width: rightWidth }">
+    <!-- 右栏：辅助面板 -->
+    <aside class="panel-right" :style="{ width: rightWidth }" aria-label="辅助面板">
       <RightPanel />
-    </div>
+    </aside>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import FileTree from '@/components/file-tree/FileTree.vue'
 import EditorTabs from '@/components/editor/EditorTabs.vue'
 import EditorToolbar from '@/components/editor/EditorToolbar.vue'
@@ -158,8 +158,9 @@ function onVDrag(e: MouseEvent) {
 .panel-left {
   height: 100%;
   overflow-y: auto;
-  background: var(--bg-secondary);
+  background: var(--ink-dark);
   flex-shrink: 0;
+  border-right: 1px solid var(--border-ink);
 }
 
 .panel-center {
@@ -169,13 +170,15 @@ function onVDrag(e: MouseEvent) {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  background: var(--ink-deep);
 }
 
 .panel-right {
   height: 100%;
   overflow-y: auto;
-  background: var(--bg-secondary);
+  background: var(--ink-dark);
   flex-shrink: 0;
+  border-left: 1px solid var(--border-ink);
 }
 
 .center-top {
@@ -200,30 +203,59 @@ function onVDrag(e: MouseEvent) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  border-top: 1px solid var(--border-ink);
+  background: var(--ink-deep);
 }
 
 // ── 分隔条 ────────────────────────────────────────
 .divider {
   flex-shrink: 0;
-  background-color: var(--border-color);
+  background: var(--border-ink);
   position: relative;
-  transition: background-color 0.15s;
+  transition: all var(--transition-normal);
   z-index: 10;
 
+  &::before {
+    content: '';
+    position: absolute;
+    transition: opacity var(--transition-normal);
+    opacity: 0;
+  }
+
   &:hover {
-    background-color: var(--accent-primary);
+    background: var(--gold-primary);
+
+    &::before {
+      opacity: 1;
+    }
   }
 
   &-v {
-    width: 6px;
+    width: 5px;
     cursor: col-resize;
+
+    &::before {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(180deg, transparent, var(--gold-primary), transparent);
+    }
   }
 
   &-h {
-    height: 6px;
+    height: 5px;
     cursor: row-resize;
+
+    &::before {
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      height: 2px;
+      width: 40px;
+      background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+    }
   }
 }
 </style>

@@ -1,12 +1,17 @@
 <template>
   <div class="chat-panel">
     <div class="chat-messages" ref="messagesContainer">
-      <ChatMessages :messages="messages" :is-thinking="!!currentThinking" />
+      <ChatMessages :messages="messages" :is-thinking="!!currentThinking" @send-suggestion="handleSuggestion" />
     </div>
     <div class="chat-input-area">
       <ChatInput v-model="inputText" @send="sendMessage" :disabled="isStreaming" />
       <div class="chat-actions">
-        <button v-if="isStreaming" class="btn-cancel" @click="cancelStream">取消生成</button>
+        <button v-if="isStreaming" class="btn-cancel" @click="cancelStream">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2"/>
+          </svg>
+          取消生成
+        </button>
       </div>
     </div>
   </div>
@@ -35,19 +40,19 @@ const messages = computed(() => chatStore.messages)
 const isStreaming = computed(() => chatStore.isStreaming)
 const currentThinking = computed(() => chatStore.currentThinking)
 
-// 自动滚动到底部
 watch(
   () => messages.value.length,
-  async () => {
-    await nextTick()
-    scrollToBottom()
-  }
+  async () => { await nextTick(); scrollToBottom() }
 )
 
 watch(isStreaming, async () => {
-  await nextTick()
-  scrollToBottom()
+  await nextTick(); scrollToBottom()
 })
+
+function handleSuggestion(text: string) {
+  inputText.value = text
+  sendMessage()
+}
 
 function scrollToBottom() {
   if (messagesContainer.value) {
@@ -55,7 +60,6 @@ function scrollToBottom() {
   }
 }
 
-// 发送消息
 async function sendMessage() {
   const text = inputText.value.trim()
   if (!text) return
@@ -77,12 +81,10 @@ async function sendMessage() {
   }
 }
 
-// 取消生成
 function cancelStream() {
   chatStore.cancelStream()
 }
 
-// 监听编辑器发起的 AI 续写请求
 async function handleAIContinue() {
   const projectId = projectStore.currentProject?.id
   const filePath = fileStore.currentFile?.path
@@ -97,7 +99,6 @@ async function handleAIContinue() {
   }
 }
 
-// 监听编辑器发起的 AI 重写请求
 async function handleAIRewrite() {
   const projectId = projectStore.currentProject?.id
   const filePath = fileStore.currentFile?.path
@@ -128,64 +129,53 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-primary);
+  background: var(--ink-deep);
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 4px;
 }
 
 .chat-input-area {
-  border-top: 1px solid var(--border-color);
-  padding: 16px;
-  background: var(--bg-card);
+  border-top: 1px solid var(--border-ink);
+  padding: 12px 16px;
+  background: var(--ink-dark);
 }
 
 .chat-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .btn-cancel {
-  padding: 8px 16px;
-  background: var(--accent-error);
-  color: white;
-  border: none;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(192, 57, 43, 0.12);
+  color: var(--vermillion-light);
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 
   &:hover {
-    filter: brightness(1.1);
+    background: rgba(192, 57, 43, 0.2);
     transform: translateY(-1px);
   }
 
   &:active {
     transform: translateY(0);
   }
-}
 
-.btn-clear {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: var(--bg-hover);
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
+  svg {
+    flex-shrink: 0;
   }
 }
 </style>

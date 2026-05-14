@@ -23,7 +23,6 @@ from backend.core.llm import (
     load_llm_config_from_workspace,
 )
 from backend.core.file_ops import FileService
-from backend.core.prompt_engine import PromptEngine
 from backend.core.pipeline import PipelineRunner, PipelineError
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
@@ -58,7 +57,7 @@ async def generate(
 
     支持两种模式：
     1. 管线模式：prompt_type 匹配 _GENERATE_PIPELINE_MAP 时，走 PipelineRunner
-    2. 回退模式：其余情况走原有的 PromptEngine + 直接 LLM 调用
+    2. 回退模式：其余情况用 PipelineRunner 的工具方法渲染 Prompt，再流式调用 LLM
     """
 
     async def _stream() -> AsyncGenerator[dict, None]:
@@ -66,21 +65,21 @@ async def generate(
         task_id = f"gen-{id(req)}"
         _stop_signals[task_id] = asyncio.Event()
 
+        file_service = FileService(settings.projects_path)
+        llm_cfg = load_llm_config_from_workspace(settings)
+        svc = LLMService.from_workspace_config(llm_cfg)
+        runner = PipelineRunner(settings.prompts_path, svc, file_service)
+
+        # 构建 LLM 额外参数（含 thinking 配置）
+        llm_extra_kwargs = {}
+        thinking = llm_cfg.get("thinking", settings.llm_thinking)
+        if thinking and "claude" in svc.config.model:
+            llm_extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
+
         # 检测是否可路由到管线
         if req.prompt_type in _GENERATE_PIPELINE_MAP:
             pipeline_name, output_mode = _GENERATE_PIPELINE_MAP[req.prompt_type]
             try:
-                file_service = FileService(settings.projects_path)
-                llm_cfg = load_llm_config_from_workspace(settings)
-                svc = LLMService.from_workspace_config(llm_cfg)
-                runner = PipelineRunner(settings.prompts_path, svc, file_service)
-
-                # 构建 LLM 额外参数（含 thinking 配置）
-                llm_extra_kwargs = {}
-                thinking = llm_cfg.get("thinking", settings.llm_thinking)
-                if thinking and "claude" in svc.config.model:
-                    llm_extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
-
                 async for event in runner.run(
                     pipeline_name=pipeline_name,
                     project_id=req.project_id,
@@ -101,16 +100,13 @@ async def generate(
                 _stop_signals.pop(task_id, None)
             return
 
-        # ——— 回退模式（旧逻辑） ———
+        # ——— 回退模式（单步 prompt，复用 PipelineRunner 工具方法） ———
         if event_bus:
             await event_bus.publish("task", {"task_id": task_id, "status": "running", "name": f"生成 {req.file_path}"})
 
         yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
 
         try:
-            file_service = FileService(settings.projects_path)
-            prompt_engine = PromptEngine(settings.prompts_path, file_service)
-
             logger.info("开始生成任务", extra={"task_id": task_id, "project_id": req.project_id, "file_path": req.file_path})
 
             try:
@@ -125,7 +121,8 @@ async def generate(
                 **req.extra_vars,
             }
             try:
-                prompt_text = await prompt_engine.render(req.prompt_type, variables)
+                prompt_text = runner.render_prompt(f"{req.prompt_type}.md", variables)
+                prompt_text = await runner.resolve_references(prompt_text, req.project_id)
             except Exception as e:
                 prompt_text = f"请根据以下内容进行创作：\n\n{content}"
 
@@ -145,25 +142,17 @@ async def generate(
             except Exception:
                 pass
 
-            llm_cfg = load_llm_config_from_workspace(settings)
-            svc = LLMService.from_workspace_config(llm_cfg)
-            thinking = llm_cfg.get("thinking", settings.llm_thinking)
-
             messages = [{"role": "user", "content": prompt_text}]
-            extra_kwargs = {}
-            if thinking and "claude" in svc.config.model:
-                extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
-
             stop_event = _stop_signals[task_id]
             generated_text = ""
-            async for content in svc.complete(messages, stop_event=stop_event, timeout=180, **extra_kwargs):
-                generated_text += content
+            async for chunk in svc.complete(messages, stop_event=stop_event, timeout=180, **llm_extra_kwargs):
+                generated_text += chunk
                 yield {
                     "event": "generation",
-                    "data": json.dumps({"delta": content, "task_id": task_id}),
+                    "data": json.dumps({"delta": chunk, "task_id": task_id}),
                 }
                 if event_bus:
-                    await event_bus.publish("generation", {"delta": content, "task_id": task_id})
+                    await event_bus.publish("generation", {"delta": chunk, "task_id": task_id})
 
             if generated_text and not _stop_signals[task_id].is_set():
                 if req.mode == "rewrite":
@@ -196,7 +185,7 @@ async def batch_generate(
     """批量生成章节内容
 
     根据卷/章/节筛选条件，对目标章节逐节调用LLM生成内容。
-    每节使用 generate/chapter 模板，模板变量自动从项目文件中提取。
+    使用 PipelineRunner 的变量解析能力，去除独立的 PromptEngine 依赖。
     """
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
@@ -223,7 +212,6 @@ async def batch_generate(
     for vol_dir in vol_dirs:
         if not vol_dir.is_dir():
             continue
-        vol_match = vol_dir.name  # vol-XX
 
         # 确定章范围
         if req.chapter_number:
@@ -236,14 +224,12 @@ async def batch_generate(
                 continue
 
             # 解析章节号
-            ch_match = ch_dir.name  # ch-XXX
-            ch_num = int(ch_match.split("-")[1])
+            ch_num = int(ch_dir.name.split("-")[1])
 
             # 确定节范围
             if req.section_numbers:
                 sec_nums = req.section_numbers
             else:
-                # 所有未写的节
                 sec_nums = []
                 for sec_file in sorted(ch_dir.glob("sec-*.md")):
                     sec_num = int(sec_file.stem.split("-")[1])
@@ -253,7 +239,6 @@ async def batch_generate(
                 sec_file = ch_dir / f"sec-{sec_num:03d}.md"
                 if sec_file.exists():
                     targets.append({
-                        "vol_dir": vol_dir,
                         "ch_dir": ch_dir,
                         "ch_num": ch_num,
                         "sec_num": sec_num,
@@ -266,74 +251,54 @@ async def batch_generate(
             message="未找到匹配的生成目标",
         )
 
-    # 加载 LLM 配置和服务
+    # 使用 PipelineRunner 的工具方法（而非独立的 PromptEngine）
     llm_cfg = load_llm_config_from_workspace(settings)
     svc = LLMService.from_workspace_config(llm_cfg)
     file_service = FileService(settings.projects_path)
-    prompt_engine = PromptEngine(settings.prompts_path, file_service)
+    runner = PipelineRunner(settings.prompts_path, svc, file_service)
 
-    # 读取共享上下文（只读一次）
-    shared_vars = {}
-    for ctx_file, var_name in [
-        ("style-guide.md", "style_guide"),
-        ("story-state.md", "story_state"),
-        ("recent-context.md", "recent_context"),
-    ]:
-        try:
-            content, _ = await file_service.read_file(f"{req.project_id}/{ctx_file}")
-            shared_vars[var_name] = content
-        except Exception:
-            shared_vars[var_name] = ""
-
-    # 读取项目 meta 获取 pov
-    pov = "第三人称"  # 默认值
-    meta_file = project_dir / "meta.json"
-    if meta_file.exists():
-        try:
-            meta = json.loads(meta_file.read_text(encoding="utf-8"))
-            pov = meta.get("writing_style") or meta.get("pov", "第三人称")
-        except Exception:
-            pass
+    shared_vars = await runner.load_system_variables(req.project_id)
+    project_meta = await runner.load_project_meta(req.project_id)
+    pov = project_meta.get("writing_style", "") or project_meta.get("pov", "第三人称")
 
     tasks: list[BatchGenerateItem] = []
     succeeded = 0
     failed = 0
+    template_path = f"{req.prompt_type}.md"
 
     for tgt in targets:
         item = BatchGenerateItem(target_file=tgt["target_file"])
 
         try:
-            # 读取章节 meta
-            ch_meta = {}
-            ch_meta_file = tgt["ch_dir"] / "ch-meta.json"
-            if ch_meta_file.exists():
-                ch_meta = json.loads(ch_meta_file.read_text(encoding="utf-8"))
+            chapter_vars = await runner.load_chapter_vars(req.project_id, tgt["target_file"])
+            chapter_title = ""
+            ch_meta_path = f"{req.project_id}/chapters/{Path(tgt['target_file']).parent.name}/ch-meta.json"
+            try:
+                meta_content, _ = await file_service.read_file(ch_meta_path)
+                if meta_content:
+                    ch_meta = json.loads(meta_content)
+                    chapter_title = ch_meta.get("title", "")
+            except Exception:
+                pass
 
-            chapter_title = ch_meta.get("title", f"第{tgt['ch_num']}章")
-
-            # 构建模板变量
             variables = {
-                "chapter_name": f"第{tgt['ch_num']}章 {chapter_title}",
+                "chapter_name": f"第{tgt['ch_num']}章 {chapter_title}".strip(),
                 "chapter_number": str(tgt["ch_num"]),
                 "section_number": str(tgt["sec_num"]),
-                "goal": ch_meta.get("goal", ""),
                 "pov": pov,
                 **shared_vars,
+                **chapter_vars,
             }
-
-            # 渲染 prompt
-            prompt_text = await prompt_engine.render(req.prompt_type, variables)
-
-            # 保存 prompt 到返回项，供前端右侧面板展示
+            # 引用解析
+            prompt_text = runner.render_prompt(template_path, variables)
+            prompt_text = await runner.resolve_references(prompt_text, req.project_id)
             item.prompt = prompt_text
 
-            # 调用 LLM
             messages = [{"role": "user", "content": prompt_text}]
             generated = await svc.complete_sync(
                 messages, temperature=req.temperature, max_tokens=4000, timeout=180
             )
 
-            # 写入文件
             await file_service.write_file(tgt["target_file"], generated.strip())
 
             word_count = len(generated.replace(" ", ""))

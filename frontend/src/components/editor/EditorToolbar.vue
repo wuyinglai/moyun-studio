@@ -1,11 +1,11 @@
 <template>
   <div class="editor-toolbar">
     <a-space>
-      <a-button size="small" @click="handleBack" :disabled="!canGoBack">
+      <a-button size="small" @click="handleBack" :disabled="!canGoBack" title="后退 (没有更早的版本)">
         <template #icon><i class="fa-solid fa-rotate-left"></i></template>
         后退
       </a-button>
-      <a-button size="small" @click="handleForward" :disabled="!canGoForward">
+      <a-button size="small" @click="handleForward" :disabled="!canGoForward" title="前进 (没有更新的版本)">
         <template #icon><i class="fa-solid fa-rotate-right"></i></template>
         前进
       </a-button>
@@ -93,11 +93,10 @@ import { useRightPanelStore } from '@/stores/rightPanel'
 import { useProjectStore } from '@/stores/project'
 import { usePipelineStore } from '@/stores/pipeline'
 import { useTaskStore } from '@/stores/task'
-import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
 import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
-import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
+import { useTaskQueue, cancelQueuedTask, confirmTask } from '@/composables/useTaskQueue'
 
 const chatStore = useChatStore()
 const historyStore = useHistoryStore()
@@ -202,7 +201,15 @@ function handleCustomPipeline(info: any) {
   runPipeline(info.key as string)
 }
 
-function handleGenerateNext() {
+async function handleGenerateNext() {
+  // L1：确认任何等待中的任务
+  const taskStore = useTaskStore()
+  const waitingTask = taskStore.tasks.find((t: any) => t.status === 'waiting')
+  if (waitingTask) {
+    confirmTask(waitingTask.id)
+    return
+  }
+
   // 工作流暂停时：恢复执行下一步
   if (guide.isPaused.value) {
     const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
@@ -213,64 +220,21 @@ function handleGenerateNext() {
     return
   }
 
-  if (!projectStore.currentProject || !editorStore.currentFilePath) {
+  if (!projectStore.currentProject) {
     notification.warning('请先打开一个文件')
     return
   }
 
-  const currentPath = editorStore.currentFilePath
-  const dir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1)
-  const currentName = currentPath.split('/').pop() || ''
-
-  // 尝试递增文件名中的数字（如 chapter-1.md → chapter-2.md）
-  const match = currentName.match(/^(.*?)(\d+)(\.[^.]+)$/)
-  let newName: string
-  if (match) {
-    const prefix = match[1]
-    const num = parseInt(match[2], 10)
-    const ext = match[3]
-    newName = `${prefix}${num + 1}${ext}`
-  } else {
-    const dotIndex = currentName.lastIndexOf('.')
-    const ext = dotIndex >= 0 ? currentName.slice(dotIndex) : ''
-    const base = dotIndex >= 0 ? currentName.slice(0, dotIndex) : currentName
-    newName = `${base}-2${ext}`
+  // 工作流未启动时启动它
+  if (!guide.isRunning.value) {
+    const projectId = projectStore.currentProject.id
+    const filePath = editorStore.currentFilePath || ''
+    await guide.start(projectId, filePath)
+    return
   }
 
-  const newPath = dir + newName
-  createAndGenerateFile(newPath)
-}
-
-async function createAndGenerateFile(filePath: string) {
-  if (!projectStore.currentProject) return
-
-  const fileStore = useFileStore()
-  try {
-    await fileStore.createFile(projectStore.currentProject.id, filePath, '')
-
-    const node = { name: filePath.split('/').pop() || '', path: filePath, type: 'file' as const }
-    fileStore.openFile(node)
-    editorStore.setCurrentFile(filePath)
-
-    rightPanelStore.setPipelineTab('quick')
-
-    const fileName = filePath.split('/').pop() || ''
-    await taskQueue.enqueue(
-      async () => {
-        await fileGen.runPipeline(
-          projectStore.currentProject!.id,
-          filePath,
-          'generate',
-        )
-      },
-      `生成新文件: ${fileName}`,
-    )
-
-    // 不再需要 setTimeout(500) 从磁盘刷新
-    // 生成内容已通过 generationEmitter → useSSE → editorStore.appendContentToFile 实时更新
-  } catch (e: any) {
-    notification.error('创建文件失败: ' + (e.message || ''))
-  }
+  // 工作流已启动但未暂停 —— 不应发生，兜底
+  notification.info('工作流已在运行')
 }
 
 function handleTokenCount() { uiStore.openTokenCount() }
@@ -279,32 +243,70 @@ function handleFeedback() { uiStore.openFeedback() }
 function handleRevisionLog() { uiStore.openRevisionLog() }
 function handleBatchGenerate() { uiStore.openBatchGenerate() }
 function handleQualityReview() { uiStore.openQualityReview() }
+
 </script>
 
 <style scoped lang="scss">
 .editor-toolbar {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
+  padding: 6px 12px;
+  background: var(--ink-mid);
+  border-bottom: 1px solid var(--border-ink);
   flex-shrink: 0;
+  gap: 2px;
 }
 
 .editor-toolbar :deep(.ant-btn) {
-  color: var(--text-primary);
+  color: var(--text-ink);
   background: transparent;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-ink);
+  font-size: 12px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 
   &:hover:not(:disabled) {
-    color: var(--accent-primary);
-    border-color: var(--accent-primary);
-    background: var(--bg-hover);
+    color: var(--gold-primary);
+    border-color: var(--gold-primary);
+    background: rgba(201, 169, 110, 0.06);
   }
 
   &:disabled {
-    color: var(--text-muted);
-    opacity: 0.5;
+    color: var(--text-faint);
+    opacity: 0.4;
   }
+
+  &.ant-btn-primary {
+    color: var(--ink-deepest);
+    background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+    border-color: var(--gold-primary);
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(201, 169, 110, 0.25);
+    }
+  }
+
+  &.ant-btn-dangerous {
+    color: var(--vermillion-light);
+    border-color: rgba(192, 57, 43, 0.3);
+
+    &:hover {
+      background: rgba(192, 57, 43, 0.1) !important;
+      color: var(--vermillion-light) !important;
+      border-color: var(--vermillion-light) !important;
+    }
+  }
+}
+
+.editor-toolbar :deep(.ant-divider-vertical) {
+  border-color: var(--border-ink);
+  height: 18px;
+  top: 0;
+  margin: 0 4px;
+}
+
+.editor-toolbar :deep(.ant-dropdown-trigger) {
+  // 自定义管线按钮样式继承 ant-btn
 }
 </style>

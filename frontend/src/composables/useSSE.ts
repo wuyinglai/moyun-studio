@@ -16,6 +16,7 @@
 
 import { ref, readonly } from 'vue'
 import { generationEmitter } from './useFileGeneration'
+import { useDiffSummary } from './useDiffSummary'
 import { useEditorStore } from '@/stores/editor'
 import { useFileStore } from '@/stores/file'
 import { useTaskStore } from '@/stores/task'
@@ -26,17 +27,6 @@ import type {
   SSEEventType,
   SSEEventData,
   GenerationEvent,
-  FileCreatedEvent,
-  FileUpdatedEvent,
-  FileRenamedEvent,
-  DirectoryCreatedEvent,
-  TaskEvent,
-  QueueEvent,
-  LLMStatusEvent,
-  ThinkingEvent,
-  ErrorEvent,
-  DiffSummaryEvent,
-  DoneEvent,
 } from '@/types/sse'
 
 export type { SSEEventType, SSEEventData, GenerationEvent }
@@ -165,7 +155,7 @@ class SSEService {
   /**
    * 处理各类事件
    */
-  private handleEvent(type: SSEEventType, data: any) {
+  private async handleEvent(type: SSEEventType, data: any) {
     const editorStore = useEditorStore()
     const fileStore = useFileStore()
     const taskStore = useTaskStore()
@@ -284,7 +274,6 @@ class SSEService {
       case 'diff_summary':
         // AI 修改摘要
         if (data.summary) {
-          const { useDiffSummary } = await import('./useDiffSummary')
           const ds = useDiffSummary()
           ds.setSummary(data.summary, data.target_file || '')
           taskStore.addLog('info', 'AI 修改摘要已生成')

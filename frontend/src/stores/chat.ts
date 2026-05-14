@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useLLMStore } from './llm'
+import { useEditorStore } from './editor'
 import { useTaskStore } from './task'
 
 function getAutoMode(): string {

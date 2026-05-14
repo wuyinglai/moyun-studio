@@ -71,7 +71,7 @@ export function useFileGeneration() {
       // 不再直接写入 store，避免重复写入
       // 将 filePath 作为事件detail的一部分传递，以便正确更新文件
       const filePathForEmitter = filePath
-      await parseSSEStream(reader, (delta) => {
+      await parseSSEStream(reader, (_delta) => {
         // delta 事件由 useSSE 通过 generationEmitter 监听并处理
         // filePath 已在 closure 中，通过 emitter detail 传递
       }, (prompt) => {
@@ -135,7 +135,7 @@ export function useFileGeneration() {
       // 不再直接写入 store，避免重复写入
       // 将 filePath 作为事件detail的一部分传递，以便正确更新文件
       const filePathForEmitter = filePath
-      await parseSSEStream(reader, (delta) => {
+      await parseSSEStream(reader, (_delta) => {
         // delta 事件由 useSSE 通过 generationEmitter 监听并处理
         // filePath 已在 closure 中，通过 emitter detail 传递
       }, (prompt) => {

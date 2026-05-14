@@ -28,7 +28,7 @@
           <div class="wf-card-body" @click="selectWorkflow(wf.name)">
             <div class="wf-card-header">
               <span class="wf-name">{{ wf.label }}</span>
-              <span class="wf-badge">{{ countSteps(wf.steps) }} 步</span>
+              <span class="wf-badge">{{ countSteps(wf.steps as WorkflowStep[]) }} 步</span>
             </div>
             <p class="wf-desc">{{ wf.description || '无描述' }}</p>
           </div>
@@ -70,7 +70,7 @@
 
         <div v-if="!hasRun" class="var-config">
           <div class="section-label">变量配置</div>
-          <div class="var-field" v-for="(val, key) in varOverrides" :key="key">
+          <div class="var-field" v-for="(_val, key) in varOverrides" :key="key">
             <label :for="'wf-var-' + key">{{ key }}</label>
             <input :id="'wf-var-' + key" v-model="varOverrides[key]" type="text" />
           </div>
@@ -181,7 +181,7 @@
 
 <!-- ─── 子组件：步骤编辑器 ─── -->
 <script setup lang="ts">
-import { ref, reactive, watch, nextTick, onMounted, computed } from 'vue'
+import { ref, reactive, watch, nextTick, onMounted } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
 import { useWorkflow, type WorkflowStep, type Workflow } from '@/composables/useWorkflow'
@@ -216,7 +216,7 @@ watch(runLogs, async () => {
 
 function countSteps(steps: WorkflowStep[]): number {
   let total = 0
-  for (const s of steps) { total++; if (s.type === 'loop' && s.steps) total += countSteps(s.steps) }
+  for (const s of steps) { total++; if (s.type === 'loop' && s.steps) total += countSteps(s.steps as WorkflowStep[]) }
   return total
 }
 

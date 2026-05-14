@@ -107,25 +107,22 @@ async function closeTab(path: string) {
 .editor-tabs {
   display: flex;
   flex-direction: column;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--ink-mid);
+  border-bottom: 1px solid var(--border-ink);
   flex-shrink: 0;
 }
 
 .tabs-bar {
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  gap: 4px;
+  padding: 0 8px;
+  gap: 2px;
   overflow-x: auto;
-  min-height: 40px;
+  min-height: 38px;
 
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-
+  &::-webkit-scrollbar { height: 3px; }
   &::-webkit-scrollbar-thumb {
-    background: var(--border-color);
+    background: var(--border-ink);
     border-radius: 2px;
   }
 }
@@ -133,82 +130,90 @@ async function closeTab(path: string) {
 .tab {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  font-size: 13px;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-muted-ink);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
-  border-radius: 8px 8px 0 0;
-  transition: all 0.2s ease;
-  max-width: 180px;
+  border-radius: 6px 6px 0 0;
+  transition: all var(--transition-fast);
+  max-width: 160px;
   margin-bottom: -1px;
+  position: relative;
 
   &:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-ink);
 
-    .tab-close {
-      opacity: 1;
-    }
+    .tab-close { opacity: 1; }
   }
 
   &.active {
-    color: var(--accent-primary);
-    background: var(--bg-primary);
-    border-bottom-color: var(--accent-primary);
+    color: var(--gold-primary);
+    background: var(--ink-deep);
+    border-bottom-color: var(--gold-primary);
 
-    .tab-icon {
-      color: var(--accent-primary);
+    .tab-icon { color: var(--gold-primary); }
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
     }
   }
 }
 
 .tab-icon {
-  font-size: 13px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text-faint);
   flex-shrink: 0;
 }
 
 .tab-name {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .tab-dirty {
-  color: var(--accent-warning);
-  font-size: 9px;
-  font-weight: bold;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold-primary);
   flex-shrink: 0;
-  animation: dirtyPulse 2s ease-in-out infinite;
+  animation: dirtyPulse 1.5s ease-in-out infinite;
 }
 
 @keyframes dirtyPulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.3; }
 }
 
 .tab-close {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: var(--text-faint);
   cursor: pointer;
   border-radius: 50%;
-  font-size: 10px;
+  font-size: 9px;
   opacity: 0;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 
   &:hover {
-    background: var(--accent-error);
+    background: var(--vermillion);
     color: white;
   }
 }
@@ -216,39 +221,28 @@ async function closeTab(path: string) {
 .tabs-status {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 6px 16px;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border-color);
+  gap: 16px;
+  padding: 5px 16px;
+  background: var(--ink-mid);
+  border-top: 1px solid var(--border-ink);
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 500;
+  gap: 5px;
+  font-weight: 400;
 
-  i {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
+  i { font-size: 10px; }
 
   &.status-save {
     margin-left: auto;
 
-    &.saving {
-      color: var(--accent-warning);
-    }
-
-    &.unsaved {
-      color: var(--accent-warning);
-    }
-
-    &.saved {
-      color: var(--accent-success);
-    }
+    &.saving { color: var(--gold-primary); }
+    &.unsaved { color: var(--gold-primary); }
+    &.saved { color: var(--jade-light); }
   }
 }
 </style>

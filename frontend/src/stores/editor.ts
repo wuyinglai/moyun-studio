@@ -99,6 +99,7 @@ export const useEditorStore = defineStore('editor', () => {
     loadContent,
     updateContent,
     appendContent,
+    appendContentToFile,
     clearFile,
     getContent,
     setContent,

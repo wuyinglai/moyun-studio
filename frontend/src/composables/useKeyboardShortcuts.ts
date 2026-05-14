@@ -3,7 +3,6 @@
  */
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useUIStore } from '@/stores/ui'
-import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useAutoSave } from '@/composables/useAutoSave'
 
@@ -49,7 +48,6 @@ export function registerShortcut(
 
 export function useKeyboardShortcuts() {
   const uiStore = useUIStore()
-  const fileStore = useFileStore()
   const editorStore = useEditorStore()
   const { triggerAutoSave } = useAutoSave()
 

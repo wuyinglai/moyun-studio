@@ -1,31 +1,29 @@
 <template>
   <div class="tree-node">
-    <!-- 节点行 -->
     <div
       class="node-row"
       :style="{ paddingLeft: `${depth * 16 + 8}px` }"
       :class="{ active: isActive }"
       @click="handleClick"
     >
-      <!-- 展开/折叠箭头 -->
-      <span
-        v-if="node.type === 'directory'"
-        class="node-arrow"
-        :class="{ expanded: isExpanded }"
-        @click.stop="toggleExpand"
-      >
-        <i class="fa-solid fa-chevron-right"></i>
+      <!-- 展开箭头 / 缩进占位 -->
+      <span v-if="node.type === 'directory'" class="node-arrow" :class="{ expanded: isExpanded }" @click.stop="toggleExpand">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
       </span>
       <span v-else class="node-arrow node-arrow--spacer"></span>
 
-      <!-- 图标 -->
-      <i :class="iconClass" class="node-icon"></i>
+      <!-- 文件类型图标 -->
+      <span class="node-icon" :class="`icon-${iconType}`">
+        <component :is="iconComponent" />
+      </span>
 
       <!-- 文件名 -->
       <span class="node-name" :title="node.name">{{ displayName }}</span>
 
-      <!-- 脏标记 -->
-      <span v-if="isDirty" class="node-dirty" title="有未保存的更改">●</span>
+      <!-- 修改标记 -->
+      <span v-if="isDirty" class="node-dirty" title="有未保存的更改"></span>
     </div>
 
     <!-- 子节点 -->
@@ -62,9 +60,7 @@ const EXPANDED_KEY = 'moyun-expanded-dirs'
 function getExpandedDirs(): string[] {
   try {
     return JSON.parse(localStorage.getItem(EXPANDED_KEY) || '[]')
-  } catch {
-    return []
-  }
+  } catch { return [] }
 }
 
 function saveExpandedDirs(dirs: string[]) {
@@ -73,12 +69,11 @@ function saveExpandedDirs(dirs: string[]) {
 
 const isExpanded = ref(
   props.depth === 0 ||
-  props.node.name.match(/^vol-\d+$/) !== null ||
-  props.node.name.match(/^ch-\d+$/) !== null ||
+  !!props.node.name.match(/^vol-\d+$/) ||
+  !!props.node.name.match(/^ch-\d+$/) ||
   getExpandedDirs().includes(props.node.path)
 )
 
-// 显示友好的目录名：vol-01 → 第1卷, ch-001 → 第1章, sec-001.md → 第1节
 const displayName = computed(() => {
   const name = props.node.name
   if (props.node.type === 'directory') {
@@ -93,47 +88,47 @@ const displayName = computed(() => {
   return name
 })
 
-// 根据文件类型获取图标
-const iconClass = computed(() => {
+// 图标类型 — 使用内联 SVG
+const iconType = computed(() => {
   if (props.node.type === 'directory') {
-    return isExpanded.value
-      ? 'fa-solid fa-folder-open'
-      : 'fa-solid fa-folder'
+    return isExpanded.value ? 'folder-open' : 'folder'
   }
-
   const ext = props.node.name.split('.').pop()?.toLowerCase()
-  const iconMap: Record<string, string> = {
-    md: 'fa-solid fa-file-lines',     // Markdown
-    txt: 'fa-solid fa-file-lines',
-    json: 'fa-solid fa-file-code',
-    yaml: 'fa-solid fa-file-code',
-    yml: 'fa-solid fa-file-code',
-    py: 'fa-brands fa-python',
-    js: 'fa-brands fa-js',
-    ts: 'fa-solid fa-file-code',
-    css: 'fa-solid fa-file-code',
-    html: 'fa-solid fa-file-code',
-    png: 'fa-solid fa-file-image',
-    jpg: 'fa-solid fa-file-image',
-    jpeg: 'fa-solid fa-file-image',
-    gif: 'fa-solid fa-file-image',
-    svg: 'fa-solid fa-file-image',
-    pdf: 'fa-solid fa-file-pdf',
-    doc: 'fa-solid fa-file-word',
-    docx: 'fa-solid fa-file-word',
-    xls: 'fa-solid fa-file-excel',
-    xlsx: 'fa-solid fa-file-excel',
+  if (['md', 'txt', 'markdown'].includes(ext || '')) return 'markdown'
+  if (['json'].includes(ext || '')) return 'json'
+  if (['yaml', 'yml'].includes(ext || '')) return 'yaml'
+  if (['py'].includes(ext || '')) return 'python'
+  if (['js'].includes(ext || '')) return 'javascript'
+  if (['ts'].includes(ext || '')) return 'typescript'
+  if (['css', 'scss', 'less'].includes(ext || '')) return 'css'
+  if (['html', 'htm'].includes(ext || '')) return 'html'
+  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '')) return 'image'
+  if (['pdf'].includes(ext || '')) return 'pdf'
+  return 'file'
+})
+
+// 简化处理：用文字标签代替复杂 SVG
+const iconComponent = computed(() => {
+  const map: Record<string, string> = {
+    'folder': 'folder',
+    'folder-open': 'folder-open',
+    'markdown': 'markdown',
+    'json': 'code',
+    'yaml': 'code',
+    'python': 'code',
+    'javascript': 'code',
+    'typescript': 'code',
+    'css': 'code',
+    'html': 'code',
+    'image': 'image',
+    'pdf': 'pdf',
+    'file': 'file',
   }
-  return iconMap[ext || ''] || 'fa-solid fa-file'
+  return map[iconType.value] || 'file'
 })
 
-const isActive = computed(() => {
-  return fileStore.currentFile?.path === props.node.path
-})
-
-const isDirty = computed(() => {
-  return fileStore.unsavedFiles.has(props.node.path)
-})
+const isActive = computed(() => fileStore.currentFile?.path === props.node.path)
+const isDirty = computed(() => fileStore.unsavedFiles.has(props.node.path))
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
@@ -159,96 +154,117 @@ function handleClick() {
 <style scoped lang="scss">
 .tree-node {
   user-select: none;
+  animation: fade-in-up 0.25s ease both;
 }
 
 .node-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  margin: 0 4px;
+  gap: 6px;
+  padding: 5px 12px;
+  margin: 1px 6px;
   cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
   font-size: 13px;
-  color: var(--text-primary);
+  color: var(--text-ink);
+  position: relative;
 
   &:hover {
-    background: var(--bg-hover);
+    background: var(--ink-hover);
+    color: var(--text-warm-white);
+
+    .node-arrow { color: var(--text-muted-ink); }
   }
 
   &.active {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    color: white;
-    box-shadow: 0 2px 8px rgba(107, 140, 255, 0.3);
+    background: linear-gradient(135deg, rgba(201, 169, 110, 0.12), rgba(201, 169, 110, 0.04));
+    color: var(--gold-primary);
+    border-left: 2px solid var(--gold-primary);
 
-    .node-icon,
-    .node-arrow {
-      color: white;
-    }
-
-    .node-dirty {
-      color: rgba(255, 255, 255, 0.9);
-    }
+    .node-name { font-weight: 500; }
   }
 }
 
+/* ── 箭头 ── */
 .node-arrow {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  color: var(--text-muted);
-  transition: transform 0.2s ease;
+  color: var(--text-faint);
+  transition: transform var(--transition-fast);
+  flex-shrink: 0;
 
-  &--spacer {
-    visibility: hidden;
-  }
+  &--spacer { visibility: hidden; }
 
   &.expanded {
     transform: rotate(90deg);
   }
 }
 
+/* ── 图标 ── */
 .node-icon {
-  width: 18px;
-  color: var(--text-muted);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  transition: color 0.2s ease;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 3px;
+
+  // 用文字图标简化而优雅
+  &.icon-folder,
+  &.icon-folder-open {
+    font-size: 13px;
+  }
 }
 
-:deep(.fa-folder),
-:deep(.fa-folder-open) {
-  color: var(--accent-warning);
-}
+/* 用序列字符替代 Font Awesome 图标 */
+.icon-folder::before { content: '📁'; font-size: 12px; }
+.icon-folder-open::before { content: '📂'; font-size: 12px; }
+.icon-markdown::before { content: '📝'; font-size: 11px; }
+.icon-json::before { content: '{ }'; font-size: 9px; color: var(--gold-primary); }
+.icon-yaml::before { content: '~'; font-size: 13px; color: var(--vermillion-light); }
+.icon-python::before { content: '🐍'; font-size: 11px; }
+.icon-javascript::before { content: 'JS'; font-size: 8px; font-weight: 700; color: var(--gold-primary); letter-spacing: 0; }
+.icon-typescript::before { content: 'TS'; font-size: 8px; font-weight: 700; color: var(--jade-light); letter-spacing: 0; }
+.icon-css::before { content: '# '; font-size: 9px; color: var(--vermillion-light); }
+.icon-html::before { content: '<>'; font-size: 8px; font-weight: 700; color: var(--gold-primary); }
+.icon-image::before { content: '🖼'; font-size: 11px; }
+.icon-pdf::before { content: '📕'; font-size: 11px; }
+.icon-file::before { content: '📄'; font-size: 11px; }
 
+/* ── 文件名 ── */
 .node-name {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 400;
+  font-size: 13px;
 }
 
+/* ── 脏标记 ── */
 .node-dirty {
-  color: var(--accent-warning);
-  font-size: 9px;
-  font-weight: bold;
-  animation: dirtyPulse 2s ease-in-out infinite;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold-primary);
+  flex-shrink: 0;
+  animation: dirty-pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes dirtyPulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+@keyframes dirty-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
+/* ── 子节点 ── */
 .node-children {
-  // 子节点缩进由 paddingLeft 控制
+  // padding 由样式绑定控制
 }
 </style>

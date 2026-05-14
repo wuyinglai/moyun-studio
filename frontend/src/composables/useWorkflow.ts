@@ -9,6 +9,8 @@ export interface WorkflowStep {
   count?: string
   var?: string
   action?: string
+  input?: string
+  path?: string
   output?: string
   output_mode?: string
   steps?: WorkflowStep[]

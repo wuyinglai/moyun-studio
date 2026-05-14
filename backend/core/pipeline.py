@@ -72,12 +72,12 @@ class PipelineRunner:
     def _get_step_prompt_path(self, pipeline_name: str, step_id: str) -> Path:
         return self._get_pipeline_dir() / pipeline_name / f"{step_id}.md"
 
-    def _render_prompt(self, relative_path: str, variables: dict) -> str:
+    def render_prompt(self, relative_path: str, variables: dict) -> str:
         """使用 Jinja2 渲染 prompt 模板"""
         template = self.env.get_template(relative_path)
         return template.render(**variables)
 
-    async def _resolve_references(self, text: str, project_id: str) -> str:
+    async def resolve_references(self, text: str, project_id: str) -> str:
         """解析 @{path} 引用为文件内容
 
         @{style-guide.md} -> 读取 {project_id}/style-guide.md 的内容
@@ -101,7 +101,7 @@ class PipelineRunner:
 
         return result
 
-    async def _load_project_meta(self, project_id: str) -> dict:
+    async def load_project_meta(self, project_id: str) -> dict:
         """从项目 meta.json 加载项目配置变量
 
         返回 {变量名: 值} 字典，读取失败时返回空字典。
@@ -119,7 +119,7 @@ class PipelineRunner:
             pass
         return {}
 
-    async def _load_system_variables(self, project_id: str) -> dict:
+    async def load_system_variables(self, project_id: str) -> dict:
         """从项目目录加载系统变量
 
         返回 {变量名: 文件内容} 字典，文件不存在或读取失败时返回空字符串。
@@ -141,7 +141,7 @@ class PipelineRunner:
                 vars[var_name] = ""
         return vars
 
-    async def _load_chapter_vars(self, project_id: str, target_file: str) -> dict:
+    async def load_chapter_vars(self, project_id: str, target_file: str) -> dict:
         """从章节元数据加载模板变量
 
         从 target_file（如 chapters/vol-01/ch-001/sec-001.md）推导 ch-meta.json 路径，
@@ -228,13 +228,13 @@ class PipelineRunner:
         )
 
         # 加载系统变量（文风指南、故事状态、近期上下文、大纲）
-        system_vars = await self._load_system_variables(project_id)
+        system_vars = await self.load_system_variables(project_id)
 
         # 加载项目配置（genre, theme, tone 等）
-        project_vars = await self._load_project_meta(project_id)
+        project_vars = await self.load_project_meta(project_id)
 
         # 加载章节变量（pending_foreshadowing, active_quests）
-        chapter_vars = await self._load_chapter_vars(project_id, target_file or "")
+        chapter_vars = await self.load_chapter_vars(project_id, target_file or "")
 
         task_id = f"pipeline-{pipeline_name}-{uuid.uuid4().hex[:8]}"
         step_outputs: dict[str, str] = {}
@@ -286,10 +286,10 @@ class PipelineRunner:
 
                 # 渲染 prompt 模板（使用 step.prompt 保证与 YAML 定义一致）
                 prompt_relative = f"{step.prompt}.md"
-                prompt_text = self._render_prompt(prompt_relative, step_vars)
+                prompt_text = self.render_prompt(prompt_relative, step_vars)
 
                 # 解析 @{path} 引用为文件内容
-                prompt_text = await self._resolve_references(prompt_text, project_id)
+                prompt_text = await self.resolve_references(prompt_text, project_id)
 
                 # 发送渲染后的 prompt
                 yield {"event": "prompt", "data": json.dumps({
@@ -538,7 +538,7 @@ class PipelineRunner:
                 "file_path": target_file,
                 "user_input": "",
             }
-            prompt_text = self._render_prompt(prompt_rel, variables)
+            prompt_text = self.render_prompt(prompt_rel, variables)
 
             messages = [{"role": "user", "content": prompt_text}]
             summary_parts = []

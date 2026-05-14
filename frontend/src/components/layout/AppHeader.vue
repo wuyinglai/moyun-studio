@@ -3,9 +3,12 @@
     <!-- 左侧：Logo + 项目名 -->
     <div class="header-left">
       <div class="logo">
-        <i class="fa-solid fa-feather-pointed"></i>
+        <span class="logo-icon" aria-hidden="true">墨</span>
         <span class="logo-text">墨韵</span>
       </div>
+
+      <div class="header-divider"></div>
+
       <div class="project-name" v-if="projectStore.currentProject">
         <input
           v-if="isEditingName"
@@ -19,63 +22,75 @@
         <span v-else class="project-name-text" @click="startNameEdit" :title="projectStore.currentProject.name">
           {{ projectStore.currentProject.name }}
         </span>
+        <span class="project-name-hint" title="点击编辑项目名">✎</span>
       </div>
-      <div class="project-name project-name--empty" v-else>未打开项目</div>
+      <div class="project-name project-name--empty" v-else>
+        <span class="project-name-placeholder">未打开项目</span>
+      </div>
     </div>
 
-    <!-- 中间：通知区域 M06 -->
-    <div class="header-center" id="header-notifications">
-      <!-- NotificationContainer 在这里会被渲染，但为了布局独立，保留占位 -->
-    </div>
+    <!-- 中：通知位 -->
+    <div class="header-center" id="header-notifications"></div>
 
-    <!-- 右侧：LLM状态 + 按钮 -->
+    <!-- 右侧：状态 + 按钮 -->
     <div class="header-right">
-      <!-- LLM连接状态 M0103 -->
-      <div
+      <!-- LLM 连接状态 -->
+      <button
         class="llm-status"
         :class="{ 'llm-status--connected': llmStore.isConnected }"
         @click="uiStore.openSettings()"
-        :title="`SSE: ${connectionStatus}`"
+        :title="`LLM: ${connectionStatus}`"
       >
-        <span class="status-dot"></span>
+        <span class="status-dot">
+          <span class="status-dot-inner"></span>
+        </span>
         <span class="status-text">{{ llmStore.isConnected ? '已连接' : '未连接' }}</span>
-        <span v-if="sseConnected" class="sse-dot" title="SSE已连接"></span>
-      </div>
+        <span v-if="sseConnected" class="sse-indicator" title="SSE已连接">SSE</span>
+      </button>
 
-      <!-- LLM调用中动画 M0104 -->
+      <!-- LLM 调用中 -->
       <div class="llm-generating" v-if="llmStore.isGenerating">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <span>{{ generatingLabel }}</span>
+        <span class="generating-dots">
+          <span></span><span></span><span></span>
+        </span>
+        <span class="generating-text">{{ generatingLabel }}</span>
       </div>
 
-      <!-- Thinking开关 M0107 -->
+      <!-- Thinking 开关 -->
       <div class="thinking-toggle" v-if="llmStore.config && llmStore.config.apiType">
         <span class="thinking-label">Thinking</span>
         <button
           class="toggle-btn"
           :class="{ 'toggle-btn--on': llmStore.config.thinking }"
           @click="toggleThinking"
+          aria-label="切换思考模式"
         >
           <span class="toggle-knob"></span>
         </button>
       </div>
 
-      <!-- 打开项目按钮 M0108 -->
-      <button class="btn btn-secondary" @click="uiStore.openOpenProject()">
-        <i class="fa-solid fa-folder-open"></i>
-        打开项目
-      </button>
+      <!-- 操作按钮组 -->
+      <div class="action-buttons">
+        <button class="btn btn-ghost" @click="uiStore.openOpenProject()" title="打开项目">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="btn-label">打开</span>
+        </button>
 
-      <!-- 新建项目按钮 M0109 -->
-      <button class="btn btn-primary" @click="uiStore.openCreateProject()">
-        <i class="fa-solid fa-plus"></i>
-        新建项目
-      </button>
+        <button class="btn btn-primary" @click="uiStore.openCreateProject()" title="新建项目">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span class="btn-label">新建</span>
+        </button>
 
-      <!-- 设置按钮 M0110 -->
-      <button class="btn btn-icon" @click="uiStore.openSettings()" title="设置">
-        <i class="fa-solid fa-gear"></i>
-      </button>
+        <button class="btn btn-icon" @click="uiStore.openSettings()" title="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 </template>
@@ -96,7 +111,6 @@ const notification = useNotificationStore()
 const chatStore = useChatStore()
 const { isConnected: sseConnected, isReconnecting } = useSSE()
 
-// M0102 — 项目名可编辑
 const isEditingName = ref(false)
 const editingName = ref('')
 const nameInputRef = ref<HTMLInputElement | null>(null)
@@ -125,13 +139,12 @@ function cancelNameEdit() {
   isEditingName.value = false
 }
 
-// M0104 — LLM 调用中动态操作名
 const generatingLabel = computed(() => {
   if (!llmStore.isGenerating) return ''
   const mode = chatStore.generationMode
-  if (mode === 'continue') return '正在续写章节...'
-  if (mode === 'rewrite') return '正在重写章节...'
-  return 'AI生成中...'
+  if (mode === 'continue') return '续写章节中'
+  if (mode === 'rewrite') return '重写章节中'
+  return 'AI 创作中'
 })
 
 const connectionStatus = computed(() => {
@@ -150,31 +163,34 @@ async function toggleThinking() {
 .app-header {
   display: flex;
   align-items: center;
-  height: 60px;
-  padding: 0 24px;
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-  border-bottom: 1px solid var(--border-color);
+  height: 56px;
+  padding: 0 20px;
+  background: var(--ink-dark);
+  border-bottom: 1px solid var(--border-ink);
   flex-shrink: 0;
-  gap: 16px;
+  gap: 12px;
   position: relative;
-  backdrop-filter: blur(10px);
+  z-index: 100;
+  user-select: none;
 
+  /* 底部金线 */
   &::after {
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
-    right: 0;
+    left: 80px;
+    right: 80px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-    opacity: 0.3;
+    background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+    opacity: 0.15;
   }
 }
 
+/* ── 左侧区域 ── */
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   min-width: 200px;
 }
 
@@ -182,57 +198,100 @@ async function toggleThinking() {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--accent-primary);
-  cursor: pointer;
-  transition: transform 0.15s ease;
-
-  &:hover {
-    transform: scale(1.02);
-  }
-
-  .fa-feather-pointed {
-    font-size: 24px;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+  cursor: default;
 }
 
+.logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-family: var(--font-kai);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink-deepest);
+  background: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+  border-radius: 6px;
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--text-warm-white), var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
+}
+
+.header-divider {
+  width: 1px;
+  height: 24px;
+  background: linear-gradient(180deg, transparent, var(--border-ink), transparent);
+}
+
+/* ── 项目名 ── */
 .project-name {
   font-size: 14px;
   color: var(--text-primary);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
 
   &--empty {
-    color: var(--text-muted);
-    font-style: italic;
+    color: var(--text-muted-ink);
   }
 }
 
 .project-name-text {
   cursor: pointer;
   border-bottom: 1px dashed transparent;
-  transition: border-color 0.2s;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
   &:hover {
-    border-bottom-color: var(--text-muted);
+    border-bottom-color: var(--text-muted-ink);
   }
 }
 
+.project-name-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  cursor: pointer;
+}
+
+.project-name:hover .project-name-hint {
+  opacity: 1;
+}
+
+.project-name-placeholder {
+  color: var(--text-faint);
+  font-style: italic;
+  font-size: 13px;
+}
+
 .project-name-input {
-  background: var(--bg-card);
-  border: 1px solid var(--accent-primary);
-  border-radius: 4px;
+  background: var(--ink-light);
+  border: 1px solid var(--gold-primary);
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 14px;
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 3px 8px;
   outline: none;
-  width: 200px;
+  width: 220px;
+  box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.1);
 }
 
+/* ── 中间 ── */
 .header-center {
   flex: 1;
   display: flex;
@@ -240,167 +299,233 @@ async function toggleThinking() {
   justify-content: center;
 }
 
+/* ── 右侧区域 ── */
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* ── LLM 连接状态 ── */
 .llm-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-muted-ink);
+  padding: 6px 14px 6px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--ink-mid);
+  border: 1px solid var(--border-ink);
+  transition: all var(--transition-normal);
   cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 9999px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  transition: all 0.25s ease;
 
   &:hover {
-    border-color: var(--accent-primary);
-  }
-
-  .status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--accent-error);
-    position: relative;
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: inherit;
-      animation: pulse 2s ease-out infinite;
-    }
-  }
-
-  &--connected .status-dot {
-    background: var(--accent-success);
+    border-color: var(--gold-primary);
+    background: var(--ink-light);
   }
 }
 
+.status-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vermillion);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-dot-inner {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+  animation: ink-pulse 2s ease-out infinite;
+}
+
+.llm-status--connected .status-dot {
+  background: var(--jade-light);
+}
+
+.status-text {
+  font-size: 12px;
+}
+
+.sse-indicator {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(45, 138, 110, 0.15);
+  color: var(--jade-light);
+  letter-spacing: 0.5px;
+}
+
+/* ── LLM 生成中动画 ── */
 .llm-generating {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--accent-primary);
+  gap: 10px;
+  font-size: 12px;
+  color: var(--gold-primary);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: rgba(201, 169, 110, 0.06);
+  border: 1px solid rgba(201, 169, 110, 0.15);
+}
 
-  .fa-spinner {
-    color: var(--accent-primary);
+.generating-dots {
+  display: flex;
+  gap: 3px;
+
+  span {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--gold-primary);
+    animation: dot-bounce 1.4s ease-in-out infinite both;
+
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0s; }
   }
 }
 
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.generating-text {
+  white-space: nowrap;
+}
+
+/* ── Thinking 开关 ── */
 .thinking-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
 
   .thinking-label {
-    font-size: 13px;
-    color: var(--text-secondary);
+    font-size: 12px;
+    color: var(--text-muted-ink);
+    font-weight: 500;
   }
 
   .toggle-btn {
-    width: 40px;
-    height: 22px;
-    border-radius: 11px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--ink-light);
+    border: 1px solid var(--border-ink);
     position: relative;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all var(--transition-normal);
 
     .toggle-knob {
       position: absolute;
       top: 2px;
       left: 2px;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      background: var(--text-secondary);
-      transition: transform 0.25s ease, background 0.25s ease;
+      background: var(--text-muted-ink);
+      transition: all var(--transition-normal);
     }
 
     &--on {
-      background: var(--accent-primary);
-      border-color: var(--accent-primary);
+      background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+      border-color: var(--gold-primary);
 
       .toggle-knob {
-        transform: translateX(18px);
+        transform: translateX(16px);
         background: white;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
       }
     }
   }
+}
+
+/* ── 操作按钮 ── */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-ink);
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 20px;
-  border-radius: 9999px;
-  font-size: 14px;
+  padding: 7px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
   font-weight: 500;
-  transition: all 0.25s ease;
+  transition: all var(--transition-normal);
   cursor: pointer;
-  border: none;
-  position: relative;
-  overflow: hidden;
+  white-space: nowrap;
 
   &:active {
     transform: scale(0.97);
   }
 
-  &-primary {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    color: white;
-    box-shadow: 0 4px 14px rgba(107, 140, 255, 0.3);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(107, 140, 255, 0.4);
-    }
+  svg {
+    flex-shrink: 0;
   }
+}
 
-  &-secondary {
-    background: var(--bg-card);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+  color: var(--ink-deepest);
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(201, 169, 110, 0.2);
 
-    &:hover {
-      background: var(--bg-hover);
-      border-color: var(--accent-primary);
-      color: var(--accent-primary);
-    }
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(201, 169, 110, 0.3);
   }
+}
 
-  &-icon {
-    width: 42px;
-    height: 42px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    color: var(--text-secondary);
-    border: none;
-    border-radius: 12px;
+.btn-ghost {
+  background: var(--ink-mid);
+  color: var(--text-ink);
+  border: 1px solid var(--border-ink);
 
-    &:hover {
-      background: var(--bg-card);
-      color: var(--accent-primary);
-    }
+  &:hover {
+    background: var(--ink-hover);
+    border-color: var(--gold-primary);
+    color: var(--gold-primary);
+  }
+}
+
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-muted-ink);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--ink-hover);
+    color: var(--gold-primary);
+  }
+}
+
+/* ── 响应式：窄屏隐藏文字标签 ── */
+@media (max-width: 900px) {
+  .btn-label {
+    display: none;
   }
 }
 </style>

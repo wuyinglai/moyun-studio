@@ -43,7 +43,6 @@ onMounted(async () => {
     try {
       await projectStore.openProject(projectId)
       if (projectStore.currentProject) {
-        const fileStore = (await import('@/stores/file')).useFileStore()
         await fileStore.loadTree(projectId)
       }
     } catch (e) {

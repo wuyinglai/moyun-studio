@@ -204,7 +204,7 @@ class TestPromptRendering:
         template_path = pipeline_runner.prompts_path / "test.md"
         template_path.write_text("Hello {{ name }}!", encoding="utf-8")
 
-        result = pipeline_runner._render_prompt("test.md", {"name": "World"})
+        result = pipeline_runner.render_prompt("test.md", {"name": "World"})
         assert result == "Hello World!"
 
     def test_render_prompt_with_missing_var(self, pipeline_runner):
@@ -212,7 +212,7 @@ class TestPromptRendering:
         template_path.write_text("Hello {{ name }}!", encoding="utf-8")
 
         # Jinja2 默认会忽略缺失的变量
-        result = pipeline_runner._render_prompt("test.md", {})
+        result = pipeline_runner.render_prompt("test.md", {})
         assert "Hello" in result
 
 
@@ -350,20 +350,20 @@ class TestSystemVariables:
 
     @pytest.mark.asyncio
     async def test_load_project_meta(self, pipeline_runner, mock_file_service):
-        meta = await pipeline_runner._load_project_meta("test-project")
+        meta = await pipeline_runner.load_project_meta("test-project")
         assert meta["genre"] == "玄幻"
         assert meta["theme"] == "成长"
         assert meta["tone"] == "热血"
 
     @pytest.mark.asyncio
     async def test_load_system_variables(self, pipeline_runner, mock_file_service):
-        vars = await pipeline_runner._load_system_variables("test-project")
+        vars = await pipeline_runner.load_system_variables("test-project")
         assert "style_guide" in vars
         assert "story_state" in vars
 
     @pytest.mark.asyncio
     async def test_load_chapter_vars(self, pipeline_runner, mock_file_service):
-        vars = await pipeline_runner._load_chapter_vars(
+        vars = await pipeline_runner.load_chapter_vars(
             "test-project",
             "chapters/vol-01/ch-001/sec-001.md"
         )
