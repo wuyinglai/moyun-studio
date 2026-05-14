@@ -371,7 +371,13 @@ class PipelineRunner:
                     return
 
         # 保存最终输出到文件
-        final_output = step_outputs.get(pipeline.steps[-1].id, "")
+        # 注意：最后一步如果是 diff 摘要步骤，输出是修改摘要而非实际内容，
+        # 此时应使用上一步（润色/改写/生成）的输出作为文件内容
+        last_step = pipeline.steps[-1]
+        if last_step.id == "diff" and len(pipeline.steps) >= 2:
+            final_output = step_outputs.get(pipeline.steps[-2].id, "")
+        else:
+            final_output = step_outputs.get(last_step.id, "")
         if final_output and target_file:
             original_content = ""
             frontmatter = None
