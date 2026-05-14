@@ -64,6 +64,11 @@ export interface DoneEvent extends BaseEvent {
   message?: string
 }
 
+export interface DiffSummaryEvent extends BaseEvent {
+  summary: string
+  target_file: string
+}
+
 export interface StepDoneEvent extends BaseEvent {
   step_id: string
   label: string
@@ -89,6 +94,7 @@ export type SSEEventType =
   | 'done'
   | 'step_done'
   | 'prompt'
+  | 'diff_summary'
   | 'connected'
   | 'file-deleted'
 
@@ -104,5 +110,6 @@ export type SSEEventData =
   | ThinkingEvent
   | ErrorEvent
   | DoneEvent
+  | DiffSummaryEvent
   | StepDoneEvent
   | PromptEvent

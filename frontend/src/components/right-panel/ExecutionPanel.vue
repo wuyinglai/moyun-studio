@@ -57,6 +57,19 @@
       </div>
     </div>
 
+    <!-- AI 修改摘要 -->
+    <div v-if="diffSummary.hasSummary.value" class="panel-section">
+      <div class="section-header">
+        <span class="section-title">AI 修改摘要</span>
+        <button class="btn-icon" @click="diffSummary.dismiss()" title="关闭">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="diff-summary-body">
+        <pre class="diff-summary-text">{{ diffSummary.current.value?.summary }}</pre>
+      </div>
+    </div>
+
     <!-- 日志 -->
     <div class="panel-section panel-section--logs">
       <div class="section-header">
@@ -91,7 +104,10 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
 import { useNotificationStore } from '@/stores/notification'
 import { useFileStore } from '@/stores/file'
+import { useDiffSummary } from '@/composables/useDiffSummary'
 import { confirmTask, cancelQueuedTask } from '@/composables/useTaskQueue'
+
+const diffSummary = useDiffSummary()
 
 const taskStore = useTaskStore()
 const notification = useNotificationStore()
@@ -453,5 +469,23 @@ function clearLogs() {
 
 .log-message {
   word-break: break-all;
+}
+
+.diff-summary-body {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.diff-summary-text {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  margin: 0;
 }
 </style>

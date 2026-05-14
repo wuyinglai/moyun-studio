@@ -51,6 +51,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useUIStore } from '@/stores/ui'
 import { useAutoSave } from '@/composables/useAutoSave'
 import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
+import { semanticHighlight } from '@/utils/semanticHighlight'
 
 const fileStore = useFileStore()
 const editorStore = useEditorStore()
@@ -137,6 +138,7 @@ function createEditor(content: string) {
       syntaxHighlighting(defaultHighlightStyle),
       moyunTheme,
       keymap.of([...defaultKeymap, ...historyKeymap] as unknown as import('@codemirror/view').KeyBinding[]),
+      semanticHighlight(),
       updateListener,
       EditorView.lineWrapping,
     ],
@@ -337,6 +339,17 @@ function handleJumpToLine(e: Event) {
 
   :deep(.cm-scroller) {
     overflow: auto;
+  }
+
+  /* ── 语义着色 ── */
+  :deep(.cm-semantic-dialogue) {
+    color: #7ecf8a !important;
+  }
+  :deep(.cm-semantic-character) {
+    color: #6b8cff !important;
+  }
+  :deep(.cm-semantic-scene) {
+    color: #c084fc !important;
   }
 }
 

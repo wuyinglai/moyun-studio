@@ -394,6 +394,23 @@ class PipelineRunner:
         if target_file and final_output:
             await self._update_after_generation(project_id, target_file, final_output, original_content)
 
+        # 内容有变化时生成 AI 修改摘要
+        if original_content and final_output and final_output != original_content:
+            try:
+                summary = await self._generate_diff_summary(
+                    project_id, target_file, original_content, final_output, task_id
+                )
+                if summary:
+                    yield {"event": "diff_summary", "data": json.dumps({
+                        "summary": summary,
+                        "task_id": task_id,
+                        "target_file": target_file,
+                    })}
+                    # 将摘要保存到 revision-log
+                    await self._save_diff_summary_to_revision(project_id, target_file, summary)
+            except Exception as e:
+                logger.warning("生成修改摘要失败: %s", e)
+
         logger.info(
             "管线执行完成: %s (steps=%d, final_output_len=%d)",
             pipeline_name, total_steps, len(final_output),
@@ -496,6 +513,73 @@ class PipelineRunner:
         chinese = len(re.findall(r'[一-鿿]', text))
         other = len(text) - chinese
         return int(chinese * 0.5 + other * 0.25)
+
+    async def _generate_diff_summary(
+        self,
+        project_id: str,
+        target_file: str,
+        original_content: str,
+        modified_content: str,
+        task_id: str,
+    ) -> str | None:
+        """生成 AI 修改摘要
+
+        使用 diff-summary 管线的 analyze 步骤 prompt，调用 LLM 分析修改内容。
+        返回结构化分析报告文本，失败时返回 None。
+        """
+        try:
+            # 加载 diff-summary 管线的 analyze 步骤
+            prompt_rel = "pipeline/diff-summary/analyze.md"
+            variables = {
+                "original_content": original_content,
+                "modified_content": modified_content,
+                "file_content": modified_content,
+                "project_id": project_id,
+                "file_path": target_file,
+                "user_input": "",
+            }
+            prompt_text = self._render_prompt(prompt_rel, variables)
+
+            messages = [{"role": "user", "content": prompt_text}]
+            summary_parts = []
+            async for chunk in self.llm_service.complete(messages, timeout=60):
+                summary_parts.append(chunk)
+
+            summary = "".join(summary_parts)
+            if summary.strip():
+                return summary
+        except Exception as e:
+            logger.warning("生成修改摘要 LLM 调用失败: %s", e)
+        return None
+
+    async def _save_diff_summary_to_revision(
+        self,
+        project_id: str,
+        target_file: str,
+        summary: str,
+    ) -> None:
+        """将修改摘要保存到 revision-log 目录"""
+        if "/sec-" not in target_file:
+            return
+        try:
+            parts = target_file.split("/")
+            if len(parts) >= 3:
+                chapter_dir = "/".join(parts[:-1])
+                entry_id = f"rev-ds-{uuid.uuid4().hex[:8]}"
+                log_entry = {
+                    "id": entry_id,
+                    "chapter_path": target_file,
+                    "revision_type": "diff_summary",
+                    "description": f"AI 修改摘要: {target_file.split('/')[-1]}",
+                    "summary": summary,
+                    "created_at": datetime.now().isoformat(),
+                }
+                log_path = f"{project_id}/{chapter_dir}/revision-log/{entry_id}.json"
+                await self.file_service.write_file(
+                    log_path, json.dumps(log_entry, ensure_ascii=False, indent=2), None
+                )
+        except Exception as e:
+            logger.warning("保存修改摘要到 revision-log 失败: %s", e)
 
     def get_pipeline_detail(self, name: str) -> dict:
         """获取管线详情（含每步 prompt 内容）"""

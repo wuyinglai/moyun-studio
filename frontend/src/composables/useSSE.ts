@@ -35,6 +35,7 @@ import type {
   LLMStatusEvent,
   ThinkingEvent,
   ErrorEvent,
+  DiffSummaryEvent,
   DoneEvent,
 } from '@/types/sse'
 
@@ -145,6 +146,7 @@ class SSEService {
       'thinking',
       'error',
       'done',
+      'diff_summary',
     ]
 
     eventTypes.forEach((type) => {
@@ -276,6 +278,17 @@ class SSEService {
         if (data.message) {
           taskStore.addLog('error', data.message)
           notification.error(data.message)
+        }
+        break
+
+      case 'diff_summary':
+        // AI 修改摘要
+        if (data.summary) {
+          const { useDiffSummary } = await import('./useDiffSummary')
+          const ds = useDiffSummary()
+          ds.setSummary(data.summary, data.target_file || '')
+          taskStore.addLog('info', 'AI 修改摘要已生成')
+          notification.info('AI 修改摘要已生成，可查看修改分析')
         }
         break
 
