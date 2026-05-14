@@ -1,0 +1,7 @@
+name: diff-summary
+label: 修改摘要分析
+steps:
+  - id: analyze
+    label: 分析修改
+    prompt: pipeline/diff-summary/analyze
+    fallback: null

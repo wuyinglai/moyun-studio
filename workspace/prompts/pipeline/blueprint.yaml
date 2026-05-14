@@ -1,0 +1,7 @@
+name: blueprint
+label: 生成小说蓝图
+steps:
+  - id: generate
+    label: 生成蓝图
+    prompt: pipeline/blueprint/generate
+    fallback: null

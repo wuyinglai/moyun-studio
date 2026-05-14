@@ -1,0 +1,7 @@
+name: character
+label: 生成角色设定
+steps:
+  - id: generate
+    label: 生成角色
+    prompt: pipeline/character/generate
+    fallback: null

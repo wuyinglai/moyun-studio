@@ -3,17 +3,17 @@ label: 提取
 steps:
   - id: worldbuilding
     label: 世界观
-    prompt: pipeline/extract/worldbuilding
+    prompt: pipeline/extract/worldbuilding-incremental
     fallback: null
   - id: characters
     label: 角色关系
-    prompt: pipeline/extract/characters
+    prompt: pipeline/extract/characters-incremental
     fallback: null
   - id: plots
     label: 情节场景
-    prompt: pipeline/extract/plots
+    prompt: pipeline/extract/plots-incremental
     fallback: null
   - id: summary
     label: 章节摘要
-    prompt: pipeline/extract/summary
+    prompt: pipeline/extract/summary-incremental
     fallback: null

@@ -1,0 +1,7 @@
+name: outline
+label: 生成大纲
+steps:
+  - id: generate
+    label: 生成大纲
+    prompt: pipeline/outline/generate
+    fallback: null

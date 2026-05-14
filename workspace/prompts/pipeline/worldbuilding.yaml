@@ -1,0 +1,7 @@
+name: worldbuilding
+label: 生成世界观设定
+steps:
+  - id: generate
+    label: 生成世界观
+    prompt: pipeline/worldbuilding/generate
+    fallback: null
