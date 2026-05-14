@@ -185,6 +185,7 @@ import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { useCustomParamsStore } from '@/stores/customParams'
 import { useNotificationStore } from '@/stores/notification'
+import { useLLMStore } from '@/stores/llm'
 
 const router = useRouter()
 const wizard = useProjectWizard()
@@ -193,6 +194,7 @@ const projectStore = useProjectStore()
 const fileStore = useFileStore()
 const customParamsStore = useCustomParamsStore()
 const notification = useNotificationStore()
+const llmStore = useLLMStore()
 
 // M0501-1~5 自定义参数管理
 const editingCategory = ref<string | null>(null)
@@ -231,6 +233,13 @@ const scaleOptions = [
 ]
 
 async function handleCreate() {
+  // 检查 LLM 是否已配置
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    uiStore.openSettings()
+    return
+  }
+
   creatingFile.value = true
   try {
     const project = await wizard.createProject(wizard.params.value)
