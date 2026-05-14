@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useEditorStore } from '@/stores/editor'
+import { useFileStore } from '@/stores/file'
 
 // Module-level singleton refs -- shared across all consumers
 const _isGenerating = ref(false)
@@ -142,6 +143,17 @@ export function useFileGeneration() {
         _currentPrompt.value = prompt
         editorStore.setFilePrompt(filePathForEmitter, prompt)
       }, filePathForEmitter)
+
+      // 管线写入文件后，从磁盘重新加载内容到编辑器
+      try {
+        const fileStore = useFileStore()
+        const result = await fileStore.readFile(projectId, filePathForEmitter)
+        if (result?.content) {
+          editorStore.loadContent(filePathForEmitter, result.content)
+        }
+      } catch {
+        // 文件可能不存在或读取失败，静默忽略
+      }
 
     } catch (e: any) {
       if (e.name !== 'AbortError') throw e

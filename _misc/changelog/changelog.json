@@ -142,6 +142,19 @@
       "files": [
         "frontend/src/components/editor/EditorToolbar.vue"
       ],
+      "commit": "71fff89"
+    },
+    {
+      "id": 10,
+      "timestamp": "2026-05-14T21:00:00+08:00",
+      "type": "fix",
+      "scope": "E004",
+      "module": "管线执行",
+      "description": "管线执行完后从磁盘重新加载文件到编辑器",
+      "reason": "重写管线只流式输出最终步骤（修改摘要），改写内容写入文件后前端未刷新导致编辑器空白",
+      "files": [
+        "frontend/src/composables/useFileGeneration.ts"
+      ],
       "commit": ""
     }
   ]
