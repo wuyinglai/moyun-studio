@@ -57,3 +57,4 @@ _misc/scripts/
 
 # 测试产物
 test-results/
+.worktrees/
