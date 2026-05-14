@@ -1,15 +1,14 @@
 """墨韵 - 文件监听器
 
 监听文件系统变化，发布事件到EventBus。
-仅负责监听，不负责事件发布逻辑。
+使用 watchfiles（原生异步）替代 watchdog。
 """
 
 import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
+import watchfiles
 
 if TYPE_CHECKING:
     from backend.core.event_bus import EventBus
@@ -19,65 +18,61 @@ class FileWatcher:
     """文件监听器
 
     职责：
-    - 监听文件系统变化（使用watchdog）
-    - 将变化转换为事件发布到EventBus
+    - 监听文件系统变化（使用 watchfiles，原生异步）
+    - 将变化转换为事件发布到 EventBus
 
     不负责：
-    - 事件发布的具体逻辑（由EventBus处理）
-    - SSE推送（由API层处理）
+    - 事件发布的具体逻辑（由 EventBus 处理）
+    - SSE 推送（由 API 层处理）
     """
 
     def __init__(self, workspace_path: Path, event_bus: "EventBus"):
         self.workspace = Path(workspace_path)
         self.event_bus = event_bus
-        self._observer = None
+        self._watch_task: asyncio.Task | None = None
 
-    def start(self) -> None:
-        """启动监听"""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+    async def start(self) -> None:
+        """启动监听（异步）"""
+        self._watch_task = asyncio.create_task(self._watch_loop())
 
-        class Handler(FileSystemEventHandler):
-            def __init__(self, watcher: FileWatcher, loop: asyncio.AbstractEventLoop):
-                super().__init__()
-                self._watcher = watcher
-                self._loop = loop
-
-            def _publish(self, event_type: str, data: dict) -> None:
-                """从 watchdog 线程向异步 EventBus 发布事件的同步包装"""
-                asyncio.run_coroutine_threadsafe(
-                    self._watcher.event_bus.publish(event_type, data),
-                    self._loop,
-                )
-
-            def on_created(self, event):
-                if not event.is_directory:
-                    self._publish("file:created", {"path": event.src_path})
-
-            def on_modified(self, event):
-                if not event.is_directory:
-                    self._publish("file:modified", {"path": event.src_path})
-
-            def on_deleted(self, event):
-                if not event.is_directory:
-                    self._publish("file:deleted", {"path": event.src_path})
-
-            def on_moved(self, event):
-                if not event.is_directory:
-                    self._publish("file:modified",
-                                  {"path": event.dest_path, "old_path": event.src_path})
-
-        self._observer = Observer()
-        handler = Handler(self, loop)
-        self._observer.schedule(handler, str(self.workspace), recursive=True)
-        self._observer.start()
-
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """停止监听"""
-        if self._observer:
-            self._observer.stop()
-            self._observer.join()
-            self._observer = None
+        if self._watch_task:
+            self._watch_task.cancel()
+            try:
+                await self._watch_task
+            except asyncio.CancelledError:
+                pass
+            self._watch_task = None
+
+    async def _watch_loop(self) -> None:
+        """异步监听循环"""
+        try:
+            async for changes in watchfiles.watch(
+                str(self.workspace),
+                recursive=True,
+                watch_filter=None,
+                stop_event=None,
+            ):
+                for change in changes:
+                    kind, path = change
+                    # watchfiles.Change: added=1, modified=2, deleted=3
+                    if kind == watchfiles.Change.added:
+                        event_type = "file:created"
+                    elif kind == watchfiles.Change.modified:
+                        event_type = "file:modified"
+                    elif kind == watchfiles.Change.deleted:
+                        event_type = "file:deleted"
+                    else:
+                        continue
+                    # 转换为相对路径
+                    try:
+                        rel = Path(path).relative_to(self.workspace).as_posix()
+                    except ValueError:
+                        rel = path
+                    await self.event_bus.publish(event_type, {"path": rel})
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("文件监听异常: %s", e)

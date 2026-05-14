@@ -153,12 +153,28 @@ class LLMService:
     - 提供流式输出
     - 自动重试机制
     - Token计数
+    - 并发控制（Semaphore）
     """
     logger = logging.getLogger(__name__)
+
+    # 类级别的并发限制（默认最多 3 个并发）
+    _semaphore: asyncio.Semaphore | None = None
+    _max_concurrent: int = 3
 
     def __init__(self, config: LLMConfig):
         self.config = config
         self._client = None
+        # 确保 Semaphore 已初始化
+        if LLMService._semaphore is None:
+            LLMService._semaphore = asyncio.Semaphore(self._max_concurrent)
+
+    @classmethod
+    def set_max_concurrent(cls, max_concurrent: int) -> None:
+        """设置最大并发数（在应用启动时调用）"""
+        cls._max_concurrent = max_concurrent
+        # 重新创建 Semaphore（已有请求会继续使用旧的）
+        cls._semaphore = asyncio.Semaphore(max_concurrent)
+        cls.logger.info(f"LLM 并发限制已设置为 {max_concurrent}")
 
     @classmethod
     def from_workspace_config(cls, config_dict: dict, model: str | None = None) -> "LLMService":
@@ -224,24 +240,26 @@ class LLMService:
             call_kwargs["api_base"] = self.config.api_base
         call_kwargs.update(kwargs)
 
-        try:
-            response = await self._call_with_retry(**call_kwargs)
+        # 使用 Semaphore 控制并发
+        async with self._semaphore:
+            try:
+                response = await self._call_with_retry(**call_kwargs)
 
-            if stream:
-                async for chunk in response:
-                    if stop_event and stop_event.is_set():
-                        break
-                    if not chunk.choices:
-                        continue
-                    content = chunk.choices[0].delta.content
-                    if content:
-                        yield content
-            else:
-                if response.choices:
-                    yield response.choices[0].message.content
+                if stream:
+                    async for chunk in response:
+                        if stop_event and stop_event.is_set():
+                            break
+                        if not chunk.choices:
+                            continue
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            yield content
+                else:
+                    if response.choices:
+                        yield response.choices[0].message.content
 
-        except Exception as e:
-            raise LLMError(message=f"LLM调用失败: {str(e)}")
+            except Exception as e:
+                raise LLMError(message=f"LLM调用失败: {str(e)}")
 
     async def _call_with_retry(self, **kwargs) -> Any:
         """带重试的调用"""

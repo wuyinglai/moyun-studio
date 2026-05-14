@@ -28,11 +28,15 @@
   --shadow-glow: 0 0 30px rgba(107, 140, 255, 0.15);
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.15);
 
-  /* 圆角 */
-  --radius-sm: 6px;   /* 输入框 */
-  --radius-md: 10px;  /* 按钮 */
-  --radius-lg: 16px;  /* 卡片 */
-  --radius-xl: 24px;  /* 模态框 */
+  /* 圆角 -- 按文档规范 M0902 */
+  --radius-input: 6px;   /* 输入框 */
+  --radius-btn: 8px;     /* 按钮 */
+  --radius-card: 12px;   /* 卡片 */
+  --radius-modal: 16px;  /* 模态框 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 9999px; /* 胶囊按钮 */
 
   /* 间距 */

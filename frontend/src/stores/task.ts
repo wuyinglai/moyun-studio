@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
 
-export type TaskStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled' | 'waiting'
+export type TaskStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled' | 'waiting' | 'interrupted'
 
 export interface Task {
   id: string
@@ -99,6 +99,14 @@ export const useTaskStore = defineStore('task', () => {
       task.status = 'cancelled'
     }
     queue.value = queue.value.filter((qid) => qid !== id)
+  }
+
+  /** 标记任务为中断（页面刷新后恢复时使用） */
+  function markInterrupted(id: string) {
+    const task = tasks.value.find((t) => t.id === id)
+    if (task) {
+      task.status = 'interrupted'
+    }
   }
 
   function clearTasks() {
@@ -205,6 +213,7 @@ export const useTaskStore = defineStore('task', () => {
     completeTask,
     failTask,
     cancelTask,
+    markInterrupted,
     waitForConfirm,
     confirmTask,
     clearTasks,

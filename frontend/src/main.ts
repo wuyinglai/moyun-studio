@@ -7,6 +7,7 @@ import router from './router'
 import './assets/styles/base.css'
 import App from './App.vue'
 import { useUIStore } from './stores/ui'
+import { restoreInterruptedTasks } from './composables/useTaskQueue'
 
 const pinia = createPinia()
 pinia.use(piniaPersistedstate)
@@ -20,3 +21,6 @@ app.use(Antd)
 useUIStore()
 
 app.mount('#app')
+
+// 恢复页面刷新前中断的任务
+restoreInterruptedTasks()

@@ -15,6 +15,38 @@ const _isProcessing = ref(false)
 /** L1 待确认任务的 resolve 回调 */
 const _confirmResolvers = new Map<string, () => void>()
 
+/* ─── 持久化 ─────────────────────────────────────────── */
+
+const PREFIX = 'moyun:task-queue:'
+
+function _saveQueueMeta() {
+  const metas = _queue.value.map(t => ({ id: t.id, name: t.name }))
+  localStorage.setItem(PREFIX + 'queue', JSON.stringify(metas))
+}
+
+function _loadQueueMeta(): { id: string; name: string }[] {
+  try {
+    const raw = localStorage.getItem(PREFIX + 'queue')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function restoreInterruptedTasks() {
+  const metas = _loadQueueMeta()
+  if (metas.length === 0) return
+
+  const taskStore = useTaskStore()
+  for (const meta of metas) {
+    // 标记为中断状态，用户可选择重新执行
+    taskStore.addTask(meta.id, `[中断] ${meta.name}`)
+    taskStore.markInterrupted(meta.id)
+  }
+  // 清空已恢复的持久化数据
+  localStorage.removeItem(PREFIX + 'queue')
+}
+
 /* ─── 内部处理逻辑 ──────────────────────────────────────── */
 
 function getAutoMode(): string {
@@ -49,10 +81,12 @@ async function processQueue() {
       }
 
       _queue.value.shift()
+      _saveQueueMeta()
     } catch (e: any) {
       taskStore.failTask(task.id)
       taskStore.addLog('error', `失败: ${task.name} — ${e.message || e}`)
       _queue.value.shift()
+      _saveQueueMeta()
     }
   }
 
@@ -72,6 +106,7 @@ export function enqueueTask(
   const taskStore = useTaskStore()
   taskStore.addTask(id, name)
   _queue.value.push({ id, executor, name })
+  _saveQueueMeta()
 
   if (!_isProcessing.value) {
     processQueue()
@@ -104,6 +139,7 @@ export function cancelQueuedTask(taskId: string) {
   taskStore.cancelTask(taskId)
   const idx = _queue.value.findIndex(t => t.id === taskId)
   if (idx >= 0) _queue.value.splice(idx, 1)
+  _saveQueueMeta()
 }
 
 /* ─── Vue 响应式 composable ─────────────────────────────── */
@@ -113,6 +149,7 @@ export function useTaskQueue() {
     enqueue: enqueueTask,
     confirmTask: confirmTask,
     cancelTask: cancelQueuedTask,
+    restoreInterruptedTasks,
     isProcessing: _isProcessing,
     queueLength: _queue.value.length,
   }

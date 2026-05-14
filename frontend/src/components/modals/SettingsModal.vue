@@ -147,6 +147,7 @@ import { useLLMStore } from '@/stores/llm'
 import type { LLMConfig } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notification'
+import { saveConfig as saveRemoteConfig } from '@/services/configService'
 
 const llmStore = useLLMStore()
 const uiStore = useUIStore()
@@ -176,6 +177,8 @@ const themes = [
 const autoMode = ref(localStorage.getItem('moyun-auto-mode') || 'L1')
 watch(autoMode, (val) => {
   localStorage.setItem('moyun-auto-mode', val)
+  // G0104 同步到后端 .config.json
+  saveRemoteConfig({ autoMode: val }).catch(() => {})
 })
 
 watch(visible, (val) => {

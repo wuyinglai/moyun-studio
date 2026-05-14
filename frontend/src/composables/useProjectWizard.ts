@@ -4,8 +4,9 @@ import { useProjectStore } from '@/stores/project'
 export const useProjectWizard = () => {
   const projectStore = useProjectStore()
 
-  // 创作参数（保留现有所有字段）
+  // 创作参数
   const params = ref({
+    name: '',
     genre: '',
     tone: '',
     background: '',
@@ -24,7 +25,7 @@ export const useProjectWizard = () => {
     isGenerating.value = true
     try {
       const project = await projectStore.createProject({
-        name: '新项目', // 后端生成书名后会更新
+        name: params.name || '新项目',
         genre: params.genre,
         tone: params.tone,
         background: params.background,
@@ -41,6 +42,7 @@ export const useProjectWizard = () => {
 
   function reset() {
     params.value = {
+      name: '',
       genre: '',
       tone: '',
       background: '',

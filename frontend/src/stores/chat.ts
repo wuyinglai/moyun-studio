@@ -2,8 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useLLMStore } from './llm'
 import { useTaskStore } from './task'
-import { useFileStore } from './file'
-import { useEditorStore } from './editor'
 
 function getAutoMode(): string {
   return localStorage.getItem('moyun-auto-mode') || 'L1'
@@ -11,13 +9,16 @@ function getAutoMode(): string {
 
 /**
  * 解析 SSE 响应流，逐行提取 data: JSON 中的 delta 内容
+ * 注意：/api/generate 的 generation 事件已由 useSSE 通过 generationEmitter 统一处理，
+ * 此函数仅用于 /api/chat 的聊天消息流
  */
-async function parseSSEStream(
+async function parseSSEStreamForChat(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onDelta: (delta: string) => void,
 ): Promise<void> {
   const decoder = new TextDecoder()
   let buffer = ''
+  let currentEvent = ''
 
   while (true) {
     const { done, value } = await reader.read()
@@ -28,9 +29,14 @@ async function parseSSEStream(
     buffer = lines.pop() || '' // 保留未完成行
 
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
+      if (line.startsWith('event: ')) {
+        currentEvent = line.slice(7).trim()
+      } else if (line.startsWith('data: ')) {
         try {
           const parsed = JSON.parse(line.slice(6))
+          if (currentEvent === 'error') {
+            throw new Error(parsed.message || '聊天出错')
+          }
           if (parsed.delta) {
             onDelta(parsed.delta)
           } else if (parsed.content) {
@@ -53,22 +59,6 @@ export interface ChatMessage {
 }
 
 export type GenerationMode = 'continue' | 'rewrite' | 'chat'
-
-/**
- * 重新加载文件内容到编辑器（生成/重写完成后调用）
- */
-async function reloadFileIntoEditor(projectId: string, filePath: string) {
-  try {
-    const fileStore = useFileStore()
-    const editorStore = useEditorStore()
-    const result = await fileStore.readFile(projectId, filePath)
-    if (result && result.content) {
-      editorStore.loadContent(filePath, result.content)
-    }
-  } catch (e) {
-    console.warn('重新加载文件到编辑器失败:', e)
-  }
-}
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
@@ -144,6 +134,7 @@ export const useChatStore = defineStore('chat', () => {
 
   /**
    * 发送聊天消息（走 chat 管线）
+   * 注意：generation 事件由 useSSE 通过 generationEmitter 统一处理
    */
   async function sendMessage(content: string, projectId?: string, contextFile?: string) {
     const llmStore = useLLMStore()
@@ -174,7 +165,7 @@ export const useChatStore = defineStore('chat', () => {
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
 
-      await parseSSEStream(reader, (delta) => {
+      await parseSSEStreamForChat(reader, (delta) => {
         appendAIMessage(delta)
       })
       finishAIMessage()
@@ -188,14 +179,17 @@ export const useChatStore = defineStore('chat', () => {
 
   /**
    * 续写当前文件（调用 /api/generate 的 append 模式）
+   * 注意：generation 事件由 useSSE 通过 generationEmitter 统一处理到编辑器，
+   * 此方法只处理任务队列逻辑
    */
   async function continueWriting(projectId: string, filePath: string, prompt?: string) {
     const taskStore = useTaskStore()
+    const editorStore = useEditorStore()
     generationMode.value = 'continue'
 
     // 记录 prompt 与文件的关联
     if (prompt) {
-      useEditorStore().setFilePrompt(filePath, prompt)
+      editorStore.setFilePrompt(filePath, prompt)
     }
 
     const taskId = `task-${Date.now()}`
@@ -224,12 +218,8 @@ export const useChatStore = defineStore('chat', () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('无法读取响应流')
-
-      await parseSSEStream(reader, (delta) => {
-        appendAIMessage(delta)
-      })
+      // 消费响应体但不解析 SSE（generation 事件由 useSSE 通过 generationEmitter 处理）
+      await response.body?.getReader()?.cancel()
 
       // G0116: 根据自动化模式决定是否等待确认
       if (getAutoMode() === 'L1') {
@@ -238,9 +228,6 @@ export const useChatStore = defineStore('chat', () => {
         taskStore.completeTask(taskId)
       }
       finishAIMessage()
-
-      // 生成完成后，重新加载文件内容到编辑器
-      await reloadFileIntoEditor(projectId, filePath)
     } catch (e) {
       taskStore.failTask(taskId)
       finishAIMessage()
@@ -252,14 +239,17 @@ export const useChatStore = defineStore('chat', () => {
 
   /**
    * 重写当前文件（调用 /api/generate 的 rewrite 模式）
+   * 注意：generation 事件由 useSSE 通过 generationEmitter 统一处理到编辑器，
+   * 此方法只处理任务队列逻辑
    */
   async function rewriteContent(projectId: string, filePath: string, prompt?: string) {
     const taskStore = useTaskStore()
+    const editorStore = useEditorStore()
     generationMode.value = 'rewrite'
 
     // 记录 prompt 与文件的关联
     if (prompt) {
-      useEditorStore().setFilePrompt(filePath, prompt)
+      editorStore.setFilePrompt(filePath, prompt)
     }
 
     const taskId = `task-${Date.now()}`
@@ -288,12 +278,8 @@ export const useChatStore = defineStore('chat', () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('无法读取响应流')
-
-      await parseSSEStream(reader, (delta) => {
-        appendAIMessage(delta)
-      })
+      // 消费响应体但不解析 SSE（generation 事件由 useSSE 通过 generationEmitter 处理）
+      await response.body?.getReader()?.cancel()
 
       // G0116: 根据自动化模式决定是否等待确认
       if (getAutoMode() === 'L1') {
@@ -302,9 +288,6 @@ export const useChatStore = defineStore('chat', () => {
         taskStore.completeTask(taskId)
       }
       finishAIMessage()
-
-      // 生成完成后，重新加载文件内容到编辑器
-      await reloadFileIntoEditor(projectId, filePath)
     } catch (e) {
       taskStore.failTask(taskId)
       finishAIMessage()

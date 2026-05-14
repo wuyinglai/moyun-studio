@@ -14,7 +14,7 @@
 import pytest
 
 from backend.core.file_ops import FileService
-from backend.core.exceptions import FileNotFoundError as MoyunFileNotFoundError
+from backend.core.exceptions import MoyunFileNotFoundError
 
 
 class TestFileServiceInit:

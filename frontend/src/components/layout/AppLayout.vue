@@ -36,24 +36,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import FileTree from '@/components/file-tree/FileTree.vue'
 import EditorTabs from '@/components/editor/EditorTabs.vue'
 import EditorToolbar from '@/components/editor/EditorToolbar.vue'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import RightPanel from '@/components/right-panel/RightPanel.vue'
+import { getStorage, setStorage, STORAGE_KEYS } from '@/utils/storage'
+import { saveConfig as saveRemoteConfig } from '@/services/configService'
 
 // ── 布局尺寸状态 ──────────────────────────────────
 const DEFAULT_LEFT = 20
 const DEFAULT_RIGHT = 25
 const DEFAULT_TOP = 75
 
-const leftWidth = ref(`${DEFAULT_LEFT}%`)
-const rightWidth = ref(`${DEFAULT_RIGHT}%`)
-const centerWidth = ref(`${100 - DEFAULT_LEFT - DEFAULT_RIGHT}%`)
-const topHeight = ref(`${DEFAULT_TOP}%`)
-const bottomHeight = ref(`${100 - DEFAULT_TOP}%`)
+function loadSavedSizes() {
+  const saved = getStorage<{ left: number; right: number; top: number } | null>(STORAGE_KEYS.LAYOUT_SIZES, null)
+  if (saved) {
+    return {
+      left: Math.max(10, Math.min(60, saved.left)),
+      right: Math.max(10, Math.min(60, saved.right)),
+      top: Math.max(15, Math.min(85, saved.top)),
+    }
+  }
+  return { left: DEFAULT_LEFT, right: DEFAULT_RIGHT, top: DEFAULT_TOP }
+}
+
+const saved = loadSavedSizes()
+const leftWidth = ref(`${saved.left}%`)
+const rightWidth = ref(`${saved.right}%`)
+const centerWidth = ref(`${100 - saved.left - saved.right}%`)
+const topHeight = ref(`${saved.top}%`)
+const bottomHeight = ref(`${100 - saved.top}%`)
 
 let dragging: 'h-left' | 'h-right' | 'v' | null = null
 
@@ -84,6 +99,21 @@ function stopDrag() {
   document.removeEventListener('mousemove', onHDrag)
   document.removeEventListener('mousemove', onVDrag)
   document.removeEventListener('mouseup', stopDrag)
+
+  // 持久化布局尺寸 M0704 / G0104
+  setStorage(STORAGE_KEYS.LAYOUT_SIZES, {
+    left: Math.round(parseFloat(leftWidth.value) * 100) / 100,
+    right: Math.round(parseFloat(rightWidth.value) * 100) / 100,
+    top: Math.round(parseFloat(topHeight.value) * 100) / 100,
+  })
+  // 同步到后端 .config.json
+  saveRemoteConfig({
+    layout: {
+      left: Math.round(parseFloat(leftWidth.value) * 100) / 100,
+      right: Math.round(parseFloat(rightWidth.value) * 100) / 100,
+      editorChat: Math.round(parseFloat(topHeight.value) * 100) / 100,
+    },
+  }).catch(() => {}) // 静默失败，localStorage 兜底
 }
 
 function onHDrag(e: MouseEvent) {

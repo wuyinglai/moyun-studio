@@ -12,7 +12,7 @@ import json
 import aiofiles
 import frontmatter
 
-from backend.core.exceptions import FileNotFoundError
+from backend.core.exceptions import MoyunFileNotFoundError
 
 
 class FileService:
@@ -48,7 +48,7 @@ class FileService:
         file_path = self._resolve_path(relative_path)
 
         if not file_path.exists():
-            raise FileNotFoundError(str(file_path))
+            raise MoyunFileNotFoundError(str(file_path))
 
         async with aiofiles.open(file_path, mode="r", encoding="utf-8") as f:
             content = await f.read()
@@ -185,3 +185,62 @@ class FileService:
             async with aiofiles.open(info_path, "r") as f:
                 return json.loads(await f.read())
         return None
+
+    async def search_files(
+        self,
+        project_id: str,
+        query: str,
+        case_sensitive: bool = False,
+        regex: bool = False,
+    ) -> list[dict]:
+        """在项目中搜索文件内容
+
+        Args:
+            project_id: 项目ID
+            query: 搜索关键词
+            case_sensitive: 是否区分大小写
+            regex: 是否使用正则表达式
+
+        Returns:
+            [{file, line, content}, ...]
+        """
+        import re
+
+        project_path = self._resolve_path(project_id)
+        if not project_path.exists():
+            return []
+
+        results = []
+        flags = 0 if case_sensitive else re.IGNORECASE
+
+        try:
+            if regex:
+                pattern = re.compile(query, flags)
+            else:
+                pattern = re.compile(re.escape(query), flags)
+        except re.error:
+            return []
+
+        async def _search_dir(dir_path: Path, rel_prefix: str = "") -> None:
+            for item in dir_path.iterdir():
+                if item.name.startswith("."):
+                    continue
+                rel = f"{rel_prefix}/{item.name}" if rel_prefix else item.name
+                if item.is_dir():
+                    await _search_dir(item, rel)
+                elif item.is_file() and item.suffix in (".md", ".txt", ".mdx"):
+                    try:
+                        async with aiofiles.open(item, "r", encoding="utf-8") as f:
+                            content = await f.read()
+                        for line_no, line in enumerate(content.splitlines(), 1):
+                            if pattern.search(line):
+                                results.append({
+                                    "file": rel,
+                                    "line": line_no,
+                                    "content": line[:200],
+                                })
+                    except (UnicodeDecodeError, OSError):
+                        pass
+
+        await _search_dir(project_path)
+        return results

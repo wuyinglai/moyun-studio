@@ -1,7 +1,7 @@
 # 墨韵 AI Prompt 模板说明文档
 
 > 本文档用于 AI 读取并理解所有 Prompt 模板的结构，以便进行编程开发。
-> **版本：2.1 | 更新日期：2026-05-14**
+> **版本：2.4 | 更新日期：2026-05-14**
 
 ---
 
@@ -18,78 +18,111 @@
 
 ```
 workspace/prompts/pipeline/
-├── generate.yaml           ← 续写管线定义（6步：context → outline → draft → depai → logic → rhythm）
-├── rewrite.yaml            ← 重写管线定义（5步：diagnose → draft → depai → logic → rhythm）
-├── chat.yaml               ← 聊天管线定义（3步：understand → draft → validate）
-├── extract.yaml            ← 提取管线定义（4步：世界观/角色/情节/摘要）
-├── polish.yaml             ← 润色管线定义（4步：去AI味/文笔/逻辑/节奏）
-├── generate/               ← 续写管线步骤 prompt
-│   ├── context.md
-│   ├── outline.md
-│   ├── draft.md
-│   ├── depai.md
-│   ├── logic.md
-│   └── rhythm.md
+├── generate.yaml           ← 生成管线（7步：context → outline → draft → depai → logic → rhythm → diff）
+├── rewrite.yaml            ← 重写管线（6步：diagnose → draft → depai → logic → rhythm → diff）
+├── chat.yaml               ← 聊天管线（3步：understand → draft → validate）
+├── extract.yaml            ← 提取管线（4步：世界观/角色/情节/摘要，均为增量提取）
+├── polish.yaml             ← 润色管线（5步：depai → prose → logic → rhythm → diff）
+├── blueprint.yaml          ← 蓝图生成（1步，直接输出）
+├── outline.yaml            ← 大纲生成（1步，直接输出）
+├── worldbuilding.yaml      ← 世界观生成（1步，直接输出）
+├── character.yaml          ← 角色生成（1步，直接输出）
+├── diff-summary.yaml       ← 修改摘要分析（1步，被 generate/polish/rewrite 末尾引用）
+├── generate/               ← 各管线步骤 prompt
 ├── rewrite/
-│   ├── diagnose.md
-│   ├── draft.md
-│   ├── depai.md
-│   ├── logic.md
-│   └── rhythm.md
 ├── chat/
-│   ├── understand.md
-│   ├── draft.md
-│   └── validate.md
 ├── extract/
-│   ├── worldbuilding.md
-│   ├── characters.md
-│   ├── plots.md
-│   └── summary.md
+│   ├── worldbuilding-incremental.md
+│   ├── characters-incremental.md
+│   ├── plots-incremental.md
+│   └── summary-incremental.md
 ├── polish/
-│   ├── depai.md
-│   ├── prose.md
-│   ├── logic.md
-│   └── rhythm.md
+├── blueprint/
+├── outline/
+├── worldbuilding/
+├── character/
+└── diff-summary/
+    └── analyze.md
 ```
 
-**管线 YAML 定义示例**（generate.yaml）：
+**管线的最终步骤（diff）**：三条主管线（generate/polish/rewrite）末尾都加了 `diff` 步骤，调用 `pipeline/diff-summary/analyze`，对比原文和修改后的内容，输出结构化的修改摘要供前端展示。
+
+**管线 YAML 定义示例**（generate.yaml 目前版本）：
 ```yaml
 name: generate
-label: 续写
+label: 生成
 steps:
-  - id: analysis
-    label: 分析现状
-    prompt: pipeline/generate/analysis
-  - id: style
-    label: 风格对齐
-    prompt: pipeline/generate/style
-    fallback: analysis
-  - id: write
-    label: 续写
-    prompt: pipeline/generate/write
-    fallback: style
+  - id: context
+    label: 整合上下文
+    prompt: pipeline/generate/context
+    fallback: null
+  - id: outline
+    label: 大纲对齐
+    prompt: pipeline/generate/outline
+    fallback: context
+  - id: draft
+    label: 写作初稿
+    prompt: pipeline/generate/draft
+    fallback: outline
+  - id: depai
+    label: 去AI味
+    prompt: pipeline/generate/depai
+    fallback: draft
+  - id: logic
+    label: 逻辑修正
+    prompt: pipeline/generate/logic
+    fallback: depai
+  - id: rhythm
+    label: 优化节奏
+    prompt: pipeline/generate/rhythm
+    fallback: logic
+  - id: diff
+    label: 修改摘要
+    prompt: pipeline/diff-summary/analyze
+    fallback: rhythm
 ```
 
-### 1.2 旧模板目录结构（回退模式）
+### 1.2 共享块目录（blocks/）
+
+公共规则拆分为独立块文件，用 `{% include %}` 跨 prompt 引用：
+
+```
+workspace/prompts/blocks/
+├── depai-rules.md          ← 去AI味规则（被12个 prompt 引用）
+├── logic-rules.md          ← 逻辑检查规则（被3个 prompt 引用）
+├── rhythm-rules.md         ← 节奏优化规则（被3个 prompt 引用）
+├── prose-rules.md          ← 文笔提升规则（被1个 prompt 引用）
+├── writing-rules.md        ← 通用写作原则（被2个 prompt 引用）
+├── blueprint-core.md       ← 蓝图七段输出结构（被 pipeline + standalone 共享）
+├── outline-core.md         ← 大纲五段输出结构（被 pipeline + standalone 共享）
+├── worldbuilding-core.md   ← 世界观五段输出结构（被 pipeline + standalone 共享）
+└── character-core.md       ← 角色五维输出模板（被 pipeline + standalone 共享）
+```
+
+改一处，处处生效。例如去AI味规则原先散落在12个 prompt 中，改一个词要改12处；现在改 `blocks/depai-rules.md` 即可。
+
+### 1.3 旧模板目录结构（回退模式）
 
 ```
 workspace/prompts/
+├── blocks/             # 共享块（所有 prompt 的公共规则）
 ├── generate/           # 生成类模板
 │   ├── title/          # 书名+创意生成
 │   ├── blueprint/      # 整体蓝图生成
 │   ├── outline/        # 大纲生成
 │   ├── worldbuilding/  # 世界观设定
 │   ├── character/      # 角色设定
-│   ├── chapter/        # 章节撰写
+│   ├── chapter/        # 章节撰写（含 blocks/ 子目录，收录 opening-writing/climax-writing/ending-writing 写作技巧参考）
 │   ├── continuation/   # 续写
 │   ├── rewrite/        # 重写
 │   ├── dialogue/       # 对话生成
-│   └── scene/          # 场景描写
+│   ├── scene/          # 场景描写
+│   └── diff-summary/   # 修改摘要分析（2026-05-14 新增）
 ├── extract/           # 提取类模板
-│   ├── character/     # 角色提取
-│   ├── plot/          # 情节提取
-│   ├── scene/         # 场景提取
-│   └── summary/       # 摘要提取
+│   ├── character/     # 角色提取（完整提取）
+│   ├── plot/          # 情节提取（完整提取）
+│   ├── scene/         # 场景提取（完整提取）
+│   └── summary/       # 摘要提取（完整提取）
 └── transform/         # 转换类模板
     ├── polish/        # 润色
     ├── translate/     # 翻译
@@ -97,11 +130,15 @@ workspace/prompts/
     └── shorten/       # 缩写
 ```
 
-### 1.3 每个模板的文件结构
+**提取类有两套**：`pipeline/extract/*-incremental.md`（增量提取，每次生成后自动运行，只输出新增内容）和 `extract/*/main.md`（完整提取，用户手动触发，从零提取）。前者加 `-incremental` 后缀以示区分。
+
+### 1.4 每个模板的文件结构
 
 旧模板每个包含两个文件：
 - `meta.json` — 变量定义（供前端UI使用）
 - `main.md` — Prompt 内容（Jinja2 模板）
+
+管线步骤 prompt 只用 `.md` 文件，没有 `meta.json`（变量由 pipeline runner 统一提供）。
 
 ---
 
@@ -140,6 +177,9 @@ PipelineRunner 自动加载以下变量：
 | `{{ project_id }}` | 项目ID | 字符串 |
 | `{{ user_input }}` | 用户输入 | 文本 |
 | `{{ previous_output }}` | 前序步骤输出（仅 fallback 启用时可用） | 文本 |
+| `{{ original_content }}` | pipeline extra_vars，由调用方在运行前快照 | 文本 |
+| `{{ modified_content }}` | 管线最终输出，由调用方通过 extra_vars 传入 | 文本 |
+| `{{ character_info }}` | 用户输入或 ch-meta.json，角色生成用 | 文本 |
 
 ---
 
@@ -282,13 +322,15 @@ PipelineRunner 自动加载以下变量：
 1. **加载管线 YAML** — 读取 `pipeline/{name}.yaml` 获取步骤定义
 2. **加载系统变量** — 读取 style-guide.md、story-state.md、recent-context.md、outline.md
 3. **加载章节变量** — 读取 ch-meta.json 的 pending_foreshadowing、active_quests
-4. **对每步**：
+4. **保存原文快照** — 如有 `diff` 步骤，在第一步执行前将 `file_content` 暂存为 `original_content`
+5. **对每步**：
    a. 渲染步骤 prompt 模板（Jinja2）
    b. 解析 `@{path}` 引用为文件内容（见 §5.3）
    c. 调用 LLM
    d. 失败时自动 fallback
-5. **保存输出** — 根据 output_mode 写入目标文件
-6. **自动更新** — 更新 story-state.md、recent-context.md，创建 revision-log
+6. **保存输出** — 根据 output_mode 写入目标文件
+7. **自动更新** — 更新 story-state.md、recent-context.md，创建 revision-log
+8. **修改摘要** — 如有 `diff` 步骤，将原文快照（`original_content`）和最终输出（`modified_content`）发给 LLM，输出修改分析报告
 
 ### 5.2 变量加载顺序
 
@@ -425,3 +467,4 @@ async def run(pipeline_name, project_id, target_file, user_input):
 | v2.1 | 2026-05-14 | 新增变量加载顺序、@{path}引用机制，修正章节编号 |
 | v2.2 | 2026-05-14 | 补全 extract/polish 管线（共5管线），修正 @{path} 引用解析方法名 |
 | v2.3 | 2026-05-14 | 工作流引擎的变量解析语法见 [工作流引擎设计.md](工作流引擎设计.md#三变量解析) |
+| v2.4 | 2026-05-14 | 新增 blocks/ 共享块体系、diff-summary 管线及三条主管线的 diff 步骤；extract 管线步骤重命名为 -incremental；新增 blueprint/outline/worldbuilding/character/diff-summary 五组单步管线；chat/draft 新增指令优先级；meta.json 同步更新 |

@@ -15,7 +15,7 @@ from backend.core.exceptions import (
     ProjectNotFoundError,
     ProjectAlreadyExistsError,
     MoyunFileError,
-    FileNotFoundError as MoyunFileNotFoundError,
+    MoyunFileNotFoundError,
     DirectoryNotFoundError,
     TemplateError,
     TemplateNotFoundError,

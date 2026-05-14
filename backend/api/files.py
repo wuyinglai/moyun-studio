@@ -42,6 +42,13 @@ class CreateDirectoryRequest(BaseModel):
     path: str = Field(..., description="目录路径（相对于项目根目录）")
 
 
+class SearchRequest(BaseModel):
+    project_id: str = Field(..., description="项目ID")
+    query: str = Field(..., description="搜索关键词")
+    case_sensitive: bool = Field(default=False, description="区分大小写")
+    regex: bool = Field(default=False, description="使用正则表达式")
+
+
 def _get_file_service(settings: Settings = Depends(get_settings)) -> FileService:
     return FileService(settings.projects_path)
 
@@ -218,3 +225,24 @@ async def get_tree(
     return ApiResponse.ok(
         FileTreeResponse(project_id=project_id, tree=nodes)
     )
+
+
+class SearchResultItem(BaseModel):
+    file: str = Field(..., description="文件路径")
+    line: int = Field(..., description="行号")
+    content: str = Field(..., description="匹配内容")
+
+
+@router.post("/files/search", response_model=ApiResponse[list[SearchResultItem]])
+async def search_files(
+    req: SearchRequest,
+    fs: FileService = Depends(_get_file_service),
+):
+    """在项目中搜索文件内容"""
+    results = await fs.search_files(
+        req.project_id,
+        req.query,
+        case_sensitive=req.case_sensitive,
+        regex=req.regex,
+    )
+    return ApiResponse.ok([SearchResultItem(**r) for r in results])

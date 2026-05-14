@@ -1,12 +1,41 @@
 <template>
   <div class="markdown-editor" ref="editorContainer">
-    <div v-if="!fileStore.currentFile" class="editor-empty">
-      <i class="fa-solid fa-file-lines"></i>
-      <h3>暂无打开的文件</h3>
-      <p>从左侧文件树选择一个文件开始编辑</p>
+    <div v-if="!fileStore.currentFile" class="editor-welcome">
+      <div class="welcome-card">
+        <div class="welcome-icon">
+          <i class="fa-solid fa-feather-pointed"></i>
+        </div>
+        <h1 class="welcome-title">欢迎使用墨韵</h1>
+        <p class="welcome-desc">AI 辅助小说创作工具，从零开始创作你的第一部小说</p>
+        <div class="welcome-actions">
+          <a-button type="primary" size="large" @click="uiStore.openCreateProject()">
+            <template #icon><i class="fa-solid fa-plus"></i></template>
+            开始创作
+          </a-button>
+          <a-button size="large" @click="uiStore.openOpenProject()">
+            <template #icon><i class="fa-solid fa-folder-open"></i></template>
+            打开项目
+          </a-button>
+        </div>
+        <div class="welcome-features">
+          <div class="feature-item">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>AI 自动生成</span>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-pen-nib"></i>
+            <span>全流程写作</span>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-sliders"></i>
+            <span>灵活控制</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div v-show="fileStore.currentFile" ref="codemirrorEl" class="codemirror-container"></div>
+    <div v-show="fileStore.currentFile && !isPreviewMode" ref="codemirrorEl" class="codemirror-container"></div>
+    <div v-show="fileStore.currentFile && isPreviewMode" class="preview-container" v-html="previewHtml"></div>
   </div>
 </template>
 
@@ -19,11 +48,15 @@ import { markdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
+import { useUIStore } from '@/stores/ui'
 import { useAutoSave } from '@/composables/useAutoSave'
+import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
 
 const fileStore = useFileStore()
 const editorStore = useEditorStore()
+const uiStore = useUIStore()
 const { triggerAutoSave, cleanup: cleanupAutoSave } = useAutoSave()
+const { isPreviewMode, previewHtml, updatePreview } = useMarkdownPreview()
 
 const codemirrorEl = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
@@ -120,6 +153,8 @@ function handleContentChange(content: string) {
 
   editorStore.updateContent(fileStore.currentFile.path, content)
   fileStore.markDirty(fileStore.currentFile.path)
+  // 标记本地编辑，防止外部更新覆盖
+  editorStore.markLocalEdit()
 
   triggerAutoSave(fileStore.currentFile.path)
 }
@@ -138,19 +173,31 @@ watch(
   }
 )
 
-// 监听外部内容变更（流式生成、文件重载等），更新编辑器但不触发循环
-let _externalUpdate = false
+// 监听外部内容变更（流式生成等），更新编辑器
+// 只有 contentSource === 'external' 时才更新，防止覆盖用户正在编辑的内容
 watch(
   () => fileStore.currentFile ? editorStore.contents[fileStore.currentFile.path] : undefined,
   (content) => {
-    if (content === undefined || !editorView || _externalUpdate) return
+    if (content === undefined || !editorView) return
+    // 只有外部更新才触发编辑器更新
+    if (editorStore.contentSource !== 'external') return
     const current = editorView.state.doc.toString()
     if (current !== content) {
-      _externalUpdate = true
       editorView.dispatch({
         changes: { from: 0, to: current.length, insert: content },
       })
-      nextTick(() => { _externalUpdate = false })
+      // 更新完成后标记为本地来源
+      editorStore.markLocalEdit()
+    }
+  }
+)
+
+// 预览模式下，内容变化时更新预览
+watch(
+  () => editorStore.currentFile ? editorStore.getContent(editorStore.currentFile.path) : undefined,
+  () => {
+    if (isPreviewMode.value) {
+      updatePreview()
     }
   }
 )
@@ -158,6 +205,7 @@ watch(
 onMounted(() => {
   window.addEventListener('editor:undo', handleUndo)
   window.addEventListener('editor:redo', handleRedo)
+  window.addEventListener('editor:jump-to-line', handleJumpToLine)
   if (fileStore.currentFile) {
     const content = editorStore.getContent(fileStore.currentFile.path) || ''
     createEditor(content)
@@ -167,6 +215,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('editor:undo', handleUndo)
   window.removeEventListener('editor:redo', handleRedo)
+  window.removeEventListener('editor:jump-to-line', handleJumpToLine)
   cleanupAutoSave()
 
   if (editorView) {
@@ -182,6 +231,20 @@ function handleUndo() {
 function handleRedo() {
   if (editorView) redo(editorView)
 }
+
+function handleJumpToLine(e: Event) {
+  const detail = (e as CustomEvent).detail
+  const line = detail?.line
+  if (!editorView || !line) return
+  try {
+    const lineInfo = editorView.state.doc.line(Math.min(line, editorView.state.doc.lines))
+    editorView.dispatch({
+      selection: { anchor: lineInfo.from },
+      scrollIntoView: true,
+    })
+    editorView.focus()
+  } catch {}
+}
 </script>
 
 <style scoped lang="scss">
@@ -194,33 +257,73 @@ function handleRedo() {
   overflow: hidden;
 }
 
-.editor-empty {
+.editor-welcome {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.welcome-card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  text-align: center;
+}
+
+.welcome-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 20px;
+  background: linear-gradient(135deg, rgba(107, 140, 255, 0.15), rgba(168, 85, 247, 0.15));
+  border-radius: 24px;
+  margin-bottom: 8px;
+  font-size: 36px;
+  color: var(--accent-primary);
+}
+
+.welcome-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.welcome-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.welcome-features {
+  display: flex;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
   color: var(--text-muted);
-  padding: 40px;
 
   i {
-    font-size: 72px;
-    opacity: 0.3;
+    font-size: 20px;
     color: var(--accent-primary);
-  }
-
-  h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin: 0;
-  }
-
-  p {
-    font-size: 14px;
-    margin: 0;
-    opacity: 0.8;
+    opacity: 0.7;
   }
 }
 
@@ -234,6 +337,67 @@ function handleRedo() {
 
   :deep(.cm-scroller) {
     overflow: auto;
+  }
+}
+
+.preview-container {
+  flex: 1;
+  overflow: auto;
+  padding: 24px 32px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  line-height: 1.85;
+  font-size: 15px;
+
+  :deep(h1) {
+    font-size: 1.8em;
+    font-weight: 700;
+    margin: 0.8em 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.3em;
+  }
+
+  :deep(h2) {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin: 0.8em 0;
+  }
+
+  :deep(h3) {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin: 0.6em 0;
+  }
+
+  :deep(p) {
+    margin: 0.8em 0;
+  }
+
+  :deep(blockquote) {
+    border-left: 4px solid var(--accent-primary);
+    padding-left: 1em;
+    margin: 1em 0;
+    color: var(--text-secondary);
+  }
+
+  :deep(code) {
+    background: var(--bg-secondary);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'Fira Code', monospace;
+  }
+
+  :deep(pre) {
+    background: var(--bg-secondary);
+    padding: 1em;
+    border-radius: 6px;
+    overflow-x: auto;
+
+    :deep(code) {
+      background: none;
+      padding: 0;
+    }
   }
 }
 </style>

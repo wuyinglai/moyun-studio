@@ -64,12 +64,8 @@ class MoyunFileError(MoyunException):
         super().__init__(message, "FILE_ERROR", details)
 
 
-class FileNotFoundError(MoyunFileError):
-    """文件不存在（code: FILE_NOT_FOUND，对应 HTTP 404）
-
-    注意：命名为 FileNotFoundError 以保持向后兼容，
-    但这与 Python 内置异常同名，使用时需注意导入来源。
-    """
+class MoyunFileNotFoundError(MoyunFileError):
+    """文件不存在（code: FILE_NOT_FOUND，对应 HTTP 404）"""
 
     def __init__(self, file_path: str):
         super().__init__(

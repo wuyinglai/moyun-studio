@@ -1,7 +1,7 @@
 /**
  * SSE 事件系统 - 实时接收后端推送
  * 事件类型：
- * - generation: AI 生成内容
+ * - generation: AI 生成内容（通过 generationEmitter 统一处理，不再通过 EventSource）
  * - file-created: 新文件创建
  * - file-updated: 文件更新
  * - file-renamed: 文件被重命名
@@ -15,58 +15,30 @@
  */
 
 import { ref, readonly } from 'vue'
+import { generationEmitter } from './useFileGeneration'
 import { useEditorStore } from '@/stores/editor'
 import { useFileStore } from '@/stores/file'
 import { useTaskStore } from '@/stores/task'
 import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
 import { useChatStore } from '@/stores/chat'
+import type {
+  SSEEventType,
+  SSEEventData,
+  GenerationEvent,
+  FileCreatedEvent,
+  FileUpdatedEvent,
+  FileRenamedEvent,
+  DirectoryCreatedEvent,
+  TaskEvent,
+  QueueEvent,
+  LLMStatusEvent,
+  ThinkingEvent,
+  ErrorEvent,
+  DoneEvent,
+} from '@/types/sse'
 
-export type SSEEventType =
-  | 'generation'
-  | 'file-created'
-  | 'file-updated'
-  | 'file-renamed'
-  | 'directory-created'
-  | 'task'
-  | 'queue'
-  | 'llm-status'
-  | 'thinking'
-  | 'error'
-  | 'done'
-  | 'connected'
-
-export interface SSEEvent {
-  type: SSEEventType
-  data: any
-}
-
-export interface GenerationEvent {
-  content: string
-  taskId: string
-}
-
-export interface FileEvent {
-  path: string
-  name?: string
-}
-
-export interface TaskEvent {
-  taskId: string
-  status: 'pending' | 'running' | 'done' | 'failed'
-  name?: string
-  progress?: number
-}
-
-export interface LLMStatusEvent {
-  connected: boolean
-  model?: string
-}
-
-export interface ErrorEvent {
-  code: string
-  message: string
-}
+export type { SSEEventType, SSEEventData, GenerationEvent }
 
 const MAX_RECONNECT_ATTEMPTS = 10
 const INITIAL_RECONNECT_DELAY = 1000
@@ -128,8 +100,11 @@ class SSEService {
         }
       }
 
-      // 监听各类型事件
+      // 监听 EventSource 事件（非 generation）
       this.setupEventListeners()
+
+      // 订阅 generationEmitter - generation 事件统一通过 fetch+ReadableStream 处理
+      this.setupGenerationEmitterListener()
     } catch (error) {
       this.isConnecting = false
       this._lastError.value = 'SSE 连接失败'
@@ -138,13 +113,28 @@ class SSEService {
   }
 
   /**
+   * 订阅 generationEmitter - 处理来自 useFileGeneration 的 generation 事件
+   * 这样 generation 事件只通过一条通路（fetch+ReadableStream → generationEmitter → handleEvent）
+   */
+  private setupGenerationEmitterListener() {
+    const handler = (event: CustomEvent) => {
+      // generationEmitter 发出的事件格式: { delta, task_id, ... }
+      // 通过 handleEvent 统一处理，但标记为 'generation' 类型
+      this.handleEvent('generation', event.detail)
+    }
+    generationEmitter.addEventListener('generation', handler as EventListener)
+    // 存储 handler 以便后续移除
+    ;(this as any)._generationHandler = handler
+  }
+
+  /**
    * 设置 EventSource 事件监听
+   * 注意：generation 事件不再通过 EventSource 接收，统一由 generationEmitter 处理
    */
   private setupEventListeners() {
     if (!this.eventSource) return
 
     const eventTypes: SSEEventType[] = [
-      'generation',
       'file-created',
       'file-updated',
       'file-renamed',
@@ -184,11 +174,22 @@ class SSEService {
     switch (type) {
       case 'generation':
         // AI 生成内容 - 更新编辑器和聊天
-        // 后端发送格式: { delta: "...", content?: "..." }
+        // 后端发送格式: { delta: "...", content?: "...", _targetFilePath?: string }
+        // 通过 generationEmitter 接收，包含正确的目标文件路径
         if (data.delta) {
           chatStore.appendAIMessage(data.delta)
+          // 如果有 _targetFilePath，使用 appendContentToFile；否则使用 appendContent
+          if (data._targetFilePath) {
+            editorStore.appendContentToFile(data._targetFilePath, data.delta)
+          } else {
+            editorStore.appendContent(data.delta)
+          }
         } else if (data.content) {
-          editorStore.appendContent(data.content)
+          if (data._targetFilePath) {
+            editorStore.appendContentToFile(data._targetFilePath, data.content)
+          } else {
+            editorStore.appendContent(data.content)
+          }
           chatStore.appendAIMessage(data.content)
         }
         break
@@ -197,6 +198,7 @@ class SSEService {
         // 新文件创建 - 刷新文件树
         if (data.path) {
           fileStore.handleFileCreated(data.path, data.name)
+          taskStore.addLog('success', `已创建文件: ${data.name || data.path}`)
           notification.success(`已创建文件: ${data.name || data.path}`)
         }
         break
@@ -205,13 +207,15 @@ class SSEService {
         // 文件更新 - 更新编辑器内容
         if (data.path) {
           editorStore.updateContent(data.path, data.content)
+          taskStore.addLog('info', `文件已更新: ${data.path}`)
         }
         break
 
       case 'file-renamed':
-        // 文件重命名 - 本地更新文件树（不做 API 调用，避免二次重命名）
+        // 文件重命名 - 本地更新文件树
         if (data.oldPath && data.newPath) {
           fileStore.handleFileRenamed(data.oldPath, data.newPath)
+          taskStore.addLog('info', `文件重命名: ${data.oldPath} → ${data.newPath}`)
         }
         break
 
@@ -219,6 +223,7 @@ class SSEService {
         // 目录创建 - 刷新文件树
         if (data.path) {
           fileStore.handleDirectoryCreated(data.path, data.name)
+          taskStore.addLog('success', `已创建目录: ${data.name || data.path}`)
         }
         break
 
@@ -228,9 +233,13 @@ class SSEService {
           taskStore.updateTask(data.taskId, data)
           llmStore.setGenerating(data.status === 'running')
 
-          // 开始新任务时，启动 AI 消息
-          if (data.status === 'running' && data.taskId) {
+          if (data.status === 'running') {
+            taskStore.addLog('info', `任务开始: ${data.name || data.taskId}`)
             chatStore.startAIMessage(data.taskId)
+          } else if (data.status === 'done') {
+            taskStore.addLog('success', `任务完成: ${data.name || data.taskId}`)
+          } else if (data.status === 'failed') {
+            taskStore.addLog('error', `任务失败: ${data.name || data.taskId}`)
           }
         }
         break
@@ -246,6 +255,11 @@ class SSEService {
         // LLM 状态变化
         if (typeof data.connected === 'boolean') {
           llmStore.isConnected = data.connected
+          if (data.connected) {
+            taskStore.addLog('success', 'LLM 连接已建立')
+          } else {
+            taskStore.addLog('warning', 'LLM 连接断开')
+          }
         }
         break
 
@@ -260,6 +274,7 @@ class SSEService {
       case 'error':
         // 错误
         if (data.message) {
+          taskStore.addLog('error', data.message)
           notification.error(data.message)
         }
         break
@@ -270,6 +285,7 @@ class SSEService {
         llmStore.setGenerating(false)
         llmStore.setThinking(false)
         if (data.message) {
+          taskStore.addLog('success', data.message)
           notification.success(data.message)
         }
         break
@@ -313,6 +329,12 @@ class SSEService {
     if (this.eventSource) {
       this.eventSource.close()
       this.eventSource = null
+    }
+    // 移除 generationEmitter 监听器
+    const handler = (this as any)._generationHandler
+    if (handler) {
+      generationEmitter.removeEventListener('generation', handler as EventListener)
+      delete (this as any)._generationHandler
     }
     this._isConnected.value = false
     this._isReconnecting.value = false

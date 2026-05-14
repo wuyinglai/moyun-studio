@@ -6,6 +6,20 @@ const _isGenerating = ref(false)
 const _currentPrompt = ref('')
 let _abortController: AbortController | null = null
 
+/**
+ * GenerationEmitter - 统一事件分发中心
+ * useFileGeneration 通过 fetch+ReadableStream 解析 SSE 事件，
+ * 通过此 Emitter 分发给其他组件，避免与 useSSE (EventSource) 重复处理
+ */
+export class GenerationEmitter extends EventTarget {
+  emit(type: string, data: unknown) {
+    this.dispatchEvent(new CustomEvent(type, { detail: data }))
+  }
+}
+
+// 导出单例，供 useSSE 订阅
+export const generationEmitter = new GenerationEmitter()
+
 export function useFileGeneration() {
   const editorStore = useEditorStore()
 
@@ -22,18 +36,10 @@ export function useFileGeneration() {
     if (_isGenerating.value) return
 
     _isGenerating.value = true
-    _currentPrompt.value = prompt || ''
+    _currentPrompt.value = ''
     _abortController = new AbortController()
 
-    // 记录当前 prompt 与该文件的关联
-    if (prompt) {
-      editorStore.setFilePrompt(filePath, prompt)
-    }
-
     try {
-      // 确保编辑器已打开该文件
-      editorStore.setCurrentFile(filePath)
-
       const body: Record<string, unknown> = {
         project_id: projectId,
         file_path: filePath,
@@ -61,12 +67,17 @@ export function useFileGeneration() {
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
 
+      // 通过 generationEmitter → useSSE → handleEvent 统一处理 generation 事件
+      // 不再直接写入 store，避免重复写入
+      // 将 filePath 作为事件detail的一部分传递，以便正确更新文件
+      const filePathForEmitter = filePath
       await parseSSEStream(reader, (delta) => {
-        editorStore.appendContent(delta)
+        // delta 事件由 useSSE 通过 generationEmitter 监听并处理
+        // filePath 已在 closure 中，通过 emitter detail 传递
       }, (prompt) => {
         _currentPrompt.value = prompt
-        editorStore.setFilePrompt(filePath, prompt)
-      })
+        editorStore.setFilePrompt(filePathForEmitter, prompt)
+      }, filePathForEmitter)
 
       _isGenerating.value = false
     } catch (e: any) {
@@ -101,8 +112,6 @@ export function useFileGeneration() {
     _abortController = new AbortController()
 
     try {
-      editorStore.setCurrentFile(filePath)
-
       const response = await fetch('/api/pipeline/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,12 +131,17 @@ export function useFileGeneration() {
       const reader = response.body?.getReader()
       if (!reader) throw new Error('无法读取响应流')
 
+      // 通过 generationEmitter → useSSE → handleEvent 统一处理 generation 事件
+      // 不再直接写入 store，避免重复写入
+      // 将 filePath 作为事件detail的一部分传递，以便正确更新文件
+      const filePathForEmitter = filePath
       await parseSSEStream(reader, (delta) => {
-        editorStore.appendContent(delta)
+        // delta 事件由 useSSE 通过 generationEmitter 监听并处理
+        // filePath 已在 closure 中，通过 emitter detail 传递
       }, (prompt) => {
         _currentPrompt.value = prompt
-        editorStore.setFilePrompt(filePath, prompt)
-      })
+        editorStore.setFilePrompt(filePathForEmitter, prompt)
+      }, filePathForEmitter)
 
     } catch (e: any) {
       if (e.name !== 'AbortError') throw e
@@ -138,12 +152,17 @@ export function useFileGeneration() {
   }
 
   /**
-   * 解析 SSE 流，提取 delta 内容
+   * 解析 SSE 流，提取 delta 内容，同时通过 generationEmitter 分发事件
+   * 这样 useSSE 可以统一处理所有事件，避免 SSE EventSource 和 fetch 流重复处理
+   * @param onDelta 回调（已废弃，保留为空实现）
+   * @param onPrompt prompt 事件回调
+   * @param targetFilePath 目标文件路径，用于 generation 事件的 detail
    */
   async function parseSSEStream(
     reader: ReadableStreamDefaultReader<Uint8Array>,
     onDelta: (delta: string) => void,
     onPrompt?: (prompt: string) => void,
+    targetFilePath?: string,
   ): Promise<void> {
     const decoder = new TextDecoder()
     let buffer = ''
@@ -164,14 +183,20 @@ export function useFileGeneration() {
           try {
             const parsed = JSON.parse(line.slice(6))
             if (currentEvent === 'error') {
+              // 抛出错误而非仅通过 emitter
               throw new Error(parsed.message || '管线执行出错')
             }
+            // 通过 generationEmitter 分发所有事件，供 useSSE 统一处理
+            // 对于 generation 事件，注入 targetFilePath 以便正确更新文件
+            if (currentEvent === 'generation' && targetFilePath) {
+              parsed._targetFilePath = targetFilePath
+            }
+            generationEmitter.emit(currentEvent || 'message', parsed)
+            // 原有回调逻辑保留（但 delta 写入已移除，由 useSSE 通过 emitter 处理）
             if (currentEvent === 'prompt' && parsed.prompt && onPrompt) {
               onPrompt(parsed.prompt)
-            } else if (parsed.delta) {
-              onDelta(parsed.delta)
-            } else if (parsed.content) {
-              onDelta(parsed.content)
+            } else if ((parsed.delta || parsed.content) && onDelta) {
+              onDelta(parsed.delta || parsed.content)
             }
           } catch {
             // 跳过非 JSON 行

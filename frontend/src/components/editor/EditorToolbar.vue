@@ -10,6 +10,11 @@
         前进
       </a-button>
       <a-divider type="vertical" />
+      <a-button size="small" @click="togglePreview" :type="isPreviewMode ? 'primary' : 'default'">
+        <template #icon><i class="fa-solid fa-eye"></i></template>
+        {{ isPreviewMode ? '编辑' : '预览' }}
+      </a-button>
+      <a-divider type="vertical" />
       <a-button v-if="isGenerating" danger size="small" @click="handleStop">
         <template #icon><i class="fa-solid fa-stop"></i></template>
         停止
@@ -90,6 +95,8 @@ import { usePipelineStore } from '@/stores/pipeline'
 import { useTaskStore } from '@/stores/task'
 import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
+import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
 import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 
 const chatStore = useChatStore()
@@ -101,10 +108,12 @@ const rightPanelStore = useRightPanelStore()
 const projectStore = useProjectStore()
 const pipelineStore = usePipelineStore()
 const fileGen = useFileGeneration()
+const guide = useWorkflowGuide()
 const taskQueue = useTaskQueue()
+const { isPreviewMode, togglePreview } = useMarkdownPreview()
 
 const isGenerating = computed(() =>
-  chatStore.isStreaming || fileGen.isGenerating.value || taskQueue.isProcessing.value,
+  chatStore.isStreaming || fileGen.isGenerating.value || taskQueue.isProcessing.value || guide.isRunning.value,
 )
 
 const customPipelines = computed(() =>
@@ -152,6 +161,11 @@ function handleStop() {
   if (running) {
     cancelQueuedTask(running.id)
   }
+  // 工作流模式：停止当前步骤，等待"写下一部分"继续
+  if (guide.isRunning.value) {
+    guide.stopAfterCurrent()
+    return
+  }
   notification.info('已停止当前任务')
 }
 
@@ -189,6 +203,16 @@ function handleCustomPipeline(info: any) {
 }
 
 function handleGenerateNext() {
+  // 工作流暂停时：恢复执行下一步
+  if (guide.isPaused.value) {
+    const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
+    const filePath = editorStore.currentFilePath
+    if (projectId && filePath) {
+      guide.resume(projectId, filePath)
+    }
+    return
+  }
+
   if (!projectStore.currentProject || !editorStore.currentFilePath) {
     notification.warning('请先打开一个文件')
     return
@@ -242,15 +266,8 @@ async function createAndGenerateFile(filePath: string) {
       `生成新文件: ${fileName}`,
     )
 
-    // 生成完成后从磁盘刷新内容
-    setTimeout(async () => {
-      try {
-        const result = await fileStore.readFile(projectStore.currentProject.id, filePath)
-        if (result?.content) {
-          editorStore.loadContent(filePath, result.content)
-        }
-      } catch {}
-    }, 500)
+    // 不再需要 setTimeout(500) 从磁盘刷新
+    // 生成内容已通过 generationEmitter → useSSE → editorStore.appendContentToFile 实时更新
   } catch (e: any) {
     notification.error('创建文件失败: ' + (e.message || ''))
   }

@@ -14,7 +14,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from backend.core.snapshot import Snapshot, SnapshotManager
-from backend.core.exceptions import ResourceNotFoundError
+from backend.core.exceptions import ResourceNotFoundError, MoyunFileNotFoundError
 
 
 class TestSnapshotData:
@@ -96,7 +96,7 @@ class TestSnapshotManagerList:
 
     @pytest.mark.asyncio
     async def test_list_empty(self, mock_file_service):
-        mock_file_service.read_file = AsyncMock(side_effect=FileNotFoundError("not found"))
+        mock_file_service.read_file = AsyncMock(side_effect=MoyunFileNotFoundError("not found"))
 
         mgr = SnapshotManager(mock_file_service)
         snapshots = await mgr.list_snapshots("chapters/test.md")

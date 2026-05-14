@@ -1,5 +1,8 @@
-import axios, { type AxiosRequestConfig } from 'axios'
+import axios, { type AxiosRequestConfig, type AxiosError } from 'axios'
 import { useNotificationStore } from '@/stores/notification'
+
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1000
 
 const rawApi = axios.create({
   baseURL: '/api',
@@ -7,7 +10,47 @@ const rawApi = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// 响应拦截器：兼容两种格式
+// 请求拦截器：注入重试计数
+rawApi.interceptors.request.use((config) => {
+  ;(config as any).__retryCount = 0
+  return config
+})
+
+// 判断是否可重试
+function isRetryable(error: AxiosError): boolean {
+  if (!error.response) {
+    // 网络错误、断连等
+    return true
+  }
+  const status = error.response.status
+  // 5xx 服务器错误、429 限流、408 超时
+  return status >= 500 || status === 429 || status === 408
+}
+
+// 响应拦截器：自动重试
+rawApi.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const config = error.config as any
+    if (!config || !isRetryable(error)) {
+      return Promise.reject(error)
+    }
+
+    config.__retryCount = (config.__retryCount || 0) + 1
+    if (config.__retryCount >= MAX_RETRIES) {
+      return Promise.reject(error)
+    }
+
+    // 指数退避
+    const delay = RETRY_DELAY_MS * Math.pow(2, config.__retryCount - 1)
+    await new Promise((resolve) => setTimeout(resolve, delay))
+
+    // 重试时带上已发送的数据
+    return rawApi.request(config)
+  }
+)
+
+// 响应拦截器：兼容两种格式 & 错误通知
 // 格式1：{ success: true, data: ..., message: '...' }（标准封装）
 // 格式2：直接返回数据（数组/对象/字符串等）
 rawApi.interceptors.response.use(

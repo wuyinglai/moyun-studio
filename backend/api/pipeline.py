@@ -71,8 +71,11 @@ async def run_pipeline(
                 output_mode=req.output_mode,
                 extra_vars=req.extra_vars,
             ):
+                # 直接返回事件到 streaming 响应
                 yield event
-                if event_bus and event.get("event") in ("generation", "thinking", "done", "error"):
+                # 只发布非 generation 事件到 EventBus
+                # generation 事件只通过 streaming 响应返回，避免重复
+                if event_bus and event.get("event") in ("thinking", "done", "error", "step_done", "prompt"):
                     await event_bus.publish(event["event"], json.loads(event["data"]))
 
         except PipelineError as e:

@@ -2,11 +2,16 @@
 
 实际执行生成任务的模块。
 TaskQueue只负责状态管理，TaskExecutor负责具体执行。
+
+持久化：enqueue 时将任务写入 <project>/.task-queue/<task_id>.json，
+complete/fail/cancel 时同步更新状态。启动时调用 restore() 恢复中断的任务。
 """
 
 import asyncio
+import json
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from backend.core.exceptions import ContextLengthError
@@ -121,13 +126,36 @@ class TaskExecutor:
 
 
 class TaskQueue:
-    """任务队列（仅状态管理）"""
+    """任务队列（状态管理 + 磁盘持久化）"""
 
-    def __init__(self):
+    def __init__(self, persist_dir: str | Path | None = None):
         self._tasks: dict[str, dict] = {}
         self._queue: asyncio.Queue = asyncio.Queue()
         self._running: set[str] = set()
         self._executor: TaskExecutor | None = None
+        self._persist_dir = Path(persist_dir) if persist_dir else None
+
+    def _task_file(self, task_id: str) -> Path:
+        """返回任务对应的持久化文件路径"""
+        return self._persist_dir / f"{task_id}.json" if self._persist_dir else None  # type: ignore[return-value]
+
+    def _save_task(self, task: dict) -> None:
+        """将任务写入磁盘"""
+        if not self._persist_dir:
+            return
+        # 序列化时排除 result（可能含大文本，单独存储）
+        persist_data = {k: v for k, v in task.items() if k != "result"}
+        self._persist_dir.mkdir(parents=True, exist_ok=True)
+        path = self._persist_dir / f"{task['task_id']}.json"
+        path.write_text(json.dumps(persist_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _remove_task_file(self, task_id: str) -> None:
+        """从磁盘移除任务文件（仅 completed/failed/cancelled 的归档清理用）"""
+        if not self._persist_dir:
+            return
+        path = self._persist_dir / f"{task_id}.json"
+        if path.exists():
+            path.unlink()
 
     def set_executor(self, executor: TaskExecutor) -> None:
         """设置执行器"""
@@ -144,6 +172,7 @@ class TaskQueue:
         }
 
         self._tasks[task_id] = task
+        self._save_task(task)
         await self._queue.put(task_id)
 
         return task_id
@@ -162,6 +191,7 @@ class TaskQueue:
             self._tasks[task_id]["status"] = "running"
             self._tasks[task_id]["started_at"] = datetime.now().isoformat()
             self._running.add(task_id)
+            self._save_task(self._tasks[task_id])
 
     def complete_task(self, task_id: str, result: Any) -> None:
         """标记任务完成"""
@@ -170,6 +200,7 @@ class TaskQueue:
             self._tasks[task_id]["completed_at"] = datetime.now().isoformat()
             self._tasks[task_id]["result"] = result
             self._running.discard(task_id)
+            self._remove_task_file(task_id)
 
     def fail_task(self, task_id: str, error: str) -> None:
         """标记任务失败"""
@@ -178,6 +209,7 @@ class TaskQueue:
             self._tasks[task_id]["completed_at"] = datetime.now().isoformat()
             self._tasks[task_id]["error"] = error
             self._running.discard(task_id)
+            self._remove_task_file(task_id)
 
     def cancel_task(self, task_id: str) -> bool:
         """取消任务"""
@@ -187,6 +219,7 @@ class TaskQueue:
                 task["status"] = "cancelled"
                 task["completed_at"] = datetime.now().isoformat()
                 self._running.discard(task_id)
+                self._remove_task_file(task_id)
                 return True
         return False
 
@@ -197,6 +230,33 @@ class TaskQueue:
     def get_all_tasks(self) -> list[dict]:
         """获取所有任务"""
         return list(self._tasks.values())
+
+    @classmethod
+    def restore(cls, persist_dir: str | Path) -> "TaskQueue":
+        """从磁盘恢复中断的任务
+
+        读取 <persist_dir>/*.json 中所有 status=pending 或 running 的任务，
+        将其重新入队。completed/failed/cancelled 的归档文件会被清除。
+        """
+        queue = cls(persist_dir=persist_dir)
+        persist_path = Path(persist_dir)
+        if not persist_path.exists():
+            return queue
+
+        for f in sorted(persist_path.glob("*.json")):
+            try:
+                task = json.loads(f.read_text(encoding="utf-8"))
+                if task.get("status") in ("pending", "running"):
+                    task["status"] = "pending"  # 重启后统一重置为 pending
+                    task_id = task["task_id"]
+                    queue._tasks[task_id] = task
+                    queue._queue.put_nowait(task_id)
+                else:
+                    f.unlink()  # 清理已完成/失败的归档
+            except (json.JSONDecodeError, KeyError, OSError):
+                pass  # 跳过损坏的文件
+
+        return queue
 
     @property
     def running_count(self) -> int:

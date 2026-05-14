@@ -30,6 +30,8 @@ from jinja2 import Environment, FileSystemLoader
 
 from backend.core.llm import LLMService
 from backend.core.file_ops import FileService
+from backend.core.exceptions import MoyunFileNotFoundError
+from backend.core.prompt_versioning import archive_prompt
 from backend.schemas.pipeline import PipelineDef, PipelineStepDef
 
 logger = logging.getLogger(__name__)
@@ -93,11 +95,29 @@ class PipelineRunner:
             try:
                 content, _ = await self.file_service.read_file(f"{project_id}/{file_path}")
                 replacement = content if content else ""
-            except Exception:
+            except (MoyunFileNotFoundError, OSError):
                 replacement = f"\n<!-- 文件 {file_path} 不存在 -->\n"
             result = result[:match.start()] + replacement + result[match.end():]
 
         return result
+
+    async def _load_project_meta(self, project_id: str) -> dict:
+        """从项目 meta.json 加载项目配置变量
+
+        返回 {变量名: 值} 字典，读取失败时返回空字典。
+        映射关系：meta.json 的字段直接作为模板变量名（genre, theme, tone 等）。
+        """
+        try:
+            content, _ = await self.file_service.read_file(f"{project_id}/meta.json")
+            if content:
+                meta = json.loads(content)
+                # 提取需要的字段，忽略内部字段（project_id, created_at 等）
+                keys = ["genre", "theme", "tone", "background", "writing_style",
+                        "target_word_count", "name"]
+                return {k: meta.get(k, "") for k in keys}
+        except (json.JSONDecodeError, MoyunFileNotFoundError, OSError):
+            pass
+        return {}
 
     async def _load_system_variables(self, project_id: str) -> dict:
         """从项目目录加载系统变量
@@ -117,7 +137,7 @@ class PipelineRunner:
             try:
                 content, _ = await self.file_service.read_file(f"{project_id}/{rel_path}")
                 vars[var_name] = content
-            except Exception:
+            except (MoyunFileNotFoundError, OSError):
                 vars[var_name] = ""
         return vars
 
@@ -147,7 +167,7 @@ class PipelineRunner:
                 vars["pending_foreshadowing"] = json.dumps(foreshadowing, ensure_ascii=False) if foreshadowing else ""
                 quests = meta.get("active_quests", [])
                 vars["active_quests"] = json.dumps(quests, ensure_ascii=False) if quests else ""
-        except Exception:
+        except (json.JSONDecodeError, MoyunFileNotFoundError, OSError):
             pass
         return vars
 
@@ -202,8 +222,16 @@ class PipelineRunner:
         pipeline = self.load_pipeline(pipeline_name)
         extra_vars = extra_vars or {}
 
+        logger.info(
+            "管线开始执行: %s (project=%s, target=%s, mode=%s)",
+            pipeline_name, project_id, target_file, output_mode,
+        )
+
         # 加载系统变量（文风指南、故事状态、近期上下文、大纲）
         system_vars = await self._load_system_variables(project_id)
+
+        # 加载项目配置（genre, theme, tone 等）
+        project_vars = await self._load_project_meta(project_id)
 
         # 加载章节变量（pending_foreshadowing, active_quests）
         chapter_vars = await self._load_chapter_vars(project_id, target_file or "")
@@ -251,6 +279,7 @@ class PipelineRunner:
                     "user_input": user_input or "",
                     "previous_output": step_outputs.get(step.fallback) if step.fallback else None,
                     **system_vars,
+                    **project_vars,
                     **chapter_vars,
                     **extra_vars,
                 }
@@ -299,6 +328,11 @@ class PipelineRunner:
 
                 step_outputs[step.id] = step_output
 
+                logger.info(
+                    "管线步骤完成: %s/%s (output_len=%d)",
+                    pipeline_name, step.id, len(step_output),
+                )
+
                 yield {"event": "step_done", "data": json.dumps({
                     "step_id": step.id,
                     "label": step.label,
@@ -306,9 +340,12 @@ class PipelineRunner:
                 })}
 
             except Exception as e:
-                logger.error("管线步骤失败: %s/%s - %s", pipeline_name, step.id, e)
+                logger.error(
+                    "管线步骤失败: %s/%s (fallback=%s, is_final=%s) - %s",
+                    pipeline_name, step.id, step.fallback, is_final, e,
+                )
                 if step.fallback and step.fallback in step_outputs:
-                    logger.info("回退到步骤 %s 的输出", step.fallback)
+                    logger.info("回退到步骤 %s 的输出 (管线: %s)", step.fallback, pipeline_name)
                     step_outputs[step.id] = step_outputs[step.fallback]
                     yield {"event": "step_done", "data": json.dumps({
                         "step_id": step.id,
@@ -356,6 +393,11 @@ class PipelineRunner:
         # 生成完成后自动更新 story-state 和 recent-context
         if target_file and final_output:
             await self._update_after_generation(project_id, target_file, final_output, original_content)
+
+        logger.info(
+            "管线执行完成: %s (steps=%d, final_output_len=%d)",
+            pipeline_name, total_steps, len(final_output),
+        )
 
         yield {"event": "done", "data": json.dumps({
             "task_id": task_id,
@@ -478,15 +520,21 @@ class PipelineRunner:
         }
 
     def save_step_prompt(self, pipeline_name: str, step_id: str, content: str) -> None:
-        """保存步骤的 prompt 内容"""
+        """保存步骤的 prompt 内容（保存前自动归档旧版本）"""
         prompt_dir = self._get_pipeline_dir() / pipeline_name
         prompt_dir.mkdir(parents=True, exist_ok=True)
         prompt_file = prompt_dir / f"{step_id}.md"
+        # 归档旧版本
+        if prompt_file.exists():
+            archive_prompt(prompt_file, self.prompts_path, note=f"更新 {pipeline_name}/{step_id}")
         prompt_file.write_text(content, encoding="utf-8")
 
     def save_pipeline_yaml(self, name: str, label: str, steps: list[dict]) -> None:
-        """保存管线 YAML 定义"""
+        """保存管线 YAML 定义（保存前自动归档旧版本）"""
         yaml_path = self._get_pipeline_yaml_path(name)
+        # 归档旧版本
+        if yaml_path.exists():
+            archive_prompt(yaml_path, self.prompts_path, note=f"更新 {name} 定义")
         data = {
             "name": name,
             "label": label,

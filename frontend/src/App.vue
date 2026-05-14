@@ -13,8 +13,11 @@ import RevisionLogModal from '@/components/modals/RevisionLogModal.vue'
 import BatchGenerateModal from '@/components/modals/BatchGenerateModal.vue'
 import ExtractModal from '@/components/modals/ExtractModal.vue'
 import QualityReviewModal from '@/components/modals/QualityReviewModal.vue'
+import SearchModal from '@/components/modals/SearchModal.vue'
+import QuickOpenModal from '@/components/modals/QuickOpenModal.vue'
 import { useNotificationStore } from '@/stores/notification'
 import { useAppInit } from '@/composables/useApp'
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
@@ -22,6 +25,7 @@ import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useRightPanelStore } from '@/stores/rightPanel'
 
 const { initApp, cleanupApp } = useAppInit()
+useKeyboardShortcuts()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
@@ -168,6 +172,8 @@ watch(
     <BatchGenerateModal />
     <ExtractModal />
     <QualityReviewModal />
+    <SearchModal />
+    <QuickOpenModal />
   </div>
 </template>
 

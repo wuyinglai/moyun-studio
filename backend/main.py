@@ -48,12 +48,19 @@ async def lifespan(app: FastAPI):
     watcher = None
     if settings.projects_path.exists():
         watcher = FileWatcher(settings.projects_path, event_bus)
-        watcher.start()  # 同步方法
+        await watcher.start()  # 异步启动
         app.state.watcher = watcher
 
-    # 初始化任务队列和工作线程
-    task_queue = TaskQueue()
+    # 初始化任务队列（带持久化）和工作线程
+    persist_dir = settings.workspace_path / ".task-queue"
+    task_queue = TaskQueue.restore(persist_dir)
+    restored = len(task_queue._tasks)
+    if restored:
+        logger.info("任务队列已恢复: %d 个待处理任务", restored)
     app.state.task_queue = task_queue
+
+    # 设置 LLM 并发限制
+    LLMService.set_max_concurrent(settings.task_queue_max_concurrent)
 
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
@@ -89,7 +96,7 @@ async def lifespan(app: FastAPI):
 
     # 关闭时停止监听器
     if watcher:
-        watcher.stop()  # 同步方法
+        await watcher.stop()  # 异步停止
     logger.info("墨韵后端已关闭")
 
 

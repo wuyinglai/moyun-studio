@@ -9,6 +9,8 @@ export const useEditorStore = defineStore('editor', () => {
   const currentFilePath = ref<string | null>(null)
   // 文件路径 → 最后一次用于生成该文件的 prompt
   const filePrompts = ref<Record<string, string>>({})
+  // 内容来源标记：'local' = 用户本地编辑，'external' = AI生成等外部更新
+  const contentSource = ref<'local' | 'external'>('local')
   const isDirty = computed(() => {
     const fileStore = useFileStore()
     return fileStore.unsavedFiles.size > 0
@@ -60,6 +62,16 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
+  /** 追加内容到指定文件（AI 生成等外部更新使用，同时标记 contentSource） */
+  function appendContentToFile(path: string, content: string) {
+    contentSource.value = 'external'
+    const current = contents.value[path] || ''
+    contents.value[path] = current + content
+    const fileStore = useFileStore()
+    fileStore.markDirty(path)
+    // 不自动重置 contentSource，由 MarkdownEditor 的 watcher 在更新编辑器后重置
+  }
+
   function setFilePrompt(path: string, prompt: string) {
     if (prompt) {
       filePrompts.value[path] = prompt
@@ -70,10 +82,16 @@ export const useEditorStore = defineStore('editor', () => {
     return filePrompts.value[path] || ''
   }
 
+  /** 标记本地编辑已发生，用于防止外部更新覆盖本地编辑 */
+  function markLocalEdit() {
+    contentSource.value = 'local'
+  }
+
   return {
     contents,
     frontmatter,
     filePrompts,
+    contentSource,
     isDirty,
     wordCount,
     cursorPosition,
@@ -87,6 +105,7 @@ export const useEditorStore = defineStore('editor', () => {
     setCurrentFile,
     setFilePrompt,
     getFilePrompt,
+    markLocalEdit,
   }
 }, {
   persist: {

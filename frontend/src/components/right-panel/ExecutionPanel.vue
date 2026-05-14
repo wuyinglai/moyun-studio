@@ -3,7 +3,7 @@
     <!-- M0403-1 状态指示 -->
     <div class="panel-section">
       <div class="section-header">
-        <span class="section-title">任务队列</span>
+        <span class="section-title">LLM 工作堆栈</span>
         <span class="exec-status" :class="{ running: hasRunningTasks }">
           <span class="status-dot"></span>
           {{ hasRunningTasks ? '运行中' : '空闲' }}

@@ -22,6 +22,8 @@ class SSEManager:
     """SSE 连接管理器，集成EventBus"""
 
     # EventBus → 前端事件名映射
+    # 注意：generation/done/error 事件不再通过 EventBus 广播
+    # 它们通过 streaming 响应直接返回，避免重复
     _EVENT_MAP = {
         "file:created": "file-created",
         "file:modified": "file-updated",
@@ -32,11 +34,9 @@ class SSEManager:
         "task:failed": "error",
         "project:created": "file-created",
         "project:updated": "file-updated",
-        "generation": "generation",
-        "done": "done",
-        "error": "error",
-        "llm-status": "llm-status",
         "thinking": "thinking",
+        "step_done": "step_done",
+        "prompt": "prompt",
     }
 
     @staticmethod

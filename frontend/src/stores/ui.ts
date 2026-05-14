@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { Project } from './project'
+import { saveConfig as saveRemoteConfig } from '@/services/configService'
 
 export type Theme = 'dark' | 'green' | 'gray'
 
@@ -22,6 +23,8 @@ export interface ModalState {
   batchGenerate: boolean
   extract: boolean
   qualityReview: boolean
+  search: boolean
+  quickOpen: boolean
 }
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -46,6 +49,8 @@ export const useUIStore = defineStore('ui', () => {
     batchGenerate: false,
     extract: false,
     qualityReview: false,
+    search: false,
+    quickOpen: false,
   })
 
   // 初始化时应用主题
@@ -59,6 +64,11 @@ export const useUIStore = defineStore('ui', () => {
 
   // 立即应用保存的主题（从 persist 恢复后自动生效）
   applyTheme(theme.value)
+
+  // G0104 主题变更同步到后端 .config.json
+  watch(theme, (val) => {
+    saveRemoteConfig({ theme: val }).catch(() => {})
+  })
 
   function setTheme(t: Theme) {
     applyTheme(t)
@@ -184,6 +194,24 @@ export const useUIStore = defineStore('ui', () => {
     modals.value.qualityReview = false
   }
 
+  function openSearch() {
+    _closeAllModals()
+    modals.value.search = true
+  }
+
+  function closeSearch() {
+    modals.value.search = false
+  }
+
+  function openQuickOpen() {
+    _closeAllModals()
+    modals.value.quickOpen = true
+  }
+
+  function closeQuickOpen() {
+    modals.value.quickOpen = false
+  }
+
   return {
     theme,
     modals,
@@ -211,6 +239,10 @@ export const useUIStore = defineStore('ui', () => {
     closeExtract,
     openQualityReview,
     closeQualityReview,
+    openSearch,
+    closeSearch,
+    openQuickOpen,
+    closeQuickOpen,
   }
 }, {
   persist: {
