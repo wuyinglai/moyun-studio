@@ -11,7 +11,9 @@ import {
   Decoration,
   EditorView,
 } from '@codemirror/view'
-import type { DecorationSet } from '@codemirror/view'
+// DecorationSet 是 type-only 导出，Vite 8 esbuild 合并导入时会残留 runtime import
+// 用 ReturnType 从 Decoration.set 的返回值推导类型，避免从 @codemirror/view 导入类型
+type DecorationSet = ReturnType<typeof Decoration.set>
 
 // ─── 效果 ──────────────────────────────────────────────────────
 

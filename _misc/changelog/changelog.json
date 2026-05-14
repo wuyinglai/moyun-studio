@@ -155,6 +155,20 @@
       "files": [
         "frontend/src/composables/useFileGeneration.ts"
       ],
+      "commit": "c3ab7fb"
+    },
+    {
+      "id": 11,
+      "timestamp": "2026-05-14T21:30:00+08:00",
+      "type": "fix",
+      "scope": "G0113",
+      "module": "编辑器",
+      "description": "修复 Vite 8 空白页问题：DecorationSet 类型导入被 esbuild 残留为 value import",
+      "reason": "@codemirror/view 的 DecorationSet 是 type-only，Vite 8 合并导入时保留为 runtime export 导致模块加载失败",
+      "files": [
+        "frontend/src/utils/semanticHighlight.ts",
+        "frontend/vite.config.ts"
+      ],
       "commit": ""
     }
   ]

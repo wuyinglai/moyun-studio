@@ -17,6 +17,9 @@ export default defineConfig({
       }
     }
   },
+  optimizeDeps: {
+    exclude: ['@codemirror/view'],
+  },
   css: {
     preprocessorOptions: {
       scss: {}
