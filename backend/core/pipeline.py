@@ -308,7 +308,11 @@ class PipelineRunner:
                     })}
 
                 # 调用 LLM
-                messages = [{"role": "user", "content": prompt_text}]
+                # system 消息设定模型行为：对改写/润色步骤防止输出分析报告
+                messages = [
+                    {"role": "system", "content": "你是一个文本处理工具。根据用户的指令处理文本，只输出处理结果本身，严禁输出任何解释、分析、问候、标题、编号或其他附加内容。"},
+                    {"role": "user", "content": prompt_text},
+                ]
                 step_output = ""
                 extra_kwargs = dict(llm_extra_kwargs or {})
 
@@ -546,7 +550,10 @@ class PipelineRunner:
             }
             prompt_text = self.render_prompt(prompt_rel, variables)
 
-            messages = [{"role": "user", "content": prompt_text}]
+            messages = [
+                {"role": "system", "content": "你是一个文本处理工具。根据用户的指令处理文本，只输出处理结果本身，严禁输出任何解释、分析、问候、标题、编号或其他附加内容。"},
+                {"role": "user", "content": prompt_text},
+            ]
             summary_parts = []
             async for chunk in self.llm_service.complete(messages, timeout=60):
                 summary_parts.append(chunk)
