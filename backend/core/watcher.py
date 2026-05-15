@@ -48,12 +48,20 @@ class FileWatcher:
     async def _watch_loop(self) -> None:
         """异步监听循环"""
         try:
-            async for changes in watchfiles.watch(
+            gen = watchfiles.watch(
                 str(self.workspace),
                 recursive=True,
                 watch_filter=None,
                 stop_event=None,
-            ):
+            )
+            loop = asyncio.get_event_loop()
+            while True:
+                def _next():
+                    try: return next(gen)
+                    except StopIteration: return None
+                changes = await loop.run_in_executor(None, _next)
+                if changes is None:
+                    break
                 for change in changes:
                     kind, path = change
                     # watchfiles.Change: added=1, modified=2, deleted=3

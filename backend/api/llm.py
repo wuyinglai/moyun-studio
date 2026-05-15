@@ -13,7 +13,6 @@ import logging
 import time
 from pathlib import Path
 
-import litellm
 from fastapi import APIRouter, Depends, Request
 
 from backend.config import Settings, get_settings
@@ -137,15 +136,20 @@ async def test_connection(
     try:
         logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
-        # 测试连接直接调 litellm，不经过 LLMService 的重试逻辑
-        response = await litellm.acompletion(
-            model=model,
-            messages=[{"role": "user", "content": "Hi"}],
-            max_tokens=5,
-            api_key=llm_cfg.get("apiKey") or settings.llm_api_key,
-            api_base=llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or None,
+        api_key = llm_cfg.get("apiKey") or settings.llm_api_key
+        api_base = (llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or "").rstrip("/") + "/v1"
+
+        import json as _json, requests as _req
+        sess = _req.Session()
+        sess.trust_env = False
+        resp = sess.post(
+            f"{api_base}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": llm_cfg.get("model", settings.llm_model), "messages": [{"role": "user", "content": "Hi"}], "max_tokens": 5},
             timeout=30,
         )
+        resp.raise_for_status()
+        data = resp.json()
         logger.info("LLM连接测试成功", extra={"model": model})
         return ApiResponse.ok(
             LLMStatusResponse(connected=True, model=model, message="连接成功")
@@ -156,9 +160,13 @@ async def test_connection(
             LLMStatusResponse(connected=False, model=model, message="连接超时")
         )
     except Exception as e:
-        logger.warning("LLM连接测试失败", extra={"model": model, "error": str(e)[:100]})
+        import traceback
+        err_type = type(e).__name__
+        err_msg = str(e)[:200]
+        tb = traceback.format_exc()
+        logger.error(f"LLM连接测试失败: [{err_type}] {err_msg}\n{tb[:500]}")
         return ApiResponse.ok(
-            LLMStatusResponse(connected=False, model=model, message=f"连接失败: {str(e)[:100]}")
+            LLMStatusResponse(connected=False, model=model, message=f"[{err_type}] {err_msg}")
         )
 
 

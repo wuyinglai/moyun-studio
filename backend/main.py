@@ -2,7 +2,11 @@
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
+
+# 禁用 Python HTTP 库的代理检测（解决 Windows 下 aiohttp/httpx 的 SSL 连接问题）
+os.environ.setdefault('no_proxy', '*')
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
