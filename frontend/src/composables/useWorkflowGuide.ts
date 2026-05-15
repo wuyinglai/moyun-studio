@@ -206,7 +206,10 @@ export function useWorkflowGuide() {
           await fileStore.loadTree(projectId)
           try {
             const content = await fileStore.readFile(projectId, resolved)
-            if (content) editorStore.loadContent(resolved, content.content || '')
+            if (content) {
+              editorStore.loadContent(resolved, content.content || '')
+              editorStore.contentSource = 'external'
+            }
           } catch { /* file may not exist yet */ }
         }
       } else if (step.type === 'loop') {

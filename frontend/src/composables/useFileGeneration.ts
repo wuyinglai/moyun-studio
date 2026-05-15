@@ -176,6 +176,8 @@ export function useFileGeneration() {
         const result = await fileStore.readFile(projectId, filePathForEmitter)
         if (result?.content) {
           editorStore.loadContent(filePathForEmitter, result.content)
+          // 强制标记为外部更新，触发 CodeMirror watcher 刷新编辑器
+          editorStore.contentSource = 'external'
         }
       } catch {
         // 文件可能不存在或读取失败，静默忽略
