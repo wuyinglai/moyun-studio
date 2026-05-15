@@ -333,8 +333,14 @@ async function handleGenerateNext() {
   fileStore.openFile(node)
   editorStore.setCurrentFile(next.path)
 
+  // 同步更新 workflow guide 步骤状态
+  syncGuideStep(next.path, 'running')
+
   // 运行对应 pipeline
   await fileGen.runPipeline(projectId, next.path, next.pipeline)
+
+  // pipeline 完成 → 更新 guide 步骤状态为 done
+  syncGuideStep(next.path, 'done')
 
   // L2: 完成后自动推进下一节
   if (getAutoMode() === 'L2') {
@@ -356,6 +362,27 @@ async function handleGenerateNext() {
       return
     }
     console.error('[ERR] handleGenerateNext:', e.message || e)
+  }
+}
+
+/** 根据当前生成的路径，更新 workflow guide 对应步骤的状态 */
+const GUIDE_STEP_MAP: Record<string, number> = {
+  'blueprint.md': 0,
+  'outline.md': 1,
+  'worldbuilding.md': 2,
+  'characters/main.md': 3,
+}
+
+function syncGuideStep(path: string, status: 'running' | 'done') {
+  if (path.match(/sec-\d+\.md$/)) {
+    if (guide.steps.value[4]) guide.steps.value[4].status = status as any
+    return
+  }
+  for (const [key, idx] of Object.entries(GUIDE_STEP_MAP)) {
+    if (path.endsWith(key) && guide.steps.value[idx]) {
+      guide.steps.value[idx].status = status as any
+      return
+    }
   }
 }
 
