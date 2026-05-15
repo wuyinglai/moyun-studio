@@ -34,21 +34,61 @@
 - **AI**: OpenAI GPT-4 / Claude / DeepSeek / Ollama（通过 LiteLLM 统一调用）
 - **存储**: 本地文件系统（`workspace/projects/`），无数据库
 
-## 编码原则（精简版）
+## 分层架构规则（必须遵守）
 
-**后端**：
-- 所有 API 端点用 FastAPI + `async def`
-- Prompt 必须从 `workspace/prompts/` 加载（Jinja2 语法），禁止硬编码
-- 所有 LLM 调用通过 LiteLLM，禁止直接用 `openai` 库
-- 文件读写用 aiofiles，禁止同步 `open()`
-- 配置用 pydantic-settings，禁止 `os.getenv()`
-- 异常使用 `backend/core/exceptions.py` 中定义的统一异常类
+### 后端分层
 
-**前端**：
-- 所有组件用 Vue 3 Composition API + `<script setup>` + TypeScript
-- 全局状态用 Pinia store，避免 props 多层透传
-- API 请求用 Axios（`src/services/api.ts`），SSE 用 `useSSE.ts`
-- Markdown 编辑器用 CodeMirror 6
+```
+api/ (路由层) → core/ (服务层) → core/infra (基础设施)
+```
+
+**禁止规则：**
+- **`api/` 中的路由文件禁止包含业务逻辑。** 只做三件事：参数校验、调 service、格式化响应
+- **业务逻辑必须放在 `core/` 下对应的 Service 类中。** 已存在的 Service：
+  - `ProjectService` → 项目 CRUD、统计计算
+  - `CharacterService` → 角色 CRUD
+  - `QualityService` → 质量审查
+  - `GenerationService` → 生成编排
+  - `FileService` → 文件 I/O
+  - `LLMService` → LLM 调用
+- **文件 I/O 强制走 `FileService`**，禁止 `Path.read_text()` + `json.loads()` 的同步调用
+- **LLM 调用强制走 `LLMService`**，禁止直接 `litellm.acompletion()`
+- 新增功能时，先判断是新建 Service 还是扩展现有 Service，**不得将逻辑塞入路由层**
+
+### 前端分层
+
+```
+components (UI) → stores/composables (状态+逻辑) → services (通信) → API
+```
+
+**Store 职责边界（已拆分明细）：**
+
+| Store | 只允许管 | 禁止管 |
+|-------|---------|--------|
+| `fileStore` | 文件 CRUD + 快照 | 任务队列、生成、审查 |
+| `taskStore` | 任务生命周期 + 轮询 | 文件操作、生成 |
+| `generationStore` | 生成、续写、重写、批量生成 | 文件 CRUD、聊天 |
+| `reviewStore` | 质量审查 | 文件操作、生成 |
+| `chatStore` | 聊天消息 + 流式传输 | 文件生成（续写/重写） |
+
+**禁止规则：**
+- **`stores/file.ts` 禁止包含任务/生成/审查相关代码**（上述表格为准）
+- **`stores/chat.ts` 禁止包含 `continueWriting`/`rewriteContent`**（在 `generationStore` 中）
+- **`App.vue` 禁止包含编排 watcher**（应抽取到 `composables/`）
+- **禁止在组件或 store 中用 `fetch()` 调后端 API**（改用 `services/api.ts`，SSE 流除外）
+
+### 新增功能时的分支选择
+
+```
+要加功能 → 属于哪个领域？
+  ├─ 文件管理 → fileStore + FileService
+  ├─ 角色设定 → characterStore(如有) + CharacterService
+  ├─ 生成/续写/重写 → generationStore + GenerationService
+  ├─ 质量审查 → reviewStore + QualityService
+  ├─ 项目管理 → projectStore + ProjectService
+  ├─ 聊天 → chatStore + PipelineRunner(后端 chat 管线)
+  └─ 新领域 → 新建 store + 新建 core/*Service
+```
 
 详细编码规范见 `docs/编码规范.md`。
 
