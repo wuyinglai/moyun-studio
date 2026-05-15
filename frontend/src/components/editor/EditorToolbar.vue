@@ -20,16 +20,20 @@
         停止
       </a-button>
       <template v-else>
-        <a-button size="small" type="primary" ghost @click="runPipeline('polish')">
+        <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('polish')">
           ✏️ 润色
         </a-button>
-        <a-button size="small" type="primary" ghost @click="runPipeline('rewrite')">
-          📦 重写
+        <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('rewrite')">
+          📦 精修
         </a-button>
-        <a-button size="small" type="primary" ghost @click="runPipeline('extract')">
+        <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('extract')">
           🌟 提取
         </a-button>
-        <a-dropdown>
+        <a-divider v-if="isChapterFile" type="vertical" />
+        <a-button v-if="!isSystemFile" size="small" @click="handleRegenerate" title="用原参数重新生成">
+          🔄 重新生成
+        </a-button>
+        <a-dropdown v-if="!isSystemFile">
           <a-button size="small">➕ 自定义 <i class="fa-solid fa-chevron-down"></i></a-button>
           <template #overlay>
             <a-menu @click="handleCustomPipeline">
@@ -42,8 +46,8 @@
             </a-menu>
           </template>
         </a-dropdown>
-        <a-divider type="vertical" />
-        <a-button size="small" type="primary" ghost @click="handleGenerateNext">
+        <a-divider v-if="!isSystemFile" type="vertical" />
+        <a-button v-if="!isSystemFile" size="small" type="primary" ghost @click="handleGenerateNext">
           📄 写下一部分
         </a-button>
         <a-divider type="vertical" />
@@ -80,7 +84,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Button as AButton, Space as ASpace, Divider as ADivider, Dropdown as ADropdown, Menu as AMenu, MenuItem as AMenuItem, MenuDivider as AMenuDivider } from 'ant-design-vue'
+import { Button as AButton, Space as ASpace, Divider as ADivider, Dropdown as ADropdown, Menu as AMenu, MenuItem as AMenuItem, MenuDivider as AMenuDivider, Modal } from 'ant-design-vue'
 import { useChatStore } from '@/stores/chat'
 import { useHistoryStore } from '@/stores/history'
 import { useEditorStore } from '@/stores/editor'
@@ -95,6 +99,8 @@ import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
 import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
 import { useTaskQueue, cancelQueuedTask, confirmTask } from '@/composables/useTaskQueue'
+import { useFileMetaStore } from '@/stores/fileMeta'
+import { guessPromptType } from '@/utils/promptTypes'
 
 const chatStore = useChatStore()
 const historyStore = useHistoryStore()
@@ -117,6 +123,18 @@ const isGenerating = computed(() =>
 const customPipelines = computed(() =>
   pipelineStore.pipelines.filter(p => p.source === 'custom')
 )
+
+/** 当前文件是否为正文章节（sec-*.md） */
+const isChapterFile = computed(() => {
+  const path = editorStore.currentFilePath || ''
+  return /\/sec-\d+\.md$/.test(path)
+})
+
+/** 当前文件是否为系统维护文件（不应触发任何生成操作） */
+const isSystemFile = computed(() => {
+  const path = editorStore.currentFilePath || ''
+  return /style-guide\.md$|story-state\.md$|recent-context\.md$|\.json$/.test(path)
+})
 
 function handleBack() {
   const path = editorStore.currentFilePath
@@ -183,7 +201,7 @@ async function runPipeline(name: string) {
   const labelMap: Record<string, string> = {
     polish: '润色',
     generate: '生成',
-    rewrite: '重写',
+    rewrite: '精修',
     extract: '提取',
   }
   const fileName = editorStore.currentFilePath.split('/').pop() || ''
@@ -244,6 +262,72 @@ async function handleGenerateNext() {
 
   // 工作流已启动但未暂停 —— 不应发生，兜底
   notification.info('工作流已在运行')
+}
+
+async function handleRegenerate() {
+  const filePath = editorStore.currentFilePath
+  const projectId = projectStore.currentProject?.id
+  if (!filePath || !projectId) {
+    notification.warning('请先打开一个文件')
+    return
+  }
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    uiStore.openSettings()
+    return
+  }
+
+  // 1. 查找已保存的生成元数据
+  const meta = useFileMetaStore().getMeta(projectId, filePath)
+
+  let promptType: string
+  let extraVars: Record<string, string>
+
+  if (meta) {
+    promptType = meta.promptType
+    extraVars = { ...meta.extraVars }
+  } else {
+    // 无元数据时从文件路径推测
+    const guessed = guessPromptType(filePath)
+    if (!guessed) {
+      notification.warning('无法确定该文件的生成方式')
+      return
+    }
+    promptType = guessed
+    extraVars = {}
+  }
+
+  // 2. 确认覆盖
+  const confirmed = await new Promise<boolean>((resolve) => {
+    Modal.confirm({
+      title: '重新生成',
+      content: `将清空 "${filePath.split('/').pop()}" 的内容并重新生成，确定吗？`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: () => resolve(true),
+      onCancel: () => resolve(false),
+    })
+  })
+  if (!confirmed) return
+
+  // 3. 清空文件
+  editorStore.loadContent(filePath, '')
+  try {
+    await fileStore.saveFile(projectId, filePath, '')
+  } catch {
+    notification.error('清空文件失败')
+    return
+  }
+
+  // 4. 重新生成（user_prompt 已在 extraVars 中）
+  const userPrompt = extraVars.user_prompt || ''
+  delete extraVars.user_prompt
+  try {
+    await fileGen.generateToFile(projectId, filePath, userPrompt, extraVars, promptType)
+    notification.success('已重新生成')
+  } catch (e: any) {
+    notification.error(e.message || '重新生成失败')
+  }
 }
 
 function handleTokenCount() { uiStore.openTokenCount() }

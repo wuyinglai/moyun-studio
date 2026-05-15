@@ -236,7 +236,8 @@ async function handleCreate() {
   // 检查 LLM 是否已配置
   if (!llmStore.isConnected) {
     notification.warning('请先配置 LLM 连接')
-    uiStore.openSettings()
+    // 直接打开设置模态框，不关闭创建模态框——用户配置 LLM 后关闭设置可继续创建
+    uiStore.modals.settings = true
     return
   }
 
@@ -256,15 +257,17 @@ async function handleCreate() {
     }
 
     // 记录需要在项目打开后自动生成
+    // prompt 省略：后端根据 prompt_type 自动加载 generate/title 模板并渲染
     projectStore.setPendingGeneration({
       filePath: '书名与创意.md',
-      prompt: `你是一位专业的小说创作助手。用户选择了「${wizard.params.value.genre}」题材，请生成一个吸引人的书名和创意描述。`,
+      prompt: '',
       promptType: 'generate/title',
       extraVars: {
         genre: wizard.params.value.genre || '',
         tone: wizard.params.value.tone || '',
         theme: wizard.params.value.theme || '',
-        background: wizard.params.value.background || '',
+        // 模板使用 setting 变量名，映射 background
+        setting: wizard.params.value.background || '',
         writing_style: wizard.params.value.writing_style || '',
       },
     })

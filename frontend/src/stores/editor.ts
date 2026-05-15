@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useFileStore } from './file'
+import { useProjectStore } from './project'
 import { countWords } from '@/utils/wordCount'
 
 export const useEditorStore = defineStore('editor', () => {
@@ -20,6 +21,9 @@ export const useEditorStore = defineStore('editor', () => {
     return countWords(contents.value[currentFilePath.value] || '')
   })
   const cursorPosition = ref({ line: 1, col: 1 })
+
+  // 按 projectId 隔离的编辑器状态（持久化）
+  const perProjectData = ref<Record<string, { currentFilePath: string | null; filePrompts: Record<string, string> }>>({})
 
   function loadContent(path: string, content: string, fm?: Record<string, unknown>) {
     contents.value[path] = content
@@ -87,6 +91,26 @@ export const useEditorStore = defineStore('editor', () => {
     contentSource.value = 'local'
   }
 
+  // ─── 按 projectId 隔离：切换项目时保存/恢复 currentFilePath/filePrompts ───
+  watch(
+    () => useProjectStore().currentProject,
+    (newProj, oldProj) => {
+      if (oldProj) {
+        perProjectData.value[oldProj.id] = {
+          currentFilePath: currentFilePath.value,
+          filePrompts: { ...filePrompts.value },
+        }
+      }
+      currentFilePath.value = null
+      filePrompts.value = {}
+      if (newProj && perProjectData.value[newProj.id]) {
+        const saved = perProjectData.value[newProj.id]
+        if (saved.currentFilePath) currentFilePath.value = saved.currentFilePath
+        if (saved.filePrompts) filePrompts.value = saved.filePrompts
+      }
+    },
+  )
+
   return {
     contents,
     frontmatter,
@@ -107,10 +131,11 @@ export const useEditorStore = defineStore('editor', () => {
     setFilePrompt,
     getFilePrompt,
     markLocalEdit,
+    perProjectData,
   }
 }, {
   persist: {
     storage: localStorage,
-    pick: ['currentFilePath', 'filePrompts'],
+    pick: ['perProjectData'],
   },
 })

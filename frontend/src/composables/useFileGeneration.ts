@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { useFileStore } from '@/stores/file'
+import { useFileMetaStore } from '@/stores/fileMeta'
 
 // Module-level singleton refs -- shared across all consumers
 const _isGenerating = ref(false)
@@ -79,6 +80,17 @@ export function useFileGeneration() {
         _currentPrompt.value = prompt
         editorStore.setFilePrompt(filePathForEmitter, prompt)
       }, filePathForEmitter)
+
+      // 生成成功后保存元数据（含 user_prompt，供重新生成使用）
+      const savedExtraVars = { ...(extraVars || {}) }
+      if (prompt) {
+        savedExtraVars.user_prompt = prompt
+      }
+      useFileMetaStore().saveMeta(projectId, filePath, {
+        promptType: promptType || 'generate/continuation',
+        extraVars: savedExtraVars,
+        generatedAt: new Date().toISOString(),
+      })
 
       _isGenerating.value = false
     } catch (e: any) {

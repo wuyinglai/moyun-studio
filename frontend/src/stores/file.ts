@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import api from '@/services/api'
+import { useProjectStore } from './project'
 import type { BatchGenerateRequest, BatchGenerateResponse, ExtractTaskRequest, ExtractTaskResponse, ReviewRequest, ReviewResponse, BatchReviewRequest, BatchReviewResponse } from '@/types/chat'
 import type { TaskSubmitRequest, TaskQueueListResponse } from '@/types/task'
-import { useProjectStore } from './project'
 
 export interface FileNode {
   name: string
@@ -34,6 +34,9 @@ export const useFileStore = defineStore('file', () => {
   const isLoading = ref(false)
   const fileContents = ref<Record<string, FileContent>>({})
   const snapshots = ref<Record<string, VersionSnapshot[]>>({})
+
+  // 按 projectId 隔离的文件状态（持久化）
+  const perProjectData = ref<Record<string, { openFiles: FileNode[]; currentFile: FileNode | null }>>({})
 
   async function loadTree(projectId: string) {
     isLoading.value = true
@@ -189,6 +192,29 @@ export const useFileStore = defineStore('file', () => {
     return res
   }
 
+  // ─── 按 projectId 隔离：切换项目时保存/恢复 openFiles/currentFile ───
+  watch(
+    () => useProjectStore().currentProject,
+    (newProj, oldProj) => {
+      // 保存旧项目状态
+      if (oldProj) {
+        perProjectData.value[oldProj.id] = JSON.parse(JSON.stringify({
+          openFiles: openFiles.value,
+          currentFile: currentFile.value,
+        }))
+      }
+      // 清理当前状态
+      openFiles.value = []
+      currentFile.value = null
+      // 恢复新项目状态
+      if (newProj && perProjectData.value[newProj.id]) {
+        const saved = perProjectData.value[newProj.id]
+        if (saved.openFiles) openFiles.value = saved.openFiles
+        if (saved.currentFile) currentFile.value = saved.currentFile
+      }
+    },
+  )
+
   async function reviewBatch(req: BatchReviewRequest): Promise<BatchReviewResponse> {
     const res = await api.post<BatchReviewResponse>('/quality/review-batch', req)
     return res
@@ -233,10 +259,11 @@ export const useFileStore = defineStore('file', () => {
     reviewChapter,
     reviewBatch,
     listReviews,
+    perProjectData,
   }
 }, {
   persist: {
     storage: localStorage,
-    pick: ['openFiles', 'currentFile'],
+    pick: ['perProjectData'],
   },
 })

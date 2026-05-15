@@ -121,7 +121,7 @@ async def generate(
                 **req.extra_vars,
             }
             try:
-                prompt_text = runner.render_prompt(f"{req.prompt_type}.md", variables)
+                prompt_text = runner.render_prompt(f"{req.prompt_type}/main.md", variables)
                 prompt_text = await runner.resolve_references(prompt_text, req.project_id)
             except Exception as e:
                 prompt_text = f"请根据以下内容进行创作：\n\n{content}"
@@ -264,7 +264,7 @@ async def batch_generate(
     tasks: list[BatchGenerateItem] = []
     succeeded = 0
     failed = 0
-    template_path = f"{req.prompt_type}.md"
+    template_path = f"{req.prompt_type}/main.md"
 
     for tgt in targets:
         item = BatchGenerateItem(target_file=tgt["target_file"])

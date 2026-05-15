@@ -1,42 +1,59 @@
 <template>
   <div class="right-panel">
-    <!-- Tab 导航 -->
-    <div class="panel-tabs" role="tablist">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        class="panel-tab"
-        :class="{ active: activeTab === tab.id }"
-        @click="activeTab = tab.id"
-        :title="tab.label"
-        role="tab"
-        :aria-selected="activeTab === tab.id"
-      >
-        <span class="tab-icon">{{ tab.icon }}</span>
-        <span class="tab-label">{{ tab.label }}</span>
-      </button>
+    <!-- 未打开项目：空状态 -->
+    <div v-if="!projectStore.currentProject" class="panel-empty">
+      <div class="empty-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="9" y1="21" x2="9" y2="9"/>
+        </svg>
+      </div>
+      <span class="empty-text">未打开项目</span>
+      <span class="empty-hint">打开项目后可使用辅助工具</span>
     </div>
+    <template v-else>
+      <!-- Tab 导航 -->
+      <div class="panel-tabs" role="tablist">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          class="panel-tab"
+          :class="{ active: activeTab === tab.id }"
+          @click="activeTab = tab.id"
+          :title="tab.label"
+          role="tab"
+          :aria-selected="activeTab === tab.id"
+        >
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-label">{{ tab.label }}</span>
+        </button>
+      </div>
 
-    <!-- 内容区域 -->
-    <div class="panel-content">
-      <PromptPanel v-show="activeTab === 'prompt'" />
-      <PipelineEditor v-show="activeTab === 'pipeline'" />
-      <WorkflowPanel v-show="activeTab === 'workflow'" />
-      <StoryStatePanel v-show="activeTab === 'story'" ref="storyPanelRef" />
-      <StyleGuidePanel v-show="activeTab === 'style'" ref="styleGuidePanelRef" />
-      <ExecutionPanel v-show="activeTab === 'execution'" />
-    </div>
+      <!-- 内容区域 -->
+      <div class="panel-content">
+        <PromptPanel v-show="activeTab === 'prompt'" />
+        <PipelineEditor v-show="activeTab === 'pipeline'" />
+        <WorkflowPanel v-show="activeTab === 'workflow'" />
+        <StoryStatePanel v-show="activeTab === 'story'" ref="storyPanelRef" />
+        <StyleGuidePanel v-show="activeTab === 'style'" ref="styleGuidePanelRef" />
+        <ExecutionPanel v-show="activeTab === 'execution'" />
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useProjectStore } from '@/stores/project'
 import PromptPanel from './PromptPanel.vue'
 import PipelineEditor from './PipelineEditor.vue'
 import WorkflowPanel from './WorkflowPanel.vue'
 import ExecutionPanel from './ExecutionPanel.vue'
 import StoryStatePanel from '../global/StoryStatePanel.vue'
 import StyleGuidePanel from '../global/StyleGuidePanel.vue'
+
+const projectStore = useProjectStore()
 
 const activeTab = ref('prompt')
 
@@ -64,6 +81,35 @@ onMounted(() => {
   flex-direction: column;
   height: 100%;
   background: var(--ink-dark);
+}
+
+.panel-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-muted-ink);
+
+  .empty-icon {
+    opacity: 0.3;
+    margin-bottom: 4px;
+  }
+
+  .empty-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .empty-hint {
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.5;
+    max-width: 180px;
+  }
 }
 
 /* ── Tab 导航 ── */
