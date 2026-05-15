@@ -255,6 +255,11 @@ async function handleGenerateNext() {
     return
   }
 
+  // 停止可能仍在运行的工作流引导，避免并发冲突
+  if (guide.isRunning.value) {
+    guide.stopNow()
+  }
+
   const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
   const filePath = editorStore.currentFilePath
   if (!projectId || !filePath) {
