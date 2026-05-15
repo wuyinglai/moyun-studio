@@ -186,8 +186,8 @@ const wfError = computed(() => guide.error.value)
 const canStart = computed(() => !!projectStore.currentProject && !!editorStore.currentFilePath)
 const hasDoneSteps = computed(() => guide.steps.value.some(s => s.status === 'done' || s.status === 'waiting'))
 const hasWaitingStep = computed(() => guide.steps.value.some(s => s.status === 'waiting'))
-const l1PauseText = '已完成！点击顶部工具栏「写下一部分」继续'
-const l2PauseText = '已停止，可点击顶部工具栏「写下一部分」恢复'
+const l1PauseText = '✅ 已完成，请审核内容，然后点击顶部工具栏「📄 写下一部分」继续下一步'
+const l2PauseText = '⏸ 已暂停，点击顶部工具栏「📄 写下一部分」继续'
 
 function stepTooltip(step: { label: string; pipeline?: string; type: string }): string {
   if (step.type === 'pipeline' && step.pipeline) {
