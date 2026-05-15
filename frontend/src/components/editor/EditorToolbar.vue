@@ -97,7 +97,7 @@ import { useTaskStore } from '@/stores/task'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
 import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
-import { useTaskQueue, cancelQueuedTask, confirmTask } from '@/composables/useTaskQueue'
+import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { guessPromptType } from '@/utils/promptTypes'
 
@@ -252,43 +252,39 @@ async function handleGenerateNext() {
     uiStore.openSettings()
     return
   }
-  // L1：确认任何等待中的任务
-  const taskStore = useTaskStore()
-  const waitingTask = taskStore.tasks.find((t: any) => t.status === 'waiting')
-  if (waitingTask) {
-    confirmTask(waitingTask.id)
-  }
 
-  // 工作流暂停时：恢复执行下一步（与任务确认同一点击）
-  if (guide.isPaused.value) {
-    const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
-    const filePath = editorStore.currentFilePath
-    if (projectId && filePath) {
-      guide.resume(projectId, filePath)
-    }
-    return
-  }
-
-  // 如果只是确认了任务但工作流未暂停，不需要继续
-  if (waitingTask && !guide.isPaused.value) {
-    return
-  }
-
-  if (!projectStore.currentProject) {
+  const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
+  const filePath = editorStore.currentFilePath
+  if (!projectId || !filePath) {
     notification.warning('请先打开一个文件')
     return
   }
 
-  // 工作流未启动时启动它
-  if (!guide.isRunning.value) {
-    const projectId = projectStore.currentProject.id
-    const filePath = editorStore.currentFilePath || ''
-    await guide.start(projectId, filePath)
+  // 从当前文件路径推导下一个文件路径
+  const nextPath = getNextSectionPath(filePath)
+  if (!nextPath) {
+    notification.warning('当前文件不是章节文件，无法生成下一节')
     return
   }
 
-  // 工作流已启动但未暂停 —— 不应发生，兜底
-  notification.info('工作流已在运行')
+  // 打开下一个文件
+  const fileStore = useFileStore()
+  const editorStore = useEditorStore()
+  const node = { name: nextPath.split('/').pop() || '', path: nextPath, type: 'file' as const }
+  fileStore.openFile(node)
+  editorStore.setCurrentFile(nextPath)
+
+  // 运行 generate pipeline
+  await fileGen.runPipeline(projectId, nextPath, 'generate')
+}
+
+/** 从当前文件路径推导下一个章节文件路径 */
+function getNextSectionPath(currentPath: string): string | null {
+  const match = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
+  if (!match) return null
+  const [, prefix, base, num, ext] = match
+  const nextNum = String(Number(num) + 1).padStart(num.length, '0')
+  return `${prefix}${base}${nextNum}${ext}`
 }
 
 async function handleRegenerate() {
