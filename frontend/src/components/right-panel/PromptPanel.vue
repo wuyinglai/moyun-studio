@@ -44,28 +44,12 @@
             <span v-else-if="step.status === 'waiting'" class="wf-waiting-badge">
               等待确认
             </span>
-            <!-- 可执行的步骤 -->
-            <button
-              v-else-if="step.status === 'pending' && !guide.isRunning.value"
-              class="wf-btn-run-step"
-              @click="handleRunStep(idx)"
-            >
-              <i class="fa-solid fa-play"></i> 执行
-            </button>
           </div>
         </div>
       </div>
 
       <!-- 控制按钮 -->
       <div class="wf-actions" v-if="!wfError">
-        <button
-          v-if="!guide.isRunning.value"
-          class="wf-btn-start"
-          @click="handleStartWorkflow"
-          :disabled="!canStart"
-        >
-          <i class="fa-solid fa-play"></i> 开始创作
-        </button>
         <button
           v-if="guide.isRunning.value"
           class="wf-btn-stop"
