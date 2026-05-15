@@ -40,8 +40,7 @@
         </div>
       </div>
 
-      <!-- 进度条 -->
-      <div class="wf-progress" v-if="guide.steps.value.length > 0 && !wfError">
+      <!-- 进度条（已移除） -->
         <div class="wf-progress-bar">
           <div class="wf-progress-fill" :style="{ width: guide.progress.value.percent + '%' }"></div>
         </div>
