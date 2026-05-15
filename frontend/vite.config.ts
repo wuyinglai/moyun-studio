@@ -23,7 +23,11 @@ export default defineConfig(({ mode }) => {
       }
     },
     optimizeDeps: {
-      exclude: ['@codemirror/view', '@codemirror/language'],
+      exclude: [
+        '@codemirror/view', '@codemirror/state', '@codemirror/language',
+        '@codemirror/commands', '@codemirror/lang-markdown', '@codemirror/search',
+        '@lezer/highlight', '@lezer/common', '@lezer/lr', '@lezer/markdown',
+      ],
     },
     css: {
       preprocessorOptions: {
