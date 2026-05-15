@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Button as AButton, Space as ASpace, Divider as ADivider, Dropdown as ADropdown, Menu as AMenu, MenuItem as AMenuItem, MenuDivider as AMenuDivider, Modal } from 'ant-design-vue'
 import { useChatStore } from '@/stores/chat'
 import { useHistoryStore } from '@/stores/history'
@@ -116,6 +116,46 @@ const guide = useWorkflowGuide()
 const taskQueue = useTaskQueue()
 const { isPreviewMode, togglePreview } = useMarkdownPreview()
 
+// L2 自动连续生成状态
+const _l2StopRequested = ref(false)
+const _l2AutoRunning = ref(false)
+
+function getAutoMode(): string {
+  return localStorage.getItem('moyun-auto-mode') || 'L1'
+}
+
+/** 项目生成链（文件名 → 对应 pipeline） */
+const PROJECT_CHAIN: Array<{ path: string; pipeline: string }> = [
+  { path: 'blueprint.md', pipeline: 'blueprint' },
+  { path: 'outline.md', pipeline: 'outline' },
+  { path: 'materials/worldbuilding.md', pipeline: 'worldbuilding' },
+  { path: 'characters/main.md', pipeline: 'character' },
+]
+
+/** 根据当前文件路径推导下一个文件和 pipeline */
+function getNextInChain(currentPath: string): { path: string; pipeline: string } | null {
+  // 章节文件（sec-NNN.md）→ 用已有的 getNextSectionPath + generate pipeline
+  const secMatch = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
+  if (secMatch) {
+    const nextPath = getNextSectionPath(currentPath)
+    if (nextPath) return { path: nextPath, pipeline: 'generate' }
+    return null
+  }
+
+  // 在项目链中 → 找下一个
+  const idx = PROJECT_CHAIN.findIndex(item => currentPath.endsWith(item.path))
+  if (idx >= 0 && idx < PROJECT_CHAIN.length - 1) {
+    return PROJECT_CHAIN[idx + 1]
+  }
+
+  // 不在链中也不是章节 → 从链头开始
+  if (!secMatch && !PROJECT_CHAIN.some(i => currentPath.endsWith(i.path))) {
+    return PROJECT_CHAIN[0]
+  }
+
+  return null
+}
+
 const isGenerating = computed(() =>
   chatStore.isStreaming || fileGen.isGenerating.value || taskQueue.isProcessing.value || guide.isRunning.value,
 )
@@ -125,9 +165,9 @@ const isWaitingForConfirm = computed(() => {
   return guide.isPaused.value || useTaskStore().tasks.some(t => t.status === 'waiting')
 })
 
-/** 显示停止按钮：正在流式输出或管线执行中（但非 L1 等待状态） */
+/** 显示停止按钮：正在流式输出、管线执行中、或 L2 自动推进中 */
 const showStopButton = computed(() =>
-  isGenerating.value && !isWaitingForConfirm.value
+  isGenerating.value || _l2AutoRunning.value
 )
 
 /** 显示"写下一部分"：有项目打开且非系统文件时始终可见 */
@@ -184,6 +224,14 @@ const canGoForward = computed(() => {
 })
 
 function handleStop() {
+  // L2 自动推进中 → 标记停止，当前文件生成完毕后停
+  if (getAutoMode() === 'L2' && (_l2AutoRunning.value || fileGen.isGenerating.value)) {
+    _l2StopRequested.value = true
+    fileGen.cancelGeneration()
+    notification.info('将在当前步骤完成后停止')
+    return
+  }
+
   chatStore.cancelStream()
   fileGen.cancelGeneration()
 
@@ -267,24 +315,41 @@ async function handleGenerateNext() {
     return
   }
 
-  console.log('[DIAG] handleGenerateNext: filePath=', filePath, 'projectId=', projectId)
-  // 从当前文件路径推导下一个文件路径
-  const nextPath = getNextSectionPath(filePath)
-  console.log('[DIAG] handleGenerateNext: nextPath=', nextPath)
-  if (!nextPath) {
-    notification.warning('当前文件不是章节文件，无法生成下一节')
+  // 从当前文件路径推导下一个文件和 pipeline
+  const next = getNextInChain(filePath)
+  if (!next) {
+    notification.warning('已无下一个可生成的文件')
     return
   }
 
   // 打开下一个文件
   const fileStore = useFileStore()
-  const node = { name: nextPath.split('/').pop() || '', path: nextPath, type: 'file' as const }
+  const node = { name: next.path.split('/').pop() || '', path: next.path, type: 'file' as const }
   fileStore.openFile(node)
-  editorStore.setCurrentFile(nextPath)
+  editorStore.setCurrentFile(next.path)
 
-  // 运行 generate pipeline
-  await fileGen.runPipeline(projectId, nextPath, 'generate')
+  // 运行对应 pipeline
+  await fileGen.runPipeline(projectId, next.path, next.pipeline)
+
+  // L2: 完成后自动推进下一节
+  if (getAutoMode() === 'L2') {
+    if (_l2StopRequested.value) {
+      _l2StopRequested.value = false
+      _l2AutoRunning.value = false
+      notification.info('已停止自动生成')
+    } else {
+      _l2AutoRunning.value = true
+      setTimeout(() => handleGenerateNext(), 800)
+    }
+  }
   } catch (e: any) {
+    // L2 取消时不弹错误
+    if (getAutoMode() === 'L2' && _l2StopRequested.value) {
+      _l2StopRequested.value = false
+      _l2AutoRunning.value = false
+      notification.info('已停止自动生成')
+      return
+    }
     console.error('[ERR] handleGenerateNext:', e.message || e)
   }
 }
