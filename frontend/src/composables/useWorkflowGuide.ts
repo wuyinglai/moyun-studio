@@ -11,6 +11,8 @@ import api from '@/services/api'
 import { useFileGeneration } from './useFileGeneration'
 import { useNotificationStore } from '@/stores/notification'
 import { useTaskStore } from '@/stores/task'
+import { useFileStore } from '@/stores/file'
+import { useEditorStore } from '@/stores/editor'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'waiting'
 
@@ -19,6 +21,7 @@ export interface GuideStepItem {
   label: string
   type: string
   pipeline?: string
+  output?: string | null
   status: StepStatus
 }
 
@@ -73,6 +76,7 @@ export function useWorkflowGuide() {
         label: s.label,
         type: s.type,
         pipeline: s.pipeline,
+        output: s.output,
         status: 'pending' as StepStatus,
       }))
       _error.value = null
@@ -100,7 +104,25 @@ export function useWorkflowGuide() {
     try {
       if (step.type === 'pipeline' && step.pipeline) {
         taskStore.addLog('info', `执行: ${step.label}`)
-        await fileGen.runPipeline(projectId, filePath, step.pipeline)
+
+        // 使用工作流定义的 output 路径（如有），否则用当前文件
+        const targetFile = step.output || filePath
+
+        await fileGen.runPipeline(projectId, targetFile, step.pipeline)
+
+        // pipeline 完成后：如果是新文件，刷新文件树并打开
+        if (step.output && step.output !== filePath) {
+          const fileStore = useFileStore()
+          const editorStore = useEditorStore()
+          await fileStore.loadTree(projectId)
+          const node = { name: step.output.split('/').pop() || '', path: step.output, type: 'file' as const }
+          fileStore.openFile(node)
+          editorStore.setCurrentFile(step.output)
+          try {
+            const content = await fileStore.readFile(projectId, step.output)
+            if (content) editorStore.loadContent(step.output, content.content || '')
+          } catch { /* file may not exist yet */ }
+        }
       } else {
         await new Promise(r => setTimeout(r, 300))
       }
