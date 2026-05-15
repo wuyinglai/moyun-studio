@@ -260,8 +260,10 @@ async function handleGenerateNext() {
     return
   }
 
+  console.log('[DIAG] handleGenerateNext: filePath=', filePath, 'projectId=', projectId)
   // 从当前文件路径推导下一个文件路径
   const nextPath = getNextSectionPath(filePath)
+  console.log('[DIAG] handleGenerateNext: nextPath=', nextPath)
   if (!nextPath) {
     notification.warning('当前文件不是章节文件，无法生成下一节')
     return
