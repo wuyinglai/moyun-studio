@@ -271,8 +271,6 @@ async function handleGenerateNext() {
   }
 
   // 打开下一个文件
-  const fileStore = useFileStore()
-  const editorStore = useEditorStore()
   const node = { name: nextPath.split('/').pop() || '', path: nextPath, type: 'file' as const }
   fileStore.openFile(node)
   editorStore.setCurrentFile(nextPath)
