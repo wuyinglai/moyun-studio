@@ -78,10 +78,11 @@ async def save_llm_config(
 ):
     """保存LLM配置"""
     data = _load_global_config(settings)
+    existing = data.get(_LLM_CONFIG_KEY, {})
     data[_LLM_CONFIG_KEY] = {
         "apiType": req.api_type,
         "apiUrl": req.api_url,
-        "apiKey": req.api_key,
+        "apiKey": req.api_key or existing.get("apiKey", ""),
         "model": req.model,
         "thinking": req.thinking,
     }

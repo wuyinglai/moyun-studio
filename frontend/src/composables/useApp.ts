@@ -12,11 +12,7 @@ export function useAppInit() {
 
   async function initApp() {
     await llmStore.loadConfig()
-    try {
-      await llmStore.testConnection()
-    } catch {
-      console.warn('LLM 连接测试失败，部分功能可能不可用')
-    }
+    await llmStore.loadStatus()
     sseService.connect()
     await projectStore.loadProjects()
   }

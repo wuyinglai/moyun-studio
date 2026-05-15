@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import api from '@/services/api'
 
 export interface LLMConfig {
-  apiType: 'openai' | 'ollama' | 'claude' | 'deepseek' | 'other'
+  apiType: 'openai' | 'ollama' | 'anthropic' | 'claude' | 'deepseek' | 'custom' | 'other'
   apiUrl: string
   apiKey: string
   model: string
@@ -25,9 +25,9 @@ export const useLLMStore = defineStore('llm', () => {
 
   async function loadConfig() {
     try {
-      const data = await api.get<LLMConfig>('/llm/config')
+      const data = await api.get<Record<string, unknown>>('/llm/config')
       if (data) {
-        config.value = data
+        config.value = normalizeConfig(data)
       }
     } catch {
       // 配置不存在，使用默认
@@ -35,19 +35,35 @@ export const useLLMStore = defineStore('llm', () => {
   }
 
   async function saveConfig(cfg: Partial<LLMConfig>) {
-    await api.post('/llm/config', { ...config.value, ...cfg })
+    const next = normalizeConfig({ ...config.value, ...cfg })
+    await api.post('/llm/config', {
+      api_type: normalizeProvider(next.apiType),
+      api_url: next.apiUrl,
+      api_key: next.apiKey,
+      model: next.model,
+      thinking: next.thinking,
+    })
     // 合并本地配置（后端仅保存，不返回完整配置）
-    Object.assign(config.value, cfg)
+    config.value = next
   }
 
   async function testConnection(signal?: AbortSignal): Promise<boolean> {
     try {
-      await api.post('/llm/test', config.value, { signal, timeout: 15000 })
-      isConnected.value = true
-      return true
+      const status = await api.post<{ connected: boolean }>('/llm/test', undefined, { signal, timeout: 15000 })
+      isConnected.value = Boolean(status?.connected)
+      return isConnected.value
     } catch {
       isConnected.value = false
       return false
+    }
+  }
+
+  async function loadStatus() {
+    try {
+      const status = await api.get<{ connected: boolean }>('/llm/status', { timeout: 15000 })
+      isConnected.value = Boolean(status?.connected)
+    } catch {
+      isConnected.value = false
     }
   }
 
@@ -78,6 +94,7 @@ export const useLLMStore = defineStore('llm', () => {
     saveConfig,
     testConnection,
     fetchModels,
+    loadStatus,
     setThinking,
     setGenerating,
   }
@@ -87,3 +104,28 @@ export const useLLMStore = defineStore('llm', () => {
     pick: ['config'],
   },
 })
+
+function normalizeProvider(provider: unknown): LLMConfig['apiType'] {
+  if (provider === 'claude') return 'anthropic'
+  if (provider === 'other') return 'custom'
+  if (
+    provider === 'openai' ||
+    provider === 'ollama' ||
+    provider === 'anthropic' ||
+    provider === 'deepseek' ||
+    provider === 'custom'
+  ) {
+    return provider
+  }
+  return 'openai'
+}
+
+function normalizeConfig(raw: Record<string, unknown>): LLMConfig {
+  return {
+    apiType: normalizeProvider(raw.apiType ?? raw.api_type),
+    apiUrl: String(raw.apiUrl ?? raw.api_url ?? ''),
+    apiKey: String(raw.apiKey ?? raw.api_key ?? ''),
+    model: String(raw.model ?? ''),
+    thinking: Boolean(raw.thinking),
+  }
+}

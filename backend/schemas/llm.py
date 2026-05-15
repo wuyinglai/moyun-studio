@@ -1,21 +1,28 @@
 """墨韵 - LLM 相关 Schemas"""
 
-from typing import Literal, Optional
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class LLMConfigRequest(BaseModel):
-    api_type: Literal["openai", "anthropic", "ollama", "deepseek", "custom"] = "openai"
-    api_url: str = ""
-    api_key: str = ""
+    model_config = ConfigDict(populate_by_name=True)
+
+    api_type: Literal["openai", "anthropic", "ollama", "deepseek", "custom"] = Field(
+        default="openai",
+        validation_alias=AliasChoices("api_type", "apiType"),
+    )
+    api_url: str = Field(default="", validation_alias=AliasChoices("api_url", "apiUrl"))
+    api_key: str = Field(default="", validation_alias=AliasChoices("api_key", "apiKey"))
     model: str = ""
     thinking: bool = False
 
 
 class LLMConfigResponse(BaseModel):
-    api_type: str
-    api_url: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    api_type: str = Field(serialization_alias="apiType")
+    api_url: str = Field(serialization_alias="apiUrl")
     model: str
     thinking: bool
     # 不返回 api_key

@@ -382,9 +382,9 @@ class PipelineRunner:
             final_output = step_outputs.get(pipeline.steps[-2].id, "")
         else:
             final_output = step_outputs.get(last_step.id, "")
+        original_content = ""
+        frontmatter = None
         if final_output and target_file:
-            original_content = ""
-            frontmatter = None
             try:
                 orig, fm = await self.file_service.read_file(f"{project_id}/{target_file}")
                 original_content = orig

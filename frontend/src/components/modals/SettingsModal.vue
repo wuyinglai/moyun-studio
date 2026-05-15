@@ -21,7 +21,6 @@
               <a-select v-model:value="config.apiType" placeholder="选择 API 提供商">
                 <a-select-option value="openai">OpenAI</a-select-option>
                 <a-select-option value="deepseek">DeepSeek</a-select-option>
-                <a-select-option value="azure">Azure OpenAI</a-select-option>
                 <a-select-option value="anthropic">Anthropic</a-select-option>
                 <a-select-option value="ollama">Ollama (本地)</a-select-option>
               </a-select>
