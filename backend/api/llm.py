@@ -148,6 +148,7 @@ async def test_connection(
             json={"model": llm_cfg.get("model", settings.llm_model), "messages": [{"role": "user", "content": "Hi"}], "max_tokens": 5},
             timeout=30,
         )
+        sess.close()
         resp.raise_for_status()
         data = resp.json()
         logger.info("LLM连接测试成功", extra={"model": model})
