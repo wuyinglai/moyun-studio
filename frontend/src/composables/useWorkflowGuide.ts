@@ -182,7 +182,6 @@ export function useWorkflowGuide() {
         // 解析 step.output 中的模板变量
         const resolved = (step.output || '').replace('{{project_id}}', projectId)
         const targetFile = resolved || filePath
-        console.log('[DIAG] runFromCurrent: stepId=', step.id, 'step.output=', step.output, 'resolved=', resolved, 'targetFile=', targetFile, 'filePath=', filePath, 'currentStepIndex=', _currentStepIndex.value)
 
         if (resolved && resolved !== filePath) {
           const fileStore = useFileStore()
@@ -277,7 +276,6 @@ export function useWorkflowGuide() {
   /** 开始工作流（从第1步） */
   async function start(projectId: string, filePath: string) {
     if (_isRunning.value) return
-    console.log('[DIAG] start: projectId=', projectId, 'filePath=', filePath, 'steps.length=', _steps.value.length)
     if (!projectId || !filePath) {
       notification.warning('请先打开一个文件和项目')
       return
@@ -299,7 +297,6 @@ export function useWorkflowGuide() {
 
   /** 恢复执行（L1 确认 / L2 停止后继续） */
   async function resume(projectId: string, filePath: string) {
-    console.log('[DIAG] resume: _currentStepIndex=', _currentStepIndex.value, 'stepId=', _steps.value[_currentStepIndex.value]?.id, 'stepStatus=', _steps.value[_currentStepIndex.value]?.status, 'isPaused=', _paused.value, 'filePath=', filePath)
     if (!_paused.value || !_isRunning.value) return
 
     // L1: 当前步骤在 waiting 状态
