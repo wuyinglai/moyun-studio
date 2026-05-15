@@ -137,7 +137,7 @@ async def test_connection(
         logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
         api_key = llm_cfg.get("apiKey") or settings.llm_api_key
-        api_base = (llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or "").rstrip("/") + "/v1"
+        api_base = (llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or "").rstrip("/")
 
         import json as _json, requests as _req
         sess = _req.Session()
