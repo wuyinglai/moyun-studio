@@ -279,12 +279,40 @@ async function handleGenerateNext() {
 }
 
 /** 从当前文件路径推导下一个章节文件路径 */
+const SECTIONS_PER_CHAPTER = 4
+const CHAPTERS_PER_VOLUME = 20
+
 function getNextSectionPath(currentPath: string): string | null {
+  // 匹配 chapters/vol-NN/ch-NNN/sec-NNN.md
   const match = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
   if (!match) return null
   const [, prefix, base, num, ext] = match
-  const nextNum = String(Number(num) + 1).padStart(num.length, '0')
-  return `${prefix}${base}${nextNum}${ext}`
+  const secNum = Number(num)
+
+  // 如果当前 section < 每章上限，直接递增
+  if (secNum < SECTIONS_PER_CHAPTER) {
+    const nextNum = String(secNum + 1).padStart(num.length, '0')
+    return `${prefix}${base}${nextNum}${ext}`
+  }
+
+  // 已达到章节上限，尝试进入下一章
+  const chMatch = prefix.match(/^(.*\/ch-)(\d+)(\/)$/)
+  if (!chMatch) return null
+  const [, chPrefix, chNum, chSuffix] = chMatch
+  const ch = Number(chNum)
+
+  if (ch < CHAPTERS_PER_VOLUME) {
+    // 同一卷内下一章
+    const nextCh = String(ch + 1).padStart(chNum.length, '0')
+    return `${chPrefix}${nextCh}${chSuffix}sec-001.md`
+  }
+
+  // 已到卷末，进入下一卷
+  const volMatch = chPrefix.match(/^(.*\/vol-)(\d+)(\/)$/)
+  if (!volMatch) return null
+  const [, volPrefix, volNum, volSuffix] = volMatch
+  const nextVol = String(Number(volNum) + 1).padStart(volNum.length, '0')
+  return `${volPrefix}${nextVol}${volSuffix}ch-001/sec-001.md`
 }
 
 async function handleRegenerate() {
