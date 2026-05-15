@@ -247,6 +247,7 @@ function handleCustomPipeline(info: any) {
 }
 
 async function handleGenerateNext() {
+  try {
   if (!llmStore.isConnected) {
     notification.warning('请先配置 LLM 连接')
     uiStore.openSettings()
@@ -278,6 +279,9 @@ async function handleGenerateNext() {
 
   // 运行 generate pipeline
   await fileGen.runPipeline(projectId, nextPath, 'generate')
+  } catch (e: any) {
+    console.error('[ERR] handleGenerateNext:', e.message || e)
+  }
 }
 
 /** 从当前文件路径推导下一个章节文件路径 */
