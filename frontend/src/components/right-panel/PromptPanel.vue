@@ -1,5 +1,54 @@
 <template>
   <div class="prompt-panel">
+    <!-- 工作流步骤展示 -->
+    <div class="wf-guide">
+      <div class="wf-guide-header">
+        <span class="wf-guide-title" v-if="workflowLabel">{{ workflowLabel }}</span>
+        <span class="wf-guide-title" v-else>创作任务</span>
+        <button class="wf-refresh" @click="reloadWorkflow" title="刷新工作流">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+
+      <!-- 加载失败 -->
+      <div v-if="wfError" class="wf-error">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>{{ wfError }}</span>
+        <button class="wf-retry" @click="reloadWorkflow">重试</button>
+      </div>
+
+      <!-- 步骤列表 -->
+      <div v-if="!wfError" class="wf-steps">
+        <div
+          v-for="(step, idx) in guide.steps.value"
+          :key="step.id"
+          class="wf-step"
+          :class="[step.status]"
+          :title="stepTooltip(step)"
+        >
+          <span class="wf-step-icon">{{ stepIcon(step.status) }}</span>
+          <span class="wf-step-label">{{ step.label }}</span>
+          <span class="wf-step-badge">{{ step.type === 'loop' ? '循环' : '' }}</span>
+          <div class="wf-step-action">
+            <span v-if="step.status === 'running'" class="wf-spinner">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+            </span>
+            <span v-else-if="step.status === 'waiting'" class="wf-waiting-badge">
+              等待确认
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 进度条 -->
+      <div class="wf-progress" v-if="guide.steps.value.length > 0 && !wfError">
+        <div class="wf-progress-bar">
+          <div class="wf-progress-fill" :style="{ width: guide.progress.value.percent + '%' }"></div>
+        </div>
+        <span class="wf-progress-text">{{ guide.progress.value.done }}/{{ guide.progress.value.total }}</span>
+      </div>
+    </div>
+
     <!-- 生成状态提示 -->
     <div v-if="guide.isRunning.value" class="generation-status">
       <i class="fa-solid fa-spinner fa-spin"></i>
