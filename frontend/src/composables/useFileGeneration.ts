@@ -37,6 +37,13 @@ export function useFileGeneration() {
   ) {
     if (_isGenerating.value) return
 
+    // 检测并发写入风险
+    const fileStore = useFileStore()
+    if (fileStore.unsavedFiles.has(filePath)) {
+      const notification = useNotificationStore()
+      notification.warning(`文件有未保存的编辑，AI 生成后可能覆盖您的修改`)
+    }
+
     _isGenerating.value = true
     _currentPrompt.value = ''
     _abortController = new AbortController()
@@ -119,6 +126,13 @@ export function useFileGeneration() {
     pipelineName: string,
   ) {
     if (_isGenerating.value) return
+
+    // 检测并发写入风险
+    const fileStore = useFileStore()
+    if (fileStore.unsavedFiles.has(filePath)) {
+      const notification = useNotificationStore()
+      notification.warning(`文件有未保存的编辑，AI 生成后可能覆盖您的修改`)
+    }
 
     _isGenerating.value = true
     _currentPrompt.value = ''

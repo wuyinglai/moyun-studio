@@ -6,7 +6,7 @@
  * L2: 自动连续执行，用户可停止，停止后 paused=true，"写下一部分"恢复。
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import api from '@/services/api'
 import { useFileGeneration } from './useFileGeneration'
 import { useNotificationStore } from '@/stores/notification'
@@ -103,6 +103,12 @@ export function useWorkflowGuide() {
   const fileGen = useFileGeneration()
   const notification = useNotificationStore()
   const taskStore = useTaskStore()
+
+  // 切换项目时自动重置工作流状态
+  const projectStore = useProjectStore()
+  watch(() => projectStore.currentProject?.id, () => {
+    if (_isRunning.value) reset()
+  })
 
   const currentStep = computed(() =>
     _currentStepIndex.value >= 0 && _currentStepIndex.value < _steps.value.length
