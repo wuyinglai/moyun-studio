@@ -29,7 +29,7 @@
           <span class="wf-step-icon">{{ stepIcon(step.status) }}</span>
           <span class="wf-step-label">{{ step.label }}</span>
           <span class="wf-step-badge">{{ step.type === 'loop' ? '循环' : '' }}</span>
-          <div class="wf-step-action">
+          <div class="wf-step-action" v-if="step.status === 'running' || step.status === 'waiting'">
             <span v-if="step.status === 'running'" class="wf-spinner">
               <i class="fa-solid fa-spinner fa-spin"></i>
             </span>
