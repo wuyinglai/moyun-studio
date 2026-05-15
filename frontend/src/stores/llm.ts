@@ -40,9 +40,9 @@ export const useLLMStore = defineStore('llm', () => {
     Object.assign(config.value, cfg)
   }
 
-  async function testConnection(): Promise<boolean> {
+  async function testConnection(signal?: AbortSignal): Promise<boolean> {
     try {
-      await api.post('/llm/test', config.value)
+      await api.post('/llm/test', config.value, { signal, timeout: 15000 })
       isConnected.value = true
       return true
     } catch {
@@ -51,9 +51,9 @@ export const useLLMStore = defineStore('llm', () => {
     }
   }
 
-  async function fetchModels() {
+  async function fetchModels(signal?: AbortSignal) {
     try {
-      const data = await api.get<{ models: Array<{ id: string; name: string }> }>('/llm/models')
+      const data = await api.get<{ models: Array<{ id: string; name: string }> }>('/llm/models', { signal, timeout: 15000 })
       availableModels.value = (data?.models || []).map((m) => m.id)
     } catch {
       availableModels.value = []

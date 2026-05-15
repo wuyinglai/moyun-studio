@@ -5,7 +5,7 @@
     :width="500"
     @cancel="close"
     @ok="saveSettings"
-    :confirm-loading="isTesting"
+    :confirm-loading="false"
   >
     <div class="settings-modal">
       <a-tabs v-model:activeKey="activeTab">
@@ -42,19 +42,20 @@
             </a-form-item>
 
             <a-form-item label="模型">
-              <a-select
+              <a-input
                 v-model:value="config.model"
+                placeholder="输入模型名称，如 gpt-4、deepseek-chat"
                 style="width: 100%;"
-                placeholder="输入或选择模型名称"
-                show-search
-                :allow-clear="true"
-              >
-                <a-select-option
+              />
+              <div v-if="llmStore.availableModels.length > 0" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+                <a-tag
                   v-for="m in llmStore.availableModels"
                   :key="m"
-                  :value="m"
-                >{{ m }}</a-select-option>
-              </a-select>
+                  @click="selectModel(m)"
+                  style="cursor: pointer;"
+                  :color="config.model === m ? 'blue' : undefined"
+                >{{ m }}</a-tag>
+              </div>
             </a-form-item>
 
             <a-form-item>
@@ -66,16 +67,31 @@
               </div>
             </a-form-item>
 
+            <a-divider>后端服务</a-divider>
+
+            <a-form-item label="后端服务地址">
+              <a-input v-model:value="backendUrl" placeholder="留空则使用 Vite 代理（默认）" />
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 8px; align-items: center;">
+                <span>例如 http://127.0.0.1:8001</span>
+                <a-button size="small" @click="resetBackendUrl">恢复默认</a-button>
+                <a-button size="small" type="primary" @click="applyBackendUrl">应用</a-button>
+              </div>
+            </a-form-item>
+
             <a-divider>连接测试</a-divider>
 
-            <a-space>
-              <a-button @click="testConnection" :loading="isTesting">
+            <a-space wrap>
+              <a-button @click="testConnection" :loading="isTesting" :disabled="isTesting">
                 <i class="fa-solid fa-plug"></i>
                 测试连接
               </a-button>
-              <a-button @click="fetchModels" :loading="isFetchingModels">
+              <a-button @click="fetchModels" :loading="isFetchingModels" :disabled="isFetchingModels">
                 <i class="fa-solid fa-list"></i>
                 获取模型列表
+              </a-button>
+              <a-button v-if="isTesting || isFetchingModels" @click="cancelRequest" danger>
+                <i class="fa-solid fa-stop"></i>
+                取消
               </a-button>
               <a-alert
                 v-if="testResult"
@@ -148,6 +164,7 @@ import type { LLMConfig } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notification'
 import { saveConfig as saveRemoteConfig } from '@/services/configService'
+import { useBackendCheck } from '@/composables/useBackendCheck'
 
 const llmStore = useLLMStore()
 const uiStore = useUIStore()
@@ -158,6 +175,25 @@ const activeTab = ref('llm')
 const isTesting = ref(false)
 const isFetchingModels = ref(false)
 const testResult = ref<{ status: 'success' | 'error'; message: string } | null>(null)
+let testAbortController: AbortController | null = null
+let fetchAbortController: AbortController | null = null
+
+const { customUrl, setCustomUrl, resetUrl, checkBackend } = useBackendCheck()
+const backendUrl = ref(customUrl.value)
+
+function applyBackendUrl() {
+  setCustomUrl(backendUrl.value)
+  notification.success('后端地址已更新，正在重新检测...')
+  // 重新检测连通性
+  setTimeout(() => checkBackend(), 500)
+}
+
+function resetBackendUrl() {
+  backendUrl.value = ''
+  resetUrl()
+  notification.success('已恢复默认后端地址，正在重新检测...')
+  setTimeout(() => checkBackend(), 500)
+}
 
 const config = ref({
   apiType: 'openai',
@@ -186,39 +222,81 @@ watch(visible, (val) => {
     config.value = { ...llmStore.config }
     testResult.value = null
     autoMode.value = localStorage.getItem('moyun-auto-mode') || 'L1'
+    backendUrl.value = customUrl.value
+  } else {
+    // 关闭弹窗时取消所有进行中的请求
+    cancelRequest(true)
   }
 })
 
+function selectModel(model: string) {
+  config.value.model = model
+}
+
+function cancelRequest(silent = false) {
+  if (testAbortController) {
+    testAbortController.abort()
+    testAbortController = null
+  }
+  if (fetchAbortController) {
+    fetchAbortController.abort()
+    fetchAbortController = null
+  }
+  isTesting.value = false
+  isFetchingModels.value = false
+  if (!silent) {
+    notification.info('已取消请求')
+  }
+}
+
 async function fetchModels() {
+  if (isFetchingModels.value) return
   isFetchingModels.value = true
+  fetchAbortController = new AbortController()
   try {
     await llmStore.saveConfig(config.value)
-    await llmStore.fetchModels()
-    notification.success(`已获取 ${llmStore.availableModels.length} 个可用模型`)
+    await llmStore.fetchModels(fetchAbortController.signal)
+    if (!fetchAbortController.signal.aborted) {
+      notification.success(`已获取 ${llmStore.availableModels.length} 个可用模型`)
+    }
   } catch {
-    notification.error('获取模型列表失败')
+    if (!fetchAbortController?.signal.aborted) {
+      notification.error('获取模型列表失败')
+    }
   } finally {
-    isFetchingModels.value = false
+    if (fetchAbortController) {
+      isFetchingModels.value = false
+      fetchAbortController = null
+    }
   }
 }
 
 async function testConnection() {
+  if (isTesting.value) return
   isTesting.value = true
   testResult.value = null
+  testAbortController = new AbortController()
 
   try {
     await llmStore.saveConfig(config.value)
-    const success = await llmStore.testConnection()
+    const success = await llmStore.testConnection(testAbortController.signal)
 
-    if (success) {
-      testResult.value = { status: 'success', message: '连接成功！' }
-    } else {
-      testResult.value = { status: 'error', message: '连接失败，请检查配置' }
+    if (!testAbortController.signal.aborted) {
+      if (success) {
+        testResult.value = { status: 'success', message: '连接成功！' }
+      } else {
+        testResult.value = { status: 'error', message: '连接失败，请检查配置' }
+      }
     }
   } catch (e: any) {
-    testResult.value = { status: 'error', message: e.message || '连接失败' }
+    if (!testAbortController?.signal.aborted) {
+      testResult.value = { status: 'error', message: e.message || '连接失败' }
+    }
   } finally {
-    isTesting.value = false
+    if (testAbortController) {
+      isTesting.value = false
+      testAbortController = null
+    }
   }
 }
 

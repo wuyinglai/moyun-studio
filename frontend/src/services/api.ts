@@ -10,9 +10,21 @@ const rawApi = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// 请求拦截器：注入重试计数
+// 请求拦截器：动态 baseURL + 注入重试计数
 rawApi.interceptors.request.use((config) => {
   ;(config as any).__retryCount = 0
+  // 如果用户在设置中配置了自定义后端地址，覆盖 baseURL
+  if (typeof window !== 'undefined') {
+    try {
+      const customUrl = localStorage.getItem('moyun-api-baseurl')
+      if (customUrl) {
+        // 用户填的是后端根地址（如 http://127.0.0.1:8001），需要加上 /api 前缀
+        config.baseURL = customUrl.replace(/\/+$/, '') + '/api'
+      }
+    } catch {
+      // localStorage 不可用时忽略
+    }
+  }
   return config
 })
 
@@ -50,6 +62,13 @@ rawApi.interceptors.response.use(
   }
 )
 
+// 记录异常错误的额外信息
+function logErrorDetail(err: unknown) {
+  if (err instanceof Error) {
+    console.error(`[API Error] ${err.name}: ${err.message}\nStack: ${err.stack}`)
+  }
+}
+
 // 响应拦截器：兼容两种格式 & 错误通知
 // 格式1：{ success: true, data: ..., message: '...' }（标准封装）
 // 格式2：直接返回数据（数组/对象/字符串等）
@@ -65,7 +84,14 @@ rawApi.interceptors.response.use(
     return body
   },
   (error) => {
-    const message = error.response?.data?.message || error.message
+    // 记录详细错误信息到控制台
+    logErrorDetail(error)
+    let message: string
+    try {
+      message = error.response?.data?.message || error.message || '请求失败'
+    } catch {
+      message = '请求失败'
+    }
     try {
       const notificationStore = useNotificationStore()
       notificationStore.addNotification({

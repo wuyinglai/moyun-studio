@@ -18,6 +18,7 @@ import QuickOpenModal from '@/components/modals/QuickOpenModal.vue'
 import { useNotificationStore } from '@/stores/notification'
 import { useAppInit } from '@/composables/useApp'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+import { useBackendCheck } from '@/composables/useBackendCheck'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
@@ -25,10 +26,13 @@ import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { useLLMStore } from '@/stores/llm'
 import { useFileMetaStore } from '@/stores/fileMeta'
+import { useTaskStore } from '@/stores/task'
+import { useUIStore } from '@/stores/ui'
 import { guessPromptType } from '@/utils/promptTypes'
 
 const { initApp, cleanupApp } = useAppInit()
 useKeyboardShortcuts()
+const { backendReachable, checking, checkBackend, customUrl } = useBackendCheck()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
@@ -97,6 +101,10 @@ function handlePromiseRejection(event: PromiseRejectionEvent) {
   } catch {}
 }
 
+function settingsBtn() {
+  useUIStore().openSettings()
+}
+
 // 路由守卫：路由跳转前拦截（Vue Router beforeEach 已在 router/index.ts 中处理）
 
 // 监听 pendingGeneration：项目创建后自动触发流式生成
@@ -135,10 +143,17 @@ watch(
       // 文件可能尚未在后端就绪，忽略
     }
 
-    // 触发流式生成
+    // 触发流式生成（显示在 LLM 工作堆栈中）
     useNotificationStore().info('正在生成创意...')
+    const taskStore = useTaskStore()
+    const taskId = `gen-${Date.now()}`
+    const taskName = `AI 生成: ${filePath.split('/').pop() || filePath}`
+    taskStore.addTask(taskId, taskName)
+    taskStore.startTask(taskId)
     try {
       await fileGen.generateToFile(projectId, filePath, prompt, pending.extraVars, pending.promptType)
+      taskStore.completeTask(taskId)
+      taskStore.addLog('success', `完成: ${taskName}`)
 
       // 生成成功后保存元数据
       if (pending.promptType) {
@@ -157,6 +172,8 @@ watch(
         }
       } catch {}
     } catch (e: any) {
+      taskStore.failTask(taskId)
+      taskStore.addLog('error', `失败: ${taskName}`)
       console.error('自动生成失败:', e)
     }
 
@@ -197,6 +214,24 @@ watch(
 
 <template>
   <div class="app-shell">
+    <!-- 后端连通性告警横幅 -->
+    <div
+      v-if="!checking && !backendReachable"
+      class="backend-warning"
+    >
+      <div class="backend-warning-content">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>无法连接到后端服务</span>
+        <code v-if="customUrl">{{ customUrl }}</code>
+        <code v-else>/api → Vite proxy</code>
+        <button class="retry-btn" @click="checkBackend">
+          <i class="fa-solid fa-rotate"></i> 重试
+        </button>
+        <button class="settings-btn" @click="settingsBtn">
+          <i class="fa-solid fa-gear"></i> 配置
+        </button>
+      </div>
+    </div>
     <AppHeader />
     <router-view />
     <NotificationContainer />
@@ -221,5 +256,45 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.backend-warning {
+  background: #e74c3c;
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.backend-warning-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.backend-warning-content code {
+  background: rgba(255,255,255,0.2);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.backend-warning-content button {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 2px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.backend-warning-content button:hover {
+  background: rgba(255,255,255,0.35);
 }
 </style>

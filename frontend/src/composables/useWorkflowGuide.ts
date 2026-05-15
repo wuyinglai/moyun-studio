@@ -101,14 +101,23 @@ export function useWorkflowGuide() {
     step.status = 'running'
     _paused.value = false
 
+    // 在 LLM 工作堆栈中显示当前步骤
+    const wfTaskId = `wf-${step.id}-${Date.now()}`
+    const wfTaskName = `工作流: ${step.label}`
+
     try {
       if (step.type === 'pipeline' && step.pipeline) {
         taskStore.addLog('info', `执行: ${step.label}`)
+        taskStore.addTask(wfTaskId, wfTaskName)
+        taskStore.startTask(wfTaskId)
 
         // 使用工作流定义的 output 路径（如有），否则用当前文件
         const targetFile = step.output || filePath
 
         await fileGen.runPipeline(projectId, targetFile, step.pipeline)
+
+        taskStore.completeTask(wfTaskId)
+        taskStore.addLog('success', `完成: ${wfTaskName}`)
 
         // pipeline 完成后：如果是新文件，刷新文件树并打开
         if (step.output && step.output !== filePath) {
@@ -143,6 +152,7 @@ export function useWorkflowGuide() {
     } catch (e: any) {
       if (!_isRunning.value) return
       step.status = 'done'
+      taskStore.failTask(wfTaskId)
       taskStore.addLog('error', `失败: ${step.label} — ${e.message}`)
       advanceAndRun(projectId, filePath)
     }
