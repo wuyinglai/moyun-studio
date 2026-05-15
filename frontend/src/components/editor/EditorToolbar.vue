@@ -279,15 +279,19 @@ async function handleGenerateNext() {
 }
 
 /** 从当前文件路径推导下一个章节文件路径 */
-const SECTIONS_PER_CHAPTER = 4
-const CHAPTERS_PER_VOLUME = 20
-
 function getNextSectionPath(currentPath: string): string | null {
   // 匹配 chapters/vol-NN/ch-NNN/sec-NNN.md
   const match = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
   if (!match) return null
   const [, prefix, base, num, ext] = match
   const secNum = Number(num)
+
+  // 从项目目标字数计算章节参数（与 expandLoopStep 算法一致）
+  const projectStore = useProjectStore()
+  const tgt = projectStore.currentProject?.target_word_count || 50000
+  const sections = Math.max(1, Math.floor(tgt / 1800))
+  const SECTIONS_PER_CHAPTER = 4
+  const CHAPTERS_PER_VOLUME = Math.ceil(sections / 4)
 
   // 如果当前 section < 每章上限，直接递增
   if (secNum < SECTIONS_PER_CHAPTER) {
