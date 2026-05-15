@@ -6,6 +6,8 @@
     @cancel="close"
     @ok="saveSettings"
     :confirm-loading="false"
+    ok-text="保存设置"
+    cancel-text="取消"
   >
     <div class="settings-modal">
       <a-tabs v-model:activeKey="activeTab">

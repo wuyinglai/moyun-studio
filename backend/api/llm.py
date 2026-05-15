@@ -13,11 +13,12 @@ import logging
 import time
 from pathlib import Path
 
+import litellm
 from fastapi import APIRouter, Depends, Request
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import RateLimitError
-from backend.core.llm import LLMService, load_llm_config_from_workspace, normalize_model_for_provider
+from backend.core.llm import load_llm_config_from_workspace, normalize_model_for_provider
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
     LLMConfigRequest,
@@ -136,10 +137,13 @@ async def test_connection(
     try:
         logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
-        svc = LLMService.from_workspace_config(llm_cfg)
-        _ = await svc.complete_sync(
-            [{"role": "user", "content": "Hi"}],
+        # 测试连接直接调 litellm，不经过 LLMService 的重试逻辑
+        response = await litellm.acompletion(
+            model=model,
+            messages=[{"role": "user", "content": "Hi"}],
             max_tokens=5,
+            api_key=llm_cfg.get("apiKey") or settings.llm_api_key,
+            api_base=llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or None,
             timeout=30,
         )
         logger.info("LLM连接测试成功", extra={"model": model})
