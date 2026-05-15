@@ -177,12 +177,8 @@ watch(
   () => fileStore.currentFile ? editorStore.contents[fileStore.currentFile.path] : undefined,
   (content) => {
     if (content === undefined || !editorView) return
-    if (editorStore.contentSource !== 'external') {
-      console.log('[DIAG] MarkdownEditor watcher: contentSource=', editorStore.contentSource, 'blocked')
-      return
-    }
+    if (editorStore.contentSource !== 'external') return
     const current = editorView.state.doc.toString()
-    console.log('[DIAG] MarkdownEditor watcher: UPATE editor, docLen=', current.length, 'newLen=', content.length, 'diff=', content.length - current.length)
     if (current !== content) {
       const scroller = editorView.scrollDOM
       const prevScrollTop = scroller.scrollTop

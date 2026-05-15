@@ -71,7 +71,6 @@ export const useEditorStore = defineStore('editor', () => {
     contentSource.value = 'external'
     const current = contents.value[path] || ''
     contents.value[path] = current + content
-    console.log('[DIAG] editorStore.appendContentToFile: path=', path, 'deltaLen=', content.length, 'totalLen=', contents.value[path].length, 'contentSource=', contentSource.value)
     const fileStore = useFileStore()
     fileStore.markDirty(path)
     // 不自动重置 contentSource，由 MarkdownEditor 的 watcher 在更新编辑器后重置

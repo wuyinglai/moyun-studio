@@ -54,7 +54,7 @@ async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<G
       const chPad = String(ch).padStart(3, '0')
 
       const resolvePath = (t: string) =>
-        t.replace('{{vol|pad:2}}', volPad).replace('{{ch|pad:3}}', chPad)
+        t.replace('{{project_id}}', projectId).replace('{{vol|pad:2}}', volPad).replace('{{ch|pad:3}}', chPad)
 
       // 每章固定 4 节，逐节生成
       for (let sec = 1; sec <= 4; sec++) {
@@ -178,18 +178,20 @@ export function useWorkflowGuide() {
         taskStore.addTask(wfTaskId, wfTaskName)
         taskStore.startTask(wfTaskId)
 
-        const targetFile = step.output || filePath
+        // 解析 step.output 中的模板变量
+        const resolved = (step.output || '').replace('{{project_id}}', projectId)
+        const targetFile = resolved || filePath
 
-        if (step.output && step.output !== filePath) {
+        if (resolved && resolved !== filePath) {
           const fileStore = useFileStore()
           const editorStore = useEditorStore()
           await fileStore.loadTree(projectId)
-          const node = { name: step.output.split('/').pop() || '', path: step.output, type: 'file' as const }
+          const node = { name: resolved.split('/').pop() || '', path: resolved, type: 'file' as const }
           fileStore.openFile(node)
-          editorStore.setCurrentFile(step.output)
+          editorStore.setCurrentFile(resolved)
           try {
-            const content = await fileStore.readFile(projectId, step.output)
-            if (content) editorStore.loadContent(step.output, content.content || '')
+            const content = await fileStore.readFile(projectId, resolved)
+            if (content) editorStore.loadContent(resolved, content.content || '')
           } catch { /* file may not exist yet */ }
         }
 
@@ -198,13 +200,13 @@ export function useWorkflowGuide() {
         taskStore.completeTask(wfTaskId)
         taskStore.addLog('success', `完成: ${wfTaskName}`)
 
-        if (step.output && step.output !== filePath) {
+        if (resolved && resolved !== filePath) {
           const fileStore = useFileStore()
           const editorStore = useEditorStore()
           await fileStore.loadTree(projectId)
           try {
-            const content = await fileStore.readFile(projectId, step.output)
-            if (content) editorStore.loadContent(step.output, content.content || '')
+            const content = await fileStore.readFile(projectId, resolved)
+            if (content) editorStore.loadContent(resolved, content.content || '')
           } catch { /* file may not exist yet */ }
         }
       } else if (step.type === 'loop') {
