@@ -190,8 +190,11 @@ class SSEService {
         // 新文件创建 - 刷新文件树
         if (data.path) {
           fileStore.handleFileCreated(data.path, data.name)
-          taskStore.addLog('success', `已创建文件: ${data.name || data.path}`)
-          notification.success(`已创建文件: ${data.name || data.path}`)
+          // 快照文件（backup/snapshots/）频繁创建，不弹通知
+          if (!data.path.startsWith('backup/snapshots/')) {
+            taskStore.addLog('success', `已创建文件: ${data.name || data.path}`)
+            notification.success(`已创建文件: ${data.name || data.path}`)
+          }
         }
         break
 
