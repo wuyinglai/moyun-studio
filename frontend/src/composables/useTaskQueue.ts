@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useTaskStore } from '@/stores/task'
+import { useNotificationStore } from '@/stores/notification'
 
 /* ─── 模块级队列状态（单例） ────────────────────────────── */
 
@@ -101,7 +102,9 @@ export function enqueueTask(
   _queue.value.push({ id, executor, name })
   _saveQueueMeta()
 
-  if (!_isProcessing.value) {
+  if (_isProcessing.value) {
+    useNotificationStore().info(`「${name}」已加入队列，等当前任务完成后执行`)
+  } else {
     processQueue()
   }
 

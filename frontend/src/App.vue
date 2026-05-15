@@ -134,6 +134,7 @@ watch(
     }
 
     // 触发流式生成
+    useNotificationStore().info('正在生成创意...')
     try {
       await fileGen.generateToFile(projectId, filePath, prompt, pending.extraVars, pending.promptType)
 
