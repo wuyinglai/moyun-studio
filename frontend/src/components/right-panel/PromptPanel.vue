@@ -40,12 +40,6 @@
         </div>
       </div>
 
-      <!-- 进度条（已移除） -->
-        <div class="wf-progress-bar">
-          <div class="wf-progress-fill" :style="{ width: guide.progress.value.percent + '%' }"></div>
-        </div>
-        <span class="wf-progress-text">{{ guide.progress.value.done }}/{{ guide.progress.value.total }}</span>
-      </div>
     </div>
 
     <!-- 生成状态提示 -->
