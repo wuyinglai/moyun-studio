@@ -323,12 +323,11 @@ class PipelineRunner:
                     **extra_kwargs,
                 ):
                     step_output += chunk
-                    # 只有最终步骤才流式输出到前端
-                    if is_final:
-                        yield {"event": "generation", "data": json.dumps({
-                            "delta": chunk,
-                            "task_id": task_id,
-                        })}
+                    # 所有步骤的 LLM 输出都流式输出到前端，让用户实时看到生成过程
+                    yield {"event": "generation", "data": json.dumps({
+                        "delta": chunk,
+                        "task_id": task_id,
+                    })}
 
                 step_outputs[step.id] = step_output
 
