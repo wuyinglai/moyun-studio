@@ -286,7 +286,7 @@ class GenerationService:
 
                 messages = [{"role": "user", "content": prompt_text}]
                 generated = await svc.complete_sync(
-                    messages, temperature=temperature, max_tokens=4000, timeout=180
+                    messages, temperature=temperature, max_tokens=16000, timeout=180
                 )
 
                 await self.file_service.write_file(tgt["target_file"], generated.strip())

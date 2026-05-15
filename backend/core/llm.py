@@ -134,7 +134,7 @@ class LLMConfig:
         api_key: str | None = None,
         api_base: str | None = None,
         model: str = "gpt-4",
-        max_tokens: int = 4096,
+        max_tokens: int = 16000,
         temperature: float = 0.7,
     ):
         self.provider = provider
@@ -283,7 +283,8 @@ class LLMService:
         chunks = []
         async for chunk in self.complete(messages, model=model, stream=False, **kwargs):
             chunks.append(chunk)
-        return "".join(chunks)
+        result = "".join(chunks)
+        return result
 
     async def count_tokens(self, text: str, model: str = "gpt-4") -> int:
         """计算token数"""

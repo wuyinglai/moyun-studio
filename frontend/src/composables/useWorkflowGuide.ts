@@ -13,6 +13,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useTaskStore } from '@/stores/task'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
+import { useProjectStore } from '@/stores/project'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'waiting'
 
@@ -23,6 +24,66 @@ export interface GuideStepItem {
   pipeline?: string
   output?: string | null
   status: StepStatus
+}
+
+/** 展开 loop 步骤为单个 pipeline 步骤列表 */
+async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<GuideStepItem[]> {
+  const res = await api.get<{ workflow: any }>(`/workflows/${_workflowName.value}`)
+  const loopDef = res?.workflow?.steps?.find((s: any) => s.id === step.id)
+  if (!loopDef?.steps) return []
+
+  const chaptersLoop = loopDef.steps.find((s: any) => s.type === 'loop')
+  if (!chaptersLoop?.steps) return []
+
+  const genStep = chaptersLoop.steps.find((s: any) => s.type === 'pipeline' && s.pipeline)
+  if (!genStep) return []
+
+  const extractStep = chaptersLoop.steps.find((s: any) => s.pipeline === 'extract')
+
+  // 从项目 target_word_count 计算卷/章数量（和后端 wizard.py 算法一致）
+  const projectStore = useProjectStore()
+  const tgt = projectStore.currentProject?.target_word_count || 50000
+  const sections = Math.max(1, Math.floor(tgt / 1800))
+  const chCount = Math.ceil(sections / 4)
+  const volCount = Math.max(1, Math.ceil(chCount / 12))
+
+  const expanded: GuideStepItem[] = []
+  for (let vol = 1; vol <= volCount; vol++) {
+    for (let ch = 1; ch <= chCount; ch++) {
+      const volPad = String(vol).padStart(2, '0')
+      const chPad = String(ch).padStart(3, '0')
+
+      const resolvePath = (t: string) =>
+        t.replace('{{vol|pad:2}}', volPad).replace('{{ch|pad:3}}', chPad)
+
+      // 每章固定 4 节，逐节生成
+      for (let sec = 1; sec <= 4; sec++) {
+        const secPad = String(sec).padStart(3, '0')
+        const secOutput = resolvePath(genStep.output || '').replace('sec-001.md', `sec-${secPad}.md`)
+        expanded.push({
+          id: `vol-${volPad}-ch-${chPad}-sec-${secPad}`,
+          label: `第${vol}卷第${ch}章第${sec}节`,
+          type: 'pipeline',
+          pipeline: genStep.pipeline,
+          output: secOutput,
+          status: 'pending',
+        })
+      }
+
+      // extracts 只在每章执行一次
+      if (extractStep?.output) {
+        expanded.push({
+          id: `vol-${volPad}-ch-${chPad}-extract`,
+          label: `提取 第${vol}卷第${ch}章`,
+          type: 'pipeline',
+          pipeline: extractStep.pipeline,
+          output: resolvePath(extractStep.output),
+          status: 'pending',
+        })
+      }
+    }
+  }
+  return expanded
 }
 
 // ── 模块级单例状态 ────────────────────────────────
@@ -111,15 +172,8 @@ export function useWorkflowGuide() {
         taskStore.addTask(wfTaskId, wfTaskName)
         taskStore.startTask(wfTaskId)
 
-        // 使用工作流定义的 output 路径（如有），否则用当前文件
         const targetFile = step.output || filePath
 
-        await fileGen.runPipeline(projectId, targetFile, step.pipeline)
-
-        taskStore.completeTask(wfTaskId)
-        taskStore.addLog('success', `完成: ${wfTaskName}`)
-
-        // pipeline 完成后：如果是新文件，刷新文件树并打开
         if (step.output && step.output !== filePath) {
           const fileStore = useFileStore()
           const editorStore = useEditorStore()
@@ -132,8 +186,36 @@ export function useWorkflowGuide() {
             if (content) editorStore.loadContent(step.output, content.content || '')
           } catch { /* file may not exist yet */ }
         }
+
+        await fileGen.runPipeline(projectId, targetFile, step.pipeline)
+
+        taskStore.completeTask(wfTaskId)
+        taskStore.addLog('success', `完成: ${wfTaskName}`)
+
+        if (step.output && step.output !== filePath) {
+          const fileStore = useFileStore()
+          const editorStore = useEditorStore()
+          await fileStore.loadTree(projectId)
+          try {
+            const content = await fileStore.readFile(projectId, step.output)
+            if (content) editorStore.loadContent(step.output, content.content || '')
+          } catch { /* file may not exist yet */ }
+        }
+      } else if (step.type === 'loop') {
+        // 展开循环为单个 pipeline 步骤，实现逐节 L1 确认
+        taskStore.addLog('info', `展开循环: ${step.label}`)
+        const expanded = await expandLoopStep(projectId, step)
+        if (expanded.length > 0) {
+          // 替换当前步骤为展开后的步骤列表
+          _steps.value.splice(_currentStepIndex.value, 1, ...expanded)
+          // 重新执行当前索引（现在指向第一个展开步骤）
+          await runFromCurrent(projectId, filePath)
+          return
+        }
+        taskStore.addLog('warning', `无法展开循环: ${step.label}，跳过`)
       } else {
-        await new Promise(r => setTimeout(r, 300))
+        // 其他类型（file 等）跳过
+        taskStore.addLog('info', `跳过: ${step.label}`)
       }
 
       if (!_isRunning.value) return

@@ -15,11 +15,14 @@
         {{ isPreviewMode ? '编辑' : '预览' }}
       </a-button>
       <a-divider type="vertical" />
-      <a-button v-if="isGenerating" danger size="small" @click="handleStop">
+      <a-button v-if="showStopButton" danger size="small" @click="handleStop">
         <template #icon><i class="fa-solid fa-stop"></i></template>
         停止
       </a-button>
-      <template v-else>
+      <a-button v-if="showNextButton" size="small" type="primary" @click="handleGenerateNext">
+        📄 写下一部分
+      </a-button>
+      <template v-else-if="!isGenerating">
         <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('polish')">
           ✏️ 润色
         </a-button>
@@ -47,10 +50,6 @@
           </template>
         </a-dropdown>
         <a-divider v-if="!isSystemFile" type="vertical" />
-        <a-button v-if="!isSystemFile" size="small" type="primary" ghost @click="handleGenerateNext">
-          📄 写下一部分
-        </a-button>
-        <a-divider type="vertical" />
         <a-dropdown>
           <a-button size="small">更多 <i class="fa-solid fa-chevron-down"></i></a-button>
           <template #overlay>
@@ -120,6 +119,21 @@ const isGenerating = computed(() =>
   chatStore.isStreaming || fileGen.isGenerating.value || taskQueue.isProcessing.value || guide.isRunning.value,
 )
 
+/** 有任务在等待 L1 确认，或者工作流已暂停 */
+const isWaitingForConfirm = computed(() => {
+  return guide.isPaused.value || useTaskStore().tasks.some(t => t.status === 'waiting')
+})
+
+/** 显示停止按钮：正在流式输出或管线执行中（但非 L1 等待状态） */
+const showStopButton = computed(() =>
+  isGenerating.value && !isWaitingForConfirm.value
+)
+
+/** 显示"写下一部分"：有项目打开且非系统文件时始终可见 */
+const showNextButton = computed(() =>
+  !isSystemFile.value && !!projectStore.currentProject
+)
+
 const customPipelines = computed(() =>
   pipelineStore.pipelines.filter(p => p.source === 'custom')
 )
@@ -171,8 +185,17 @@ const canGoForward = computed(() => {
 function handleStop() {
   chatStore.cancelStream()
   fileGen.cancelGeneration()
-  // 只取消当前正在运行的任务（其余排队任务保留）
+
   const taskStore = useTaskStore()
+
+  // L1 等待中 + 工作流运行中 -> 等效于确认当前任务并继续
+  const waitingTask = taskStore.tasks.find(t => t.status === 'waiting')
+  if (waitingTask && guide.isRunning.value) {
+    handleGenerateNext()
+    return
+  }
+
+  // 只取消当前正在运行的任务（其余排队任务保留）
   const running = taskStore.tasks.find(t => t.status === 'running')
   if (running) {
     cancelQueuedTask(running.id)
@@ -234,16 +257,20 @@ async function handleGenerateNext() {
   const waitingTask = taskStore.tasks.find((t: any) => t.status === 'waiting')
   if (waitingTask) {
     confirmTask(waitingTask.id)
-    return
   }
 
-  // 工作流暂停时：恢复执行下一步
+  // 工作流暂停时：恢复执行下一步（与任务确认同一点击）
   if (guide.isPaused.value) {
     const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
     const filePath = editorStore.currentFilePath
     if (projectId && filePath) {
       guide.resume(projectId, filePath)
     }
+    return
+  }
+
+  // 如果只是确认了任务但工作流未暂停，不需要继续
+  if (waitingTask && !guide.isPaused.value) {
     return
   }
 

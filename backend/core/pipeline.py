@@ -519,10 +519,9 @@ class PipelineRunner:
                 return len(enc.encode(text))
             except Exception:
                 pass
-        # 回退：中文字符 ≈ 0.5 token，其他字符 ≈ 0.25 token
-        chinese = len(re.findall(r'[一-鿿]', text))
-        other = len(text) - chinese
-        return int(chinese * 0.5 + other * 0.25)
+        # 回退：字符估算
+        from backend.utils.token_utils import estimate_tokens_fallback
+        return estimate_tokens_fallback(text)
 
     async def _generate_diff_summary(
         self,

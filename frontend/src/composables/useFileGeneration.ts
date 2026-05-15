@@ -223,7 +223,7 @@ export function useFileGeneration() {
               onDelta(parsed.delta || parsed.content)
             }
           } catch {
-            // 跳过非 JSON 行
+            // SSR 流中包含 heartbeat 等非 JSON 行，静默跳过
           }
         }
       }

@@ -335,7 +335,7 @@ async def submit_extract_task(
         result = await svc.complete_sync(
             [{"role": "user", "content": prompt_text}],
             temperature=0.3,
-            max_tokens=4000,
+            max_tokens=16000,
             timeout=180,
         )
         result = result.strip()

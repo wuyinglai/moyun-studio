@@ -138,9 +138,8 @@ class PromptEngine:
             enc = tiktoken.encoding_for_model("gpt-4")
             return len(enc.encode(text))
         except Exception:
-            chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
-            other_chars = len(text) - chinese_chars
-            return int(chinese_chars * 0.5 + other_chars * 0.25)
+            from backend.utils.token_utils import estimate_tokens_fallback
+            return estimate_tokens_fallback(text)
 
     def get_template_path(self, category: str, template_type: str) -> Path:
         """获取模板文件路径"""

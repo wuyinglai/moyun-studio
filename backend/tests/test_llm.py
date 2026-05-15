@@ -35,7 +35,7 @@ class TestLLMConfig:
         assert config.api_key is None
         assert config.api_base is None
         assert config.model == "gpt-4"
-        assert config.max_tokens == 4096
+        assert config.max_tokens == 16000
         assert config.temperature == 0.7
 
     def test_custom_values(self):

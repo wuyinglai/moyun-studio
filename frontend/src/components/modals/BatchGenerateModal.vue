@@ -123,6 +123,7 @@
 import { ref, computed, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
+import { useFileStore } from '@/stores/file'
 import { useGenerationStore } from '@/stores/generation'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
@@ -132,6 +133,7 @@ import type { BatchGenerateItem } from '@/types/chat'
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
 const generationStore = useGenerationStore()
+const fileStore = useFileStore()
 const notification = useNotificationStore()
 const llmStore = useLLMStore()
 
@@ -256,8 +258,8 @@ async function handleGenerate() {
     if (response.failed > 0) {
       notification.warning(`失败 ${response.failed} 个文件`)
     }
-  } catch (e) {
-    notification.error('批量生成失败')
+  } catch (e: any) {
+    notification.error(`批量生成失败: ${e?.message || e || '未知错误'}`)
   } finally {
     isGenerating.value = false
   }

@@ -126,8 +126,8 @@ async function handleExtract() {
     })
     result.value = res
     notification.success('提取完成')
-  } catch (e) {
-    notification.error('提取失败')
+  } catch (e: any) {
+    notification.error(`提取失败: ${e?.message || e || '未知错误'}`)
   } finally {
     isExtracting.value = false
   }

@@ -48,7 +48,7 @@ class TestSettingsDefaults:
 
     def test_default_llm_max_tokens(self):
         settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")
-        assert settings.llm_max_tokens == 4096
+        assert settings.llm_max_tokens == 16000
 
     def test_default_llm_temperature(self):
         settings = Settings(debug=False, llm_provider="openai", llm_model="gpt-4")

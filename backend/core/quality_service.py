@@ -113,7 +113,7 @@ class QualityService:
         raw = await svc.complete_sync(
             [{"role": "user", "content": prompt_text}],
             temperature=0.2,
-            max_tokens=4000,
+            max_tokens=16000,
             timeout=180,
         )
         raw = raw.strip()

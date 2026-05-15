@@ -21,7 +21,7 @@ from backend.core.llm import (
     LLMService,
     load_llm_config_from_workspace,
 )
-from backend.api.projects import _load_meta, _load_context, _project_info, _meta_path, _context_path
+from backend.core.project_service import ProjectService
 from backend.core.prompt_engine import PromptEngine
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
@@ -268,20 +268,18 @@ async def confirm_outline(
             total_sections += ch['sections']
 
     # 更新 meta.json
-    meta = _load_meta(project_dir)
+    svc = ProjectService(settings)
+    meta = svc._load_meta(project_dir)
     if meta:
         meta.update({
             "chapter_count": total_chapters,
             "volume_count": num_volumes,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
-        _meta_path(project_dir).write_text(
-            json.dumps(meta, ensure_ascii=False, indent=2),
-            encoding="utf-8"
-        )
+        svc.write_meta(project_dir, meta)
 
     # 更新 context.json
-    context = _load_context(project_dir)
+    context = svc._load_context(project_dir)
     if context:
         context["stats"].update({
             "total_sections": total_sections,
@@ -289,10 +287,7 @@ async def confirm_outline(
             "volume_count": num_volumes,
         })
         context["updated_at"] = datetime.now(timezone.utc).isoformat()
-        _context_path(project_dir).write_text(
-            json.dumps(context, ensure_ascii=False, indent=2),
-            encoding="utf-8"
-        )
+        svc.write_context(project_dir, context)
 
     logger.info("目录结构创建完成", extra={
         "project_id": project_id,

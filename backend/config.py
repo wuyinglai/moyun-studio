@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     llm_api_key: str = Field(default="", description="LLM API Key")
     llm_api_base: str = Field(default="", description="LLM 服务地址")
     llm_model: str = Field(default="gpt-4", description="默认模型")
-    llm_max_tokens: int = Field(default=4096, description="最大Token数")
+    llm_max_tokens: int = Field(default=16000, description="最大Token数")
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="温度")
     llm_thinking: bool = Field(default=False, description="是否启用思考模式")
 

@@ -154,7 +154,9 @@ export const useFileStore = defineStore('file', () => {
   }
 
   function handleFileUpdated(path: string, content: string) {
-    fileContents.value[path] = { content }
+    if (content !== undefined && content !== null) {
+      fileContents.value[path] = { content }
+    }
   }
 
   // ─── 按 projectId 隔离：切换项目时保存/恢复 openFiles/currentFile ───

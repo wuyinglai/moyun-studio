@@ -127,9 +127,8 @@ async def _count_tokens_async(text: str, model: str = "gpt-4") -> int:
     except Exception as e:
         logger.warning(f"tiktoken 计算失败，使用估算方法: {e}")
         chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
-        other_chars = len(text) - chinese_chars
-        return int(chinese_chars * 0.5 + other_chars * 0.25)
-
+        from backend.utils.token_utils import estimate_tokens_fallback
+        return estimate_tokens_fallback(text)
 
 # ─── 路由 ────────────────────────────────────────────────────────────
 
