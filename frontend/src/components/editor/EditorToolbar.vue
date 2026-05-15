@@ -148,6 +148,11 @@ function getNextInChain(currentPath: string): { path: string; pipeline: string }
     return PROJECT_CHAIN[idx + 1]
   }
 
+  // 在链中且是最后一项 → 过渡到第一章
+  if (idx === PROJECT_CHAIN.length - 1) {
+    return { path: 'chapters/vol-01/ch-001/sec-001.md', pipeline: 'generate' }
+  }
+
   // 不在链中也不是章节 → 从链头开始
   if (!secMatch && !PROJECT_CHAIN.some(i => currentPath.endsWith(i.path))) {
     return PROJECT_CHAIN[0]
