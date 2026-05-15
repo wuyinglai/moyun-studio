@@ -229,6 +229,9 @@ export function useFileGeneration() {
             if (currentEvent === 'generation' && targetFilePath) {
               parsed._targetFilePath = targetFilePath
             }
+            if (currentEvent === 'generation') {
+              console.log('[DIAG] parseSSEStream: generation event, delta length:', parsed.delta?.length, 'targetFilePath:', parsed._targetFilePath)
+            }
             generationEmitter.emit(currentEvent || 'message', parsed)
             // 原有回调逻辑保留（但 delta 写入已移除，由 useSSE 通过 emitter 处理）
             if (currentEvent === 'prompt' && parsed.prompt && onPrompt) {

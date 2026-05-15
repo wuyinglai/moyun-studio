@@ -168,6 +168,7 @@ class SSEService {
         // AI 生成内容 - 更新编辑器和聊天
         // 后端发送格式: { delta: "...", content?: "...", _targetFilePath?: string }
         // 通过 generationEmitter 接收，包含正确的目标文件路径
+        console.log('[DIAG] useSSE.handleEvent: generation', data.delta ? `delta=${data.delta.length}ch` : 'no delta', '_targetFilePath:', data._targetFilePath)
         if (data.delta) {
           chatStore.appendAIMessage(data.delta)
           // 如果有 _targetFilePath，使用 appendContentToFile；否则使用 appendContent
