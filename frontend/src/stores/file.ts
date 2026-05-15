@@ -2,8 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import api from '@/services/api'
 import { useProjectStore } from './project'
-import type { BatchGenerateRequest, BatchGenerateResponse, ExtractTaskRequest, ExtractTaskResponse, ReviewRequest, ReviewResponse, BatchReviewRequest, BatchReviewResponse } from '@/types/chat'
-import type { TaskSubmitRequest, TaskQueueListResponse } from '@/types/task'
 
 export interface FileNode {
   name: string
@@ -159,39 +157,6 @@ export const useFileStore = defineStore('file', () => {
     fileContents.value[path] = { content }
   }
 
-  // ─── 新后端 API 封装 ────────────────────────────────────────────
-
-  async function batchGenerate(req: BatchGenerateRequest): Promise<BatchGenerateResponse> {
-    return await api.post<BatchGenerateResponse>('/generate/batch', req)
-  }
-
-  async function extractTask(req: ExtractTaskRequest): Promise<ExtractTaskResponse> {
-    return await api.post<ExtractTaskResponse>('/extract', req)
-  }
-
-  async function submitTask(req: TaskSubmitRequest): Promise<{ task_id: string; status: string }> {
-    return await api.post('/tasks', req)
-  }
-
-  async function listTasks(): Promise<TaskQueueListResponse> {
-    return await api.get<TaskQueueListResponse>('/tasks')
-  }
-
-  async function getTask(taskId: string): Promise<Record<string, unknown>> {
-    return await api.get(`/tasks/${taskId}`)
-  }
-
-  async function cancelTask(taskId: string): Promise<void> {
-    return await api.post(`/tasks/${taskId}/cancel`)
-  }
-
-  // ─── 质量审查 (G0112) ───────────────────────────────────────────
-
-  async function reviewChapter(req: ReviewRequest): Promise<ReviewResponse> {
-    const res = await api.post<ReviewResponse>('/quality/review', req)
-    return res
-  }
-
   // ─── 按 projectId 隔离：切换项目时保存/恢复 openFiles/currentFile ───
   watch(
     () => useProjectStore().currentProject,
@@ -214,15 +179,6 @@ export const useFileStore = defineStore('file', () => {
       }
     },
   )
-
-  async function reviewBatch(req: BatchReviewRequest): Promise<BatchReviewResponse> {
-    const res = await api.post<BatchReviewResponse>('/quality/review-batch', req)
-    return res
-  }
-
-  async function listReviews(projectId: string): Promise<{ reviews: Record<string, unknown>[]; total: number }> {
-    return await api.get(`/quality/reviews/${projectId}`)
-  }
 
   return {
     tree,
@@ -250,15 +206,6 @@ export const useFileStore = defineStore('file', () => {
     handleDirectoryCreated,
     handleFileRenamed,
     handleFileUpdated,
-    batchGenerate,
-    extractTask,
-    submitTask,
-    listTasks,
-    getTask,
-    cancelTask,
-    reviewChapter,
-    reviewBatch,
-    listReviews,
     perProjectData,
   }
 }, {

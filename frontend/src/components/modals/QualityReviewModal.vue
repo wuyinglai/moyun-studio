@@ -109,7 +109,7 @@ import { ref, computed, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
-import { useFileStore } from '@/stores/file'
+import { useReviewStore } from '@/stores/review'
 import { useNotificationStore } from '@/stores/notification'
 import { useLLMStore } from '@/stores/llm'
 import type { QualityReviewResult } from '@/types/chat'
@@ -117,7 +117,7 @@ import type { QualityReviewResult } from '@/types/chat'
 const uiStore = useUIStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
-const fileStore = useFileStore()
+const reviewStore = useReviewStore()
 const notification = useNotificationStore()
 const llmStore = useLLMStore()
 
@@ -170,7 +170,7 @@ async function handleReview() {
   error.value = ''
 
   try {
-    const res = await fileStore.reviewChapter({
+    const res = await reviewStore.reviewChapter({
       project_id: projectStore.currentProject.id,
       target_file: targetFile.value,
     })

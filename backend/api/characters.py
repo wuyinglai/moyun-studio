@@ -7,17 +7,13 @@
   DELETE /api/characters/{id}        标记角色为 inactive
 """
 
-import json
 import logging
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError
+from backend.core.character_service import CharacterService
 from backend.schemas.common import ApiResponse
 
 logger = logging.getLogger(__name__)
@@ -72,32 +68,6 @@ class CharacterUpdateRequest(BaseModel):
 
 # ─── 辅助函数 ──────────────────────────────────────────────────────
 
-def _characters_dir(project_dir: Path) -> Path:
-    return project_dir / "characters"
-
-
-def _ensure_characters_dir(project_dir: Path) -> Path:
-    cd = _characters_dir(project_dir)
-    cd.mkdir(parents=True, exist_ok=True)
-    return cd
-
-
-def _character_file(project_dir: Path, character_id: str) -> Path:
-    return _characters_dir(project_dir) / f"{character_id}.json"
-
-
-def _load_character(project_dir: Path, character_id: str) -> dict | None:
-    cf = _character_file(project_dir, character_id)
-    if not cf.exists():
-        return None
-    return json.loads(cf.read_text(encoding="utf-8"))
-
-
-def _save_character(project_dir: Path, character: dict) -> None:
-    cf = _character_file(project_dir, character["character_id"])
-    cf.write_text(json.dumps(character, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
 def _dict_to_profile(data: dict) -> CharacterProfile:
     return CharacterProfile(**{k: v for k, v in data.items() if k in CharacterProfile.model_fields})
 
@@ -111,20 +81,8 @@ async def list_characters(
 ):
     """获取项目角色列表"""
     logger.info("获取角色列表", extra={"project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
-        raise ProjectNotFoundError(project_id)
-
-    char_dir = _characters_dir(project_dir)
-    if not char_dir.exists():
-        return ApiResponse.ok(CharacterListResponse(characters=[], total=0))
-
-    characters: list[CharacterProfile] = []
-    for cf in char_dir.glob("*.json"):
-        data = json.loads(cf.read_text(encoding="utf-8"))
-        characters.append(_dict_to_profile(data))
-
-    # 按名称排序
+    svc = CharacterService(settings)
+    characters = [_dict_to_profile(c) for c in svc.list_characters(project_id)]
     characters.sort(key=lambda c: c.name)
     return ApiResponse.ok(CharacterListResponse(characters=characters, total=len(characters)))
 
@@ -137,14 +95,8 @@ async def get_character(
 ):
     """获取角色详情"""
     logger.info("获取角色详情", extra={"character_id": character_id, "project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
-        raise ProjectNotFoundError(project_id)
-
-    data = _load_character(project_dir, character_id)
-    if data is None:
-        raise ResourceNotFoundError(resource="character", identifier=character_id)
-
+    svc = CharacterService(settings)
+    data = svc.get_character(project_id, character_id)
     return ApiResponse.ok(_dict_to_profile(data))
 
 
@@ -155,32 +107,8 @@ async def create_character(
 ):
     """创建新角色"""
     logger.info("创建角色", extra={"name": req.name, "project_id": req.project_id})
-    project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
-        raise ProjectNotFoundError(req.project_id)
-
-    _ensure_characters_dir(project_dir)
-
-    # 检查是否已存在同名角色（允许同名但用不同ID）
-    character_id = str(uuid.uuid4())[:8]
-    now = datetime.now(timezone.utc).isoformat()
-
-    character = {
-        "character_id": character_id,
-        "name": req.name,
-        "role": req.role,
-        "age": req.age,
-        "appearance": req.appearance,
-        "personality": req.personality,
-        "background": req.background,
-        "abilities": req.abilities,
-        "relationships": req.relationships,
-        "status": "active",
-        "created_at": now,
-        "updated_at": now,
-    }
-
-    _save_character(project_dir, character)
+    svc = CharacterService(settings)
+    character = svc.create_character(req.project_id, req)
     return ApiResponse.ok(_dict_to_profile(character), message="角色创建成功")
 
 
@@ -193,23 +121,8 @@ async def update_character(
 ):
     """更新角色信息"""
     logger.info("更新角色", extra={"character_id": character_id, "project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
-        raise ProjectNotFoundError(project_id)
-
-    data = _load_character(project_dir, character_id)
-    if data is None:
-        raise ResourceNotFoundError(resource="character", identifier=character_id)
-
-    # 更新字段
-    for field in ["name", "role", "age", "appearance", "personality", "background", "abilities", "relationships"]:
-        value = getattr(req, field, None)
-        if value is not None:
-            data[field] = value
-
-    data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    _save_character(project_dir, data)
-
+    svc = CharacterService(settings)
+    data = svc.update_character(project_id, character_id, req)
     return ApiResponse.ok(_dict_to_profile(data), message="角色更新成功")
 
 
@@ -221,16 +134,6 @@ async def deactivate_character(
 ):
     """将角色标记为 inactive（不提供物理删除）"""
     logger.info("标记角色为inactive", extra={"character_id": character_id, "project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
-        raise ProjectNotFoundError(project_id)
-
-    data = _load_character(project_dir, character_id)
-    if data is None:
-        raise ResourceNotFoundError(resource="character", identifier=character_id)
-
-    data["status"] = "inactive"
-    data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    _save_character(project_dir, data)
-
+    svc = CharacterService(settings)
+    svc.deactivate_character(project_id, character_id)
     return ApiResponse.ok(message="角色已标记为 inactive")

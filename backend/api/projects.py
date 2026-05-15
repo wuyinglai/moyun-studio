@@ -10,16 +10,13 @@
 import asyncio
 import json
 import logging
-import shutil
 import uuid
-import re
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, Depends
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectError, ProjectNotFoundError
+from backend.core.project_service import ProjectService
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     ProjectCreateRequest,
@@ -37,153 +34,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["projects"])
 
 
-# ─── 辅助函数 ──────────────────────────────────────────────────────
-
-def _meta_path(project_dir: Path) -> Path:
-    return project_dir / "meta.json"
-
-
-def _load_meta(project_dir: Path) -> dict | None:
-    mp = _meta_path(project_dir)
-    if not mp.exists():
-        return None
-    return json.loads(mp.read_text(encoding="utf-8"))
-
-
-def _context_path(project_dir: Path) -> Path:
-    return project_dir / "context.json"
-
-
-def _load_context(project_dir: Path) -> dict:
-    cp = _context_path(project_dir)
-    if cp.exists():
-        return json.loads(cp.read_text(encoding="utf-8"))
-    return {"stats": {"total_words": 0, "total_sections": 0, "completed_sections": 0}}
-
-
-def _compute_completion(meta: dict, context: dict) -> tuple[float, int]:
-    """返回 (completion_rate, total_words)"""
-    stats = context.get("stats", {})
-    total = stats.get("total_sections", 0)
-    completed = stats.get("completed_sections", 0)
-    rate = (completed / total) if total > 0 else 0.0
-    return rate, stats.get("total_words", 0)
-
-
-def _count_words(text: str) -> int:
-    """统计字数（中英文混合）"""
-    chinese_chars = len(re.findall(r'[一-鿿]', text))
-    english_words = len(re.findall(r'[a-zA-Z]+', text))
-    return chinese_chars + english_words
-
-
-def _recalculate_stats(project_dir: Path) -> dict:
-    """扫描 chapters/ 下实际文件，重新计算项目统计信息
-
-    完成度 = 有内容的节文件数 / 大纲中计划的节总数
-    - 节文件有实际内容（字数 > 0）才算完成
-    - 空文件不计入完成数
-    - ch-meta.json 中 status 为 discarded 的章节不计入总数
-    """
-    chapters_dir = project_dir / "chapters"
-    total_sections = 0
-    completed_sections = 0
-    total_words = 0
-    chapter_count = 0
-    volume_count = 0
-
-    if not chapters_dir.exists():
-        return {"total_sections": 0, "completed_sections": 0, "total_words": 0,
-                "chapter_count": 0, "volume_count": 0}
-
-    for vol_dir in sorted(chapters_dir.glob("vol-*")):
-        if not vol_dir.is_dir():
-            continue
-        volume_count += 1
-
-        for ch_dir in sorted(vol_dir.glob("ch-*")):
-            if not ch_dir.is_dir():
-                continue
-            chapter_count += 1
-
-            # 读取 ch-meta.json 检查废弃状态
-            ch_meta = {}
-            ch_meta_file = ch_dir / "ch-meta.json"
-            if ch_meta_file.exists():
-                try:
-                    ch_meta = json.loads(ch_meta_file.read_text(encoding="utf-8"))
-                except Exception:
-                    pass
-
-            # 废弃章不计入统计
-            if ch_meta.get("status") == "discarded":
-                continue
-
-            for sec_file in sorted(ch_dir.glob("sec-*.md")):
-                total_sections += 1
-                try:
-                    text = sec_file.read_text(encoding="utf-8")
-                    wc = _count_words(text)
-                    if wc > 0:
-                        completed_sections += 1
-                        total_words += wc
-                except Exception:
-                    pass
-
-    return {
-        "total_sections": total_sections,
-        "completed_sections": completed_sections,
-        "total_words": total_words,
-        "chapter_count": chapter_count,
-        "volume_count": volume_count,
-    }
-
-
-def _project_info(project_dir: Path) -> ProjectInfo | None:
-    meta = _load_meta(project_dir)
-    if meta is None:
-        return None
-    context = _load_context(project_dir)
-    rate, words = _compute_completion(meta, context)
-
-    # datetime 兼容处理
-    def _dt(s: str) -> datetime:
-        try:
-            return datetime.fromisoformat(s)
-        except Exception:
-            return datetime.now(timezone.utc)
-
-    return ProjectInfo(
-        project_id=meta["project_id"],
-        name=meta.get("name", project_dir.name),
-        genre=meta.get("genre", ""),
-        theme=meta.get("theme", ""),
-        tone=meta.get("tone", ""),
-        target_word_count=meta.get("target_word_count", 0),
-        completion_rate=round(rate, 4),
-        total_words=words,
-        created_at=_dt(meta.get("created_at", "")),
-        updated_at=_dt(meta.get("updated_at", "")),
-    )
-
-
-# ─── 路由 ─────────────────────────────────────────────────────────
-
 @router.get("/projects", response_model=ApiResponse[ProjectListResponse])
 async def list_projects(settings: Settings = Depends(get_settings)):
     """获取所有项目列表"""
-    projects_path = settings.projects_path
-    projects_path.mkdir(parents=True, exist_ok=True)
-
-    projects: list[ProjectInfo] = []
-    for d in sorted(projects_path.iterdir()):
-        if d.is_dir():
-            info = _project_info(d)
-            if info:
-                projects.append(info)
-
-    # 按更新时间倒序
-    projects.sort(key=lambda p: p.updated_at, reverse=True)
+    svc = ProjectService(settings)
+    projects = svc.list_projects()
     return ApiResponse.ok(ProjectListResponse(projects=projects, total=len(projects)))
 
 
@@ -198,28 +53,13 @@ async def create_project(
 
     logger.info("创建新项目", extra={"project_id": project_id, "name": req.name, "genre": req.genre})
 
+    svc = ProjectService(settings)
     project_dir = settings.projects_path / project_id
     await asyncio.to_thread(project_dir.mkdir, parents=True, exist_ok=True)
 
     # 写 meta.json
-    meta = {
-        "project_id": project_id,
-        "name": req.name,
-        "genre": req.genre,
-        "theme": req.theme,
-        "tone": req.tone,
-        "background": req.background,
-        "writing_style": req.writing_style,
-        "target_word_count": req.target_word_count,
-        "author": req.author,
-        "created_at": now,
-        "updated_at": now,
-    }
-    await asyncio.to_thread(
-        _meta_path(project_dir).write_text,
-        json.dumps(meta, ensure_ascii=False, indent=2),
-        "utf-8",
-    )
+    meta = svc.create_project_meta(project_id, req.name, req)
+    await asyncio.to_thread(svc.write_meta, project_dir, meta)
 
     # 写 context.json
     context = {
@@ -234,17 +74,13 @@ async def create_project(
         },
         "updated_at": now,
     }
-    await asyncio.to_thread(
-        _context_path(project_dir).write_text,
-        json.dumps(context, ensure_ascii=False, indent=2),
-        "utf-8",
-    )
+    await asyncio.to_thread(svc.write_context, project_dir, context)
 
     # 创建基础子目录
     for subdir in ["chapters", "characters", "materials/extracted", "backup", "revision-log", "feedback"]:
         await asyncio.to_thread((project_dir / subdir).mkdir, parents=True, exist_ok=True)
 
-    # 初始化 style-guide.md / story-state.md / recent-context.md
+    # 初始化文件
     for filename, content in [
         ("style-guide.md", "# 文风指南\n\n在此描述写作风格、语气、叙事视角等要求。\n"),
         ("story-state.md", "# 故事状态\n\n## 主角状态\n\n## 势力关系\n\n## 伏笔追踪\n\n## 主线进度\n"),
@@ -255,7 +91,7 @@ async def create_project(
             (project_dir / filename).write_text, content, "utf-8",
         )
 
-    info = _project_info(project_dir)
+    info = svc.get_project_info(project_dir)
     return ApiResponse.ok(info, message="项目创建成功")
 
 
@@ -265,11 +101,12 @@ async def get_project(
     settings: Settings = Depends(get_settings),
 ):
     """获取项目详情"""
+    svc = ProjectService(settings)
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(project_id)
 
-    info = _project_info(project_dir)
+    info = svc.get_project_info(project_dir)
     if info is None:
         logger.error("项目meta损坏", extra={"project_id": project_id})
         raise ProjectNotFoundError(project_id)
@@ -281,30 +118,17 @@ async def recalculate_project_stats(
     project_id: str,
     settings: Settings = Depends(get_settings),
 ):
-    """重新计算项目完成度统计
-
-    扫描 chapters/ 下所有 sec-*.md 文件，统计：
-    - 总节数、已完成节数（字数 > 0）
-    - 总字数
-    - 章数、卷数
-    - 更新 context.json 并返回最新统计
-    """
+    """重新计算项目完成度统计"""
+    svc = ProjectService(settings)
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(project_id)
 
-    stats = _recalculate_stats(project_dir)
+    stats = svc.recalculate_stats(project_dir)
     completion_rate = (stats["completed_sections"] / stats["total_sections"]) if stats["total_sections"] > 0 else 0.0
 
     # 更新 context.json
-    context = _load_context(project_dir)
-    context["stats"] = stats
-    context["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await asyncio.to_thread(
-        _context_path(project_dir).write_text,
-        json.dumps(context, ensure_ascii=False, indent=2),
-        "utf-8",
-    )
+    svc.save_stats(project_dir, stats)
 
     logger.info("项目统计已重新计算", extra={
         "project_id": project_id,
@@ -329,16 +153,8 @@ async def delete_project(
     settings: Settings = Depends(get_settings),
 ):
     """删除项目（不可恢复）"""
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
-        raise ProjectNotFoundError(project_id)
-
-    try:
-        await asyncio.to_thread(shutil.rmtree, project_dir)
-    except Exception as e:
-        logger.error("删除项目失败", extra={"project_id": project_id, "error": str(e)})
-        raise ProjectError(f"删除项目失败: {str(e)}")
-
+    svc = ProjectService(settings)
+    svc.delete_project_dir(project_id)
     logger.info("项目已删除", extra={"project_id": project_id})
     return ApiResponse.ok(message=f"项目 {project_id} 已删除")
 

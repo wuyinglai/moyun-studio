@@ -72,7 +72,7 @@ import { ref, computed, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
-import { useFileStore } from '@/stores/file'
+import { useGenerationStore } from '@/stores/generation'
 import { useNotificationStore } from '@/stores/notification'
 import { useLLMStore } from '@/stores/llm'
 import type { ExtractTaskRequest, ExtractTaskResponse } from '@/types/chat'
@@ -80,7 +80,7 @@ import type { ExtractTaskRequest, ExtractTaskResponse } from '@/types/chat'
 const uiStore = useUIStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
-const fileStore = useFileStore()
+const generationStore = useGenerationStore()
 const notification = useNotificationStore()
 const llmStore = useLLMStore()
 
@@ -119,7 +119,7 @@ async function handleExtract() {
   result.value = null
 
   try {
-    const res = await fileStore.extractTask({
+    const res = await generationStore.extractTask({
       project_id: projectStore.currentProject.id,
       type: extractType.value as ExtractTaskRequest['type'],
       source_file: sourceFile.value,

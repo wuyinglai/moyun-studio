@@ -8,20 +8,16 @@
   GET  /api/tasks            获取任务队列状态
 """
 
-import asyncio
 import json
 import logging
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
+
 from backend.config import Settings, get_settings
-from backend.core.llm import (
-    LLMService,
-    load_llm_config_from_workspace,
-)
+from backend.core.generation_service import GenerationService
+from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.file_ops import FileService
 from backend.core.pipeline import PipelineRunner, PipelineError
 from backend.schemas.common import ApiResponse
@@ -30,21 +26,10 @@ from backend.schemas.llm import (
     ChatRequest,
     BatchGenerateRequest,
     BatchGenerateResponse,
-    BatchGenerateItem,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["generate"])
-
-# 全局停止信号
-_stop_signals: dict[str, asyncio.Event] = {}
-
-
-# prompt_type → pipeline 映射
-_GENERATE_PIPELINE_MAP = {
-    "generate/continuation": ("generate", "append"),
-    "generate/rewrite": ("rewrite", "overwrite"),
-}
 
 
 @router.post("/generate")
@@ -53,126 +38,27 @@ async def generate(
     request: Request,
     settings: Settings = Depends(get_settings),
 ):
-    """LLM 生成任务（流式输出，SSE 格式）
-
-    支持两种模式：
-    1. 管线模式：prompt_type 匹配 _GENERATE_PIPELINE_MAP 时，走 PipelineRunner
-    2. 回退模式：其余情况用 PipelineRunner 的工具方法渲染 Prompt，再流式调用 LLM
-    """
+    """LLM 生成任务（流式输出，SSE 格式）"""
+    svc = GenerationService(settings)
 
     async def _stream() -> AsyncGenerator[dict, None]:
         event_bus = getattr(request.app.state, "event_bus", None)
         task_id = f"gen-{id(req)}"
-        _stop_signals[task_id] = asyncio.Event()
-
-        file_service = FileService(settings.projects_path)
-        llm_cfg = load_llm_config_from_workspace(settings)
-        svc = LLMService.from_workspace_config(llm_cfg)
-        runner = PipelineRunner(settings.prompts_path, svc, file_service)
-
-        # 构建 LLM 额外参数（含 thinking 配置）
-        llm_extra_kwargs = {}
-        thinking = llm_cfg.get("thinking", settings.llm_thinking)
-        if thinking and "claude" in svc.config.model:
-            llm_extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
-
-        # 检测是否可路由到管线
-        if req.prompt_type in _GENERATE_PIPELINE_MAP:
-            pipeline_name, output_mode = _GENERATE_PIPELINE_MAP[req.prompt_type]
-            try:
-                async for event in runner.run(
-                    pipeline_name=pipeline_name,
-                    project_id=req.project_id,
-                    target_file=req.file_path,
-                    user_input=req.extra_vars.get("user_prompt", ""),
-                    output_mode=output_mode,
-                    extra_vars=req.extra_vars,
-                    stop_event=_stop_signals[task_id],
-                    llm_extra_kwargs=llm_extra_kwargs,
-                ):
-                    yield event
-                    if event_bus and event.get("event") in ("generation", "done", "error"):
-                        await event_bus.publish(event["event"], json.loads(event["data"]))
-            except PipelineError as e:
-                logger.error("管线生成失败: %s", e)
-                yield {"event": "error", "data": json.dumps({"message": str(e), "task_id": task_id})}
-            finally:
-                _stop_signals.pop(task_id, None)
-            return
-
-        # ——— 回退模式（单步 prompt，复用 PipelineRunner 工具方法） ———
-        if event_bus:
-            await event_bus.publish("task", {"task_id": task_id, "status": "running", "name": f"生成 {req.file_path}"})
-
-        yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
+        svc.create_stop_signal(task_id)
 
         try:
-            logger.info("开始生成任务", extra={"task_id": task_id, "project_id": req.project_id, "file_path": req.file_path})
-
-            try:
-                content, fm = await file_service.read_file(f"{req.project_id}/{req.file_path}")
-            except Exception:
-                content, fm = "", None
-
-            variables = {
-                "file_content": content,
-                "file_path": req.file_path,
-                "project_id": req.project_id,
-                **req.extra_vars,
-            }
-            try:
-                prompt_text = runner.render_prompt(f"{req.prompt_type}/main.md", variables)
-                prompt_text = await runner.resolve_references(prompt_text, req.project_id)
-            except Exception as e:
-                prompt_text = f"请根据以下内容进行创作：\n\n{content}"
-
-            yield {"event": "prompt", "data": json.dumps({"prompt": prompt_text, "task_id": task_id})}
-
-            # G0118: 自动 token 检查
-            try:
-                import tiktoken
-                enc = tiktoken.get_encoding("cl100k_base")
-                prompt_tokens = len(enc.encode(prompt_text))
-                if prompt_tokens > 120000:
-                    yield {"event": "error", "data": json.dumps({
-                        "message": f"Prompt 过长（约 {prompt_tokens} tokens），可能超出模型上下文限制",
-                        "task_id": task_id,
-                        "warning": True,
-                    })}
-            except Exception:
-                pass
-
-            messages = [{"role": "user", "content": prompt_text}]
-            stop_event = _stop_signals[task_id]
-            generated_text = ""
-            async for chunk in svc.complete(messages, stop_event=stop_event, timeout=180, **llm_extra_kwargs):
-                generated_text += chunk
-                yield {
-                    "event": "generation",
-                    "data": json.dumps({"delta": chunk, "task_id": task_id}),
-                }
-                if event_bus:
-                    await event_bus.publish("generation", {"delta": chunk, "task_id": task_id})
-
-            if generated_text and not _stop_signals[task_id].is_set():
-                if req.mode == "rewrite":
-                    await file_service.write_file(f"{req.project_id}/{req.file_path}", generated_text, fm)
-                elif req.mode == "append":
-                    new_content = content + "\n\n" + generated_text
-                    await file_service.write_file(f"{req.project_id}/{req.file_path}", new_content, fm)
-
-            yield {"event": "done", "data": json.dumps({"task_id": task_id, "message": "生成完成"})}
-            if event_bus:
-                await event_bus.publish("task", {"task_id": task_id, "status": "done"})
-                await event_bus.publish("done", {"task_id": task_id})
-
-        except Exception as e:
-            logger.error(f"生成任务异常: {e}", exc_info=True)
-            yield {"event": "error", "data": json.dumps({"message": str(e), "task_id": task_id})}
-            if event_bus:
-                await event_bus.publish("error", {"message": str(e)})
+            async for event in svc.generate_stream(
+                project_id=req.project_id,
+                file_path=req.file_path,
+                prompt_type=req.prompt_type,
+                extra_vars=req.extra_vars,
+                mode=req.mode,
+                task_id=task_id,
+                event_bus=event_bus,
+            ):
+                yield event
         finally:
-            _stop_signals.pop(task_id, None)
+            svc.remove_stop_signal(task_id)
 
     return EventSourceResponse(_stream())
 
@@ -182,155 +68,23 @@ async def batch_generate(
     req: BatchGenerateRequest,
     settings: Settings = Depends(get_settings),
 ):
-    """批量生成章节内容
+    """批量生成章节内容"""
+    svc = GenerationService(settings)
+    result = await svc.batch_generate(
+        project_id=req.project_id,
+        prompt_type=req.prompt_type,
+        volume_number=req.volume_number,
+        chapter_number=req.chapter_number,
+        section_numbers=req.section_numbers,
+        temperature=req.temperature,
+    )
 
-    根据卷/章/节筛选条件，对目标章节逐节调用LLM生成内容。
-    使用 PipelineRunner 的变量解析能力，去除独立的 PromptEngine 依赖。
-    """
-    project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
-        from backend.core.exceptions import ProjectNotFoundError
-        raise ProjectNotFoundError(req.project_id)
-
-    logger.info("批量生成开始", extra={
-        "project_id": req.project_id,
-        "volume": req.volume_number,
-        "chapter": req.chapter_number,
-        "sections": req.section_numbers,
-    })
-
-    # 列出所有目标文件：chapters/vol-{v}/ch-{c}/sec-{s}.md
-    chapters_dir = project_dir / "chapters"
-    targets: list[dict] = []
-
-    # 确定卷范围
-    if req.volume_number:
-        vol_dirs = [chapters_dir / f"vol-{req.volume_number:02d}"]
-    else:
-        vol_dirs = sorted(chapters_dir.glob("vol-*"))
-
-    for vol_dir in vol_dirs:
-        if not vol_dir.is_dir():
-            continue
-
-        # 确定章范围
-        if req.chapter_number:
-            ch_dirs = [vol_dir / f"ch-{req.chapter_number:03d}"]
-        else:
-            ch_dirs = sorted(vol_dir.glob("ch-*"))
-
-        for ch_dir in ch_dirs:
-            if not ch_dir.is_dir():
-                continue
-
-            # 解析章节号
-            ch_num = int(ch_dir.name.split("-")[1])
-
-            # 确定节范围
-            if req.section_numbers:
-                sec_nums = req.section_numbers
-            else:
-                sec_nums = []
-                for sec_file in sorted(ch_dir.glob("sec-*.md")):
-                    sec_num = int(sec_file.stem.split("-")[1])
-                    sec_nums.append(sec_num)
-
-            for sec_num in sec_nums:
-                sec_file = ch_dir / f"sec-{sec_num:03d}.md"
-                if sec_file.exists():
-                    targets.append({
-                        "ch_dir": ch_dir,
-                        "ch_num": ch_num,
-                        "sec_num": sec_num,
-                        "target_file": f"{req.project_id}/chapters/{vol_dir.name}/{ch_dir.name}/sec-{sec_num:03d}.md",
-                    })
-
-    if not targets:
-        return ApiResponse.ok(
-            BatchGenerateResponse(tasks=[], total=0, succeeded=0, failed=0),
-            message="未找到匹配的生成目标",
-        )
-
-    # 使用 PipelineRunner 的工具方法（而非独立的 PromptEngine）
-    llm_cfg = load_llm_config_from_workspace(settings)
-    svc = LLMService.from_workspace_config(llm_cfg)
-    file_service = FileService(settings.projects_path)
-    runner = PipelineRunner(settings.prompts_path, svc, file_service)
-
-    shared_vars = await runner.load_system_variables(req.project_id)
-    project_meta = await runner.load_project_meta(req.project_id)
-    pov = project_meta.get("writing_style", "") or project_meta.get("pov", "第三人称")
-
-    tasks: list[BatchGenerateItem] = []
-    succeeded = 0
-    failed = 0
-    template_path = f"{req.prompt_type}/main.md"
-
-    for tgt in targets:
-        item = BatchGenerateItem(target_file=tgt["target_file"])
-
-        try:
-            chapter_vars = await runner.load_chapter_vars(req.project_id, tgt["target_file"])
-            chapter_title = ""
-            ch_meta_path = f"{req.project_id}/chapters/{Path(tgt['target_file']).parent.name}/ch-meta.json"
-            try:
-                meta_content, _ = await file_service.read_file(ch_meta_path)
-                if meta_content:
-                    ch_meta = json.loads(meta_content)
-                    chapter_title = ch_meta.get("title", "")
-            except Exception:
-                pass
-
-            variables = {
-                "chapter_name": f"第{tgt['ch_num']}章 {chapter_title}".strip(),
-                "chapter_number": str(tgt["ch_num"]),
-                "section_number": str(tgt["sec_num"]),
-                "pov": pov,
-                **shared_vars,
-                **chapter_vars,
-            }
-            # 引用解析
-            prompt_text = runner.render_prompt(template_path, variables)
-            prompt_text = await runner.resolve_references(prompt_text, req.project_id)
-            item.prompt = prompt_text
-
-            messages = [{"role": "user", "content": prompt_text}]
-            generated = await svc.complete_sync(
-                messages, temperature=req.temperature, max_tokens=4000, timeout=180
-            )
-
-            await file_service.write_file(tgt["target_file"], generated.strip())
-
-            word_count = len(generated.replace(" ", ""))
-            item.status = "success"
-            item.word_count = word_count
-            succeeded += 1
-
-            logger.info("章节生成完成", extra={
-                "target": tgt["target_file"],
-                "words": word_count,
-            })
-
-        except Exception as e:
-            logger.error("章节生成失败", extra={
-                "target": tgt["target_file"],
-                "error": str(e)[:200],
-            })
-            item.status = "error"
-            item.error = str(e)[:200]
-            failed += 1
-
-        tasks.append(item)
-
-    logger.info("批量生成完成", extra={
-        "total": len(targets),
-        "succeeded": succeeded,
-        "failed": failed,
-    })
+    if result.total == 0:
+        return ApiResponse.ok(result, message="未找到匹配的生成目标")
 
     return ApiResponse.ok(
-        BatchGenerateResponse(tasks=tasks, total=len(tasks), succeeded=succeeded, failed=failed),
-        message=f"批量生成完成：成功 {succeeded}，失败 {failed}",
+        result,
+        message=f"批量生成完成：成功 {result.succeeded}，失败 {result.failed}",
     )
 
 
@@ -367,23 +121,28 @@ async def chat(
     return EventSourceResponse(_stream())
 
 
+# 模块级 GenerationService 实例，管理跨请求的停止信号
+_shared_gen_svc: GenerationService | None = None
+
+
+def _get_gen_svc(settings: Settings) -> GenerationService:
+    global _shared_gen_svc
+    if _shared_gen_svc is None:
+        _shared_gen_svc = GenerationService(settings)
+    return _shared_gen_svc
+
+
 @router.post("/stop", response_model=ApiResponse[None])
-async def stop_task(task_id: str | None = None):
+async def stop_task(settings: Settings = Depends(get_settings), task_id: str | None = None):
     """停止当前任务"""
-    if task_id and task_id in _stop_signals:
-        _stop_signals[task_id].set()
+    svc = _get_gen_svc(settings)
+    svc.stop_task(task_id)
+    if task_id:
         return ApiResponse.ok(message=f"任务 {task_id} 已停止")
-    # 停止所有任务
-    for sig in _stop_signals.values():
-        sig.set()
     return ApiResponse.ok(message="所有任务已停止")
 
 
 @router.get("/generate-tasks", response_model=ApiResponse[dict], include_in_schema=False)
 async def get_generate_tasks():
-    """当前运行的生成任务（旧端点，新端点在 /api/tasks）"""
-    running = [
-        {"task_id": tid, "status": "running" if not sig.is_set() else "stopping"}
-        for tid, sig in _stop_signals.items()
-    ]
-    return ApiResponse.ok({"tasks": running, "count": len(running)})
+    """当前运行的生成任务（旧端点）"""
+    return ApiResponse.ok({"tasks": [], "count": 0})

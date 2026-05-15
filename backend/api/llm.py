@@ -13,13 +13,11 @@ import logging
 import time
 from pathlib import Path
 
-import litellm
-
 from fastapi import APIRouter, Depends, Request
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import RateLimitError
-from backend.core.llm import normalize_model_for_provider
+from backend.core.llm import LLMService, load_llm_config_from_workspace, normalize_model_for_provider
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
     LLMConfigRequest,
@@ -130,25 +128,18 @@ async def test_connection(
         raise RateLimitError(retry_after=remaining)
     _rate_limit_store[client_ip] = now
 
-    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
-    api_key = cfg.get("apiKey") or settings.llm_api_key
-    model = cfg.get("model") or settings.llm_model
-    api_type = cfg.get("apiType") or settings.llm_provider
-    api_base = cfg.get("apiUrl") or cfg.get("apiBase") or settings.llm_api_base or None
+    llm_cfg = load_llm_config_from_workspace(settings)
+    model = llm_cfg.get("model", settings.llm_model)
+    api_type = llm_cfg.get("apiType", settings.llm_provider)
+    model = normalize_model_for_provider(model, api_type)
 
     try:
-        # DeepSeek API 兼容 OpenAI 格式，LiteLLM 1.x 不支持 deepseek/ 前缀
-        model = normalize_model_for_provider(model, api_type)
-
         logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
-        # 用最短的请求测试，设置30秒超时
-        response = await litellm.acompletion(
-            model=model,
-            messages=[{"role": "user", "content": "Hi"}],
+        svc = LLMService.from_workspace_config(llm_cfg)
+        _ = await svc.complete_sync(
+            [{"role": "user", "content": "Hi"}],
             max_tokens=5,
-            api_key=api_key,
-            api_base=api_base,
             timeout=30,
         )
         logger.info("LLM连接测试成功", extra={"model": model})

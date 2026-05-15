@@ -32,6 +32,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
+import { useGenerationStore } from '@/stores/generation'
 import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
 import { useProjectStore } from '@/stores/project'
@@ -40,6 +41,7 @@ import ChatMessages from './ChatMessages.vue'
 import ChatInput from './ChatInput.vue'
 
 const chatStore = useChatStore()
+const generationStore = useGenerationStore()
 const llmStore = useLLMStore()
 const notification = useNotificationStore()
 const projectStore = useProjectStore()
@@ -105,7 +107,7 @@ async function handleAIContinue() {
     return
   }
   try {
-    await chatStore.continueWriting(projectId, filePath)
+    await generationStore.continueWriting(projectId, filePath)
   } catch {
     notification.error('AI 续写失败')
   }
@@ -119,7 +121,7 @@ async function handleAIRewrite() {
     return
   }
   try {
-    await chatStore.rewriteContent(projectId, filePath)
+    await generationStore.rewriteContent(projectId, filePath)
   } catch {
     notification.error('AI 重写失败')
   }

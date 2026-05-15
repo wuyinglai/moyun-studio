@@ -123,7 +123,7 @@
 import { ref, computed, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
-import { useFileStore } from '@/stores/file'
+import { useGenerationStore } from '@/stores/generation'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
 import { useLLMStore } from '@/stores/llm'
@@ -131,7 +131,7 @@ import type { BatchGenerateItem } from '@/types/chat'
 
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
-const fileStore = useFileStore()
+const generationStore = useGenerationStore()
 const notification = useNotificationStore()
 const llmStore = useLLMStore()
 
@@ -227,7 +227,7 @@ async function handleGenerate() {
   results.value = []
 
   try {
-    const response = await fileStore.batchGenerate({
+    const response = await generationStore.batchGenerate({
       project_id: projectStore.currentProject.id,
       volume_number: volumeNumber.value || null,
       chapter_number: chapterNumber.value || null,

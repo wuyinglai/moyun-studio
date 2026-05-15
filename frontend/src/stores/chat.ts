@@ -1,12 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useLLMStore } from './llm'
-import { useEditorStore } from './editor'
-import { useTaskStore } from './task'
-
-function getAutoMode(): string {
-  return localStorage.getItem('moyun-auto-mode') || 'L1'
-}
 
 /**
  * 解析 SSE 响应流，逐行提取 data: JSON 中的 delta 内容
@@ -178,125 +172,6 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /**
-   * 续写当前文件（调用 /api/generate 的 append 模式）
-   * 注意：generation 事件由 useSSE 通过 generationEmitter 统一处理到编辑器，
-   * 此方法只处理任务队列逻辑
-   */
-  async function continueWriting(projectId: string, filePath: string, prompt?: string) {
-    const taskStore = useTaskStore()
-    const editorStore = useEditorStore()
-    generationMode.value = 'continue'
-
-    // 记录 prompt 与文件的关联
-    if (prompt) {
-      editorStore.setFilePrompt(filePath, prompt)
-    }
-
-    const taskId = `task-${Date.now()}`
-    taskStore.addTask(taskId, `续写: ${filePath.split('/').pop()}`)
-    taskStore.startTask(taskId)
-
-    streamController = new AbortController()
-    startAIMessage(taskId)
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          file_path: filePath,
-          prompt_type: 'generate/continuation',
-          extra_vars: prompt ? { user_prompt: prompt } : {},
-          mode: 'append',
-          stream: true,
-        }),
-        signal: streamController.signal,
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      // 消费响应体但不解析 SSE（generation 事件由 useSSE 通过 generationEmitter 处理）
-      await response.body?.getReader()?.cancel()
-
-      // G0116: 根据自动化模式决定是否等待确认
-      if (getAutoMode() === 'L1') {
-        taskStore.waitForConfirm(taskId)
-      } else {
-        taskStore.completeTask(taskId)
-      }
-      finishAIMessage()
-    } catch (e) {
-      taskStore.failTask(taskId)
-      finishAIMessage()
-      throw e
-    } finally {
-      streamController = null
-    }
-  }
-
-  /**
-   * 重写当前文件（调用 /api/generate 的 rewrite 模式）
-   * 注意：generation 事件由 useSSE 通过 generationEmitter 统一处理到编辑器，
-   * 此方法只处理任务队列逻辑
-   */
-  async function rewriteContent(projectId: string, filePath: string, prompt?: string) {
-    const taskStore = useTaskStore()
-    const editorStore = useEditorStore()
-    generationMode.value = 'rewrite'
-
-    // 记录 prompt 与文件的关联
-    if (prompt) {
-      editorStore.setFilePrompt(filePath, prompt)
-    }
-
-    const taskId = `task-${Date.now()}`
-    taskStore.addTask(taskId, `重写: ${filePath.split('/').pop()}`)
-    taskStore.startTask(taskId)
-
-    streamController = new AbortController()
-    startAIMessage(taskId)
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          file_path: filePath,
-          prompt_type: 'generate/rewrite',
-          extra_vars: prompt ? { user_prompt: prompt } : {},
-          mode: 'rewrite',
-          stream: true,
-        }),
-        signal: streamController.signal,
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      // 消费响应体但不解析 SSE（generation 事件由 useSSE 通过 generationEmitter 处理）
-      await response.body?.getReader()?.cancel()
-
-      // G0116: 根据自动化模式决定是否等待确认
-      if (getAutoMode() === 'L1') {
-        taskStore.waitForConfirm(taskId)
-      } else {
-        taskStore.completeTask(taskId)
-      }
-      finishAIMessage()
-    } catch (e) {
-      taskStore.failTask(taskId)
-      finishAIMessage()
-      throw e
-    } finally {
-      streamController = null
-    }
-  }
 
   /**
    * 停止生成
@@ -324,8 +199,6 @@ export const useChatStore = defineStore('chat', () => {
     generationMode,
     addMessage,
     sendMessage,
-    continueWriting,
-    rewriteContent,
     cancelStream,
     clearMessages,
     startAIMessage,
