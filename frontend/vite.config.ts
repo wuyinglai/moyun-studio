@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     optimizeDeps: {
-      exclude: ['@codemirror/view'],
+      exclude: ['@codemirror/view', '@codemirror/language'],
     },
     css: {
       preprocessorOptions: {
