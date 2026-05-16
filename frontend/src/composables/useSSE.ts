@@ -117,6 +117,13 @@ class SSEService {
     generationEmitter.addEventListener('generation', handler as EventListener)
     // 存储 handler 以便后续移除
     ;(this as any)._generationHandler = handler
+
+    // 监听 step_done 事件，更新当前步骤信息
+    const stepHandler = (event: CustomEvent) => {
+      this.handleEvent('step_done', event.detail)
+    }
+    generationEmitter.addEventListener('step_done', stepHandler as EventListener)
+    ;(this as any)._stepDoneHandler = stepHandler
   }
 
   /**
@@ -268,8 +275,11 @@ class SSEService {
         break
 
       case 'thinking':
-        // AI 思考中
+        // AI 思考中 — 更新当前步骤进度
         llmStore.setThinking(data.thinking ?? true)
+        if (data.label) {
+          llmStore.currentStepLabel = data.label
+        }
         if (data.content) {
           chatStore.updateThinking(data.content)
         }
@@ -298,6 +308,7 @@ class SSEService {
         chatStore.finishAIMessage()
         llmStore.setGenerating(false)
         llmStore.setThinking(false)
+        llmStore.currentStepLabel = ''
         if (data.message) {
           taskStore.addLog('success', data.message)
           notification.success(data.message)

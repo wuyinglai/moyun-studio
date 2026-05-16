@@ -98,6 +98,13 @@
       <div class="editor-hint">
         提示：使用 <code>@{文件路径}</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量，也可从文件树拖拽文件到此处
       </div>
+      <button
+        class="btn-regenerate"
+        :disabled="!canSend || fileGen.isGenerating.value"
+        @click="handleSendPrompt"
+      >
+        <i class="fa-solid fa-wand-magic-sparkles"></i> 重新生成
+      </button>
     </div>
   </div>
 </template>
@@ -229,6 +236,18 @@ watch(
     }
   },
 )
+
+const canSend = computed(() =>
+  !!projectStore.currentProject && !!editorStore.currentFilePath && !!localPrompt.value.trim()
+)
+
+async function handleSendPrompt() {
+  const projectId = projectStore.currentProject?.id
+  const filePath = editorStore.currentFilePath
+  if (!projectId || !filePath || !localPrompt.value.trim()) return
+  // 将编辑框中的 prompt 作为 user_prompt 传入 generate 管线
+  await fileGen.generateToFile(projectId, filePath, localPrompt.value.trim(), {}, 'generate/continuation')
+}
 
 // 管线运行时，将每次生成的 prompt 实时显示到编辑框
 watch(
@@ -697,6 +716,32 @@ function handlePromptInput() {
     padding: 1px 5px;
     border-radius: 3px;
     font-size: 11px;
+  }
+}
+
+.btn-regenerate {
+  margin-top: 10px;
+  width: 100%;
+  padding: 6px 16px;
+  border: 1px solid var(--gold-primary);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--gold-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  &:hover:not(:disabled) {
+    background: var(--gold-primary);
+    color: var(--ink-deep);
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 }
 </style>

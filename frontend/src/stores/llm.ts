@@ -21,6 +21,7 @@ export const useLLMStore = defineStore('llm', () => {
   const isConnected = ref(false)
   const isThinking = ref(false)
   const isGenerating = ref(false)
+  const currentStepLabel = ref('')  // pipeline 当前步骤名称，如"优化节奏"
   const availableModels = ref<string[]>([])
 
   async function loadConfig() {
@@ -89,6 +90,7 @@ export const useLLMStore = defineStore('llm', () => {
     isConnected,
     isThinking,
     isGenerating,
+    currentStepLabel,
     availableModels,
     loadConfig,
     saveConfig,

@@ -53,7 +53,7 @@
         <span class="generating-dots">
           <span></span><span></span><span></span>
         </span>
-        <span class="generating-text">{{ generatingLabel }}</span>
+        <span class="generating-text">{{ generatingLabel }}<span v-if="llmStore.currentStepLabel" class="step-label"> — {{ llmStore.currentStepLabel }}</span></span>
       </div>
 
       <!-- Thinking 开关 -->

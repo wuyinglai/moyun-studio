@@ -207,4 +207,9 @@ export const useChatStore = defineStore('chat', () => {
     finishAIMessage,
     updateThinking,
   }
+}, {
+  persist: {
+    storage: localStorage,
+    pick: ['messages'],
+  },
 })
