@@ -348,7 +348,10 @@ class PipelineRunner:
                     **extra_kwargs,
                 ):
                     step_output += chunk
-                    # 所有步骤的 LLM 输出实时流式到前端
+                    # update_story_state 的输出是结构化状态数据，不流式到编辑器
+                    if step.id == "update_story_state":
+                        continue
+                    # 其他步骤的 LLM 输出实时流式到前端
                     yield {"event": "generation", "data": json.dumps({
                         "delta": chunk,
                         "task_id": task_id,
