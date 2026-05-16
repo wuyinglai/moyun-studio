@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 GENERATE_PIPELINE_MAP = {
     "generate/continuation": ("generate", "append"),
     "generate/rewrite": ("rewrite", "overwrite"),
+    "generate/title": ("title", "overwrite"),
 }
 
 
