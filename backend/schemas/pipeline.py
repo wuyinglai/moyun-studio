@@ -9,6 +9,7 @@ class PipelineStepDef(BaseModel):
     label: str
     prompt: str  # prompt 模板路径，如 pipeline/polish/depai
     fallback: str | None = None  # 失败时回退到哪步的输出变量名
+    output: str | None = None  # 可选：步骤完成后将输出写入此文件（相对于 project_id）
 
 
 class PipelineDef(BaseModel):

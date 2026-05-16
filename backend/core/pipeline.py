@@ -331,6 +331,16 @@ class PipelineRunner:
 
                 step_outputs[step.id] = step_output
 
+                # 如果步骤指定了 output 路径，将步骤输出写入对应文件
+                if step.output and step_output:
+                    try:
+                        await self.file_service.write_file(
+                            f"{project_id}/{step.output}", step_output, None
+                        )
+                        logger.info("步骤输出已写入: %s", step.output)
+                    except Exception as e:
+                        logger.warning("步骤输出写入失败 %s: %s", step.output, e)
+
                 logger.info(
                     "管线步骤完成: %s/%s (output_len=%d)",
                     pipeline_name, step.id, len(step_output),
@@ -350,6 +360,14 @@ class PipelineRunner:
                 if step.fallback and step.fallback in step_outputs:
                     logger.info("回退到步骤 %s 的输出 (管线: %s)", step.fallback, pipeline_name)
                     step_outputs[step.id] = step_outputs[step.fallback]
+                    # 回退时也尝试写入步骤的 output 文件
+                    if step.output and step_outputs[step.id]:
+                        try:
+                            await self.file_service.write_file(
+                                f"{project_id}/{step.output}", step_outputs[step.id], None
+                            )
+                        except Exception as e:
+                            logger.warning("步骤输出写入失败 %s: %s", step.output, e)
                     yield {"event": "step_done", "data": json.dumps({
                         "step_id": step.id,
                         "label": step.label,
