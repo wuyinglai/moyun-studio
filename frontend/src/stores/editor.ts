@@ -27,6 +27,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   function loadContent(path: string, content: string, fm?: Record<string, unknown>) {
     contents.value[path] = content
+    contentSource.value = 'external'
     if (fm) {
       frontmatter.value[path] = fm
     }
