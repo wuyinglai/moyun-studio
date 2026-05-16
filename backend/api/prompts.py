@@ -32,6 +32,18 @@ class PromptUpdateRequest(BaseModel):
     content: str
 
 
+@router.get("/raw", response_model=ApiResponse[dict])
+async def get_raw_prompt(
+    path: str = Query(..., description="相对于 prompts 目录的文件路径"),
+    settings: Settings = Depends(get_settings),
+):
+    """读取 prompts 目录下的原始文件内容"""
+    file_path = settings.prompts_path / path
+    if not file_path.exists() or not file_path.is_relative_to(settings.prompts_path):
+        raise HTTPException(status_code=404, detail=f"Prompt 文件不存在: {path}")
+    content = file_path.read_text(encoding="utf-8")
+    return ApiResponse.ok({"path": path, "content": content})
+
 @router.get("", response_model=ApiResponse[dict])
 async def list_prompts(settings: Settings = Depends(get_settings)):
     """获取所有Prompt模板列表"""
@@ -123,7 +135,6 @@ async def get_prompt(
     """获取指定Prompt内容"""
     prompt_key = f"{category}/{name}"
     prompt_file = settings.prompts_path / category / name / "main.md"
-
     if not prompt_file.exists():
         raise TemplateNotFoundError(template=f"{category}/{name}")
 

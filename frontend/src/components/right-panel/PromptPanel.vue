@@ -304,6 +304,7 @@ async function openReferencedFile(path: string) {
   const node = { name, path, type: 'file' as const }
   const projectId = projectStore.currentProject?.id
   if (!projectId) return
+  // 先尝试项目目录，如果是 blocks/ 等 prompt 模板则走 prompts API
   try {
     const fileData = await fileStore.readFile(projectId, path)
     fileStore.openFile(node)
@@ -311,7 +312,21 @@ async function openReferencedFile(path: string) {
     editorStore.setCurrentFile(path)
     notification.info(`已打开: ${path}`)
   } catch {
-    notification.error(`无法打开: ${path}`)
+    // 项目目录未找到，尝试从 prompts 模板目录读取
+    try {
+      const resp = await fetch(`/api/prompts/raw?path=${encodeURIComponent(path)}`)
+      const json = await resp.json()
+      if (json?.data?.content) {
+        fileStore.openFile(node)
+        editorStore.loadContent(path, json.data.content)
+        editorStore.setCurrentFile(path)
+        notification.info(`已打开: ${path}`)
+      } else {
+        notification.error(`无法打开: ${path}`)
+      }
+    } catch {
+      notification.error(`无法打开: ${path}`)
+    }
   }
 }
 
