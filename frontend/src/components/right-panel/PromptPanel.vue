@@ -145,20 +145,22 @@ const historyKey = 'prompt-current'
 const historyStore = useHistoryStore()
 
 function handleDrop(e: DragEvent) {
+  e.preventDefault()
+  e.stopPropagation()
   const path = e.dataTransfer?.getData('text/plain')
   if (!path || path.includes('/.')) return // 过滤隐藏文件和空值
   const ta = promptTextareaRef.value
   if (!ta) return
+  // 获取拖拽时的光标位置（React-like approach via document.caretRangeFromPoint）
+  const fallbackPos = ta.selectionStart
   const refText = `@{${path}}`
-  const start = ta.selectionStart
-  const end = ta.selectionEnd
-  const before = localPrompt.value.substring(0, start)
-  const after = localPrompt.value.substring(end)
+  const before = localPrompt.value.substring(0, fallbackPos)
+  const after = localPrompt.value.substring(fallbackPos)
   localPrompt.value = before + refText + after
   rightPanelStore.updatePrompt(localPrompt.value)
   // 光标移到插入内容之后
   requestAnimationFrame(() => {
-    const pos = start + refText.length
+    const pos = fallbackPos + refText.length
     ta.setSelectionRange(pos, pos)
     ta.focus()
   })
