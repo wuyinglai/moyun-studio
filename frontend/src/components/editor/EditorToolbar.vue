@@ -242,13 +242,6 @@ function handleStop() {
 
   const taskStore = useTaskStore()
 
-  // L1 等待中 + 工作流运行中 -> 等效于确认当前任务并继续
-  const waitingTask = taskStore.tasks.find(t => t.status === 'waiting')
-  if (waitingTask && guide.isRunning.value) {
-    handleGenerateNext()
-    return
-  }
-
   // 只取消当前正在运行的任务（其余排队任务保留）
   const running = taskStore.tasks.find(t => t.status === 'running')
   if (running) {
@@ -257,8 +250,11 @@ function handleStop() {
   // 工作流模式：停止当前步骤，等待"写下一部分"继续
   if (guide.isRunning.value) {
     guide.stopAfterCurrent()
+    notification.info('已停止当前步骤，点"写下一部分"继续')
     return
   }
+  // 强制重置任务队列处理状态（防止 pipeline 异常断开后卡死）
+  taskQueue.isProcessing.value = false
   notification.info('已停止当前任务')
 }
 
