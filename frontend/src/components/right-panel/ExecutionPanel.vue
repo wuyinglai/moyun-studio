@@ -115,7 +115,15 @@ onUnmounted(() => {
   taskStore.stopPolling()
 })
 
-const tasks = computed(() => taskStore.tasks)
+const tasks = computed(() => {
+  const statusOrder: Record<string, number> = { running: 0, pending: 1, waiting: 2, done: 3, failed: 4, cancelled: 5 }
+  return [...taskStore.tasks].sort((a, b) => {
+    const oa = statusOrder[a.status] ?? 99
+    const ob = statusOrder[b.status] ?? 99
+    if (oa !== ob) return oa - ob
+    return b.createdAt - a.createdAt  // 同状态按创建时间倒序
+  })
+})
 const logs = computed(() => taskStore.logs)
 const hasRunningTasks = computed(() => tasks.value.some(t => t.status === 'running'))
 
