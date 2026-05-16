@@ -267,20 +267,26 @@ async function runPipeline(name: string) {
 
   rightPanelStore.setPipelineTab('quick')
 
+  // 提取管线输出到 materials/extracted/，不覆盖当前章节
+  const filePath = editorStore.currentFilePath!
+  const targetFile = name === 'extract'
+    ? `materials/extracted/${filePath.replace(/^.*?chapters\//, '').replace(/\//g, '-')}`
+    : filePath
+
   const labelMap: Record<string, string> = {
     polish: '润色',
     generate: '生成',
     rewrite: '精修',
     extract: '提取',
   }
-  const fileName = editorStore.currentFilePath.split('/').pop() || ''
+  const fileName = filePath.split('/').pop() || ''
   const pipelineLabel = labelMap[name] || name
 
   await taskQueue.enqueue(
     async () => {
       await fileGen.runPipeline(
         projectStore.currentProject!.id,
-        editorStore.currentFilePath!,
+        targetFile,
         name,
       )
     },
