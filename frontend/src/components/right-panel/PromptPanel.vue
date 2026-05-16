@@ -72,7 +72,7 @@
     </div>
 
     <!-- Prompt 编辑区 -->
-    <div class="editor-section">
+    <div class="editor-section" @drop.prevent="handleDrop" @dragover.prevent>
       <div class="editor-label">{{ isFreeMode ? '提示词（自由编辑）' : '当前步骤 Prompt（可直接编辑）' }}</div>
       <a-textarea
         ref="promptTextareaRef"
@@ -80,8 +80,6 @@
         :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"
         :auto-size="{ minRows: 8, maxRows: 16 }"
         @input="handlePromptInput"
-        @drop.prevent="handleDrop"
-        @dragover.prevent
         class="prompt-editor"
       />
       <!-- @{path} 引用文件列表 -->
