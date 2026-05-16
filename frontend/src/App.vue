@@ -190,4 +190,16 @@ function settingsBtn() {
 .backend-warning-content button:hover {
   background: rgba(255,255,255,0.35);
 }
+
+/* ── Ant Design Modal 暗色主题适配 ── */
+.ant-modal-confirm-title,
+.ant-modal-confirm-content {
+  color: var(--text-warm-white) !important;
+}
+.ant-modal-content {
+  background: var(--ink-dark) !important;
+}
+.ant-modal-confirm-body > .anticon {
+  color: var(--gold-primary) !important;
+}
 </style>
