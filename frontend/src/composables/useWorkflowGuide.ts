@@ -39,6 +39,7 @@ async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<G
   if (!genStep) return []
 
   const extractStep = chaptersLoop.steps.find((s: any) => s.pipeline === 'extract')
+  const storyStateStep = chaptersLoop.steps.find((s: any) => s.pipeline === 'story-state')
 
   // 从项目 target_word_count 计算卷/章数量（和后端 wizard.py 算法一致）
   const projectStore = useProjectStore()
@@ -78,6 +79,18 @@ async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<G
           type: 'pipeline',
           pipeline: extractStep.pipeline,
           output: resolvePath(extractStep.output),
+          status: 'pending',
+        })
+      }
+
+      // story-state 每章更新一次
+      if (storyStateStep?.pipeline) {
+        expanded.push({
+          id: `vol-${volPad}-ch-${chPad}-story`,
+          label: `状态 第${vol}卷第${ch}章`,
+          type: 'pipeline',
+          pipeline: storyStateStep.pipeline,
+          output: storyStateStep.output || '',
           status: 'pending',
         })
       }
