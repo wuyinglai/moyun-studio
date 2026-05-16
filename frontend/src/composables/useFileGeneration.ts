@@ -146,7 +146,7 @@ export function useFileGeneration() {
           pipeline: pipelineName,
           project_id: projectId,
           target_file: filePath,
-          output_mode: pipelineName === 'generate' ? 'append' : 'overwrite',
+          output_mode: 'overwrite',
         }),
         signal: _abortController.signal,
       })
