@@ -5,6 +5,7 @@
   POST /api/style-guide/{project_id}  保存文风指南内容
 """
 
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError
+from backend.core.file_ops import FileService
+from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.schemas.common import ApiResponse
 
 logger = logging.getLogger(__name__)
@@ -21,6 +24,17 @@ router = APIRouter(tags=["文风指南"], prefix="/style-guide")
 
 
 # ─── Schema ──────────────────────────────────────────────────────────
+
+
+class GenerateRequest(BaseModel):
+    """AI 生成文风指南请求"""
+    genre: str = ""
+    theme: str = ""
+    tone: str = ""
+    writing_style: str = ""
+
+
+
 
 class StyleGuideContent(BaseModel):
     """文风指南内容"""
@@ -31,6 +45,103 @@ class StyleGuideContent(BaseModel):
 class SaveStyleGuideRequest(BaseModel):
     """保存文风指南请求"""
     content: str = Field(..., description="文风指南Markdown内容")
+
+
+# ─── AI 生成文风指南 ────────────────────────────────────────────────
+
+
+_GENERATE_PROMPT = """你是一名资深文学编辑。请根据以下项目信息，生成一份文风指南。
+
+## 项目信息
+- 题材：{genre}
+- 核心主题：{theme}
+- 作品基调：{tone}
+- 写作风格：{writing_style}
+
+## 要求
+请按以下结构输出完整的文风指南（Markdown 格式）：
+
+### 一、文风定位
+- 整体风格：根据题材和基调确定
+- 句子节奏：长短句搭配方式
+- 描写密度：场景/心理/对话的比例
+- 语言特点：用词偏好、修辞风格
+
+### 二、写作风格要点
+- 叙述方式（如第三人称有限视角）
+- 对话风格（如自然口语化）
+- 心理描写（如适度、点到即止）
+- 场景描写（如注重氛围烘托）
+
+### 三、写作禁忌
+- 针对本题材应避免的表达方式
+
+### 四、题材特点
+- 本题材特有的表达习惯和术语规范
+
+直接输出文风指南内容，不要添加说明。
+"""
+
+
+@router.post("/{project_id}/generate", response_model=ApiResponse[StyleGuideContent])
+async def generate_style_guide(
+    project_id: str,
+    req: GenerateRequest | None = None,
+    settings: Settings = Depends(get_settings),
+) -> ApiResponse[StyleGuideContent]:
+    """AI 生成文风指南
+
+    从项目 meta.json 读取题材/主题/基调等信息，调用 LLM 生成文风指南。
+    也支持通过请求体传入自定义参数覆盖 meta.json。
+    """
+    project_dir = settings.projects_path / project_id
+    if not project_dir.exists():
+        raise ProjectNotFoundError(project_id)
+
+    # 读取 meta.json
+    meta = {}
+    meta_path = project_dir / "meta.json"
+    if meta_path.exists():
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+
+    genre = req.genre if req and req.genre else meta.get("genre", "")
+    theme = req.theme if req and req.theme else meta.get("theme", "")
+    tone = req.tone if req and req.tone else meta.get("tone", "")
+    writing_style = req.writing_style if req and req.writing_style else meta.get("writing_style", "")
+
+    if not any([genre, theme, tone, writing_style]):
+        return ApiResponse.ok(StyleGuideContent(
+            content=DEFAULT_STYLE_GUIDE,
+            last_modified=datetime.now().isoformat(),
+        ))
+
+    # 调用 LLM
+    prompt = _GENERATE_PROMPT.format(genre=genre, theme=theme, tone=tone, writing_style=writing_style)
+    llm_cfg = load_llm_config_from_workspace(settings)
+    svc = LLMService(llm_cfg)
+    messages = [{"role": "user", "content": prompt}]
+    try:
+        generated = await svc.complete_sync(messages, timeout=60)
+    except Exception as e:
+        logger.warning("AI 生成文风指南失败: %s", e)
+        return ApiResponse.ok(StyleGuideContent(
+            content=DEFAULT_STYLE_GUIDE,
+            last_modified=datetime.now().isoformat(),
+        ))
+
+    content = generated.strip()
+    if not content:
+        content = DEFAULT_STYLE_GUIDE
+
+    # 写入文件
+    file_path = _get_style_guide_path(project_id, settings)
+    file_path.write_text(content, encoding="utf-8")
+    logger.info("文风指南已通过 AI 生成: %s", project_id)
+
+    return ApiResponse.ok(StyleGuideContent(
+        content=content,
+        last_modified=datetime.now().isoformat(),
+    ))
 
 
 # ─── 默认文风指南模板 ─────────────────────────────────────────────────

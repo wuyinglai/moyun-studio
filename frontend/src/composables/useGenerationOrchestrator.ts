@@ -17,6 +17,7 @@ import { useLLMStore } from '@/stores/llm'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { useNotificationStore } from '@/stores/notification'
 import { useFileGeneration } from './useFileGeneration'
+import api from '@/services/api'
 
 export function useGenerationOrchestrator() {
   const projectStore = useProjectStore()
@@ -69,6 +70,11 @@ export function useGenerationOrchestrator() {
         await fileGen.generateToFile(projectId, filePath, prompt, pending.extraVars, pending.promptType)
         taskStore.completeTask(taskId)
         taskStore.addLog('success', `完成: ${taskName}`)
+
+        // 初始生成完成后自动触发文风指南 AI 生成
+        if (pending.promptType === 'generate/title') {
+          api.post(`/style-guide/${projectId}/generate`).catch(() => {})
+        }
 
         // 保存元数据
         if (pending.promptType) {
