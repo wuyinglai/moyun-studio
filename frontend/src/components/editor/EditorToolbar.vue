@@ -91,6 +91,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
 import { useRightPanelStore } from '@/stores/rightPanel'
+import { guessPromptType } from '@/utils/promptTypes'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { usePipelineStore } from '@/stores/pipeline'
@@ -319,7 +320,8 @@ async function handleGenerateNext() {
   }
 
   // 读取右侧面板中用户手工修改的 prompt，传入 pipeline 的 extra_vars
-  const customPrompt = useRightPanelStore().promptContent
+  const rightPanelStore = useRightPanelStore()
+  const customPrompt = rightPanelStore.promptContent
   const extraVars: Record<string, unknown> = {}
   if (customPrompt && customPrompt.length > 50) {
     extraVars.user_prompt = customPrompt
@@ -336,6 +338,9 @@ async function handleGenerateNext() {
   const node = { name: next.path.split('/').pop() || '', path: next.path, type: 'file' as const }
   fileStore.openFile(node)
   editorStore.setCurrentFile(next.path)
+
+  // 加载新文件的 prompt 到右侧面板
+  loadFilePrompt(projectId, next.path)
 
   // 同步更新 workflow guide 步骤状态
   syncGuideStep(next.path, 'running')
@@ -399,6 +404,22 @@ function syncGuideStep(path: string, status: 'running' | 'done') {
       }
       return
     }
+  }
+}
+
+/** 加载文件的 prompt 到右侧面板 */
+function loadFilePrompt(projectId: string, filePath: string) {
+  const promptType = guessPromptType(filePath)
+  if (promptType) {
+    fetch(`/api/prompts/${promptType}?project_id=${projectId}`)
+      .then(r => r.json())
+      .then(json => {
+        if (json?.data?.content) {
+          editorStore.setFilePrompt(filePath, json.data.content)
+          rightPanelStore.updatePrompt(json.data.content)
+        }
+      })
+      .catch(() => {})
   }
 }
 
