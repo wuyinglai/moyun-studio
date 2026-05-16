@@ -71,11 +71,6 @@ export function useGenerationOrchestrator() {
         taskStore.completeTask(taskId)
         taskStore.addLog('success', `完成: ${taskName}`)
 
-        // 初始生成完成后自动触发文风指南 AI 生成
-        if (pending.promptType === 'generate/title') {
-          api.post(`/style-guide/${projectId}/generate`).catch(() => {})
-        }
-
         // 保存元数据
         if (pending.promptType) {
           useFileMetaStore().saveMeta(projectId, filePath, {
