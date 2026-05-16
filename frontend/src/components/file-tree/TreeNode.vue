@@ -6,6 +6,7 @@
       :class="{ active: isActive }"
       :draggable="node.type === 'file'"
       @dragstart="handleDragStart"
+      @dragend="handleDragEnd"
       @click="handleClick"
     >
       <!-- 展开箭头 / 缩进占位 -->
@@ -144,7 +145,10 @@ function toggleExpand() {
   saveExpandedDirs(dirs)
 }
 
+let _dragFlag = false
+
 function handleClick() {
+  if (_dragFlag) { _dragFlag = false; return }
   if (props.node.type === 'file') {
     emit('file-click', props.node)
   } else {
@@ -154,10 +158,15 @@ function handleClick() {
 
 function handleDragStart(e: DragEvent) {
   if (props.node.type === 'file') {
-    e.dataTransfer?.clearData()  // 清除浏览器默认数据
+    _dragFlag = true
+    e.dataTransfer?.clearData()
     e.dataTransfer?.setData('text/plain', props.node.path)
     e.dataTransfer!.effectAllowed = 'copy'
   }
+}
+
+function handleDragEnd() {
+  _dragFlag = false
 }
 </script>
 
