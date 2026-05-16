@@ -25,7 +25,3 @@ steps:
     label: 优化节奏
     prompt: pipeline/generate/rhythm
     fallback: logic
-  - id: diff
-    label: 修改摘要
-    prompt: pipeline/diff-summary/analyze
-    fallback: rhythm
