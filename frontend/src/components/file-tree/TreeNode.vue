@@ -154,6 +154,7 @@ function handleClick() {
 
 function handleDragStart(e: DragEvent) {
   if (props.node.type === 'file') {
+    e.dataTransfer?.clearData()  // 清除浏览器默认数据
     e.dataTransfer?.setData('text/plain', props.node.path)
     e.dataTransfer!.effectAllowed = 'copy'
   }
