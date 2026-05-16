@@ -280,7 +280,7 @@ async function openReferencedFile(path: string) {
 
 function openPipeline(pipelineName: string) {
   const pipelineStore = usePipelineStore()
-  pipelineStore.currentPipelineName = pipelineName
+  pipelineStore.selectPipeline(pipelineName)
   rightPanelStore.setActiveTab('pipeline')
   rightPanelStore.setPipelineTab('editor')
 }

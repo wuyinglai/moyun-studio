@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import PromptPanel from './PromptPanel.vue'
