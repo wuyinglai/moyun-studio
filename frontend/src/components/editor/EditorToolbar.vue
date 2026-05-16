@@ -371,18 +371,18 @@ async function handleGenerateNext() {
 
 /** 根据当前生成的路径，更新 workflow guide 对应步骤的状态 */
 const GUIDE_STEP_MAP: Record<string, number> = {
-  'blueprint.md': 0,
-  'outline.md': 1,
-  'worldbuilding.md': 2,
-  'characters/main.md': 3,
+  'blueprint.md': 1,
+  'outline.md': 2,
+  'worldbuilding.md': 3,
+  'characters/main.md': 4,
 }
 
 function syncGuideStep(path: string, status: 'running' | 'done') {
   // 章节文件 → loop 步骤
   if (path.match(/sec-\d+\.md$/)) {
-    if (guide.steps.value[4]) guide.steps.value[4].status = status as any
+    if (guide.steps.value[5]) guide.steps.value[5].status = status as any
     if (status === 'running') {
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as any
       }
     }
