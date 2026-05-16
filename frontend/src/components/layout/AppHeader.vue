@@ -75,12 +75,15 @@
           class="mode-btn"
           :class="{ 'mode-btn--active': autoMode === 'L1' }"
           @click="setAutoMode('L1')"
+          title="L1 半自动：每完成一个文件后暂停，需手动点"写下一部分"继续"
         >L1</button>
         <button
           class="mode-btn"
           :class="{ 'mode-btn--active': autoMode === 'L2' }"
           @click="setAutoMode('L2')"
+          title="L2 自动：生成完成后自动继续下一个文件，可随时点"停止"暂停"
         >L2</button>
+        <span class="auto-mode-label">{{ autoMode === 'L1' ? '半自动' : '自动' }}</span>
       </div>
 
       <!-- 操作按钮组 -->
@@ -601,6 +604,12 @@ async function createProjectWithGuard() {
     &:not(&--active):hover {
       color: var(--text-warm-white);
     }
+  }
+  .auto-mode-label {
+    font-size: 10px;
+    color: var(--text-muted-ink);
+    padding: 0 6px;
+    white-space: nowrap;
   }
 }
 
