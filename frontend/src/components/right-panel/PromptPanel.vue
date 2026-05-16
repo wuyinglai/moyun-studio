@@ -189,12 +189,21 @@ function stepIcon(status: string): string {
   }
 }
 
-// 从 prompt 文本中提取 @{path} 引用
+// 从 prompt 文本中提取 @{path} 和 {% include '...' %} 引用
 const fileRefs = computed(() => {
   const refs: { path: string }[] = []
-  const pattern = /@\{([^}]+)\}/g
+  // @{path} 引用
+  const atPattern = /@\{([^}]+)\}/g
   let match: RegExpExecArray | null
-  while ((match = pattern.exec(localPrompt.value)) !== null) {
+  while ((match = atPattern.exec(localPrompt.value)) !== null) {
+    const path = match[1].trim()
+    if (path && !refs.some(r => r.path === path)) {
+      refs.push({ path })
+    }
+  }
+  // {% include '...' %} 引用
+  const incPattern = /\{%\s+include\s+'([^']+)'\s*%\}/g
+  while ((match = incPattern.exec(localPrompt.value)) !== null) {
     const path = match[1].trim()
     if (path && !refs.some(r => r.path === path)) {
       refs.push({ path })
