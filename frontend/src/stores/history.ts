@@ -11,7 +11,9 @@ export interface HistoryItem {
 export const useHistoryStore = defineStore('history', () => {
   const historyMap = ref<Record<string, HistoryItem[]>>({})
   const currentIndexMap = ref<Record<string, number>>({})
-  const MAX_HISTORY = 20
+  const MAX_HISTORY = 30
+  // 浏览历史时记录当前是否在"浏览旧版本"状态（非最新版本）
+  const isBrowsing = ref(false)
 
   function getHistory(path: string): HistoryItem[] {
     return historyMap.value[path] || []
@@ -46,6 +48,7 @@ export const useHistoryStore = defineStore('history', () => {
 
     historyMap.value[path] = history
     currentIndexMap.value[path] = history.length - 1
+    isBrowsing.value = false
   }
 
   const canGoBack = (path?: string): boolean => {
@@ -69,6 +72,7 @@ export const useHistoryStore = defineStore('history', () => {
     if (idx > 0) {
       idx--
       currentIndexMap.value[path] = idx
+      isBrowsing.value = idx < history.length - 1
       return history[idx]?.content || null
     }
     return null
@@ -82,9 +86,21 @@ export const useHistoryStore = defineStore('history', () => {
     if (idx >= 0 && idx < history.length - 1) {
       idx++
       currentIndexMap.value[path] = idx
+      isBrowsing.value = idx < history.length - 1
       return history[idx]?.content || null
     }
     return null
+  }
+
+  /** 浏览历史时确认当前版本为最终版本：截断之后的历史，退出浏览模式 */
+  function saveCurrentVersion(path: string) {
+    const history = getHistory(path)
+    const idx = getCurrentIndex(path)
+    if (idx >= 0 && idx < history.length) {
+      historyMap.value[path] = history.slice(0, idx + 1)
+      currentIndexMap.value[path] = history.length - 1
+    }
+    isBrowsing.value = false
   }
 
   function clearHistory(path?: string) {
@@ -100,6 +116,7 @@ export const useHistoryStore = defineStore('history', () => {
   return {
     historyMap,
     currentIndexMap,
+    isBrowsing,
     getHistory,
     getCurrentIndex,
     pushHistory,
@@ -107,6 +124,7 @@ export const useHistoryStore = defineStore('history', () => {
     canGoForward,
     goBack,
     goForward,
+    saveCurrentVersion,
     clearHistory,
   }
 })

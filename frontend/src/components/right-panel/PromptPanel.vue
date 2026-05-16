@@ -53,17 +53,21 @@
       <span>上次生成完成，prompt 已填入下方编辑框</span>
     </div>
 
-    <!-- Prompt 历史导航 M0402-4 -->
+    <!-- Prompt 历史导航 -->
     <div class="history-nav" v-if="promptHistory.length > 0">
-      <button class="history-btn" :disabled="!canGoBack" @click="goBack" title="上一个版本">
+      <button class="history-btn" :disabled="!promptCanGoBack" @click="promptGoBack" title="上一个版本">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
-      <span class="history-indicator">{{ historyPos }}</span>
-      <button class="history-btn" :disabled="!canGoForward" @click="goForward" title="下一个版本">
+      <span class="history-indicator">{{ promptHistoryPos }}</span>
+      <button class="history-btn" :disabled="!promptCanGoForward" @click="promptGoForward" title="下一个版本">
         <i class="fa-solid fa-chevron-right"></i>
       </button>
-      <button class="history-btn history-clear" @click="clearHistory" title="清空历史">
+      <button class="history-btn history-clear" @click="promptClearHistory" title="清空历史">
         <i class="fa-solid fa-trash-can"></i>
+      </button>
+      <span v-if="promptIsBrowsing" class="browsing-badge">浏览历史</span>
+      <button v-if="promptIsBrowsing" class="history-btn history-save" @click="promptSaveVersion" title="保存此版本">
+        <i class="fa-solid fa-check"></i>
       </button>
     </div>
 
@@ -111,9 +115,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { usePipelineStore } from '@/stores/pipeline'
+import { useHistoryStore } from '@/stores/history'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
@@ -131,9 +136,13 @@ const guide = useWorkflowGuide()
 
 const localPrompt = ref('')
 const promptTextareaRef = ref<HTMLTextAreaElement | null>(null)
+const lastPromptSnapshot = ref('')
 const varHint = '{{变量名}}'
 const isFreeMode = ref(true)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
+let promptSnapshotTimer: ReturnType<typeof setTimeout> | null = null
+const historyKey = 'prompt-current'
+const historyStore = useHistoryStore()
 
 function handleDrop(e: DragEvent) {
   const path = e.dataTransfer?.getData('text/plain')
@@ -196,37 +205,54 @@ const fileRefs = computed(() => {
 
 const isPipelineRunning = computed(() => rightPanelStore.isPipelineRunning)
 
-// 历史导航
-const promptHistory = computed(() => rightPanelStore.promptHistory)
-const currentHistoryIndex = computed(() => rightPanelStore.currentHistoryIndex)
-const canGoBack = computed(() => currentHistoryIndex.value < promptHistory.value.length - 1)
-const canGoForward = computed(() => currentHistoryIndex.value > -1)
-const historyPos = computed(() => {
+// 历史导航（改用统一 history store）
+const promptHistory = computed(() => historyStore.getHistory(historyKey))
+const promptCurrentIndex = computed(() => historyStore.getCurrentIndex(historyKey))
+const promptIsBrowsing = computed(() => historyStore.isBrowsing)
+const promptCanGoBack = computed(() => historyStore.canGoBack(historyKey))
+const promptCanGoForward = computed(() => historyStore.canGoForward(historyKey))
+const promptHistoryPos = computed(() => {
   if (promptHistory.value.length === 0) return ''
-  const current = currentHistoryIndex.value === -1 ? promptHistory.value.length : promptHistory.value.length - 1 - currentHistoryIndex.value
-  return `${current} / ${promptHistory.value.length}`
+  return `${promptCurrentIndex.value + 1} / ${promptHistory.value.length}`
 })
 
-function goBack() {
-  rightPanelStore.goPromptHistoryBack()
-  localPrompt.value = rightPanelStore.promptContent
+function promptGoBack() {
+  const content = historyStore.goBack(historyKey)
+  if (content !== null) localPrompt.value = content
 }
 
-function goForward() {
-  rightPanelStore.goPromptHistoryForward()
-  localPrompt.value = rightPanelStore.promptContent
+function promptGoForward() {
+  const content = historyStore.goForward(historyKey)
+  if (content !== null) localPrompt.value = content
 }
 
-function clearHistory() {
-  rightPanelStore.clearHistory()
+function promptClearHistory() {
+  historyStore.clearHistory(historyKey)
+  lastPromptSnapshot.value = ''
+}
+
+function promptSaveVersion() {
+  historyStore.saveCurrentVersion(historyKey)
+  rightPanelStore.updatePrompt(localPrompt.value)
+}
+
+function promptCheckSnapshot() {
+  const current = localPrompt.value
+  if (current && current !== lastPromptSnapshot.value) {
+    historyStore.pushHistory(historyKey, current)
+    lastPromptSnapshot.value = current
+  }
+  if (promptSnapshotTimer) clearTimeout(promptSnapshotTimer)
+  promptSnapshotTimer = setTimeout(promptCheckSnapshot, 10000)
 }
 
 onMounted(() => {
-  // 加载工作流定义
   guide.loadWorkflow()
-
-  // 初始显示右侧面板保存的 prompt（切换文件时自动更新）
   localPrompt.value = rightPanelStore.promptContent || ''
+})
+
+onUnmounted(() => {
+  if (promptSnapshotTimer) clearTimeout(promptSnapshotTimer)
 })
 
 // 切换文件时，右侧面板 promptContent 由 App.vue 更新，此处同步到编辑器
@@ -290,6 +316,10 @@ function handlePromptInput() {
   saveTimeout = setTimeout(() => {
     rightPanelStore.updatePrompt(localPrompt.value)
   }, 500)
+  // 启动10秒快照检查
+  if (promptSnapshotTimer) clearTimeout(promptSnapshotTimer)
+  promptSnapshotTimer = setTimeout(promptCheckSnapshot, 10000)
+  if (!lastPromptSnapshot.value) lastPromptSnapshot.value = localPrompt.value
 }
 
 </script>
@@ -661,6 +691,27 @@ function handlePromptInput() {
   color: var(--text-muted);
   min-width: 40px;
   text-align: center;
+}
+
+.browsing-badge {
+  font-size: 10px;
+  color: var(--gold-primary);
+  background: rgba(201, 169, 110, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.history-save {
+  width: auto !important;
+  padding: 0 8px !important;
+  gap: 4px;
+  border-color: var(--gold-primary) !important;
+  color: var(--gold-primary) !important;
+
+  &:hover {
+    background: var(--gold-primary) !important;
+    color: var(--ink-deep) !important;
+  }
 }
 
 .editor-label {

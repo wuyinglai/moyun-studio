@@ -39,16 +39,30 @@
 
     <!-- Prompt 编辑区 -->
     <div class="prompt-section" v-if="editingStep">
-      <div class="section-label">步骤 Prompt</div>
+      <div class="section-label">
+        <span>步骤 Prompt</span>
+        <span v-if="isBrowsingHistory" class="browsing-badge">浏览历史</span>
+      </div>
       <a-textarea
         v-model:value="editingPrompt"
         :auto-size="{ minRows: 8, maxRows: 16 }"
         class="prompt-editor"
-        placeholder="在此编辑步骤的 Prompt 模板..."
+        :class="{ readonly: isBrowsingHistory }"
+        :readonly="isBrowsingHistory"
+        :placeholder="isBrowsingHistory ? '浏览历史版本...' : '在此编辑步骤的 Prompt 模板...'"
+        @input="handlePromptInput"
       />
       <div class="editor-actions">
-        <a-button size="small" @click="saveCurrentStepPrompt">保存</a-button>
-        <a-button type="primary" size="small" @click="saveAll">保存全部</a-button>
+        <a-button size="small" :disabled="!canGoBackHistory" @click="goBackHistory" title="上一个版本">
+          <i class="fa-solid fa-chevron-left"></i> 后退
+        </a-button>
+        <a-button size="small" :disabled="!canGoForwardHistory" @click="goForwardHistory" title="下一个版本">
+          前进 <i class="fa-solid fa-chevron-right"></i>
+        </a-button>
+        <span class="history-pos" v-if="historyTotal > 0">{{ historyCurrent }}/{{ historyTotal }}</span>
+        <a-button v-if="isBrowsingHistory" type="primary" size="small" @click="saveHistoryVersion">
+          <i class="fa-solid fa-check"></i> 保存此版本
+        </a-button>
       </div>
     </div>
 
@@ -60,18 +74,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Button as AButton, Select as ASelect, SelectOption as ASelectOption } from 'ant-design-vue'
 import { usePipelineStore } from '@/stores/pipeline'
+import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
 
 const pipelineStore = usePipelineStore()
+const historyStore = useHistoryStore()
 const notification = useNotificationStore()
 
 const selectedPipelineName = ref('polish')
 const editingStepIndex = ref(0)
 const localSteps = ref<{ id: string; label: string; prompt_content: string; fallback: string | null }[]>([])
 const editingPrompt = ref('')
+const lastSnapshotContent = ref('')
+let snapshotTimer: ReturnType<typeof setTimeout> | null = null
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+const historyKey = computed(() => {
+  const step = editingStep.value
+  if (!step || !selectedPipelineName.value) return ''
+  return `pipeline/${selectedPipelineName.value}/${step.id}`
+})
+
+const isBrowsingHistory = computed(() => historyKey.value ? historyStore.isBrowsing : false)
+const canGoBackHistory = computed(() => historyStore.canGoBack(historyKey.value))
+const canGoForwardHistory = computed(() => historyStore.canGoForward(historyKey.value))
+const historyTotal = computed(() => historyKey.value ? historyStore.getHistory(historyKey.value).length : 0)
+const historyCurrent = computed(() => {
+  if (!historyKey.value) return 0
+  const idx = historyStore.getCurrentIndex(historyKey.value)
+  return idx + 1
+})
 
 const editingStep = computed(() => {
   if (editingStepIndex.value < 0 || editingStepIndex.value >= localSteps.value.length) return null
@@ -79,17 +114,16 @@ const editingStep = computed(() => {
 })
 
 onMounted(() => {
-  if (pipelineStore.pipelines.length === 0) {
-    pipelineStore.fetchPipelines()
-  }
-  if (pipelineStore.currentDetail) {
-    loadFromStore()
-  }
+  if (pipelineStore.pipelines.length === 0) pipelineStore.fetchPipelines()
+  if (pipelineStore.currentDetail) loadFromStore()
 })
 
-watch(() => pipelineStore.currentDetail, (detail) => {
-  if (detail) loadFromStore()
+onUnmounted(() => {
+  if (snapshotTimer) clearTimeout(snapshotTimer)
+  if (saveTimer) clearTimeout(saveTimer)
 })
+
+watch(() => pipelineStore.currentDetail, (d) => { if (d) loadFromStore() })
 
 function loadFromStore() {
   if (!pipelineStore.currentDetail) return
@@ -102,74 +136,86 @@ function loadFromStore() {
 function syncEditingPrompt() {
   const step = editingStep.value
   editingPrompt.value = step?.prompt_content || ''
+  lastSnapshotContent.value = editingPrompt.value
+  resetSnapshotTimer()
 }
 
-watch(editingStep, () => {
-  syncEditingPrompt()
-})
+watch(editingStep, () => syncEditingPrompt())
+
+function handlePromptInput() {
+  if (isBrowsingHistory.value) return
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => doSave(), 300)
+  resetSnapshotTimer()
+}
+
+async function doSave() {
+  if (!editingStep.value) return
+  editingStep.value.prompt_content = editingPrompt.value
+  await pipelineStore.saveStepPrompt(editingStep.value.id, editingPrompt.value)
+}
+
+function resetSnapshotTimer() {
+  if (snapshotTimer) clearTimeout(snapshotTimer)
+  snapshotTimer = setTimeout(checkSnapshot, 10000)
+}
+
+function checkSnapshot() {
+  const key = historyKey.value
+  if (!key) return
+  const current = editingPrompt.value
+  if (current && current !== lastSnapshotContent.value) {
+    historyStore.pushHistory(key, current)
+    lastSnapshotContent.value = current
+  }
+  resetSnapshotTimer()
+}
+
+function goBackHistory() {
+  const key = historyKey.value
+  if (!key) return
+  const content = historyStore.goBack(key)
+  if (content !== null) editingPrompt.value = content
+}
+
+function goForwardHistory() {
+  const key = historyKey.value
+  if (!key) return
+  const content = historyStore.goForward(key)
+  if (content !== null) editingPrompt.value = content
+}
+
+function saveHistoryVersion() {
+  const key = historyKey.value
+  if (!key) return
+  historyStore.saveCurrentVersion(key)
+  if (editingStep.value) {
+    editingStep.value.prompt_content = editingPrompt.value
+    pipelineStore.saveStepPrompt(editingStep.value.id, editingPrompt.value)
+  }
+  notification.success('已保存此版本')
+}
 
 async function onPipelineSelect(name: string) {
   await pipelineStore.selectPipeline(name)
-  // selectPipeline fetches detail and updates currentDetail
 }
 
 function removeStep(index: number) {
   if (localSteps.value.length <= 1) return
   localSteps.value.splice(index, 1)
-  if (editingStepIndex.value >= localSteps.value.length) {
-    editingStepIndex.value = localSteps.value.length - 1
-  }
+  if (editingStepIndex.value >= localSteps.value.length) editingStepIndex.value = localSteps.value.length - 1
 }
 
 function addStep() {
-  const newId = `step-${Date.now()}`
   localSteps.value.push({
-    id: newId,
+    id: `step-${Date.now()}`,
     label: '新步骤',
     prompt_content: '# 新步骤\n\n请对以下文本进行处理：\n\n## 原文\n{{ file_content }}\n\n## 要求\n请输入具体要求...\n',
     fallback: null,
   })
   editingStepIndex.value = localSteps.value.length - 1
 }
-
-async function saveCurrentStepPrompt() {
-  if (!editingStep.value) return
-  const step = editingStep.value
-  step.prompt_content = editingPrompt.value
-  try {
-    await pipelineStore.saveStepPrompt(step.id, editingPrompt.value)
-    notification.success('Prompt 已保存')
-  } catch {
-    notification.error('保存失败')
-  }
-}
-
-async function saveAll() {
-  // Sync editing prompt to current step
-  if (editingStep.value) {
-    editingStep.value.prompt_content = editingPrompt.value
-  }
-
-  try {
-    // Save all step definitions
-    const stepsData = localSteps.value.map(s => ({
-      id: s.id,
-      label: s.label,
-      prompt_content: s.prompt_content,
-    }))
-    await pipelineStore.saveStepPrompt(stepsData[0]?.id || '', stepsData[0]?.prompt_content || '')
-    notification.success('管线已保存')
-  } catch {
-    notification.error('保存管线失败')
-  }
-}
-
-function showNewPipelineDialog() {
-  // For MVP, create a simple pipeline with default steps
-  notification.info('新建管线功能即将上线')
-}
 </script>
-
 <style scoped lang="scss">
 .pipeline-editor {
   display: flex;
@@ -267,6 +313,26 @@ function showNewPipelineDialog() {
   flex: 1;
   width: 100%;
   min-height: 120px;
+
+  &.readonly {
+    opacity: 0.7;
+    cursor: default;
+  }
+}
+
+.browsing-badge {
+  font-size: 10px;
+  color: var(--gold-primary);
+  background: rgba(201, 169, 110, 0.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+.history-pos {
+  font-size: 11px;
+  color: var(--text-muted);
+  align-self: center;
 }
 
 .editor-actions {
