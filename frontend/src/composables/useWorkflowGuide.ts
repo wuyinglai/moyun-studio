@@ -63,7 +63,7 @@ async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<G
         const secOutput = resolvePath(genStep.output || '').replace('sec-001.md', `sec-${secPad}.md`)
         expanded.push({
           id: `vol-${volPad}-ch-${chPad}-sec-${secPad}`,
-          label: `第${vol}卷第${ch}章第${sec}节`,
+          label: `正文 第${vol}卷第${ch}章第${sec}节`,
           type: 'pipeline',
           pipeline: genStep.pipeline,
           output: secOutput,
