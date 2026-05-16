@@ -29,7 +29,7 @@
           <span class="wf-step-icon">{{ stepIcon(step.status) }}</span>
           <span class="wf-step-label">{{ step.label }}</span>
           <span class="wf-step-badge">{{ step.type === 'loop' ? '循环' : '' }}</span>
-          <a v-if="step.pipeline || step.type === 'loop'" class="wf-step-pipeline-link" @click.stop="openPipeline(step.pipeline || 'generate')">{{ step.pipeline || '写下一部分' }}</a>
+          <a v-if="step.pipeline || step.type === 'loop'" class="wf-step-pipeline-link" @click.stop="openPipeline(step.pipeline || 'generate')">{{ pipelineLabel(step.pipeline || 'generate') }}</a>
           <div class="wf-step-action" v-if="step.status === 'running' || step.status === 'waiting'">
             <span v-if="step.status === 'running'" class="wf-spinner">
               <i class="fa-solid fa-spinner fa-spin"></i>
@@ -302,6 +302,12 @@ async function openReferencedFile(path: string) {
   } catch {
     notification.error(`无法打开: ${path}`)
   }
+}
+
+function pipelineLabel(pipelineName: string): string {
+  const ps = usePipelineStore()
+  const found = ps.pipelines.find(p => p.name === pipelineName)
+  return found?.label || pipelineName
 }
 
 function openPipeline(pipelineName: string) {
