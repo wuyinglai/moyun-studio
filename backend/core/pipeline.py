@@ -58,6 +58,8 @@ class PipelineRunner:
         self.llm_service = llm_service
         self.file_service = file_service
         self.source = source
+        # 同一章内 context 步骤输出缓存，key=章目录路径 → context 文本
+        self._context_cache: dict[str, str] = {}
         self.env = Environment(
             loader=FileSystemLoader(str(self.prompts_path)),
             autoescape=False,
@@ -307,8 +309,31 @@ class PipelineRunner:
                         "warning": True,
                     })}
 
+                # context 步骤缓存：同一章内复用已生成的上下文分析
+                if step.id == "context" and target_file:
+                    import re as _re
+                    ch_match = _re.match(r"^(.*?ch-\d+)/", target_file)
+                    if ch_match:
+                        ch_key = ch_match.group(1)
+                        cached = self._context_cache.get(ch_key)
+                        if cached is not None:
+                            logger.info("复用 context 缓存: %s", ch_key)
+                            step_output = cached
+                            yield {"event": "prompt", "data": json.dumps({
+                                "prompt": prompt_text,
+                                "task_id": task_id,
+                                "step_id": step.id,
+                                "cached": True,
+                            })}
+                            step_outputs[step.id] = step_output
+                            yield {"event": "step_done", "data": json.dumps({
+                                "step_id": step.id,
+                                "label": step.label,
+                                "status": "done",
+                            })}
+                            continue
+
                 # 调用 LLM
-                # system 消息设定模型行为：对改写/润色步骤防止输出分析报告
                 messages = [
                     {"role": "system", "content": "你是一个文本处理工具。根据用户的指令处理文本，只输出处理结果本身，严禁输出任何解释、分析、问候、标题、编号或其他附加内容。"},
                     {"role": "user", "content": prompt_text},
@@ -330,6 +355,13 @@ class PipelineRunner:
                     })}
 
                 step_outputs[step.id] = step_output
+
+                # context 步骤完成后缓存到内存，同章后续 sec 复用
+                if step.id == "context" and target_file:
+                    import re as _re
+                    ch_match = _re.match(r"^(.*?ch-\d+)/", target_file)
+                    if ch_match:
+                        self._context_cache[ch_match.group(1)] = step_output
 
                 # 如果步骤指定了 output 路径，将步骤输出写入对应文件
                 if step.output and step_output:
