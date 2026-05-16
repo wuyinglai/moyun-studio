@@ -316,6 +316,13 @@ async function handleGenerateNext() {
     return
   }
 
+  // 读取右侧面板中用户手工修改的 prompt，传入 pipeline 的 extra_vars
+  const customPrompt = useRightPanelStore().promptContent
+  const extraVars: Record<string, unknown> = {}
+  if (customPrompt && customPrompt.length > 50) {
+    extraVars.user_prompt = customPrompt
+  }
+
   // 从当前文件路径推导下一个文件和 pipeline
   const next = getNextInChain(filePath)
   if (!next) {
@@ -333,7 +340,7 @@ async function handleGenerateNext() {
   syncGuideStep(next.path, 'running')
 
   // 运行对应 pipeline
-  await fileGen.runPipeline(projectId, next.path, next.pipeline)
+  await fileGen.runPipeline(projectId, next.path, next.pipeline, extraVars)
 
   // pipeline 完成 → 更新 guide 步骤状态为 done
   syncGuideStep(next.path, 'done')

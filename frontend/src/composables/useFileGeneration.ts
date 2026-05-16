@@ -124,6 +124,7 @@ export function useFileGeneration() {
     projectId: string,
     filePath: string,
     pipelineName: string,
+    extraVars?: Record<string, unknown>,
   ) {
     if (_isGenerating.value) return
 
@@ -147,6 +148,7 @@ export function useFileGeneration() {
           project_id: projectId,
           target_file: filePath,
           output_mode: 'overwrite',
+          extra_vars: extraVars || {},
         }),
         signal: _abortController.signal,
       })
