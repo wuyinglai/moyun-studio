@@ -23,6 +23,18 @@ export class GenerationEmitter extends EventTarget {
 // 导出单例，供 useSSE 订阅
 export const generationEmitter = new GenerationEmitter()
 
+function resolveApiUrl(path: string): string {
+  try {
+    const customUrl = localStorage.getItem('moyun-api-baseurl')
+    if (customUrl) {
+      return customUrl.replace(/\/+$/, '') + '/api' + path
+    }
+  } catch {
+    // localStorage may be unavailable in tests or during SSR-like execution.
+  }
+  return '/api' + path
+}
+
 export function useFileGeneration() {
   const editorStore = useEditorStore()
 
@@ -63,7 +75,7 @@ export function useFileGeneration() {
         body.extra_vars = { ...(body.extra_vars as Record<string, string>), user_prompt: prompt }
       }
 
-      const response = await fetch('/api/generate', {
+      const response = await fetch(resolveApiUrl('/generate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -141,7 +153,7 @@ export function useFileGeneration() {
     _abortController = new AbortController()
 
     try {
-      const response = await fetch('/api/pipeline/run', {
+      const response = await fetch(resolveApiUrl('/pipeline/run'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -182,6 +194,8 @@ export function useFileGeneration() {
           // 强制标记为外部更新，触发 CodeMirror watcher 刷新编辑器
           editorStore.contentSource = 'external'
         }
+        // 文件已由 pipeline 写入磁盘，清除前端脏标记
+        fileStore.unsavedFiles.delete(filePathForEmitter)
       } catch {
         // 文件可能不存在或读取失败，静默忽略
       }
@@ -241,7 +255,8 @@ export function useFileGeneration() {
             } else if ((parsed.delta || parsed.content) && onDelta) {
               onDelta(parsed.delta || parsed.content)
             }
-          } catch {
+          } catch (e) {
+            if (currentEvent === 'error') throw e
             // SSR 流中包含 heartbeat 等非 JSON 行，静默跳过
           }
         }
