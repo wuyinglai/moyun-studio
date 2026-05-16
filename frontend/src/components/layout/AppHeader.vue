@@ -69,6 +69,20 @@
         </button>
       </div>
 
+      <!-- L1/L2 模式切换 -->
+      <div class="auto-mode-switch" v-if="projectStore.currentProject">
+        <button
+          class="mode-btn"
+          :class="{ 'mode-btn--active': autoMode === 'L1' }"
+          @click="setAutoMode('L1')"
+        >L1</button>
+        <button
+          class="mode-btn"
+          :class="{ 'mode-btn--active': autoMode === 'L2' }"
+          @click="setAutoMode('L2')"
+        >L2</button>
+      </div>
+
       <!-- 操作按钮组 -->
       <div class="action-buttons">
         <button class="btn btn-ghost" @click="uiStore.openOpenProject()" title="打开项目">
@@ -152,6 +166,12 @@ const connectionStatus = computed(() => {
   if (llmStore.isConnected && sseConnected.value) return '已连接'
   return '未连接'
 })
+
+const autoMode = computed(() => localStorage.getItem('moyun-auto-mode') || 'L1')
+
+function setAutoMode(mode: 'L1' | 'L2') {
+  localStorage.setItem('moyun-auto-mode', mode)
+}
 
 async function toggleThinking() {
   llmStore.config.thinking = !llmStore.config.thinking
@@ -519,6 +539,39 @@ async function toggleThinking() {
   &:hover {
     background: var(--ink-hover);
     color: var(--gold-primary);
+  }
+}
+
+/* ── L1/L2 模式切换 ── */
+.auto-mode-switch {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0 4px;
+  border: 1px solid var(--border-ink);
+  border-radius: 4px;
+  overflow: hidden;
+
+  .mode-btn {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted-ink);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    letter-spacing: 0.5px;
+
+    &--active {
+      background: var(--gold-primary);
+      color: var(--ink-deep);
+    }
+
+    &:not(&--active):hover {
+      color: var(--text-warm-white);
+    }
   }
 }
 
