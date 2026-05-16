@@ -191,7 +191,10 @@ function settingsBtn() {
   background: rgba(255,255,255,0.35);
 }
 
-/* ── Ant Design Modal 暗色主题适配 ── */
+</style>
+
+<style>
+/* ── Ant Design Modal 暗色主题适配（全局样式，非 scoped） ── */
 .ant-modal-confirm-title,
 .ant-modal-confirm-content {
   color: var(--text-warm-white) !important;
