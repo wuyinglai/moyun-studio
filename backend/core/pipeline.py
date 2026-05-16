@@ -503,28 +503,6 @@ class PipelineRunner:
         except Exception as e:
             logger.warning("更新 recent-context.md 失败: %s", e)
 
-        # — 更新 story-state.md（写入章节摘要而非无意义日志） —
-        if "/sec-" in target_file and content:
-            try:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-                section_summary = content[:200].strip()
-                entry = f"\n## {timestamp} - {target_file}\n{section_summary}\n"
-
-                try:
-                    existing, _ = await self.file_service.read_file(f"{project_id}/story-state.md")
-                    blocks = [b for b in existing.split("\n## ") if b.strip()]
-                    blocks = blocks[-9:]
-                    new_content = "\n## ".join(blocks).strip()
-                    if not new_content.startswith("# "):
-                        new_content = "# 故事全局状态\n" + new_content
-                    new_content += entry
-                except Exception:
-                    new_content = f"# 故事全局状态\n{entry}"
-
-                await self.file_service.write_file(f"{project_id}/story-state.md", new_content, None)
-            except Exception as e:
-                logger.warning("更新 story-state.md 失败: %s", e)
-
         # — 创建修改日志（仅当内容有变化且目标文件是章节文件） —
         if original_content and content != original_content and "/sec-" in target_file:
             try:
