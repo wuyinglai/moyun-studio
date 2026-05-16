@@ -481,46 +481,6 @@ class PipelineRunner:
         })}
 
     async def _update_after_generation(self, project_id: str, target_file: str, content: str, original_content: str = "") -> None:
-        """生成完成后更新 story-state.md、recent-context.md 和 revision-log"""
-
-        # — 更新 recent-context.md —
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-            file_name = target_file.split("/")[-1]
-            summary = content[:300].strip()
-            entry = f"\n## {timestamp} - {file_name}\n{summary}\n"
-
-            try:
-                existing, _ = await self.file_service.read_file(f"{project_id}/recent-context.md")
-                # 分隔条目，保留最近 5 条
-                blocks = [b for b in existing.split("\n## ") if b.strip()]
-                blocks = blocks[-4:]  # 保留旧条目 + 新条目的空间
-                new_content = "\n## ".join(blocks).strip()
-                if not new_content.startswith("# "):
-                    new_content = "# 近期上下文\n" + new_content
-                new_content += entry
-            except Exception:
-                new_content = f"# 近期上下文\n{entry}"
-
-            await self.file_service.write_file(f"{project_id}/recent-context.md", new_content, None)
-        except Exception as e:
-            logger.warning("更新 recent-context.md 失败: %s", e)
-
-        # — 更新 story-state.md —
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-            note = f"\n\n## 自动更新 - {timestamp}\n已生成: {target_file}\n"
-
-            try:
-                existing, _ = await self.file_service.read_file(f"{project_id}/story-state.md")
-                new_content = existing + note
-            except Exception:
-                new_content = f"# 故事全局状态{note}"
-
-            await self.file_service.write_file(f"{project_id}/story-state.md", new_content, None)
-        except Exception as e:
-            logger.warning("更新 story-state.md 失败: %s", e)
-
         # — 创建修改日志（仅当内容有变化且目标文件是章节文件） —
         if original_content and content != original_content and "/sec-" in target_file:
             try:
