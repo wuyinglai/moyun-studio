@@ -378,13 +378,25 @@ const GUIDE_STEP_MAP: Record<string, number> = {
 }
 
 function syncGuideStep(path: string, status: 'running' | 'done') {
+  // 章节文件 → loop 步骤
   if (path.match(/sec-\d+\.md$/)) {
     if (guide.steps.value[4]) guide.steps.value[4].status = status as any
+    if (status === 'running') {
+      for (let i = 0; i < 4; i++) {
+        if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as any
+      }
+    }
     return
   }
   for (const [key, idx] of Object.entries(GUIDE_STEP_MAP)) {
     if (path.endsWith(key) && guide.steps.value[idx]) {
       guide.steps.value[idx].status = status as any
+      // 标记当前步骤之前的步骤为 done
+      if (status === 'running') {
+        for (let i = 0; i < idx; i++) {
+          if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as any
+        }
+      }
       return
     }
   }
