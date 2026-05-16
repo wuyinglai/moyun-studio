@@ -22,7 +22,7 @@
       <a-button v-if="showNextButton" size="small" type="primary" @click="handleGenerateNext">
         📄 写下一部分
       </a-button>
-      <template v-else-if="!isGenerating">
+      <template v-if="!isGenerating">
         <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('polish')">
           ✏️ 润色
         </a-button>
