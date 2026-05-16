@@ -20,7 +20,7 @@
           :key="tab.id"
           class="panel-tab"
           :class="{ active: activeTab === tab.id }"
-          @click="activeTab = tab.id"
+          @click="rightPanelStore.setActiveTab(tab.id)"
           :title="tab.label"
           role="tab"
           :aria-selected="activeTab === tab.id"
@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useProjectStore } from '@/stores/project'
+import { useRightPanelStore } from '@/stores/rightPanel'
 import PromptPanel from './PromptPanel.vue'
 import PipelineEditor from './PipelineEditor.vue'
 import WorkflowPanel from './WorkflowPanel.vue'
@@ -54,8 +55,9 @@ import StoryStatePanel from '../global/StoryStatePanel.vue'
 import StyleGuidePanel from '../global/StyleGuidePanel.vue'
 
 const projectStore = useProjectStore()
+const rightPanelStore = useRightPanelStore()
 
-const activeTab = ref('prompt')
+const activeTab = computed(() => rightPanelStore.activeTab)
 
 const storyPanelRef = ref<InstanceType<typeof StoryStatePanel>>()
 const styleGuidePanelRef = ref<InstanceType<typeof StyleGuidePanel>>()

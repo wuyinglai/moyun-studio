@@ -29,6 +29,7 @@
           <span class="wf-step-icon">{{ stepIcon(step.status) }}</span>
           <span class="wf-step-label">{{ step.label }}</span>
           <span class="wf-step-badge">{{ step.type === 'loop' ? '循环' : '' }}</span>
+          <a v-if="step.pipeline" class="wf-step-pipeline-link" @click.stop="openPipeline(step.pipeline)">{{ step.pipeline }}</a>
           <div class="wf-step-action" v-if="step.status === 'running' || step.status === 'waiting'">
             <span v-if="step.status === 'running'" class="wf-spinner">
               <i class="fa-solid fa-spinner fa-spin"></i>
@@ -112,6 +113,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRightPanelStore } from '@/stores/rightPanel'
+import { usePipelineStore } from '@/stores/pipeline'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
@@ -274,6 +276,13 @@ async function openReferencedFile(path: string) {
   } catch {
     notification.error(`无法打开: ${path}`)
   }
+}
+
+function openPipeline(pipelineName: string) {
+  const pipelineStore = usePipelineStore()
+  pipelineStore.currentPipelineName = pipelineName
+  rightPanelStore.setActiveTab('pipeline')
+  rightPanelStore.setPipelineTab('editor')
 }
 
 function handlePromptInput() {
@@ -742,6 +751,22 @@ function handlePromptInput() {
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+}
+
+.wf-step-pipeline-link {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--gold-primary);
+  opacity: 0.6;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+
+  &:hover {
+    opacity: 1;
+    text-decoration: underline;
   }
 }
 </style>

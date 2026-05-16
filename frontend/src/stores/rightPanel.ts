@@ -7,6 +7,7 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
   const currentHistoryIndex = ref(-1)
   const executionLogs = ref<string[]>([])
   const activePipelineTab = ref<'quick' | 'editor'>('quick')
+  const activeTab = ref<string>('prompt')  // 右侧面板当前高亮的 Tab ID
   const isPipelineRunning = ref(false)
 
   const currentPrompt = computed(() => promptContent.value)
@@ -65,12 +66,24 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
     isPipelineRunning.value = running
   }
 
+  function setActiveTab(tab: string) {
+    activeTab.value = tab
+  }
+
+  function navigateToPipeline(pipelineName: string) {
+    activeTab.value = 'pipeline'
+    activePipelineTab.value = 'editor'
+    // 设置 pipeline store 的 currentPipelineName
+    // 由调用方在 import 后设置
+  }
+
   return {
     promptContent,
     promptHistory,
     currentHistoryIndex,
     currentPrompt,
     executionLogs,
+    activeTab,
     activePipelineTab,
     isPipelineRunning,
     loadPromptTemplate,
@@ -81,6 +94,7 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
     clearLogs,
     clearHistory,
     setPipelineTab,
+    setActiveTab,
     setPipelineRunning,
   }
 }, {
