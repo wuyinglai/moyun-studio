@@ -4,6 +4,8 @@
       class="node-row"
       :style="{ paddingLeft: `${depth * 16 + 8}px` }"
       :class="{ active: isActive }"
+      :draggable="node.type === 'file'"
+      @dragstart="handleDragStart"
       @click="handleClick"
     >
       <!-- 展开箭头 / 缩进占位 -->
@@ -147,6 +149,13 @@ function handleClick() {
     emit('file-click', props.node)
   } else {
     toggleExpand()
+  }
+}
+
+function handleDragStart(e: DragEvent) {
+  if (props.node.type === 'file') {
+    e.dataTransfer?.setData('text/plain', props.node.path)
+    e.dataTransfer!.effectAllowed = 'copy'
   }
 }
 </script>

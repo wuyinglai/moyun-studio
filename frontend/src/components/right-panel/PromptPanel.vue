@@ -70,10 +70,13 @@
     <div class="editor-section">
       <div class="editor-label">{{ isFreeMode ? '提示词（自由编辑）' : '当前步骤 Prompt（可直接编辑）' }}</div>
       <a-textarea
+        ref="promptTextareaRef"
         v-model:value="localPrompt"
         :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"
         :auto-size="{ minRows: 8, maxRows: 16 }"
         @input="handlePromptInput"
+        @drop.prevent="handleDrop"
+        @dragover.prevent
         class="prompt-editor"
       />
       <!-- @{path} 引用文件列表 -->
@@ -93,7 +96,7 @@
         </div>
       </div>
       <div class="editor-hint">
-        提示：使用 <code>@{文件路径}</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量
+        提示：使用 <code>@{文件路径}</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量，也可从文件树拖拽文件到此处
       </div>
     </div>
   </div>
@@ -120,9 +123,30 @@ const guide = useWorkflowGuide()
 const llmStore = useLLMStore()
 
 const localPrompt = ref('')
+const promptTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const varHint = '{{变量名}}'
 const isFreeMode = ref(true)
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
+
+function handleDrop(e: DragEvent) {
+  const path = e.dataTransfer?.getData('text/plain')
+  if (!path || path.includes('/.')) return // 过滤隐藏文件和空值
+  const ta = promptTextareaRef.value
+  if (!ta) return
+  const refText = `@{${path}}`
+  const start = ta.selectionStart
+  const end = ta.selectionEnd
+  const before = localPrompt.value.substring(0, start)
+  const after = localPrompt.value.substring(end)
+  localPrompt.value = before + refText + after
+  rightPanelStore.updatePrompt(localPrompt.value)
+  // 光标移到插入内容之后
+  requestAnimationFrame(() => {
+    const pos = start + refText.length
+    ta.setSelectionRange(pos, pos)
+    ta.focus()
+  })
+}
 
 // 工作流状态
 const workflowLabel = computed(() => guide.workflowLabel.value)
