@@ -40,6 +40,7 @@ workspace/
 # 工具临时目录
 .claude/
 .sisyphus/
+.moyun/
 
 # 日志
 *.log
@@ -56,5 +57,6 @@ _misc/archive/
 _misc/scripts/
 
 # 测试产物
+.pytest_cache/
 test-results/
 .worktrees/
