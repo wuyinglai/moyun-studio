@@ -7,6 +7,14 @@
   >
     <div class="open-project-modal">
       <a-spin :spinning="isLoading">
+        <a-input-search
+          v-if="projects.length > 0"
+          v-model:value="query"
+          class="project-search"
+          placeholder="搜索项目名称、题材、作者或 ID"
+          allow-clear
+        />
+
         <a-empty v-if="projects.length === 0" description="暂无项目">
           <template #image>
             <i class="fa-solid fa-folder-open" style="font-size: 64px; opacity: 0.3"></i>
@@ -16,7 +24,9 @@
           </template>
         </a-empty>
 
-        <a-list v-else item-layout="horizontal" :data-source="projects" :grid="{ gutter: 16, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }">
+        <a-empty v-else-if="filteredProjects.length === 0" description="未找到匹配项目" />
+
+        <a-list v-else item-layout="horizontal" :data-source="filteredProjects" :grid="{ gutter: 16, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }">
           <template #renderItem="{ item }">
             <a-list-item>
               <a-card
@@ -41,6 +51,7 @@
                       <span class="meta-stat"><i class="fa-solid fa-calendar"></i> {{ formatDate(item.created_at) }}</span>
                       <span class="meta-stat"><i class="fa-solid fa-chart-line"></i> {{ item.completion_rate || 0 }}%</span>
                     </div>
+                    <div class="project-id">ID: {{ item.id }}</div>
                     <p v-if="item.author" class="project-author">
                       <i class="fa-solid fa-user"></i> {{ item.author }}
                     </p>
@@ -86,11 +97,14 @@ import { ref, computed, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import type { Project } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
+import type { FileNode } from '@/stores/file'
+import { useEditorStore } from '@/stores/editor'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notification'
 
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
+const editorStore = useEditorStore()
 const uiStore = useUIStore()
 const notification = useNotificationStore()
 
@@ -98,11 +112,27 @@ const visible = computed(() => uiStore.modals.openProject)
 const isLoading = computed(() => projectStore.isLoading)
 const projects = computed(() => projectStore.projects)
 const selectedId = ref<string | null>(null)
+const query = ref('')
+const filteredProjects = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  const sorted = [...projects.value].sort((a, b) => {
+    const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
+    const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
+    return bTime - aTime
+  })
+  if (!q) return sorted
+  return sorted.filter((item) => {
+    return [item.name, item.genre, item.author, item.id, item.project_id]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(q))
+  })
+})
 
 watch(visible, async (val) => {
   if (val) {
     await projectStore.loadProjects()
     selectedId.value = null
+    query.value = ''
   }
 })
 
@@ -112,11 +142,44 @@ async function openProject() {
   try {
     const project = await projectStore.openProject(selectedId.value)
     await fileStore.loadTree(project.id)
+    await openDefaultFile(project.id)
     notification.success(`已打开项目：${project.name}`)
     close()
   } catch (e) {
     notification.error('打开项目失败')
   }
+}
+
+async function openDefaultFile(projectId: string) {
+  if (fileStore.openFiles.length > 0 && editorStore.currentFilePath) return
+  const outline = findFile(fileStore.tree, 'outline.md') || findFirstMarkdown(fileStore.tree)
+  if (!outline) return
+  const fileData = await fileStore.readFile(projectId, outline.path)
+  fileStore.openFile(outline)
+  editorStore.loadContent(outline.path, fileData.content || '', fileData.frontmatter)
+  editorStore.setCurrentFile(outline.path)
+}
+
+function findFile(nodes: FileNode[], name: string): FileNode | null {
+  for (const node of nodes) {
+    if (node.type === 'file' && node.name === name) return node
+    if (node.children) {
+      const found = findFile(node.children, name)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function findFirstMarkdown(nodes: FileNode[]): FileNode | null {
+  for (const node of nodes) {
+    if (node.type === 'file' && node.name.endsWith('.md')) return node
+    if (node.children) {
+      const found = findFirstMarkdown(node.children)
+      if (found) return found
+    }
+  }
+  return null
 }
 
 async function deleteProject(project: Project) {
@@ -144,11 +207,16 @@ function formatDate(dateStr: string): string {
 function close() {
   uiStore.closeOpenProject()
   selectedId.value = null
+  query.value = ''
 }
 </script>
 
 <style scoped lang="scss">
 .open-project-modal {
+  .project-search {
+    margin-bottom: 16px;
+  }
+
   .project-cover {
     display: flex;
     align-items: center;
@@ -183,6 +251,13 @@ function close() {
   .meta-stat {
     font-size: 12px;
     color: var(--text-muted);
+  }
+
+  .project-id {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-faint);
+    word-break: break-all;
   }
 
   .project-stats {

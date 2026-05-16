@@ -51,14 +51,21 @@ class ProjectService:
 
     def _load_meta(self, project_dir: Path) -> dict | None:
         mp = self._meta_path(project_dir)
-        if not mp.exists():
+        if not mp.is_file():
             return None
-        return json.loads(mp.read_text(encoding="utf-8"))
+        try:
+            return json.loads(mp.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("跳过无效项目meta: %s (%s)", mp, e)
+            return None
 
     def _load_context(self, project_dir: Path) -> dict:
         cp = self._context_path(project_dir)
-        if cp.exists():
-            return json.loads(cp.read_text(encoding="utf-8"))
+        if cp.is_file():
+            try:
+                return json.loads(cp.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("跳过无效项目context: %s (%s)", cp, e)
         return {"stats": {"total_words": 0, "total_sections": 0, "completed_sections": 0}}
 
     # ─── 统计计算 ────────────────────────────────────────

@@ -55,6 +55,8 @@ onMounted(async () => {
     if (route.params.pathMatch) {
       const filePath = '/' + (route.params.pathMatch as string[]).join('/')
       editorStore.setCurrentFile(filePath)
+    } else {
+      await openDefaultProjectFile(projectId)
     }
   }
 
@@ -99,6 +101,42 @@ function handlePromiseRejection(event: PromiseRejectionEvent) {
 
 function settingsBtn() {
   useUIStore().openSettings()
+}
+
+async function openDefaultProjectFile(projectId: string) {
+  if (fileStore.openFiles.length > 0 && editorStore.currentFilePath) return
+  const node = findFile(fileStore.tree, 'outline.md') || findFirstMarkdown(fileStore.tree)
+  if (!node) return
+  try {
+    const fileData = await fileStore.readFile(projectId, node.path)
+    fileStore.openFile(node)
+    editorStore.loadContent(node.path, fileData.content || '', fileData.frontmatter)
+    editorStore.setCurrentFile(node.path)
+  } catch (e) {
+    console.warn('默认文件打开失败', e)
+  }
+}
+
+function findFile(nodes: Array<{ name: string; path: string; type: string; children?: any[] }>, name: string): any | null {
+  for (const node of nodes) {
+    if (node.type === 'file' && node.name === name) return node
+    if (node.children) {
+      const found = findFile(node.children, name)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function findFirstMarkdown(nodes: Array<{ name: string; path: string; type: string; children?: any[] }>): any | null {
+  for (const node of nodes) {
+    if (node.type === 'file' && node.name.endsWith('.md')) return node
+    if (node.children) {
+      const found = findFirstMarkdown(node.children)
+      if (found) return found
+    }
+  }
+  return null
 }
 
 // 路由守卫：路由跳转前拦截（Vue Router beforeEach 已在 router/index.ts 中处理）

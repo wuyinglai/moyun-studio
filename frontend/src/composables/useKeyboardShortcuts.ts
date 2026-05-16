@@ -22,8 +22,10 @@ function _onKeydown(e: KeyboardEvent) {
   // 忽略在输入框/textarea 中的按键
   const tag = (e.target as HTMLElement).tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) {
-    // 允许 Ctrl+S 和 Ctrl+P 在这些元素中触发
-    if (!((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'p'))) {
+    const key = e.key.toLowerCase()
+    const isGlobalShortcut = (e.ctrlKey || e.metaKey)
+      && (key === 's' || key === 'p' || (key === 'f' && e.shiftKey))
+    if (!isGlobalShortcut) {
       return
     }
   }

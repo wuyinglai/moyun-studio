@@ -142,6 +142,9 @@ class SSEService {
 
     eventTypes.forEach((type) => {
       this.eventSource!.addEventListener(type, (event: MessageEvent) => {
+        if (!event.data) {
+          return
+        }
         try {
           const data = JSON.parse(event.data)
           this.handleEvent(type, data)

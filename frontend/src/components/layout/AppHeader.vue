@@ -85,14 +85,14 @@
 
       <!-- 操作按钮组 -->
       <div class="action-buttons">
-        <button class="btn btn-ghost" @click="uiStore.openOpenProject()" title="打开项目">
+        <button class="btn btn-ghost" @click="openProjectWithGuard" title="打开项目">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
           </svg>
           <span class="btn-label">打开</span>
         </button>
 
-        <button class="btn btn-primary" @click="uiStore.openCreateProject()" title="新建项目">
+        <button class="btn btn-primary" @click="createProjectWithGuard" title="新建项目">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
@@ -111,9 +111,11 @@
 
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
+import { Modal } from 'ant-design-vue'
 import { useProjectStore } from '@/stores/project'
 import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
+import { useEditorStore } from '@/stores/editor'
 import { useSSE } from '@/composables/useSSE'
 import { useNotificationStore } from '@/stores/notification'
 import { useChatStore } from '@/stores/chat'
@@ -121,6 +123,7 @@ import { useChatStore } from '@/stores/chat'
 const projectStore = useProjectStore()
 const llmStore = useLLMStore()
 const uiStore = useUIStore()
+const editorStore = useEditorStore()
 const notification = useNotificationStore()
 const chatStore = useChatStore()
 const { isConnected: sseConnected, isReconnecting } = useSSE()
@@ -176,6 +179,32 @@ function setAutoMode(mode: 'L1' | 'L2') {
 async function toggleThinking() {
   llmStore.config.thinking = !llmStore.config.thinking
   await llmStore.saveConfig({ thinking: llmStore.config.thinking })
+}
+
+async function confirmUnsavedSwitch(): Promise<boolean> {
+  if (!editorStore.isDirty) return true
+  return await new Promise((resolve) => {
+    Modal.confirm({
+      title: '有未保存的内容',
+      content: '当前项目仍有未保存内容，确定要继续切换吗？',
+      okText: '继续',
+      cancelText: '取消',
+      onOk: () => resolve(true),
+      onCancel: () => resolve(false),
+    })
+  })
+}
+
+async function openProjectWithGuard() {
+  if (await confirmUnsavedSwitch()) {
+    uiStore.openOpenProject()
+  }
+}
+
+async function createProjectWithGuard() {
+  if (await confirmUnsavedSwitch()) {
+    uiStore.openCreateProject()
+  }
 }
 </script>
 
