@@ -204,7 +204,10 @@ const config = ref({
   thinking: false,
 } as LLMConfig)
 
-const currentTheme = computed(() => uiStore.theme)
+const currentTheme = computed({
+  get: () => uiStore.theme,
+  set: (value) => uiStore.setTheme(value),
+})
 const themes = [
   { id: 'dark', name: '深邃夜紫', preview: 'linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)' },
   { id: 'green', name: '墨绿护眼', preview: 'linear-gradient(135deg, #1a1f1a, #242a24, #2d362d)' },

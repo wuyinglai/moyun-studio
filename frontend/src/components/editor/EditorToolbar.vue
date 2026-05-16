@@ -110,6 +110,7 @@ const llmStore = useLLMStore()
 const uiStore = useUIStore()
 const rightPanelStore = useRightPanelStore()
 const projectStore = useProjectStore()
+const fileStore = useFileStore()
 const pipelineStore = usePipelineStore()
 const fileGen = useFileGeneration()
 const guide = useWorkflowGuide()
@@ -164,11 +165,6 @@ function getNextInChain(currentPath: string): { path: string; pipeline: string }
 const isGenerating = computed(() =>
   chatStore.isStreaming || fileGen.isGenerating.value || taskQueue.isProcessing.value || guide.isRunning.value,
 )
-
-/** 有任务在等待 L1 确认，或者工作流已暂停 */
-const isWaitingForConfirm = computed(() => {
-  return guide.isPaused.value || useTaskStore().tasks.some(t => t.status === 'waiting')
-})
 
 /** 显示停止按钮：正在流式输出、管线执行中、或 L2 自动推进中 */
 const showStopButton = computed(() =>
@@ -331,7 +327,6 @@ async function handleGenerateNext() {
   }
 
   // 打开下一个文件
-  const fileStore = useFileStore()
   const node = { name: next.path.split('/').pop() || '', path: next.path, type: 'file' as const }
   fileStore.openFile(node)
   editorStore.setCurrentFile(next.path)

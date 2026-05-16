@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import api from '@/services/api'
 import { useEditorStore } from './editor'
 import { useTaskStore } from './task'
-import { useFileMetaStore } from './fileMeta'
 import type { BatchGenerateRequest, BatchGenerateResponse, ExtractTaskRequest, ExtractTaskResponse } from '@/types/chat'
 
 export const useGenerationStore = defineStore('generation', () => {

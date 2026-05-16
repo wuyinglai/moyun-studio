@@ -17,12 +17,26 @@ class ProjectCreateRequest(BaseModel):
     author: str = Field(default="", description="作者名")
 
 
+class ProjectUpdateRequest(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100, description="项目名称")
+    genre: Optional[str] = Field(default=None, description="题材")
+    theme: Optional[str] = Field(default=None, description="主题")
+    tone: Optional[str] = Field(default=None, description="基调")
+    background: Optional[str] = Field(default=None, description="故事背景")
+    writing_style: Optional[str] = Field(default=None, description="写作风格")
+    target_word_count: Optional[int] = Field(default=None, ge=10000, description="目标字数")
+    author: Optional[str] = Field(default=None, description="作者名")
+
+
 class ProjectInfo(BaseModel):
     project_id: str
     name: str
+    author: str = ""
     genre: str = ""
     theme: str = ""
     tone: str = ""
+    background: str = ""
+    writing_style: str = ""
     target_word_count: int = 0
     completion_rate: float = 0.0  # 0.0 ~ 1.0
     total_words: int = 0

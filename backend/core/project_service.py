@@ -150,9 +150,12 @@ class ProjectService:
         return ProjectInfo(
             project_id=meta["project_id"],
             name=meta.get("name", project_dir.name),
+            author=meta.get("author", ""),
             genre=meta.get("genre", ""),
             theme=meta.get("theme", ""),
             tone=meta.get("tone", ""),
+            background=meta.get("background", ""),
+            writing_style=meta.get("writing_style", ""),
             target_word_count=meta.get("target_word_count", 0),
             completion_rate=round(rate, 4),
             total_words=words,

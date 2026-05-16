@@ -20,7 +20,7 @@
       <!-- 步骤列表 -->
       <div v-if="!wfError" class="wf-steps">
         <div
-          v-for="(step, idx) in guide.steps.value"
+          v-for="step in guide.steps.value"
           :key="step.id"
           class="wf-step"
           :class="[step.status]"
@@ -111,7 +111,6 @@ import { useNotificationStore } from '@/stores/notification'
 import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
-import { useLLMStore } from '@/stores/llm'
 
 const rightPanelStore = useRightPanelStore()
 const editorStore = useEditorStore()
@@ -120,7 +119,6 @@ const notification = useNotificationStore()
 const fileStore = useFileStore()
 const fileGen = useFileGeneration()
 const guide = useWorkflowGuide()
-const llmStore = useLLMStore()
 
 const localPrompt = ref('')
 const promptTextareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -151,11 +149,6 @@ function handleDrop(e: DragEvent) {
 // 工作流状态
 const workflowLabel = computed(() => guide.workflowLabel.value)
 const wfError = computed(() => guide.error.value)
-const canStart = computed(() => !!projectStore.currentProject && !!editorStore.currentFilePath)
-const hasDoneSteps = computed(() => guide.steps.value.some(s => s.status === 'done' || s.status === 'waiting'))
-const hasWaitingStep = computed(() => guide.steps.value.some(s => s.status === 'waiting'))
-const l1PauseText = '✅ 已完成，请审核内容，然后点击顶部工具栏「📄 写下一部分」继续下一步'
-const l2PauseText = '⏸ 已暂停，点击顶部工具栏「📄 写下一部分」继续'
 
 function stepTooltip(step: { label: string; pipeline?: string; type: string }): string {
   if (step.type === 'pipeline' && step.pipeline) {
@@ -176,47 +169,6 @@ function stepIcon(status: string): string {
     case 'waiting': return '⏸'
     default: return '□'
   }
-}
-
-/** 一键开始 */
-async function handleStartWorkflow() {
-  if (!llmStore.isConnected) {
-    notification.warning('请先配置 LLM 连接')
-    return
-  }
-  const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
-  const filePath = editorStore.currentFilePath
-  if (!projectId || !filePath) {
-    notification.warning('请先打开一个文件和项目')
-    return
-  }
-  await guide.start(projectId, filePath)
-}
-
-/** 单步执行 */
-async function handleRunStep(idx: number) {
-  if (!llmStore.isConnected) {
-    notification.warning('请先配置 LLM 连接')
-    return
-  }
-  const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
-  const filePath = editorStore.currentFilePath
-  if (!projectId || !filePath) {
-    notification.warning('请先打开一个文件和项目')
-    return
-  }
-
-  guide.reset()
-  guide.currentStepIndex.value = idx
-  await guide.start(projectId, filePath)
-}
-
-function handleStopWorkflow() {
-  guide.stopAfterCurrent()
-}
-
-function handleReset() {
-  guide.reset()
 }
 
 // 从 prompt 文本中提取 @{path} 引用
@@ -289,12 +241,20 @@ watch(
   },
 )
 
-function openReferencedFile(path: string) {
+async function openReferencedFile(path: string) {
   const name = path.split('/').pop() || path
   const node = { name, path, type: 'file' as const }
-  fileStore.openFile(node)
-  editorStore.setCurrentFile(path)
-  notification.info(`已打开: ${path}`)
+  const projectId = projectStore.currentProject?.id
+  if (!projectId) return
+  try {
+    const fileData = await fileStore.readFile(projectId, path)
+    fileStore.openFile(node)
+    editorStore.loadContent(path, fileData.content || '')
+    editorStore.setCurrentFile(path)
+    notification.info(`已打开: ${path}`)
+  } catch {
+    notification.error(`无法打开: ${path}`)
+  }
 }
 
 function handlePromptInput() {

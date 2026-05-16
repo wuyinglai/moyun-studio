@@ -86,7 +86,7 @@ async function loadFiles() {
 function _flattenTree(nodes: any[], prefix: string): FileItem[] {
   const result: FileItem[] = []
   for (const node of nodes) {
-    const path = prefix ? `${prefix}/${node.name}` : node.name
+    const path = node.path || (prefix ? `${prefix}/${node.name}` : node.name)
     if (node.type === 'file') {
       result.push({ name: node.name, path, type: 'file' })
     } else if (node.children) {
@@ -102,9 +102,13 @@ function close() {
   selectedIndex.value = 0
 }
 
-function openFile(file: FileItem) {
+async function openFile(file: FileItem) {
+  const projectId = projectStore.currentProject?.id
+  if (!projectId) return
   const node = { name: file.name, path: file.path, type: 'file' as const }
+  const fileData = await fileStore.readFile(projectId, file.path)
   fileStore.openFile(node)
+  editorStore.loadContent(file.path, fileData.content || '')
   editorStore.setCurrentFile(file.path)
   close()
 }

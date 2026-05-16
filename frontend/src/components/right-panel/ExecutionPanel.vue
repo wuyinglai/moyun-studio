@@ -96,15 +96,14 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
 import { useNotificationStore } from '@/stores/notification'
-import { useFileStore } from '@/stores/file'
 import { useDiffSummary } from '@/composables/useDiffSummary'
 import { cancelQueuedTask } from '@/composables/useTaskQueue'
+import api from '@/services/api'
 
 const diffSummary = useDiffSummary()
 
 const taskStore = useTaskStore()
 const notification = useNotificationStore()
-const fileStore = useFileStore()
 
 const logContainer = ref<HTMLElement | null>(null)
 
@@ -143,7 +142,12 @@ function formatTime(timestamp: number): string {
 
 async function handleCancelTask(taskId: string) {
   try {
-    await fileStore.cancelTask(taskId)
+    try {
+      await api.post(`/tasks/${taskId}/cancel`)
+    } catch {
+      // 本地临时任务可能尚未注册到后端，仍允许取消前端队列状态。
+    }
+    taskStore.cancelTask(taskId)
     cancelQueuedTask(taskId)
     notification.warning('任务已取消')
   } catch {

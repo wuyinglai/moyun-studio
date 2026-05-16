@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { useFileStore } from '@/stores/file'
 import { useFileMetaStore } from '@/stores/fileMeta'
+import { useNotificationStore } from '@/stores/notification'
 
 // Module-level singleton refs -- shared across all consumers
 const _isGenerating = ref(false)

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useLLMStore } from './llm'
+import { useTaskStore } from './task'
 
 /**
  * 解析 SSE 响应流，逐行提取 data: JSON 中的 delta 内容

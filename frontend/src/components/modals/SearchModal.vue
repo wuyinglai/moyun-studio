@@ -123,9 +123,13 @@ function highlight(content: string): string {
   }
 }
 
-function jumpToResult(result: SearchResult) {
+async function jumpToResult(result: SearchResult) {
+  const projectId = projectStore.currentProject?.id
+  if (!projectId) return
   const node = { name: result.file.split('/').pop() || '', path: result.file, type: 'file' as const }
+  const fileData = await fileStore.readFile(projectId, result.file)
   fileStore.openFile(node)
+  editorStore.loadContent(result.file, fileData.content || '')
   editorStore.setCurrentFile(result.file)
   // 通知编辑器滚动到对应行
   window.dispatchEvent(new CustomEvent('editor:jump-to-line', { detail: { line: result.line } }))

@@ -16,10 +16,12 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 
 from backend.config import Settings, get_settings
+from backend.core.exceptions import ProjectNotFoundError
 from backend.core.project_service import ProjectService
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     ProjectCreateRequest,
+    ProjectUpdateRequest,
     ProjectInfo,
     ProjectListResponse,
     ProjectStatsResponse,
@@ -111,6 +113,36 @@ async def get_project(
         logger.error("项目meta损坏", extra={"project_id": project_id})
         raise ProjectNotFoundError(project_id)
     return ApiResponse.ok(info)
+
+
+@router.put("/projects/{project_id}", response_model=ApiResponse[ProjectInfo])
+async def update_project(
+    project_id: str,
+    req: ProjectUpdateRequest,
+    settings: Settings = Depends(get_settings),
+):
+    """更新项目元数据"""
+    svc = ProjectService(settings)
+    project_dir = settings.projects_path / project_id
+    if not project_dir.exists():
+        raise ProjectNotFoundError(project_id)
+
+    meta = svc._load_meta(project_dir)
+    if meta is None:
+        logger.error("项目meta损坏", extra={"project_id": project_id})
+        raise ProjectNotFoundError(project_id)
+
+    updates = req.model_dump(exclude_unset=True)
+    for key, value in updates.items():
+        if value is not None:
+            meta[key] = value
+    meta["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await asyncio.to_thread(svc.write_meta, project_dir, meta)
+
+    info = svc.get_project_info(project_dir)
+    if info is None:
+        raise ProjectNotFoundError(project_id)
+    return ApiResponse.ok(info, message="项目已更新")
 
 
 @router.post("/projects/{project_id}/recalculate-stats", response_model=ApiResponse[ProjectStatsResponse])
