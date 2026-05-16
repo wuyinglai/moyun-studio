@@ -174,15 +174,13 @@ export function useFileGeneration() {
       try {
         const fileStore = useFileStore()
         const result = await fileStore.readFile(projectId, filePathForEmitter)
-        console.log('[DIAG] runPipeline reload: path=', filePathForEmitter, 'hasContent=', !!result?.content, 'contentLen=', result?.content?.length)
         if (result?.content) {
           editorStore.loadContent(filePathForEmitter, result.content)
           // 强制标记为外部更新，触发 CodeMirror watcher 刷新编辑器
           editorStore.contentSource = 'external'
-          console.log('[DIAG] runPipeline reload: loadContent done, contentSource=external')
         }
-      } catch (e: any) {
-        console.log('[DIAG] runPipeline reload error:', e.message)
+      } catch {
+        // 文件可能不存在或读取失败，静默忽略
       }
 
     } catch (e: any) {
