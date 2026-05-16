@@ -424,10 +424,10 @@ class PipelineRunner:
                     return
 
         # 保存最终输出到文件
-        # 注意：最后一步如果是 diff 摘要步骤，输出是修改摘要而非实际内容，
+        # 注意：最后一步如果是 diff/update_story_state，输出不是章节内容，
         # 此时应使用上一步（润色/改写/生成）的输出作为文件内容
         last_step = pipeline.steps[-1]
-        if last_step.id == "diff" and len(pipeline.steps) >= 2:
+        if last_step.id in ("diff", "update_story_state") and len(pipeline.steps) >= 2:
             final_output = step_outputs.get(pipeline.steps[-2].id, "")
         else:
             final_output = step_outputs.get(last_step.id, "")
@@ -502,52 +502,6 @@ class PipelineRunner:
             await self.file_service.write_file(f"{project_id}/recent-context.md", new_content, None)
         except Exception as e:
             logger.warning("更新 recent-context.md 失败: %s", e)
-
-        # — 更新 story-state.md：AI 分析章节内容，提取结构化故事状态 —
-        if "/sec-" in target_file and content:
-            try:
-                existing_state = ""
-                try:
-                    existing_state, _ = await self.file_service.read_file(f"{project_id}/story-state.md")
-                except Exception:
-                    pass
-
-                story_prompt = f"""你是一名故事分析助手。分析以下章节内容，更新故事全局状态。
-
-## 已有状态
-{existing_state[:1000] if existing_state else "（无）"}
-
-## 新章节内容
-{content[:2000]}
-
-## 要求
-请提取并更新以下四个维度的状态（Markdown 格式）：
-
-### 主角状态
-- 当前位置、当前目标、心态变化、能力成长
-
-### 势力关系
-- 本章出现的势力/人物之间的关系变化
-
-### 伏笔追踪
-- 新设伏笔、已回收伏笔
-
-### 主线进度
-- 故事主线推进到哪一步，完成了什么里程碑
-
-直接输出更新后的完整故事状态，保留已有状态中有价值的信息并合并新内容。"""
-
-                messages = [{"role": "user", "content": story_prompt}]
-                analyzed = ""
-                async for chunk in self.llm_service.complete(messages, timeout=60):
-                    analyzed += chunk
-
-                if analyzed.strip():
-                    final = f"# 故事状态\n\n{analyzed.strip()}"
-                    await self.file_service.write_file(f"{project_id}/story-state.md", final, None)
-                    logger.info("story-state.md 已通过 AI 更新: %s", target_file)
-            except Exception as e:
-                logger.warning("AI 更新 story-state.md 失败: %s", e)
 
         # — 创建修改日志（仅当内容有变化且目标文件是章节文件） —
         if original_content and content != original_content and "/sec-" in target_file:

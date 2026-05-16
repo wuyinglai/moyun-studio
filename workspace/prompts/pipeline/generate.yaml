@@ -25,3 +25,8 @@ steps:
     label: 优化节奏
     prompt: pipeline/generate/rhythm
     fallback: logic
+  - id: update_story_state
+    label: 更新故事状态
+    prompt: pipeline/generate/update_story_state
+    fallback: rhythm
+    output: story-state.md
