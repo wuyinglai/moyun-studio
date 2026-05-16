@@ -201,8 +201,13 @@ class SSEService {
       case 'file-updated':
         // 文件更新 - 更新编辑器内容
         if (data.path) {
-          editorStore.updateContent(data.path, data.content)
-          taskStore.addLog('info', `文件已更新: ${data.path}`)
+          // SSE 事件路径含 project_id 前缀（如 "7e7273e0/outline.md"），需剥离
+          const projectId = useProjectStore().currentProject?.id
+          const cleanPath = projectId && data.path.startsWith(projectId + '/')
+            ? data.path.slice(projectId.length + 1)
+            : data.path
+          editorStore.updateContent(cleanPath, data.content)
+          taskStore.addLog('info', `文件已更新: ${cleanPath}`)
         }
         break
 
