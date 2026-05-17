@@ -41,6 +41,8 @@ workspace/
 .claude/
 .sisyphus/
 .moyun/
+.omm/
+.gitnexus/
 
 # 日志
 *.log
