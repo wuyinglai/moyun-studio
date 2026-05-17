@@ -1,0 +1,49 @@
+# 墨韵项目 — ruff 配置
+# 使用方法: ruff check .    (检查)
+#          ruff check --fix (自动修复)
+
+# 目标 Python 版本
+target-version = "py310"
+
+[lint]
+# 启用的规则集
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes (未使用变量、未定义名称等)
+    "I",      # isort (import 排序)
+    "N",      # pep8-naming (命名规范)
+    "B",      # flake8-bugbear (常见 bug 检测)
+    "SIM",    # flake8-simplify (简化写法建议)
+    "RUF",    # ruff 特有规则
+    "UP",     # pyupgrade (推荐使用新语法)
+]
+
+# 忽略的规则
+ignore = [
+    "E501",   # 行长度 (FastAPI 路由签名通常较长)
+    "B008",   # 不在参数默认值中调用函数 (FastAPI Depends 是惯用法)
+    "SIM108", # 推荐三元表达式，但多行 if/else 更可读
+]
+
+# 特定文件/目录的规则覆盖
+[lint.per-file-ignores]
+"backend/api/**/*.py" = [
+    "RUF001", # 路由中用到的字符串触发"含混淆字符"误报
+]
+"backend/tests/**/*.py" = [
+    "S101",   # 测试中允许 assert
+    "F811",   # pytest fixture 重定义
+]
+
+# isort 配置
+[lint.isort]
+known-first-party = ["backend"]
+force-sort-within-sections = true
+
+# 格式化配置
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
