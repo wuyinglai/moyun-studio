@@ -1,32 +1,7 @@
 name: generate
-label: 生成
+label: 正文撰写
 steps:
-  - id: context
-    label: 整合上下文
-    prompt: pipeline/generate/context
+  - id: write
+    label: 写作
+    prompt: pipeline/generate/write
     fallback: null
-  - id: outline
-    label: 大纲对齐
-    prompt: pipeline/generate/outline
-    fallback: context
-  - id: draft
-    label: 写作初稿
-    prompt: pipeline/generate/draft
-    fallback: outline
-  - id: depai
-    label: 去AI味
-    prompt: pipeline/generate/depai
-    fallback: draft
-  - id: logic
-    label: 逻辑修正
-    prompt: pipeline/generate/logic
-    fallback: depai
-  - id: rhythm
-    label: 优化节奏
-    prompt: pipeline/generate/rhythm
-    fallback: logic
-  - id: update_story_state
-    label: 更新故事状态
-    prompt: pipeline/generate/update_story_state
-    fallback: rhythm
-    output: story-state.md

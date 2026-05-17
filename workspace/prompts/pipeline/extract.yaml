@@ -1,19 +1,23 @@
 name: extract
 label: 提取
 steps:
-  - id: worldbuilding
-    label: 世界观
-    prompt: pipeline/extract/worldbuilding-incremental
-    fallback: null
   - id: characters
-    label: 角色关系
-    prompt: pipeline/extract/characters-incremental
+    label: 提取角色
+    prompt: extract/character/main
     fallback: null
+    output: characters/main.md
   - id: plots
-    label: 情节场景
-    prompt: pipeline/extract/plots-incremental
+    label: 提取情节
+    prompt: extract/plot/main
     fallback: null
+    output: materials/extracted/plots.md
+  - id: scenes
+    label: 提取场景
+    prompt: extract/scene/main
+    fallback: null
+    output: materials/extracted/scenes.md
   - id: summary
     label: 章节摘要
-    prompt: pipeline/extract/summary-incremental
+    prompt: extract/summary/main
     fallback: null
+    output: materials/extracted/summary.md

@@ -32,7 +32,7 @@ class PromptUpdateRequest(BaseModel):
     content: str
 
 
-@router.get("/raw", response_model=ApiResponse[dict])
+@router.get("/raw-file", response_model=ApiResponse[dict])
 async def get_raw_prompt(
     path: str = Query(..., description="相对于 prompts 目录的文件路径"),
     settings: Settings = Depends(get_settings),

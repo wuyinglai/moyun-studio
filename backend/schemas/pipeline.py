@@ -10,6 +10,7 @@ class PipelineStepDef(BaseModel):
     prompt: str  # prompt 模板路径，如 pipeline/polish/depai
     fallback: str | None = None  # 失败时回退到哪步的输出变量名
     output: str | None = None  # 可选：步骤完成后将输出写入此文件（相对于 project_id）
+    confirm: bool = True  # 是否需要用户确认后才继续下一步
 
 
 class PipelineDef(BaseModel):
@@ -59,6 +60,7 @@ class StepDetail(BaseModel):
     label: str
     prompt_content: str
     fallback: str | None = None
+    confirm: bool = True
 
 
 class PipelineDetail(BaseModel):

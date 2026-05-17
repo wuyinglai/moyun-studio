@@ -632,15 +632,23 @@ class PipelineRunner:
         pipeline = self.load_pipeline(name)
         steps = []
         for step in pipeline.steps:
-            prompt_path = self._get_step_prompt_path(name, step.id)
+            # 优先用 step.prompt 路径（实际用于生成的模板）
             prompt_content = ""
-            if prompt_path.exists():
-                prompt_content = prompt_path.read_text(encoding="utf-8")
+            if step.prompt:
+                prompt_path = self.prompts_path / f"{step.prompt}.md"
+                if prompt_path.exists():
+                    prompt_content = prompt_path.read_text(encoding="utf-8")
+            # 如果 step.prompt 指向 pipeline 内置路径，补充尝试
+            if not prompt_content:
+                alt_path = self._get_step_prompt_path(name, step.id)
+                if alt_path.exists():
+                    prompt_content = alt_path.read_text(encoding="utf-8")
             steps.append({
                 "id": step.id,
                 "label": step.label,
                 "prompt_content": prompt_content,
                 "fallback": step.fallback,
+                "confirm": step.confirm,
             })
         return {
             "name": pipeline.name,
