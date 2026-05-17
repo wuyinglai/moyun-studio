@@ -91,7 +91,6 @@ import { useNotificationStore } from '@/stores/notification'
 import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
 import { useRightPanelStore } from '@/stores/rightPanel'
-import { guessPromptType } from '@/utils/promptTypes'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { usePipelineStore } from '@/stores/pipeline'
@@ -101,7 +100,7 @@ import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
 import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
 import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 import { useFileMetaStore } from '@/stores/fileMeta'
-import { guessPromptType } from '@/utils/promptTypes'
+import { guessPromptType, getPipelineForFile } from '@/utils/promptTypes'
 
 const chatStore = useChatStore()
 const historyStore = useHistoryStore()
@@ -122,12 +121,16 @@ const { isPreviewMode, togglePreview } = useMarkdownPreview()
 const _l2StopRequested = ref(false)
 const _l2AutoRunning = ref(false)
 
+/** 当前在 PROJECT_CHAIN 中的位置（用于 silent step 自动推进时不受 editor store 干扰） */
+let _chainIndex = -1
+
 function getAutoMode(): string {
   return localStorage.getItem('moyun-auto-mode') || 'L1'
 }
 
 /** 项目生成链（文件名 → 对应 pipeline） */
 const PROJECT_CHAIN: Array<{ path: string; pipeline: string }> = [
+  { path: 'style-guide.md', pipeline: 'style-guide' },
   { path: 'blueprint.md', pipeline: 'blueprint' },
   { path: 'outline.md', pipeline: 'outline' },
   { path: 'materials/worldbuilding.md', pipeline: 'worldbuilding' },
@@ -139,6 +142,7 @@ function getNextInChain(currentPath: string): { path: string; pipeline: string }
   // 章节文件（sec-NNN.md）→ 用已有的 getNextSectionPath + generate pipeline
   const secMatch = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
   if (secMatch) {
+    _chainIndex = -1
     const nextPath = getNextSectionPath(currentPath)
     if (nextPath) return { path: nextPath, pipeline: 'generate' }
     return null
@@ -147,16 +151,19 @@ function getNextInChain(currentPath: string): { path: string; pipeline: string }
   // 在项目链中 → 找下一个
   const idx = PROJECT_CHAIN.findIndex(item => currentPath.endsWith(item.path))
   if (idx >= 0 && idx < PROJECT_CHAIN.length - 1) {
+    _chainIndex = idx + 1
     return PROJECT_CHAIN[idx + 1]
   }
 
   // 在链中且是最后一项 → 过渡到第一章
   if (idx === PROJECT_CHAIN.length - 1) {
+    _chainIndex = -1
     return { path: 'chapters/vol-01/ch-001/sec-001.md', pipeline: 'generate' }
   }
 
   // 不在链中也不是章节 → 从链头开始
   if (!secMatch && !PROJECT_CHAIN.some(i => currentPath.endsWith(i.path))) {
+    _chainIndex = 0
     return PROJECT_CHAIN[0]
   }
 
@@ -329,18 +336,27 @@ async function handleGenerateNext() {
 
   // 从当前文件路径推导下一个文件和 pipeline
   const next = getNextInChain(filePath)
+  console.log('[handleGenerateNext] currentFilePath:', filePath, '→ next:', next)
   if (!next) {
     notification.warning('已无下一个可生成的文件')
     return
   }
 
-  // 打开下一个文件
-  const node = { name: next.path.split('/').pop() || '', path: next.path, type: 'file' as const }
-  fileStore.openFile(node)
-  editorStore.setCurrentFile(next.path)
+  // 检查管线的 confirm 标记（第一步是否需用户确认）
+  await pipelineStore.fetchPipelineDetail(next.pipeline)
+  const needConfirm = pipelineStore.currentDetail?.steps?.[0]?.confirm !== false
+  console.log('[handleGenerateNext] needConfirm:', needConfirm)
 
-  // 加载新文件的 prompt 到右侧面板
-  loadFilePrompt(projectId, next.path)
+  if (needConfirm) {
+    // confirm=true：打开文件到编辑器供流式输出
+    const node = { name: next.path.split('/').pop() || '', path: next.path, type: 'file' as const }
+    fileStore.openFile(node)
+    editorStore.setCurrentFile(next.path)
+    console.log('[handleGenerateNext] opened file:', next.path)
+
+    // 加载新文件的 prompt 到右侧面板
+    loadFilePrompt(projectId, next.path)
+  }
 
   // 同步更新 workflow guide 步骤状态
   syncGuideStep(next.path, 'running')
@@ -350,6 +366,38 @@ async function handleGenerateNext() {
 
   // pipeline 完成 → 更新 guide 步骤状态为 done
   syncGuideStep(next.path, 'done')
+
+  // confirm=false：后台静默完成，自动继续下一步
+  if (!needConfirm) {
+    console.log('[handleGenerateNext] silent step done, _chainIndex:', _chainIndex, 'next path:', next.path)
+    // 用 _chainIndex 直接推进到链中下一项（不依赖 editorStore.currentFilePath）
+    const nextIdx = PROJECT_CHAIN.findIndex(item => item.path === next.path)
+    if (nextIdx >= 0 && nextIdx < PROJECT_CHAIN.length - 1) {
+      const nextNext = PROJECT_CHAIN[nextIdx + 1]
+      console.log('[handleGenerateNext] auto-advancing to:', nextNext)
+      // 打开下一文件、运行 pipeline（confirm=true 的正常流程）
+      const node2 = { name: nextNext.path.split('/').pop() || '', path: nextNext.path, type: 'file' as const }
+      fileStore.openFile(node2)
+      editorStore.setCurrentFile(nextNext.path)
+      loadFilePrompt(projectId, nextNext.path)
+      syncGuideStep(nextNext.path, 'running')
+      await fileGen.runPipeline(projectId, nextNext.path, nextNext.pipeline, extraVars)
+      syncGuideStep(nextNext.path, 'done')
+      // L1 pause or L2 auto
+      if (getAutoMode() === 'L2') {
+        if (_l2StopRequested.value) {
+          _l2StopRequested.value = false
+          _l2AutoRunning.value = false
+          notification.info('已停止自动生成')
+        } else {
+          _l2AutoRunning.value = true
+          setTimeout(() => handleGenerateNext(), 800)
+        }
+      }
+      // L1: 不继续，等待用户点"写下一部分"
+    }
+    return
+  }
 
   // L2: 完成后自动推进下一节
   if (getAutoMode() === 'L2') {
@@ -376,18 +424,19 @@ async function handleGenerateNext() {
 
 /** 根据当前生成的路径，更新 workflow guide 对应步骤的状态 */
 const GUIDE_STEP_MAP: Record<string, number> = {
-  'blueprint.md': 1,
-  'outline.md': 2,
-  'worldbuilding.md': 3,
-  'characters/main.md': 4,
+  'style-guide.md': 1,
+  'blueprint.md': 2,
+  'outline.md': 3,
+  'worldbuilding.md': 4,
+  'characters/main.md': 5,
 }
 
 function syncGuideStep(path: string, status: 'running' | 'done') {
   // 章节文件 → loop 步骤
   if (path.match(/sec-\d+\.md$/)) {
-    if (guide.steps.value[5]) guide.steps.value[5].status = status as any
+    if (guide.steps.value[6]) guide.steps.value[6].status = status as any
     if (status === 'running') {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as any
       }
     }
@@ -408,7 +457,23 @@ function syncGuideStep(path: string, status: 'running' | 'done') {
 }
 
 /** 加载文件的 prompt 到右侧面板 */
-function loadFilePrompt(projectId: string, filePath: string) {
+async function loadFilePrompt(projectId: string, filePath: string) {
+  // 优先从 pipeline 定义加载
+  const pipelineName = getPipelineForFile(filePath)
+  if (pipelineName) {
+    try {
+      await pipelineStore.fetchPipelineDetail(pipelineName)
+      const step = pipelineStore.currentDetail?.steps?.[0]
+      if (step?.prompt_content) {
+        editorStore.setFilePrompt(filePath, step.prompt_content)
+        rightPanelStore.updatePrompt(step.prompt_content)
+        return
+      }
+    } catch {
+      // fallback to guessPromptType
+    }
+  }
+
   const promptType = guessPromptType(filePath)
   if (promptType) {
     fetch(`/api/prompts/${promptType}?project_id=${projectId}`)

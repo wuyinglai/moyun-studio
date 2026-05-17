@@ -60,6 +60,7 @@ const { isPreviewMode, previewHtml, updatePreview } = useMarkdownPreview()
 
 const codemirrorEl = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
+let applyingExternalUpdate = false
 
 const moyunTheme = EditorView.theme({
   '&': {
@@ -113,6 +114,7 @@ function createEditor(content: string) {
 
   const updateListener = EditorView.updateListener.of((update) => {
     if (update.docChanged) {
+      if (applyingExternalUpdate) return
       const newContent = update.state.doc.toString()
       handleContentChange(newContent)
     }
@@ -181,9 +183,14 @@ watch(
       const scroller = editorView.scrollDOM
       const prevScrollTop = scroller.scrollTop
 
-      editorView.dispatch({
-        changes: { from: 0, to: current.length, insert: content },
-      })
+      applyingExternalUpdate = true
+      try {
+        editorView.dispatch({
+          changes: { from: 0, to: current.length, insert: content },
+        })
+      } finally {
+        applyingExternalUpdate = false
+      }
       editorStore.markLocalEdit()
 
       // AI 生成时保持滚动位置不变，防止编辑框跳动

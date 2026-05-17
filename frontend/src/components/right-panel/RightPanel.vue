@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import PromptPanel from './PromptPanel.vue'
@@ -74,6 +74,12 @@ const tabs = [
 onMounted(() => {
   storyPanelRef.value?.loadState()
   styleGuidePanelRef.value?.loadGuide()
+})
+
+// 切换到"文风"tab 时重新加载内容（pipeline 可能刚写完 style-guide.md）
+watch(activeTab, (tab) => {
+  if (tab === 'style') styleGuidePanelRef.value?.loadGuide()
+  if (tab === 'story') storyPanelRef.value?.loadState()
 })
 </script>
 

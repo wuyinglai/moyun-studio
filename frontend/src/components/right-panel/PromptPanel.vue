@@ -44,9 +44,13 @@
     </div>
 
     <!-- 生成状态提示 -->
-    <div v-if="guide.isRunning.value" class="generation-status">
+    <div v-if="(guide.isRunning.value && !guide.isPaused.value) || fileGen.isGenerating.value" class="generation-status">
       <i class="fa-solid fa-spinner fa-spin"></i>
       <span>AI 正在生成...</span>
+    </div>
+    <div v-else-if="guide.isPaused.value" class="generation-status generation-paused">
+      <i class="fa-solid fa-pause"></i>
+      <span>已完成，点「写下一部分」继续</span>
     </div>
     <div v-else-if="fileGen.currentPrompt.value" class="generation-status generation-done">
       <i class="fa-solid fa-check"></i>
@@ -74,34 +78,25 @@
     <!-- Prompt 编辑区 -->
     <div class="editor-section">
       <div class="editor-label">{{ isFreeMode ? '提示词（自由编辑）' : '当前步骤 Prompt（可直接编辑）' }}</div>
-      <a-textarea
-        ref="promptTextareaRef"
-        v-model:value="localPrompt"
-        :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"
-        :auto-size="{ minRows: 8, maxRows: 16 }"
-        @input="handlePromptInput"
-        @drop.stop.prevent="handleDrop"
-        @dragover.prevent
-        class="prompt-editor"
-      />
-      <!-- @{path} 引用文件列表 -->
-      <div v-if="fileRefs.length > 0" class="file-refs">
-        <div class="file-refs-label">引用文件</div>
-        <div class="file-refs-list">
-          <a
-            v-for="ref in fileRefs"
-            :key="ref.path"
-            class="file-ref-chip"
-            @click="openReferencedFile(ref.path)"
-            title="点击打开该文件"
-          >
-            <i class="fa-solid fa-file-lines"></i>
-            {{ ref.path }}
-          </a>
-        </div>
+      <div class="prompt-editor-wrap">
+        <!-- 高亮层 -->
+        <div ref="highlightRef" class="prompt-highlight" v-html="highlightedText" :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"></div>
+        <!-- 编辑层（透明文本，仅显示光标） -->
+        <a-textarea
+          ref="promptTextareaRef"
+          v-model:value="localPrompt"
+          :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"
+          :auto-size="{ minRows: 8, maxRows: 16 }"
+          @input="handlePromptInput"
+          @drop.stop.prevent="handleDrop"
+          @dragover.prevent
+          @click="handleTextareaClick"
+          @scroll="syncHighlightScroll"
+          class="prompt-editor"
+        />
       </div>
       <div class="editor-hint">
-        提示：使用 <code>@{文件路径}</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量，也可从文件树拖拽文件到此处
+        提示：使用 <code>@{文件路径}</code> 引用文件，<code>{{ varHint }}</code> 使用系统变量，也可从文件树拖拽文件到此处；点击高亮引用可直接打开文件
       </div>
       <button
         class="btn-regenerate"
@@ -136,6 +131,7 @@ const guide = useWorkflowGuide()
 
 const localPrompt = ref('')
 const promptTextareaRef = ref<HTMLTextAreaElement | null>(null)
+const highlightRef = ref<HTMLElement | null>(null)
 const lastPromptSnapshot = ref('')
 const varHint = '{{变量名}}'
 const isFreeMode = ref(true)
@@ -213,6 +209,63 @@ const fileRefs = computed(() => {
   }
   return refs
 })
+
+/** 将 @{path} 和 {% include '...' %} 高亮为 <mark> */
+const highlightedText = computed(() => {
+  let html = localPrompt.value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  // 高亮 @{path}
+  html = html.replace(
+    /@\{([^}]+)\}/g,
+    '<mark class="ref-highlight" data-ref="$1">@{$1}</mark>',
+  )
+  // 高亮 {% include '...' %}
+  html = html.replace(
+    /\{%\s+include\s+'([^']+)'\s*%\}/g,
+    '<mark class="ref-highlight" data-ref="$1">{% include \'$1\' %}</mark>',
+  )
+  // 保留换行
+  html = html.replace(/\n/g, '<br>')
+  return html
+})
+
+/** 点击高亮引用时打开对应文件 */
+function handleTextareaClick(e: MouseEvent) {
+  const ta = e.target as HTMLTextAreaElement
+  const pos = ta.selectionStart
+  const text = localPrompt.value
+
+  // 遍历所有 @{path} 引用
+  const atRegex = /@\{([^}]+)\}/g
+  let match: RegExpExecArray | null
+  while ((match = atRegex.exec(text)) !== null) {
+    if (pos >= match.index && pos <= match.index + match[0].length) {
+      openReferencedFile(match[1])
+      return
+    }
+  }
+
+  // 遍历所有 {% include '...' %} 引用
+  const incRegex = /\{%\s+include\s+'([^']+)'\s*%\}/g
+  while ((match = incRegex.exec(text)) !== null) {
+    if (pos >= match.index && pos <= match.index + match[0].length) {
+      openReferencedFile(match[1])
+      return
+    }
+  }
+}
+
+/** 同步高亮层滚动与 textarea 一致 */
+const highlightScrollRef = ref(0)
+function syncHighlightScroll(e: Event) {
+  const ta = e.target as HTMLTextAreaElement
+  if (highlightRef.value) {
+    highlightRef.value.scrollTop = ta.scrollTop
+    highlightRef.value.scrollLeft = ta.scrollLeft
+  }
+}
 
 const isPipelineRunning = computed(() => rightPanelStore.isPipelineRunning)
 
@@ -299,34 +352,48 @@ watch(
   },
 )
 
+/** 在文件树中递归查找路径是否存在 */
+function fileExistsInTree(nodes: FileNode[], path: string): boolean {
+  for (const n of nodes) {
+    if (n.path === path) return true
+    if (n.children?.length && fileExistsInTree(n.children, path)) return true
+  }
+  return false
+}
+
 async function openReferencedFile(path: string) {
   const name = path.split('/').pop() || path
   const node = { name, path, type: 'file' as const }
   const projectId = projectStore.currentProject?.id
   if (!projectId) return
-  // 先尝试项目目录，如果是 blocks/ 等 prompt 模板则走 prompts API
-  try {
-    const fileData = await fileStore.readFile(projectId, path)
-    fileStore.openFile(node)
-    editorStore.loadContent(path, fileData.content || '')
-    editorStore.setCurrentFile(path)
-    notification.info(`已打开: ${path}`)
-  } catch {
-    // 项目目录未找到，尝试从 prompts 模板目录读取
+  // 项目文件树中存在 → 从项目目录读取
+  if (fileExistsInTree(fileStore.tree, path)) {
     try {
-      const resp = await fetch(`/api/prompts/raw?path=${encodeURIComponent(path)}`)
-      const json = await resp.json()
-      if (json?.data?.content) {
-        fileStore.openFile(node)
-        editorStore.loadContent(path, json.data.content)
-        editorStore.setCurrentFile(path)
-        notification.info(`已打开: ${path}`)
-      } else {
-        notification.error(`无法打开: ${path}`)
-      }
+      const fileData = await fileStore.readFile(projectId, path)
+      fileStore.openFile(node)
+      editorStore.loadContent(path, fileData.content || '')
+      editorStore.setCurrentFile(path)
+      notification.info(`已打开: ${path}`)
+      return
     } catch {
       notification.error(`无法打开: ${path}`)
+      return
     }
+  }
+  // 项目目录不存在 → 从 prompts 模板目录读取
+  try {
+    const resp = await fetch(`/api/prompts/raw-file?path=${encodeURIComponent(path)}`)
+    const json = await resp.json()
+    if (json?.data?.content) {
+      fileStore.openFile(node)
+      editorStore.loadContent(path, json.data.content)
+      editorStore.setCurrentFile(path)
+      notification.info(`已打开: ${path}`)
+    } else {
+      notification.error(`无法打开: ${path}`)
+    }
+  } catch {
+    notification.error(`无法打开: ${path}`)
   }
 }
 
@@ -674,6 +741,11 @@ function handlePromptInput() {
   font-size: 12px;
 }
 
+.generation-paused {
+  color: var(--gold-primary);
+  font-size: 12px;
+}
+
 .editor-section {
   flex: 1;
   display: flex;
@@ -752,9 +824,72 @@ function handlePromptInput() {
   margin-bottom: 6px;
 }
 
+.prompt-editor-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 186px;
+}
+
+.prompt-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  pointer-events: none;
+  overflow: auto;
+  padding: 4px 11px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  color: var(--text-ink);
+  z-index: 0;
+
+  &:empty::before {
+    content: attr(placeholder);
+    color: var(--text-faint);
+    pointer-events: none;
+  }
+}
+
 .prompt-editor {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  color: transparent !important;
+  caret-color: var(--text-ink) !important;
   flex: 1;
   width: 100%;
+
+  &::placeholder {
+    color: transparent !important;
+  }
+}
+
+:deep(.ref-highlight) {
+  background: rgba(201, 169, 110, 0.2);
+  color: var(--gold-primary);
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.editor-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 6px;
+  line-height: 1.4;
+
+  code {
+    font-size: 10px;
+    background: var(--bg-primary);
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: var(--gold-primary);
+  }
 }
 
 .file-refs {

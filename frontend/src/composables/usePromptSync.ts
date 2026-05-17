@@ -8,12 +8,14 @@ import { watch } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useRightPanelStore } from '@/stores/rightPanel'
-import { guessPromptType } from '@/utils/promptTypes'
+import { usePipelineStore } from '@/stores/pipeline'
+import { getPipelineForFile, guessPromptType } from '@/utils/promptTypes'
 
 export function usePromptSync() {
   const editorStore = useEditorStore()
   const projectStore = useProjectStore()
   const rightPanelStore = useRightPanelStore()
+  const pipelineStore = usePipelineStore()
 
   watch(
     () => editorStore.currentFilePath,
@@ -26,7 +28,23 @@ export function usePromptSync() {
         return
       }
 
-      // 没有已保存的 prompt，根据文件类型加载默认模板
+      // 优先从 pipeline 定义加载 prompt
+      const pipelineName = getPipelineForFile(path)
+      if (pipelineName) {
+        try {
+          await pipelineStore.fetchPipelineDetail(pipelineName)
+          const step = pipelineStore.currentDetail?.steps?.[0]
+          if (step?.prompt_content) {
+            editorStore.setFilePrompt(path, step.prompt_content)
+            rightPanelStore.updatePrompt(step.prompt_content)
+            return
+          }
+        } catch {
+          // pipeline 加载失败，fallback 到 guessPromptType
+        }
+      }
+
+      // 没有已保存的 prompt 也不是 pipeline 文件，根据文件类型加载默认模板
       const promptType = guessPromptType(path)
       if (!promptType) return
 
