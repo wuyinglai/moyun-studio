@@ -1,0 +1,26 @@
+# 墨韵项目 — Git 属性配置
+# 统一换行符处理，避免 Windows 下 CRLF/LF 导致的虚假 diff
+
+# 文本文件统一使用 LF
+* text=auto
+
+# Python
+*.py text eol=lf
+
+# TypeScript / Vue / JavaScript
+*.ts text eol=lf
+*.tsx text eol=lf
+*.vue text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+
+# 配置文件
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+
+# 前端构建产物
+dist/** -text
+node_modules/** -text
