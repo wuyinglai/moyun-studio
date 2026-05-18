@@ -57,6 +57,10 @@ export interface LiteWriteStreamCallbacks {
   onDone?: (data: LiteWriteNextResponse) => void
 }
 
+export interface LiteWriteStreamOptions {
+  signal?: AbortSignal
+}
+
 export function defaultLitePrefs(): LiteWritingPrefs {
   return {
     style: '热血',
@@ -111,10 +115,12 @@ export async function streamLiteNext(
   prefs: LiteWritingPrefs,
   action: 'write' | 'rewrite' | 'more_exciting' | 'more_reasonable' = 'write',
   callbacks: LiteWriteStreamCallbacks = {},
+  options: LiteWriteStreamOptions = {},
 ) {
   const response = await fetch('/api/lite/write-next-stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: options.signal,
     body: JSON.stringify({
       project_id: projectId,
       target_file: targetFile,

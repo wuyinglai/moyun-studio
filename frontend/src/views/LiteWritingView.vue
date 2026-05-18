@@ -74,6 +74,7 @@
         />
         <div class="editor-actions">
           <button class="ghost-btn" :disabled="!dirty || saving" @click="saveCurrent">保存</button>
+          <button v-if="generating" class="ghost-btn danger-btn" @click="stopGeneration">停止生成</button>
           <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="rewriteCurrent">重写这一章</button>
           <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="improveCurrent('more_exciting')">更爽一点</button>
           <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="improveCurrent('more_reasonable')">更合理一点</button>
@@ -172,7 +173,7 @@ const content = ref('')
 const currentFilePath = ref('')
 const streamingFilePath = ref('')
 const streamingBuffers = ref<Record<string, string>>({})
-const chapterStatus = ref<Record<string, 'done' | 'blank'>>({})
+const chapterStatus = ref<Record<string, 'done' | 'blank' | 'draft'>>({})
 const qualitySummary = ref('')
 const engineSummary = ref<Record<string, string>>({})
 const loadingIdeas = ref(false)
@@ -181,6 +182,7 @@ const optionError = ref('')
 const optionRequestId = ref(0)
 const creating = ref(false)
 const generating = ref(false)
+const generationAbortController = ref<AbortController | null>(null)
 const saving = ref(false)
 const dirty = ref(false)
 const prefs = reactive(defaultLitePrefs())
@@ -343,6 +345,10 @@ function chapterProgressText(path: string) {
   return `第${ch}章 ${Math.min(done, total)}/${total} 节`
 }
 
+function isAbortError(e: unknown) {
+  return e instanceof DOMException && e.name === 'AbortError'
+}
+
 function isBlankChapter(text: string) {
   const body = text
     .split('\n')
@@ -355,6 +361,7 @@ function isBlankChapter(text: string) {
 function chapterBadge(path: string) {
   if (path === streamingFilePath.value) return '生成中'
   if (chapterStatus.value[path] === 'done') return '已写'
+  if (chapterStatus.value[path] === 'draft') return '草稿'
   if (chapterStatus.value[path] === 'blank') return '待写'
   return ''
 }
@@ -517,13 +524,19 @@ async function improveCurrent(action: 'more_exciting' | 'more_reasonable') {
   if (card) await runGeneration(card, action, currentFilePath.value)
 }
 
+function stopGeneration() {
+  generationAbortController.value?.abort()
+}
+
 async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrite' | 'more_exciting' | 'more_reasonable', targetFile: string | null) {
   const projectId = projectStore.currentProject?.id
   if (!projectId || generating.value) return
   generating.value = true
+  const abortController = new AbortController()
+  generationAbortController.value = abortController
   let generatedFilePath = targetFile || nextTargetFile.value || currentFilePath.value || ''
   pendingTargetLabel.value = formatChapterLabel(targetFile || nextTargetFile.value || currentFilePath.value || '')
-  qualitySummary.value = `正在生成${pendingTargetLabel.value}...`
+  qualitySummary.value = `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
   try {
     await streamLiteNext(projectId, targetFile || nextTargetFile.value || currentFilePath.value || null, card, prefs, action, {
       onMeta: (meta) => {
@@ -540,7 +553,9 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
         editorStore.loadContent(meta.file_path, '')
       },
       onStatus: (message) => {
-        qualitySummary.value = message
+        qualitySummary.value = message === 'AI 正在写正文...'
+          ? `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
+          : message
       },
       onDelta: (delta) => {
         if (!generatedFilePath) return
@@ -580,14 +595,27 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
           editorStore.setCurrentFile(result.file_path)
         }
       },
-    })
+    }, { signal: abortController.signal })
     await fileStore.loadTree(projectId)
     await refreshOptions(generatedFilePath || currentFilePath.value || null)
     notification.success('章节已生成')
   } catch (e: any) {
-    notification.error(e.message || '生成失败')
+    if (isAbortError(e)) {
+      const draft = generatedFilePath ? (streamingBuffers.value[generatedFilePath] || '') : ''
+      if (generatedFilePath) {
+        chapterStatus.value[generatedFilePath] = draft.trim() ? 'draft' : 'blank'
+      }
+      dirty.value = Boolean(draft)
+      qualitySummary.value = draft
+        ? `已停止生成，${pendingTargetLabel.value}的草稿已保留，满意可以保存。`
+        : `已停止生成${pendingTargetLabel.value}。`
+      notification.success('已停止生成')
+    } else {
+      notification.error(e.message || '生成失败')
+    }
   } finally {
     generating.value = false
+    generationAbortController.value = null
     streamingFilePath.value = ''
     pendingTargetLabel.value = ''
   }
@@ -816,6 +844,11 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
   color: var(--text-faint);
 }
 
+.chapter-item small.badge-draft {
+  background: rgba(201, 169, 110, .14);
+  color: var(--gold-primary);
+}
+
 .chapter-item small.badge-streaming {
   background: rgba(45, 138, 110, .16);
   color: var(--jade-light);
@@ -922,6 +955,11 @@ label textarea {
 .ghost-btn {
   background: transparent;
   color: var(--text-primary);
+}
+
+.danger-btn {
+  border-color: rgba(220, 88, 88, .45);
+  color: #ff9a9a;
 }
 
 .link-btn {
