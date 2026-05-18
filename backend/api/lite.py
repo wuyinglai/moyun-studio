@@ -725,17 +725,22 @@ async def generate_next_options(
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    current_no = max(1, _extract_chapter_number(req.current_file) or 1)
-    next_file = _next_section_path(req.current_file)
-    next_label = _section_label(next_file)
     file_service = FileService(settings.projects_path)
     current_content = await _read_optional(file_service, req.project_id, req.current_file or "")
+    current_no = max(1, _extract_chapter_number(req.current_file) or 1)
+    if req.current_file and _is_blank_chapter(current_content):
+        next_file = req.current_file
+    else:
+        next_file = await _next_writable_section_path(file_service, req.project_id, req.current_file)
+    next_label = _section_label(next_file)
     story_engine = await _read_optional(file_service, req.project_id, "story-engine.md")
     recent_context = await _read_optional(file_service, req.project_id, "recent-context.md")
     vol, ch, _sec = _path_parts(next_file)
     chapter_plan = await _read_optional(file_service, req.project_id, f"chapters/vol-{vol:02d}/ch-{ch:03d}/ch-plan.md")
+    chapter_context = await _read_chapter_context(file_service, req.project_id, vol, ch, _sec)
+    context_content = current_content if not _is_blank_chapter(current_content) else chapter_context
 
-    cards = _fallback_next_cards(next_label, current_content, recent_context)
+    cards = _fallback_next_cards(next_label, context_content, recent_context)
     try:
         llm_cfg = load_llm_config_from_workspace(settings)
         svc = LLMService.from_workspace_config(llm_cfg)
@@ -747,8 +752,8 @@ async def generate_next_options(
             "",
             f"下一节：{next_label}",
             f"偏好：{_prefs_to_text(req.prefs)}",
-            "当前正文：",
-            current_content[-2500:],
+            "当前正文或本章前文：",
+            context_content[-2500:],
             "故事引擎：",
             story_engine[-2500:],
             "近期上下文：",

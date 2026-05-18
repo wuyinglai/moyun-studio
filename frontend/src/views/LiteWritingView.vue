@@ -34,6 +34,9 @@
         <div class="side-head">
           <p class="eyebrow">作品</p>
           <h2>{{ projectStore.currentProject.name }}</h2>
+          <p v-if="currentChapterProgress" class="chapter-progress-text">
+            {{ currentChapterProgress }}
+          </p>
         </div>
         <button class="primary-btn full" @click="refreshOptions">
           换个方向
@@ -59,6 +62,7 @@
           <div>
             <p class="eyebrow">当前章节</p>
             <h1>{{ currentFilePath ? formatChapterLabel(currentFilePath) : '尚未打开章节' }}</h1>
+            <p v-if="completionSummary" class="completion-summary">{{ completionSummary }}</p>
             <p v-if="currentFilePath" class="path-hint">{{ currentFilePath }}</p>
           </div>
         </div>
@@ -88,7 +92,9 @@
             <span>下一节爽点卡</span>
             <button class="link-btn" :disabled="loadingOptions" @click="refreshOptions">刷新</button>
           </div>
+          <p v-if="nextTargetHint" class="next-target-hint">{{ nextTargetHint }}</p>
           <p v-if="loadingOptions" class="option-loading">正在根据前文生成爽点卡...</p>
+          <p v-else-if="optionError" class="option-loading">{{ optionError }}</p>
           <p v-else-if="!nextCards.length" class="option-loading">打开一个章节后生成下一节方向。</p>
           <button
             v-for="card in nextCards"
@@ -171,6 +177,7 @@ const qualitySummary = ref('')
 const engineSummary = ref<Record<string, string>>({})
 const loadingIdeas = ref(false)
 const loadingOptions = ref(false)
+const optionError = ref('')
 const optionRequestId = ref(0)
 const creating = ref(false)
 const generating = ref(false)
@@ -201,9 +208,30 @@ const chapterFiles = computed(() => {
 
 const optionActionLabel = computed(() => {
   if (nextTargetFile.value) {
-    return `选这个，自动生成${formatChapterLabel(nextTargetFile.value)}`
+    return `选这个，自动写${formatChapterLabel(nextTargetFile.value)}`
   }
-  return '选这个，自动生成下一节'
+  return '选这个，自动写下一节'
+})
+
+const currentChapterProgress = computed(() => {
+  const basePath = streamingFilePath.value || currentFilePath.value || nextTargetFile.value
+  return basePath ? chapterProgressText(basePath) : ''
+})
+
+const completionSummary = computed(() => {
+  if (generating.value && pendingTargetLabel.value) {
+    return `正在写${pendingTargetLabel.value} · ${currentChapterProgress.value || '本章进度更新中'}`
+  }
+  if (!currentFilePath.value || chapterStatus.value[currentFilePath.value] !== 'done') {
+    return currentChapterProgress.value
+  }
+  return `${formatChapterLabel(currentFilePath.value)}已完成 · ${currentChapterProgress.value}`
+})
+
+const nextTargetHint = computed(() => {
+  if (loadingOptions.value) return ''
+  if (!nextTargetFile.value) return ''
+  return `选择一张卡，自动写${formatChapterLabel(nextTargetFile.value)}`
 })
 
 onMounted(async () => {
@@ -294,6 +322,25 @@ function formatChapterLabel(path: string) {
   if (ch) parts.push(`第${Number(ch)}章`)
   if (sec) parts.push(`第${Number(sec)}节`)
   return parts.join(' ')
+}
+
+function parseSectionPath(path: string) {
+  const vol = Number(path.match(/vol-(\d+)/)?.[1] || 0)
+  const ch = Number(path.match(/ch-(\d+)/)?.[1] || 0)
+  const sec = Number(path.match(/sec-(\d+)/)?.[1] || 0)
+  return { vol, ch, sec }
+}
+
+function chapterProgressText(path: string) {
+  const { vol, ch } = parseSectionPath(path)
+  if (!vol || !ch) return ''
+  const sameChapter = chapterFiles.value.filter((node) => {
+    const meta = parseSectionPath(node.path)
+    return meta.vol === vol && meta.ch === ch
+  })
+  const total = Math.max(sameChapter.length, 4)
+  const done = sameChapter.filter((node) => chapterStatus.value[node.path] === 'done').length
+  return `第${ch}章 ${Math.min(done, total)}/${total} 节`
 }
 
 function isBlankChapter(text: string) {
@@ -431,12 +478,21 @@ async function refreshOptions(baseFile = currentFilePath.value || null) {
   if (!projectId) return
   const requestId = ++optionRequestId.value
   loadingOptions.value = true
+  optionError.value = ''
   nextCards.value = []
   try {
     const data = await fetchLiteNextOptions(projectId, baseFile, prefs)
     if (requestId !== optionRequestId.value) return
     nextCards.value = data.cards
     nextTargetFile.value = data.next_file
+    if (!data.cards.length) {
+      optionError.value = '这次没有生成出爽点卡，点“刷新”再试一次。'
+      nextTargetFile.value = ''
+    }
+  } catch {
+    if (requestId !== optionRequestId.value) return
+    optionError.value = '爽点卡生成失败，点“刷新”重试。'
+    nextTargetFile.value = ''
   } finally {
     if (requestId === optionRequestId.value) {
       loadingOptions.value = false
@@ -585,6 +641,26 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
   font-size: 12px;
   line-height: 1.4;
   word-break: break-all;
+}
+
+.completion-summary,
+.chapter-progress-text,
+.next-target-hint {
+  margin: 6px 0 0;
+  color: var(--gold-primary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.chapter-progress-text {
+  color: var(--text-muted-ink);
+}
+
+.next-target-hint {
+  padding: 8px 10px;
+  border: 1px solid rgba(201, 169, 110, .18);
+  border-radius: 6px;
+  background: rgba(201, 169, 110, .07);
 }
 
 .sub,
