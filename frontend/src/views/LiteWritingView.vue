@@ -43,10 +43,11 @@
             v-for="node in chapterFiles"
             :key="node.path"
             class="chapter-item"
-            :class="{ active: node.path === currentFilePath }"
+            :class="{ active: node.path === currentFilePath, streaming: node.path === streamingFilePath }"
             @click="openChapter(node.path)"
           >
-            {{ formatChapterLabel(node.path) }}
+            <span>{{ formatChapterLabel(node.path) }}</span>
+            <small v-if="node.path === streamingFilePath">生成中</small>
           </button>
         </div>
       </aside>
@@ -678,6 +679,27 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
   color: var(--text-muted-ink);
   text-align: left;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.chapter-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-item small {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(45, 138, 110, .16);
+  color: var(--jade-light);
+  font-size: 11px;
 }
 
 .chapter-item.active,
@@ -685,6 +707,10 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
   color: var(--gold-primary);
   border-color: rgba(201, 169, 110, .35);
   background: rgba(201, 169, 110, .08);
+}
+
+.chapter-item.streaming {
+  border-color: rgba(45, 138, 110, .38);
 }
 
 .panel {
