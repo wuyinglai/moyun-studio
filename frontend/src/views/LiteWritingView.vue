@@ -47,7 +47,9 @@
             @click="openChapter(node.path)"
           >
             <span>{{ formatChapterLabel(node.path) }}</span>
-            <small v-if="node.path === streamingFilePath">生成中</small>
+            <small v-if="chapterBadge(node.path)" :class="`badge-${chapterBadgeKind(node.path)}`">
+              {{ chapterBadge(node.path) }}
+            </small>
           </button>
         </div>
       </aside>
@@ -164,6 +166,7 @@ const content = ref('')
 const currentFilePath = ref('')
 const streamingFilePath = ref('')
 const streamingBuffers = ref<Record<string, string>>({})
+const chapterStatus = ref<Record<string, 'done' | 'blank'>>({})
 const qualitySummary = ref('')
 const engineSummary = ref<Record<string, string>>({})
 const loadingIdeas = ref(false)
@@ -302,6 +305,18 @@ function isBlankChapter(text: string) {
   return body.length < 20
 }
 
+function chapterBadge(path: string) {
+  if (path === streamingFilePath.value) return '生成中'
+  if (chapterStatus.value[path] === 'done') return '已写'
+  if (chapterStatus.value[path] === 'blank') return '待写'
+  return ''
+}
+
+function chapterBadgeKind(path: string) {
+  if (path === streamingFilePath.value) return 'streaming'
+  return chapterStatus.value[path] || 'unknown'
+}
+
 function normalizeChapterHeading(path: string, text: string) {
   const lines = text.split(/\r?\n/)
   const first = lines[0] || ''
@@ -349,12 +364,19 @@ async function openProject(projectId: string) {
 async function findResumeChapter(projectId: string) {
   let lastWritten = chapterFiles.value[0] || null
   let hasWritten = false
+  let firstBlank: FileNode | null = null
   for (const node of chapterFiles.value) {
     const data = await fileStore.readFile(projectId, node.path)
-    if (isBlankChapter(data.content || '')) return { node, hasWritten }
+    const blank = isBlankChapter(data.content || '')
+    chapterStatus.value[node.path] = blank ? 'blank' : 'done'
+    if (blank && !firstBlank) {
+      firstBlank = node
+    }
+    if (blank) continue
     hasWritten = true
     lastWritten = node
   }
+  if (firstBlank) return { node: firstBlank, hasWritten }
   return { node: lastWritten, hasWritten }
 }
 
@@ -366,6 +388,7 @@ async function openChapter(path: string) {
   const data = buffered === undefined ? await fileStore.readFile(projectId, path) : { content: buffered }
   currentFilePath.value = path
   content.value = normalizeChapterHeading(path, data.content || '')
+  chapterStatus.value[path] = isBlankChapter(content.value) ? 'blank' : 'done'
   fileStore.openFile({ name: path.split('/').pop() || '', path, type: 'file' })
   editorStore.loadContent(path, content.value)
   editorStore.setCurrentFile(path)
@@ -395,6 +418,7 @@ async function saveCurrent() {
   saving.value = true
   try {
     await fileStore.saveFile(projectId, currentFilePath.value, content.value)
+    chapterStatus.value[currentFilePath.value] = isBlankChapter(content.value) ? 'blank' : 'done'
     dirty.value = false
     notification.success('已保存')
   } finally {
@@ -450,6 +474,7 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
         generatedFilePath = meta.file_path
         streamingFilePath.value = meta.file_path
         streamingBuffers.value[meta.file_path] = ''
+        chapterStatus.value[meta.file_path] = 'blank'
         currentFilePath.value = meta.file_path
         pendingTargetLabel.value = formatChapterLabel(meta.file_path)
         content.value = ''
@@ -469,10 +494,14 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
         if (currentFilePath.value === generatedFilePath) {
           content.value = nextContent
         }
+        if (!isBlankChapter(nextContent)) {
+          chapterStatus.value[generatedFilePath] = 'done'
+        }
       },
       onReplace: (nextContent) => {
         if (!generatedFilePath) return
         streamingBuffers.value[generatedFilePath] = nextContent
+        chapterStatus.value[generatedFilePath] = isBlankChapter(nextContent) ? 'blank' : 'done'
         editorStore.loadContent(generatedFilePath, nextContent)
         if (currentFilePath.value === generatedFilePath) {
           content.value = nextContent
@@ -481,6 +510,7 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
       onDone: (result) => {
         generatedFilePath = result.file_path
         streamingBuffers.value[result.file_path] = result.content
+        chapterStatus.value[result.file_path] = isBlankChapter(result.content) ? 'blank' : 'done'
         qualitySummary.value = result.quality_summary
         engineSummary.value = result.story_engine_summary
         if (result.chapter_plan) {
@@ -697,9 +727,22 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
   flex: 0 0 auto;
   padding: 2px 6px;
   border-radius: 999px;
+  font-size: 11px;
+}
+
+.chapter-item small.badge-done {
   background: rgba(45, 138, 110, .16);
   color: var(--jade-light);
-  font-size: 11px;
+}
+
+.chapter-item small.badge-blank {
+  background: rgba(255, 255, 255, .06);
+  color: var(--text-faint);
+}
+
+.chapter-item small.badge-streaming {
+  background: rgba(45, 138, 110, .16);
+  color: var(--jade-light);
 }
 
 .chapter-item.active,
