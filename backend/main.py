@@ -206,6 +206,7 @@ def create_app() -> FastAPI:
         snapshots,
         config,
         workflows,
+        lite,
     )
 
     app.include_router(projects.router, prefix="/api")
@@ -231,6 +232,7 @@ def create_app() -> FastAPI:
     app.include_router(snapshots.router, prefix="/api")
     app.include_router(config.router, prefix="/api")
     app.include_router(workflows.router, prefix="/api")
+    app.include_router(lite.router, prefix="/api")
 
     # ── 前端静态文件 & 单页入口 ──────────────────────────────────
     # 优先 serve Vue 构建产物 (dist/)，fallback 到 prototype.html

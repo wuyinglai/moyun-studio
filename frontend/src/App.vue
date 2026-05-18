@@ -52,7 +52,9 @@ onMounted(async () => {
       console.warn('从 URL 恢复项目失败', e)
     }
 
-    if (route.params.pathMatch) {
+    if (route.name === 'project-lite') {
+      // 爽文模式自己决定打开哪一章，避免默认打开 outline.md。
+    } else if (route.params.pathMatch) {
       const filePath = '/' + (route.params.pathMatch as string[]).join('/')
       editorStore.setCurrentFile(filePath)
     } else {

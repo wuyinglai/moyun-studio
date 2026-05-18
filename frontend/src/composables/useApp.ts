@@ -5,6 +5,7 @@
 import { useLLMStore } from '@/stores/llm'
 import { useProjectStore } from '@/stores/project'
 import { sseService } from '@/composables/useSSE'
+import { prefetchIdeas } from '@/composables/useLitePrefetch'
 
 export function useAppInit() {
   const llmStore = useLLMStore()
@@ -15,6 +16,8 @@ export function useAppInit() {
     await llmStore.loadStatus()
     sseService.connect()
     await projectStore.loadProjects()
+    // 后台预取爽文模式开局卡，不阻塞初始化
+    prefetchIdeas()
   }
 
   function cleanupApp() {

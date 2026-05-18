@@ -4,8 +4,14 @@ import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { Modal } from 'ant-design-vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import LiteWritingView from '@/views/LiteWritingView.vue'
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/lite',
+    name: 'lite-home',
+    component: LiteWritingView,
+  },
   {
     path: '/',
     name: 'home',
@@ -30,6 +36,26 @@ const routes: RouteRecordRaw[] = [
         }
       } catch (e) {
         console.warn('项目加载失败（页面仍可渲染）:', e)
+      }
+    },
+  },
+  {
+    path: '/project/:projectId/lite',
+    name: 'project-lite',
+    component: LiteWritingView,
+    beforeEnter: async (to) => {
+      const projectStore = useProjectStore()
+      const fileStore = useFileStore()
+      const projectId = to.params.projectId as string
+      try {
+        if (!projectStore.currentProject || projectStore.currentProject.id !== projectId) {
+          await projectStore.openProject(projectId)
+        }
+        if (projectStore.currentProject) {
+          await fileStore.loadTree(projectId)
+        }
+      } catch (e) {
+        console.warn('爽文项目加载失败（页面仍可渲染）:', e)
       }
     },
   },

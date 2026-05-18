@@ -23,6 +23,9 @@
           {{ projectStore.currentProject.name }}
         </span>
         <span class="project-name-hint" title="点击编辑项目名">✎</span>
+        <button class="mode-link" @click="switchWritingMode">
+          {{ isLiteRoute ? '专业模式' : '爽文模式' }}
+        </button>
       </div>
       <div class="project-name project-name--empty" v-else>
         <span class="project-name-placeholder">未打开项目</span>
@@ -114,11 +117,13 @@
 
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Modal } from 'ant-design-vue'
 import { useProjectStore } from '@/stores/project'
 import { useLLMStore } from '@/stores/llm'
 import { useUIStore } from '@/stores/ui'
 import { useEditorStore } from '@/stores/editor'
+import { useFileStore } from '@/stores/file'
 import { useSSE } from '@/composables/useSSE'
 import { useNotificationStore } from '@/stores/notification'
 import { useChatStore } from '@/stores/chat'
@@ -127,9 +132,12 @@ const projectStore = useProjectStore()
 const llmStore = useLLMStore()
 const uiStore = useUIStore()
 const editorStore = useEditorStore()
+const fileStore = useFileStore()
 const notification = useNotificationStore()
 const chatStore = useChatStore()
 const { isConnected: sseConnected, isReconnecting } = useSSE()
+const route = useRoute()
+const router = useRouter()
 
 const isEditingName = ref(false)
 const editingName = ref('')
@@ -173,6 +181,8 @@ const connectionStatus = computed(() => {
   return '未连接'
 })
 
+const isLiteRoute = computed(() => route.name === 'project-lite' || route.name === 'lite-home')
+
 const autoMode = computed(() => localStorage.getItem('moyun-auto-mode') || 'L1')
 
 function setAutoMode(mode: 'L1' | 'L2') {
@@ -205,8 +215,25 @@ async function openProjectWithGuard() {
 }
 
 async function createProjectWithGuard() {
-  if (await confirmUnsavedSwitch()) {
+  if (!(await confirmUnsavedSwitch())) return
+  if (isLiteRoute.value) {
+    projectStore.closeProject()
+    editorStore.setCurrentFile(null)
+    fileStore.unsavedFiles.clear()
+    router.push('/lite')
+  } else {
     uiStore.openCreateProject()
+  }
+}
+
+async function switchWritingMode() {
+  if (!projectStore.currentProject) return
+  if (!(await confirmUnsavedSwitch())) return
+  const projectId = projectStore.currentProject.id
+  if (isLiteRoute.value) {
+    router.push(`/project/${projectId}`)
+  } else {
+    router.push(`/project/${projectId}/lite`)
   }
 }
 </script>
@@ -341,6 +368,22 @@ async function createProjectWithGuard() {
   outline: none;
   width: 220px;
   box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.1);
+}
+
+.mode-link {
+  margin-left: 8px;
+  padding: 4px 9px;
+  border: 1px solid rgba(201, 169, 110, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(201, 169, 110, 0.08);
+  color: var(--gold-primary);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mode-link:hover {
+  background: rgba(201, 169, 110, 0.14);
 }
 
 /* ── 中间 ── */
