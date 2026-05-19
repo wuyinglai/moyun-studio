@@ -329,15 +329,15 @@ def _parse_option_cards(raw: str, next_label: str) -> list[LiteNextOptionCard]:
         if not isinstance(item, dict):
             continue
         title = str(item.get("title") or "").strip()
+        scene = str(item.get("scene") or item.get("conflict_upgrade") or item.get("conflict") or "").strip()
         payoff = str(item.get("payoff") or item.get("beat") or "").strip()
-        scene = str(item.get("scene") or "").strip()
         hook = str(item.get("hook") or "").strip()
-        if title and payoff and hook:
+        if title and scene and payoff and hook:
             cards.append(LiteNextOptionCard(
                 id=f"next-{next_label}-{idx}",
                 title=title[:16],
-                beat=payoff[:80],
-                scene=scene[:24] or "当前冲突现场",
+                beat=payoff[:90],
+                scene=scene[:90],
                 payoff=payoff[:80],
                 hook=hook[:80],
             ))
@@ -352,11 +352,11 @@ def _fallback_next_cards(next_label: str, current_content: str, recent_context: 
         if line.strip() and not line.lstrip().startswith("#") and len(line.strip()) > 8
     ]
     context = " ".join(useful_lines)
-    hint = context[:36] or "当前冲突"
+    hint = (useful_lines[-1] if useful_lines else context)[:32] or "当前冲突"
     options = [
-        ("顺势追击", "当前现场", f"借“{hint}”继续压迫对手", "对手背后的靠山被迫露面"),
-        ("反转加码", "局势转折点", f"让刚占上风的人发现代价更大", "旧线索牵出新的危险"),
-        ("收束奖励", "结果兑现处", f"主角拿到这一轮冲突的实际收益", "奖励本身藏着下一步线索"),
+        ("当场反逼", f"对手借“{hint}”继续施压，把主角逼到众人面前。", "主角抓住对方话里的破绽，当众把主动权夺回来。", "幕后撑腰的人被迫露出一句关键口风。"),
+        ("旧账翻面", f"看似对主角不利的旧账，被对手拿来公开施压。", "主角顺势翻出被忽略的细节，让刚占上风的人反而失态。", "旧账牵出一个更大的交换条件。"),
+        ("战果藏钩", f"冲突暂时收束，但旁观者开始重新站队。", "主角拿到实在奖励，同时让羞辱者付出可见代价。", "奖励里藏着下一节必须打开的新线索。"),
     ]
     return [
         LiteNextOptionCard(
@@ -750,7 +750,11 @@ async def generate_next_options(
             "你是爽文连载编辑。请基于当前正文和故事状态，为下一节生成3张不同方向的爽点卡。",
             "不要使用固定模板，不要重复“当众打脸/危机反杀/收获升级”这类泛化标题。",
             "每张卡必须贴合前文已经发生的角色、冲突、伏笔和读者期待。",
-            "只返回 JSON 数组，每项包含 title, beat, scene, payoff, hook。",
+            "每张卡必须至少引用一个前文出现的人名、地点、物件、组织、称呼或伏笔。",
+            "三张卡方向要明显不同：一张强硬反击，一张反转揭底，一张拿奖励并埋钩子；标题必须根据剧情改写，不要直接写这些模板名。",
+            "不要写“围绕某某推进、保持快节奏、标准爽点”这类说明书句式。",
+            "只返回 JSON 数组，每项包含 title, conflict_upgrade, payoff, hook。",
+            "字段含义：conflict_upgrade=冲突升级，payoff=爽点兑现，hook=结尾钩子。",
             "",
             f"下一节：{next_label}",
             f"偏好：{_prefs_to_text(req.prefs)}",

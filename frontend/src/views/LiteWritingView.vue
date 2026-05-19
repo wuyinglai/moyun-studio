@@ -108,8 +108,20 @@
             @click="generateWithCard(card)"
           >
             <strong>{{ card.title }}</strong>
-            <span>{{ card.payoff || card.beat }}</span>
-            <small>{{ card.hook }}</small>
+            <div class="option-beats">
+              <p>
+                <b>冲突升级</b>
+                <span>{{ card.scene }}</span>
+              </p>
+              <p>
+                <b>爽点兑现</b>
+                <span>{{ card.payoff || card.beat }}</span>
+              </p>
+              <p>
+                <b>结尾钩子</b>
+                <span>{{ card.hook }}</span>
+              </p>
+            </div>
             <em>{{ optionActionLabel }}</em>
           </button>
         </section>
@@ -933,7 +945,32 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
   border-radius: 7px;
   margin-top: 10px;
   display: grid;
+  gap: 9px;
+}
+
+.option-beats {
+  display: grid;
   gap: 7px;
+}
+
+.option-beats p {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 8px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.option-beats b {
+  color: var(--gold-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.option-beats span {
+  min-width: 0;
+  color: var(--text-muted-ink);
+  font-size: 13px;
 }
 
 .option-card em {
