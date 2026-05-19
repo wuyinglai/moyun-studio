@@ -92,6 +92,11 @@
 
       <aside class="lite-assistant">
         <section class="panel">
+          <div v-if="chapterMilestone" class="chapter-milestone">
+            <span>本章完成</span>
+            <strong>{{ chapterMilestone.summary }}</strong>
+            <p>{{ chapterMilestone.nextGoal }}</p>
+          </div>
           <div class="panel-title">
             <span>下一节爽点卡</span>
             <button class="link-btn" :disabled="loadingOptions" @click="refreshOptions">刷新</button>
@@ -191,6 +196,7 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const streamingFilePath = ref('')
 const streamingBuffers = ref<Record<string, string>>({})
 const chapterStatus = ref<Record<string, 'done' | 'blank' | 'draft'>>({})
+const chapterMilestone = ref<{ vol: number; ch: number; summary: string; nextGoal: string } | null>(null)
 const qualitySummary = ref('')
 const engineSummary = ref<Record<string, string>>({})
 const loadingIdeas = ref(false)
@@ -229,13 +235,20 @@ const chapterFiles = computed(() => {
 
 const optionActionLabel = computed(() => {
   if (nextTargetFile.value) {
-    return `选这个，自动写${formatChapterLabel(nextTargetFile.value)}`
+    const verb = isChapterStart(nextTargetFile.value) && chapterMilestone.value ? '开启' : '自动写'
+    return `选这个，${verb}${formatChapterLabel(nextTargetFile.value)}`
   }
   return '选这个，自动写下一节'
 })
 
 const currentChapterProgress = computed(() => {
   const basePath = streamingFilePath.value || currentFilePath.value || nextTargetFile.value
+  if (basePath && chapterMilestone.value) {
+    const meta = parseSectionPath(basePath)
+    if (meta.vol === chapterMilestone.value.vol && meta.ch === chapterMilestone.value.ch) {
+      return `第${meta.ch}章完成 · 下一章已准备`
+    }
+  }
   return basePath ? chapterProgressText(basePath) : ''
 })
 
@@ -252,7 +265,8 @@ const completionSummary = computed(() => {
 const nextTargetHint = computed(() => {
   if (loadingOptions.value) return ''
   if (!nextTargetFile.value) return ''
-  return `选择一张卡，自动写${formatChapterLabel(nextTargetFile.value)}`
+  const verb = isChapterStart(nextTargetFile.value) && chapterMilestone.value ? '开启' : '自动写'
+  return `选择一张卡，${verb}${formatChapterLabel(nextTargetFile.value)}`
 })
 
 const canContinueDraft = computed(() => {
@@ -361,6 +375,10 @@ function parseSectionPath(path: string) {
   return { vol, ch, sec }
 }
 
+function isChapterStart(path: string) {
+  return parseSectionPath(path).sec === 1
+}
+
 function chapterProgressText(path: string) {
   const { vol, ch } = parseSectionPath(path)
   if (!vol || !ch) return ''
@@ -399,6 +417,27 @@ function appendDraftContent(base: string, addition: string) {
   if (!base.trim()) return addition
   if (!addition.trim()) return base
   return `${base.replace(/\s+$/, '')}\n\n${addition.replace(/^\s+/, '')}`
+}
+
+function extractNextChapterGoal(plan: string | null | undefined) {
+  const fallback = '下一章会把本章留下的压力继续推高。'
+  if (!plan) return fallback
+  const line = plan
+    .split(/\r?\n/)
+    .map(item => item.replace(/^#+\s*/, '').replace(/^[-*]\s*/, '').trim())
+    .find(item => item && !item.includes('章规划格式'))
+  return line ? line.slice(0, 80) : fallback
+}
+
+function buildChapterMilestone(result: { file_path: string; chapter_plan?: string | null }, card: LiteNextOptionCard) {
+  const { vol, ch } = parseSectionPath(result.file_path)
+  if (!vol || !ch) return null
+  return {
+    vol,
+    ch,
+    summary: `第${ch}章完成：${card.title}，${card.payoff}`,
+    nextGoal: `下一章目标：${extractNextChapterGoal(result.chapter_plan)}`,
+  }
 }
 
 function isBlankChapter(text: string) {
@@ -652,7 +691,10 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
         qualitySummary.value = result.quality_summary
         engineSummary.value = result.story_engine_summary
         if (result.chapter_plan) {
-          notification.success(`第 ${result.file_path.match(/ch-(\d+)/)?.[1] || ''} 章完成，已生成下一章规划`)
+          chapterMilestone.value = buildChapterMilestone(result, card)
+          notification.success(`第${parseSectionPath(result.file_path).ch}章完成，下一章已准备`)
+        } else if (action !== 'continue') {
+          chapterMilestone.value = null
         }
         dirty.value = false
         fileStore.openFile({ name: result.file_path.split('/').pop() || '', path: result.file_path, type: 'file' })
@@ -937,6 +979,34 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
   padding: 14px;
   border-radius: 8px;
   margin-bottom: 12px;
+}
+
+.chapter-milestone {
+  display: grid;
+  gap: 7px;
+  padding: 10px 11px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(45, 138, 110, .26);
+  border-radius: 7px;
+  background: rgba(45, 138, 110, .08);
+}
+
+.chapter-milestone span {
+  color: var(--jade-light);
+  font-size: 12px;
+}
+
+.chapter-milestone strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.chapter-milestone p {
+  margin: 0;
+  color: var(--text-muted-ink);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .option-card {
