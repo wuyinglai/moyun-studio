@@ -7,7 +7,7 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
   const currentHistoryIndex = ref(-1)
   const executionLogs = ref<string[]>([])
   const activePipelineTab = ref<'quick' | 'editor'>('quick')
-  const activeTab = ref<string>('prompt')  // 右侧面板当前高亮的 Tab ID
+  const activeTab = ref<string>('quick')  // 右侧面板当前高亮的 Tab ID
   const isPipelineRunning = ref(false)
 
   const currentPrompt = computed(() => promptContent.value)

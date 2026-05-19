@@ -32,6 +32,7 @@
 
       <!-- 内容区域 -->
       <div class="panel-content">
+        <ProfessionalQuickPanel v-show="activeTab === 'quick'" />
         <PromptPanel v-show="activeTab === 'prompt'" />
         <PipelineEditor v-show="activeTab === 'pipeline'" />
         <WorkflowPanel v-show="activeTab === 'workflow'" />
@@ -47,6 +48,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useRightPanelStore } from '@/stores/rightPanel'
+import ProfessionalQuickPanel from './ProfessionalQuickPanel.vue'
 import PromptPanel from './PromptPanel.vue'
 import PipelineEditor from './PipelineEditor.vue'
 import WorkflowPanel from './WorkflowPanel.vue'
@@ -63,7 +65,8 @@ const storyPanelRef = ref<InstanceType<typeof StoryStatePanel>>()
 const styleGuidePanelRef = ref<InstanceType<typeof StyleGuidePanel>>()
 
 const tabs = [
-  { id: 'prompt', label: '快捷', icon: '⚡' },
+  { id: 'quick', label: '快捷', icon: '⚡' },
+  { id: 'prompt', label: 'Prompt', icon: '✎' },
   { id: 'pipeline', label: '管线', icon: '🔧' },
   { id: 'workflow', label: '工作流', icon: '📋' },
   { id: 'story', label: '故事', icon: '📖' },
