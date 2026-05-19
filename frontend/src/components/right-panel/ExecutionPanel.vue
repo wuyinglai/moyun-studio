@@ -4,21 +4,34 @@
     <div class="panel-section">
       <div class="section-header">
         <span class="section-title">LLM 工作堆栈</span>
-        <span class="exec-status" :class="{ running: hasRunningTasks }">
-          <span class="status-dot"></span>
+        <span
+          class="exec-status"
+          :class="{ running: hasRunningTasks }"
+        >
+          <span class="status-dot" />
           {{ hasRunningTasks ? '运行中' : '空闲' }}
         </span>
-        <button class="btn-icon" @click="clearAll" title="清空">
-          <i class="fa-solid fa-trash-can"></i>
+        <button
+          class="btn-icon"
+          title="清空"
+          @click="clearAll"
+        >
+          <i class="fa-solid fa-trash-can" />
         </button>
       </div>
 
-      <div v-if="tasks.length === 0" class="section-empty">
-        <i class="fa-solid fa-inbox"></i>
+      <div
+        v-if="tasks.length === 0"
+        class="section-empty"
+      >
+        <i class="fa-solid fa-inbox" />
         <span>暂无任务</span>
       </div>
 
-      <div v-else class="task-list">
+      <div
+        v-else
+        class="task-list"
+      >
         <div
           v-for="task in tasks"
           :key="task.id"
@@ -30,8 +43,14 @@
             <span class="task-status-badge">{{ statusText[task.status] }}</span>
           </div>
 
-          <div v-if="task.status === 'running'" class="task-progress">
-            <div class="progress-bar" :style="{ width: task.progress + '%' }"></div>
+          <div
+            v-if="task.status === 'running'"
+            class="task-progress"
+          >
+            <div
+              class="progress-bar"
+              :style="{ width: task.progress + '%' }"
+            />
           </div>
 
           <div class="task-meta">
@@ -42,7 +61,7 @@
                 class="btn-cancel"
                 @click="handleCancelTask(task.id)"
               >
-                <i class="fa-solid fa-stop"></i>
+                <i class="fa-solid fa-stop" />
               </button>
             </div>
           </div>
@@ -51,11 +70,18 @@
     </div>
 
     <!-- AI 修改摘要 -->
-    <div v-if="diffSummary.hasSummary.value" class="panel-section">
+    <div
+      v-if="diffSummary.hasSummary.value"
+      class="panel-section"
+    >
       <div class="section-header">
         <span class="section-title">AI 修改摘要</span>
-        <button class="btn-icon" @click="diffSummary.dismiss()" title="关闭">
-          <i class="fa-solid fa-xmark"></i>
+        <button
+          class="btn-icon"
+          title="关闭"
+          @click="diffSummary.dismiss()"
+        >
+          <i class="fa-solid fa-xmark" />
         </button>
       </div>
       <div class="diff-summary-body">
@@ -67,12 +93,19 @@
     <div class="panel-section panel-section--logs">
       <div class="section-header">
         <span class="section-title">执行日志</span>
-        <button class="btn-icon" @click="clearLogs" title="清空">
-          <i class="fa-solid fa-trash-can"></i>
+        <button
+          class="btn-icon"
+          title="清空"
+          @click="clearLogs"
+        >
+          <i class="fa-solid fa-trash-can" />
         </button>
       </div>
 
-      <div class="log-list" ref="logContainer">
+      <div
+        ref="logContainer"
+        class="log-list"
+      >
         <div
           v-for="(log, index) in logs"
           :key="index"
@@ -83,8 +116,11 @@
           <span class="log-message">{{ log.message }}</span>
         </div>
 
-        <div v-if="logs.length === 0" class="section-empty">
-          <i class="fa-solid fa-terminal"></i>
+        <div
+          v-if="logs.length === 0"
+          class="section-empty"
+        >
+          <i class="fa-solid fa-terminal" />
           <span>暂无日志</span>
         </div>
       </div>

@@ -124,9 +124,11 @@ class WorkflowRunner:
         llm_service: Any,
         file_service: Any,
         state_dir: Path | None = None,
+        system_prompts_path: Path | None = None,
     ):
         self.workflows_path = Path(workflows_path)
         self.prompts_path = Path(prompts_path)
+        self.system_prompts_path = system_prompts_path
         self.llm_service = llm_service
         self.file_service = file_service
         self.state_dir = Path(state_dir) if state_dir else Path(".moyun/workflow-runs")
@@ -482,6 +484,7 @@ class WorkflowRunner:
             self.prompts_path,
             self.llm_service,
             self.file_service,
+            system_prompts_path=self.system_prompts_path,
         )
 
         try:

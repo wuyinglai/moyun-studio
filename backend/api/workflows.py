@@ -36,7 +36,7 @@ def _build_runner(settings: Settings) -> WorkflowRunner:
     file_service = FileService(settings.projects_path)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
-    return WorkflowRunner(workflows_path, settings.prompts_path, llm_service, file_service)
+    return WorkflowRunner(workflows_path, settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
 
 @router.get("/workflows")

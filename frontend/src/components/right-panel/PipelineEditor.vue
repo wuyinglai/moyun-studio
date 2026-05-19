@@ -8,17 +8,31 @@
         size="small"
         @change="(val: any) => onPipelineSelect(String(val))"
       >
-        <a-select-option v-for="p in pipelineStore.pipelines" :key="p.name" :value="p.name">
+        <a-select-option
+          v-for="p in pipelineStore.pipelines"
+          :key="p.name"
+          :value="p.name"
+        >
           {{ p.label }}
         </a-select-option>
       </a-select>
-      <a-button size="small" @click="showNewPipelineDialog">+ 新建</a-button>
+      <a-button
+        size="small"
+        @click="showNewPipelineDialog"
+      >
+        + 新建
+      </a-button>
     </div>
 
     <!-- 步骤列表 -->
     <div class="step-list-section">
-      <div class="section-label">步骤列表</div>
-      <div class="step-list" ref="stepListRef">
+      <div class="section-label">
+        步骤列表
+      </div>
+      <div
+        ref="stepListRef"
+        class="step-list"
+      >
         <div
           v-for="(step, index) in localSteps"
           :key="step.id"
@@ -29,19 +43,38 @@
           <span class="step-drag">⠿</span>
           <span class="step-label">{{ step.label }}</span>
           <span class="step-id">{{ step.id }}</span>
-          <a-button type="text" size="small" @click.stop="removeStep(index)" class="step-remove">✕</a-button>
+          <a-button
+            type="text"
+            size="small"
+            class="step-remove"
+            @click.stop="removeStep(index)"
+          >
+            ✕
+          </a-button>
         </div>
       </div>
-      <a-button type="dashed" block size="small" @click="addStep" class="add-step-btn">
+      <a-button
+        type="dashed"
+        block
+        size="small"
+        class="add-step-btn"
+        @click="addStep"
+      >
         + 添加步骤
       </a-button>
     </div>
 
     <!-- Prompt 编辑区 -->
-    <div class="prompt-section" v-if="editingStep">
+    <div
+      v-if="editingStep"
+      class="prompt-section"
+    >
       <div class="section-label">
         <span>步骤 Prompt</span>
-        <span v-if="isBrowsingHistory" class="browsing-badge">浏览历史</span>
+        <span
+          v-if="isBrowsingHistory"
+          class="browsing-badge"
+        >浏览历史</span>
       </div>
       <a-textarea
         v-model:value="editingPrompt"
@@ -53,21 +86,42 @@
         @input="handlePromptInput"
       />
       <div class="editor-actions">
-        <a-button size="small" :disabled="!canGoBackHistory" @click="goBackHistory" title="上一个版本">
-          <i class="fa-solid fa-chevron-left"></i> 后退
+        <a-button
+          size="small"
+          :disabled="!canGoBackHistory"
+          title="上一个版本"
+          @click="goBackHistory"
+        >
+          <i class="fa-solid fa-chevron-left" /> 后退
         </a-button>
-        <a-button size="small" :disabled="!canGoForwardHistory" @click="goForwardHistory" title="下一个版本">
-          前进 <i class="fa-solid fa-chevron-right"></i>
+        <a-button
+          size="small"
+          :disabled="!canGoForwardHistory"
+          title="下一个版本"
+          @click="goForwardHistory"
+        >
+          前进 <i class="fa-solid fa-chevron-right" />
         </a-button>
-        <span class="history-pos" v-if="historyTotal > 0">{{ historyCurrent }}/{{ historyTotal }}</span>
-        <a-button v-if="isBrowsingHistory" type="primary" size="small" @click="saveHistoryVersion">
-          <i class="fa-solid fa-check"></i> 保存此版本
+        <span
+          v-if="historyTotal > 0"
+          class="history-pos"
+        >{{ historyCurrent }}/{{ historyTotal }}</span>
+        <a-button
+          v-if="isBrowsingHistory"
+          type="primary"
+          size="small"
+          @click="saveHistoryVersion"
+        >
+          <i class="fa-solid fa-check" /> 保存此版本
         </a-button>
       </div>
     </div>
 
     <!-- 空状态 -->
-    <div v-else class="empty-state">
+    <div
+      v-else
+      class="empty-state"
+    >
       <p>选择一个管线步骤开始编辑</p>
     </div>
   </div>

@@ -3,18 +3,28 @@
     <div class="panel-header">
       <h3>文风指南</h3>
       <div class="panel-actions">
-        <button class="btn-action" @click="handleSave" :disabled="isSaving">
-          <i class="fa-solid fa-save"></i> 保存
+        <button
+          class="btn-action"
+          :disabled="isSaving"
+          @click="handleSave"
+        >
+          <i class="fa-solid fa-save" /> 保存
         </button>
       </div>
     </div>
 
     <div class="panel-content">
-      <div v-if="isLoading" class="panel-loading">
-        <i class="fa-solid fa-spinner fa-spin"></i> 加载中...
+      <div
+        v-if="isLoading"
+        class="panel-loading"
+      >
+        <i class="fa-solid fa-spinner fa-spin" /> 加载中...
       </div>
 
-      <div v-else class="editor-wrapper">
+      <div
+        v-else
+        class="editor-wrapper"
+      >
         <textarea
           v-model="content"
           class="guide-editor"
@@ -33,7 +43,7 @@
 ## 用词规范
 - 避免网络流行语
 - 人名、地名等专有名词统一"
-        ></textarea>
+        />
       </div>
     </div>
   </div>

@@ -1,9 +1,18 @@
 <template>
-  <div class="chat-message" :class="`role-${message.role}`">
+  <div
+    class="chat-message"
+    :class="`role-${message.role}`"
+  >
     <!-- 头像 -->
     <div class="message-avatar">
-      <span v-if="message.role === 'user'" class="avatar-char">你</span>
-      <span v-else class="avatar-char">墨</span>
+      <span
+        v-if="message.role === 'user'"
+        class="avatar-char"
+      >你</span>
+      <span
+        v-else
+        class="avatar-char"
+      >墨</span>
     </div>
 
     <div class="message-body">
@@ -19,14 +28,22 @@
           {{ message.content }}
         </template>
         <template v-else>
-          <div class="ai-content" v-html="renderedContent"></div>
+          <div
+            class="ai-content"
+            v-html="renderedContent"
+          />
         </template>
       </div>
 
       <!-- Thinking 内容 -->
-      <div v-if="message.thinking" class="message-thinking">
+      <div
+        v-if="message.thinking"
+        class="message-thinking"
+      >
         <span class="thinking-label">AI 思考过程</span>
-        <div class="thinking-content">{{ message.thinking }}</div>
+        <div class="thinking-content">
+          {{ message.thinking }}
+        </div>
       </div>
     </div>
   </div>

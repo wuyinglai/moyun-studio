@@ -1,24 +1,52 @@
 <template>
-  <div class="chat-messages" ref="containerRef">
+  <div
+    ref="containerRef"
+    class="chat-messages"
+  >
     <!-- 空状态 -->
-    <div v-if="messages.length === 0" class="messages-empty">
+    <div
+      v-if="messages.length === 0"
+      class="messages-empty"
+    >
       <div class="empty-icon">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <svg
+          width="36"
+          height="36"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </div>
-      <p class="empty-title">与 AI 对话</p>
-      <p class="empty-hint">输入消息开始创作、润色或讨论情节</p>
+      <p class="empty-title">
+        与 AI 对话
+      </p>
+      <p class="empty-hint">
+        输入消息开始创作、润色或讨论情节
+      </p>
       <div class="welcome-suggestions">
-        <div class="suggestion-chip" @click="$emit('send-suggestion', '帮我续写当前章节')">
+        <div
+          class="suggestion-chip"
+          @click="$emit('send-suggestion', '帮我续写当前章节')"
+        >
           <span class="chip-icon">✏️</span>
           <span>续写章节</span>
         </div>
-        <div class="suggestion-chip" @click="$emit('send-suggestion', '帮我润色这段文字，让它更生动')">
+        <div
+          class="suggestion-chip"
+          @click="$emit('send-suggestion', '帮我润色这段文字，让它更生动')"
+        >
           <span class="chip-icon">🪶</span>
           <span>润色文字</span>
         </div>
-        <div class="suggestion-chip" @click="$emit('send-suggestion', '讨论一下后续情节发展')">
+        <div
+          class="suggestion-chip"
+          @click="$emit('send-suggestion', '讨论一下后续情节发展')"
+        >
           <span class="chip-icon">💡</span>
           <span>讨论情节</span>
         </div>
@@ -26,7 +54,11 @@
     </div>
 
     <!-- 消息列表 -->
-    <TransitionGroup name="message" tag="div" class="messages-list">
+    <TransitionGroup
+      name="message"
+      tag="div"
+      class="messages-list"
+    >
       <ChatMessage
         v-for="msg in messages"
         :key="msg.id"
@@ -35,9 +67,12 @@
     </TransitionGroup>
 
     <!-- Thinking 指示器 -->
-    <div v-if="isThinking" class="thinking-indicator">
+    <div
+      v-if="isThinking"
+      class="thinking-indicator"
+    >
       <div class="thinking-ink">
-        <span class="ink-ring"></span>
+        <span class="ink-ring" />
       </div>
       <span class="thinking-text">AI 正在构思...</span>
     </div>
@@ -54,7 +89,7 @@ const props = defineProps<{
   isThinking?: boolean
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'send-suggestion', text: string): void
 }>()
 

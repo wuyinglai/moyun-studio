@@ -103,7 +103,7 @@ async def chat(
             file_service = FileService(settings.projects_path)
             llm_cfg = load_llm_config_from_workspace(settings)
             svc = LLMService.from_workspace_config(llm_cfg)
-            runner = PipelineRunner(settings.prompts_path, svc, file_service)
+            runner = PipelineRunner(settings.prompts_path, svc, file_service, system_prompts_path=settings.system_prompts_path)
 
             async for event in runner.run(
                 pipeline_name="chat",

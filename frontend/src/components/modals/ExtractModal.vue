@@ -3,9 +3,9 @@
     :open="visible"
     title="智能提取"
     :width="580"
-    @cancel="close"
     :footer="null"
     :destroy-on-close="true"
+    @cancel="close"
   >
     <div class="extract-modal">
       <a-form layout="vertical">
@@ -17,39 +17,64 @@
           >
             <template #addonAfter>
               <a-tooltip title="使用当前文件">
-                <i class="fa-solid fa-file" style="cursor: pointer;" @click="useCurrentFile" />
+                <i
+                  class="fa-solid fa-file"
+                  style="cursor: pointer;"
+                  @click="useCurrentFile"
+                />
               </a-tooltip>
             </template>
           </a-input>
         </a-form-item>
 
         <a-form-item label="提取类型">
-          <a-select v-model:value="extractType" style="width: 200px;">
-            <a-select-option value="character">角色</a-select-option>
-            <a-select-option value="plot">情节</a-select-option>
-            <a-select-option value="scene">场景</a-select-option>
-            <a-select-option value="summary">摘要</a-select-option>
+          <a-select
+            v-model:value="extractType"
+            style="width: 200px;"
+          >
+            <a-select-option value="character">
+              角色
+            </a-select-option>
+            <a-select-option value="plot">
+              情节
+            </a-select-option>
+            <a-select-option value="scene">
+              场景
+            </a-select-option>
+            <a-select-option value="summary">
+              摘要
+            </a-select-option>
           </a-select>
         </a-form-item>
       </a-form>
 
       <div class="actions">
-        <a-button @click="close">取消</a-button>
+        <a-button @click="close">
+          取消
+        </a-button>
         <a-button
           type="primary"
           :loading="isExtracting"
           :disabled="!sourceFile"
           @click="handleExtract"
         >
-          <template #icon><i class="fa-solid fa-brain"></i></template>
+          <template #icon>
+            <i class="fa-solid fa-brain" />
+          </template>
           {{ isExtracting ? '提取中...' : '开始提取' }}
         </a-button>
       </div>
 
       <!-- 结果 -->
-      <div v-if="result" class="result-area">
+      <div
+        v-if="result"
+        class="result-area"
+      >
         <a-divider />
-        <a-alert type="success" show-icon>
+        <a-alert
+          type="success"
+          show-icon
+        >
           <template #message>
             <strong>{{ result.title }}</strong>
           </template>
@@ -59,7 +84,9 @@
               <span>源文件: {{ result.source_file }}</span>
               <span>{{ formatTime(result.created_at) }}</span>
             </div>
-            <div class="result-content">{{ result.content }}</div>
+            <div class="result-content">
+              {{ result.content }}
+            </div>
           </template>
         </a-alert>
       </div>

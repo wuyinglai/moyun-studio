@@ -1,0 +1,47 @@
+{
+  "name": "场景描写",
+  "description": "生成场景描写",
+  "version": "1.3",
+  "author": "墨韵AI",
+  "updated": "2026-05-11",
+  "tags": ["scene", "generation"],
+  "variables": {
+    "location": {
+      "type": "text",
+      "label": "场景地点",
+      "source": "用户输入",
+      "required": true
+    },
+    "time_period": {
+      "type": "text",
+      "label": "时间背景",
+      "source": "用户输入",
+      "required": true
+    },
+    "atmosphere": {
+      "type": "select",
+      "label": "氛围类型",
+      "source": "用户输入",
+      "options": ["神秘", "恐怖", "温馨", "紧张", "悲伤", "欢快", "浪漫", "史诗", "诡异"],
+      "required": true
+    },
+    "purpose": {
+      "type": "textarea",
+      "label": "场景目的",
+      "source": "ch-meta.json",
+      "required": true
+    },
+    "story_state": {
+      "type": "textarea",
+      "label": "当前故事状态",
+      "source": "story-state.md",
+      "required": false
+    },
+    "style_guide": {
+      "type": "textarea",
+      "label": "文风指南",
+      "source": "style-guide.md",
+      "required": false
+    }
+  }
+}

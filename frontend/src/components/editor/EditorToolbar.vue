@@ -1,80 +1,151 @@
 <template>
   <div class="editor-toolbar">
     <a-space>
-      <a-button size="small" @click="handleBack" :disabled="!canGoBack" title="后退 (没有更早的版本)">
-        <template #icon><i class="fa-solid fa-rotate-left"></i></template>
+      <a-button
+        size="small"
+        :disabled="!canGoBack"
+        title="后退 (没有更早的版本)"
+        @click="handleBack"
+      >
+        <template #icon>
+          <i class="fa-solid fa-rotate-left" />
+        </template>
         后退
       </a-button>
-      <a-button size="small" @click="handleForward" :disabled="!canGoForward" title="前进 (没有更新的版本)">
-        <template #icon><i class="fa-solid fa-rotate-right"></i></template>
+      <a-button
+        size="small"
+        :disabled="!canGoForward"
+        title="前进 (没有更新的版本)"
+        @click="handleForward"
+      >
+        <template #icon>
+          <i class="fa-solid fa-rotate-right" />
+        </template>
         前进
       </a-button>
       <a-divider type="vertical" />
-      <a-button size="small" @click="togglePreview" :type="isPreviewMode ? 'primary' : 'default'">
-        <template #icon><i class="fa-solid fa-eye"></i></template>
+      <a-button
+        size="small"
+        :type="isPreviewMode ? 'primary' : 'default'"
+        @click="togglePreview"
+      >
+        <template #icon>
+          <i class="fa-solid fa-eye" />
+        </template>
         {{ isPreviewMode ? '编辑' : '预览' }}
       </a-button>
       <a-divider type="vertical" />
-      <a-button v-if="showStopButton" danger size="small" @click="handleStop">
-        <template #icon><i class="fa-solid fa-stop"></i></template>
+      <a-button
+        v-if="showStopButton"
+        danger
+        size="small"
+        @click="handleStop"
+      >
+        <template #icon>
+          <i class="fa-solid fa-stop" />
+        </template>
         停止
       </a-button>
-      <a-button v-if="showNextButton" size="small" type="primary" @click="handleGenerateNext">
+      <a-button
+        v-if="showNextButton"
+        size="small"
+        type="primary"
+        @click="handleGenerateNext"
+      >
         📄 写下一部分
       </a-button>
       <template v-if="!isGenerating">
-        <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('polish')">
+        <a-button
+          v-if="isChapterFile"
+          size="small"
+          type="primary"
+          ghost
+          @click="runPipeline('polish')"
+        >
           ✏️ 润色
         </a-button>
-        <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('rewrite')">
+        <a-button
+          v-if="isChapterFile"
+          size="small"
+          type="primary"
+          ghost
+          @click="runPipeline('rewrite')"
+        >
           📦 精修
         </a-button>
-        <a-button v-if="isChapterFile" size="small" type="primary" ghost @click="runPipeline('extract')">
+        <a-button
+          v-if="isChapterFile"
+          size="small"
+          type="primary"
+          ghost
+          @click="runPipeline('extract')"
+        >
           🌟 提取
         </a-button>
-        <a-divider v-if="isChapterFile" type="vertical" />
-        <a-button v-if="!isSystemFile" size="small" @click="handleRegenerate" title="用原参数重新生成">
+        <a-divider
+          v-if="isChapterFile"
+          type="vertical"
+        />
+        <a-button
+          v-if="!isSystemFile"
+          size="small"
+          title="用原参数重新生成"
+          @click="handleRegenerate"
+        >
           🔄 重新生成
         </a-button>
         <a-dropdown v-if="!isSystemFile">
-          <a-button size="small">➕ 自定义 <i class="fa-solid fa-chevron-down"></i></a-button>
+          <a-button size="small">
+            ➕ 自定义 <i class="fa-solid fa-chevron-down" />
+          </a-button>
           <template #overlay>
             <a-menu @click="handleCustomPipeline">
-              <a-menu-item v-for="p in customPipelines" :key="p.name">
+              <a-menu-item
+                v-for="p in customPipelines"
+                :key="p.name"
+              >
                 {{ p.label }}
               </a-menu-item>
-              <a-menu-item v-if="customPipelines.length === 0" disabled>
+              <a-menu-item
+                v-if="customPipelines.length === 0"
+                disabled
+              >
                 暂无自定义管线
               </a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
-        <a-divider v-if="!isSystemFile" type="vertical" />
+        <a-divider
+          v-if="!isSystemFile"
+          type="vertical"
+        />
         <a-dropdown>
-          <a-button size="small">更多 <i class="fa-solid fa-chevron-down"></i></a-button>
+          <a-button size="small">
+            更多 <i class="fa-solid fa-chevron-down" />
+          </a-button>
           <template #overlay>
             <a-menu>
               <a-menu-item @click="handleTokenCount">
-                <i class="fa-solid fa-calculator"></i> Token
+                <i class="fa-solid fa-calculator" /> Token
               </a-menu-item>
               <a-menu-item @click="handleCompare">
-                <i class="fa-solid fa-code-compare"></i> 对比
+                <i class="fa-solid fa-code-compare" /> 对比
               </a-menu-item>
               <a-menu-item @click="handleFeedback">
-                <i class="fa-solid fa-comment"></i> 反馈
+                <i class="fa-solid fa-comment" /> 反馈
               </a-menu-item>
               <a-menu-item @click="handleRevisionLog">
-                <i class="fa-solid fa-clock-rotate-left"></i> 修改日志
+                <i class="fa-solid fa-clock-rotate-left" /> 修改日志
               </a-menu-item>
               <a-menu-divider />
               <a-menu-item @click="handleExtractModal">
-                <i class="fa-solid fa-brain"></i> 智能提取
+                <i class="fa-solid fa-brain" /> 智能提取
               </a-menu-item>
               <a-menu-item @click="handleBatchGenerate">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 批量生成
+                <i class="fa-solid fa-wand-magic-sparkles" /> 批量生成
               </a-menu-item>
               <a-menu-item @click="handleQualityReview">
-                <i class="fa-solid fa-check-circle"></i> 质量审查
+                <i class="fa-solid fa-check-circle" /> 质量审查
               </a-menu-item>
             </a-menu>
           </template>

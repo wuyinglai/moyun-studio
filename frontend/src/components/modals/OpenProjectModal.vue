@@ -15,18 +15,32 @@
           allow-clear
         />
 
-        <a-empty v-if="projects.length === 0" description="暂无项目">
+        <a-empty
+          v-if="projects.length === 0"
+          description="暂无项目"
+        >
           <template #image>
-            <i class="fa-solid fa-folder-open" style="font-size: 64px; opacity: 0.3"></i>
+            <i
+              class="fa-solid fa-folder-open"
+              style="font-size: 64px; opacity: 0.3"
+            />
           </template>
           <template #description>
             <span>点击下方按钮创建第一个项目</span>
           </template>
         </a-empty>
 
-        <a-empty v-else-if="filteredProjects.length === 0" description="未找到匹配项目" />
+        <a-empty
+          v-else-if="filteredProjects.length === 0"
+          description="未找到匹配项目"
+        />
 
-        <a-list v-else item-layout="horizontal" :data-source="filteredProjects" :grid="{ gutter: 16, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }">
+        <a-list
+          v-else
+          item-layout="horizontal"
+          :data-source="filteredProjects"
+          :grid="{ gutter: 16, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }"
+        >
           <template #renderItem="{ item }">
             <a-list-item>
               <a-card
@@ -38,22 +52,32 @@
               >
                 <template #cover>
                   <div class="project-cover">
-                    <i class="fa-solid fa-book"></i>
+                    <i class="fa-solid fa-book" />
                   </div>
                 </template>
                 <a-card-meta :title="item.name">
                   <template #description>
                     <div class="project-meta">
-                      <a-tag v-if="item.genre" :color="'blue'">{{ item.genre }}</a-tag>
+                      <a-tag
+                        v-if="item.genre"
+                        :color="'blue'"
+                      >
+                        {{ item.genre }}
+                      </a-tag>
                       <span class="meta-stat">{{ item.total_words?.toLocaleString() || 0 }} 字</span>
                     </div>
                     <div class="project-stats">
-                      <span class="meta-stat"><i class="fa-solid fa-calendar"></i> {{ formatDate(item.created_at) }}</span>
-                      <span class="meta-stat"><i class="fa-solid fa-chart-line"></i> {{ item.completion_rate || 0 }}%</span>
+                      <span class="meta-stat"><i class="fa-solid fa-calendar" /> {{ formatDate(item.created_at) }}</span>
+                      <span class="meta-stat"><i class="fa-solid fa-chart-line" /> {{ item.completion_rate || 0 }}%</span>
                     </div>
-                    <div class="project-id">ID: {{ item.id }}</div>
-                    <p v-if="item.author" class="project-author">
-                      <i class="fa-solid fa-user"></i> {{ item.author }}
+                    <div class="project-id">
+                      ID: {{ item.id }}
+                    </div>
+                    <p
+                      v-if="item.author"
+                      class="project-author"
+                    >
+                      <i class="fa-solid fa-user" /> {{ item.author }}
                     </p>
                   </template>
                 </a-card-meta>
@@ -66,10 +90,16 @@
                     @confirm="deleteProject(item)"
                   >
                     <template #icon>
-                      <i class="fa-solid fa-exclamation-triangle" style="color: #ff4d4f"></i>
+                      <i
+                        class="fa-solid fa-exclamation-triangle"
+                        style="color: #ff4d4f"
+                      />
                     </template>
-                    <a-button type="text" danger>
-                      <i class="fa-solid fa-trash"></i>
+                    <a-button
+                      type="text"
+                      danger
+                    >
+                      <i class="fa-solid fa-trash" />
                     </a-button>
                   </a-popconfirm>
                 </template>
@@ -82,9 +112,15 @@
 
     <template #footer>
       <a-space>
-        <a-button @click="close">取消</a-button>
-        <a-button type="primary" :disabled="!selectedId" @click="openProject">
-          <i class="fa-solid fa-folder-open"></i>
+        <a-button @click="close">
+          取消
+        </a-button>
+        <a-button
+          type="primary"
+          :disabled="!selectedId"
+          @click="openProject"
+        >
+          <i class="fa-solid fa-folder-open" />
           打开
         </a-button>
       </a-space>
@@ -145,7 +181,7 @@ async function openProject() {
     await openDefaultFile(project.id)
     notification.success(`已打开项目：${project.name}`)
     close()
-  } catch (e) {
+  } catch {
     notification.error('打开项目失败')
   }
 }
@@ -190,7 +226,7 @@ async function deleteProject(project: Project) {
     if (selectedId.value === project.id) {
       selectedId.value = null
     }
-  } catch (e) {
+  } catch {
     notification.error('删除失败')
   }
 }

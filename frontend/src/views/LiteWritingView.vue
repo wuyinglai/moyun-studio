@@ -1,13 +1,24 @@
 <template>
   <div class="lite-page">
-    <section v-if="!projectStore.currentProject" class="idea-screen">
+    <section
+      v-if="!projectStore.currentProject"
+      class="idea-screen"
+    >
       <div class="idea-head">
         <div>
-          <p class="eyebrow">爽文模式</p>
+          <p class="eyebrow">
+            爽文模式
+          </p>
           <h1>今天想写哪一种爽文？</h1>
-          <p class="sub">选一张开局卡，系统会创建作品并进入无大纲创作。</p>
+          <p class="sub">
+            选一张开局卡，系统会创建作品并进入无大纲创作。
+          </p>
         </div>
-        <button class="ghost-btn" :disabled="loadingIdeas" @click="loadIdeas(true)">
+        <button
+          class="ghost-btn"
+          :disabled="loadingIdeas"
+          @click="loadIdeas(true)"
+        >
           换一批
         </button>
       </div>
@@ -29,16 +40,27 @@
       </div>
     </section>
 
-    <section v-else class="writing-shell">
+    <section
+      v-else
+      class="writing-shell"
+    >
       <aside class="lite-sidebar">
         <div class="side-head">
-          <p class="eyebrow">作品</p>
+          <p class="eyebrow">
+            作品
+          </p>
           <h2>{{ projectStore.currentProject.name }}</h2>
-          <p v-if="currentChapterProgress" class="chapter-progress-text">
+          <p
+            v-if="currentChapterProgress"
+            class="chapter-progress-text"
+          >
             {{ currentChapterProgress }}
           </p>
         </div>
-        <button class="primary-btn full" @click="() => refreshOptions()">
+        <button
+          class="primary-btn full"
+          @click="() => refreshOptions()"
+        >
           换个方向
         </button>
         <div class="chapter-list">
@@ -50,7 +72,10 @@
             @click="openChapter(node.path)"
           >
             <span>{{ formatChapterLabel(node.path) }}</span>
-            <small v-if="chapterBadge(node.path)" :class="`badge-${chapterBadgeKind(node.path)}`">
+            <small
+              v-if="chapterBadge(node.path)"
+              :class="`badge-${chapterBadgeKind(node.path)}`"
+            >
               {{ chapterBadge(node.path) }}
             </small>
           </button>
@@ -60,10 +85,22 @@
       <main class="lite-editor">
         <div class="editor-top">
           <div>
-            <p class="eyebrow">当前章节</p>
+            <p class="eyebrow">
+              当前章节
+            </p>
             <h1>{{ currentFilePath ? formatChapterLabel(currentFilePath) : '尚未打开章节' }}</h1>
-            <p v-if="completionSummary" class="completion-summary">{{ completionSummary }}</p>
-            <p v-if="currentFilePath" class="path-hint">{{ currentFilePath }}</p>
+            <p
+              v-if="completionSummary"
+              class="completion-summary"
+            >
+              {{ completionSummary }}
+            </p>
+            <p
+              v-if="currentFilePath"
+              class="path-hint"
+            >
+              {{ currentFilePath }}
+            </p>
           </div>
         </div>
         <textarea
@@ -75,36 +112,107 @@
           @scroll="handleTextareaScroll"
         />
         <div class="editor-actions">
-          <button class="ghost-btn" :disabled="!dirty || saving" @click="saveCurrent">保存</button>
-          <button v-if="generating" class="ghost-btn danger-btn" @click="stopGeneration">停止生成</button>
-          <button v-else-if="canContinueDraft" class="ghost-btn continue-btn" @click="continueDraft">继续生成</button>
-          <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="rewriteCurrent">重写这一章</button>
-          <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="improveCurrent('more_exciting')">更爽一点</button>
-          <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="improveCurrent('more_reasonable')">更合理一点</button>
+          <button
+            class="ghost-btn"
+            :disabled="!dirty || saving"
+            @click="saveCurrent"
+          >
+            保存
+          </button>
+          <button
+            v-if="generating"
+            class="ghost-btn danger-btn"
+            @click="stopGeneration"
+          >
+            停止生成
+          </button>
+          <button
+            v-else-if="canContinueDraft"
+            class="ghost-btn continue-btn"
+            @click="continueDraft"
+          >
+            继续生成
+          </button>
+          <button
+            class="ghost-btn"
+            :disabled="!currentFilePath || generating"
+            @click="rewriteCurrent"
+          >
+            重写这一章
+          </button>
+          <button
+            class="ghost-btn"
+            :disabled="!currentFilePath || generating"
+            @click="improveCurrent('more_exciting')"
+          >
+            更爽一点
+          </button>
+          <button
+            class="ghost-btn"
+            :disabled="!currentFilePath || generating"
+            @click="improveCurrent('more_reasonable')"
+          >
+            更合理一点
+          </button>
         </div>
-        <div v-if="qualitySummary" class="quality-line-wrap">
+        <div
+          v-if="qualitySummary"
+          class="quality-line-wrap"
+        >
           <span class="quality-line">{{ qualitySummary }}</span>
         </div>
-        <div v-if="generating" class="generating-mask">
+        <div
+          v-if="generating"
+          class="generating-mask"
+        >
           正在写{{ pendingTargetLabel }}，正文会实时出现在编辑器里...
         </div>
       </main>
 
       <aside class="lite-assistant">
         <section class="panel">
-          <div v-if="chapterMilestone" class="chapter-milestone">
+          <div
+            v-if="chapterMilestone"
+            class="chapter-milestone"
+          >
             <span>本章完成</span>
             <strong>{{ chapterMilestone.summary }}</strong>
             <p>{{ chapterMilestone.nextGoal }}</p>
           </div>
           <div class="panel-title">
             <span>下一节爽点卡</span>
-            <button class="link-btn" :disabled="loadingOptions" @click="() => refreshOptions()">刷新</button>
+            <button
+              class="link-btn"
+              :disabled="loadingOptions"
+              @click="() => refreshOptions()"
+            >
+              刷新
+            </button>
           </div>
-          <p v-if="nextTargetHint" class="next-target-hint">{{ nextTargetHint }}</p>
-          <p v-if="loadingOptions" class="option-loading">正在根据前文生成爽点卡...</p>
-          <p v-else-if="optionError" class="option-loading">{{ optionError }}</p>
-          <p v-else-if="!nextCards.length" class="option-loading">打开一个章节后生成下一节方向。</p>
+          <p
+            v-if="nextTargetHint"
+            class="next-target-hint"
+          >
+            {{ nextTargetHint }}
+          </p>
+          <p
+            v-if="loadingOptions"
+            class="option-loading"
+          >
+            正在根据前文生成爽点卡...
+          </p>
+          <p
+            v-else-if="optionError"
+            class="option-loading"
+          >
+            {{ optionError }}
+          </p>
+          <p
+            v-else-if="!nextCards.length"
+            class="option-loading"
+          >
+            打开一个章节后生成下一节方向。
+          </p>
           <button
             v-for="card in nextCards"
             :key="card.id"
@@ -114,6 +222,14 @@
           >
             <strong>{{ card.title }}</strong>
             <div class="option-beats">
+              <p v-if="card.protagonist_desire">
+                <b>主角想要</b>
+                <span>{{ card.protagonist_desire }}</span>
+              </p>
+              <p v-if="card.obstacle">
+                <b>阻力</b>
+                <span>{{ card.obstacle }}</span>
+              </p>
               <p>
                 <b>冲突升级</b>
                 <span>{{ card.scene }}</span>
@@ -121,6 +237,10 @@
               <p>
                 <b>爽点兑现</b>
                 <span>{{ card.payoff || card.beat }}</span>
+              </p>
+              <p v-if="card.advancement">
+                <b>故事推进</b>
+                <span>{{ card.advancement }}</span>
               </p>
               <p>
                 <b>结尾钩子</b>
@@ -135,12 +255,30 @@
           <div class="panel-title">
             <span>关键参数</span>
           </div>
-          <label>文风<select v-model="prefs.style"><option v-for="v in styles" :key="v">{{ v }}</option></select></label>
-          <label>爽点强度<select v-model="prefs.intensity"><option v-for="v in intensities" :key="v">{{ v }}</option></select></label>
-          <label>节奏<select v-model="prefs.pace"><option v-for="v in paces" :key="v">{{ v }}</option></select></label>
-          <label>主角性格<select v-model="prefs.protagonist"><option v-for="v in protagonists" :key="v">{{ v }}</option></select></label>
-          <label>喜欢的元素<textarea v-model="prefs.likes" rows="2" /></label>
-          <label>不要写的内容<textarea v-model="prefs.dislikes" rows="2" /></label>
+          <label>文风<select v-model="prefs.style"><option
+            v-for="v in styles"
+            :key="v"
+          >{{ v }}</option></select></label>
+          <label>爽点强度<select v-model="prefs.intensity"><option
+            v-for="v in intensities"
+            :key="v"
+          >{{ v }}</option></select></label>
+          <label>节奏<select v-model="prefs.pace"><option
+            v-for="v in paces"
+            :key="v"
+          >{{ v }}</option></select></label>
+          <label>主角性格<select v-model="prefs.protagonist"><option
+            v-for="v in protagonists"
+            :key="v"
+          >{{ v }}</option></select></label>
+          <label>喜欢的元素<textarea
+            v-model="prefs.likes"
+            rows="2"
+          /></label>
+          <label>不要写的内容<textarea
+            v-model="prefs.dislikes"
+            rows="2"
+          /></label>
         </section>
 
         <section class="panel">
@@ -343,8 +481,11 @@ async function startProject(card: LiteIdeaCard) {
       title: card.title,
       beat: `第一章围绕“${card.one_liner}”展开，写出压迫、反击前奏和主角钩子。`,
       scene: '开局冲突现场',
+      protagonist_desire: card.protagonist_hook,
+      obstacle: card.core_conflict,
       payoff: card.selling_point,
       hook: '让更大的冲突在结尾露出苗头',
+      advancement: '完成开局压迫和第一次行动选择，为下一节留出明确冲突。',
     }
     nextTargetFile.value = created.first_file
     nextCards.value = [openingCard]
@@ -486,8 +627,11 @@ function buildOpeningCardFromProject(): LiteNextOptionCard {
     title: project?.name || '开局第一章',
     beat: `第一章围绕“${project?.name || '开局冲突'}”展开，写出人物欲望、压迫感和第一个钩子。`,
     scene: project?.background || '开局冲突现场',
+    protagonist_desire: '主角要摆脱被动处境，拿到第一份可见收益。',
+    obstacle: project?.background || '旧秩序和当面施压的人挡在前面。',
     payoff: project?.theme || '完成开局爽点兑现',
     hook: '让更大的冲突在结尾露出苗头',
+    advancement: '把主角目标、压迫来源和下一节冲突接力点建立起来。',
   }
 }
 
@@ -1025,7 +1169,7 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
 
 .option-beats p {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 8px;
   margin: 0;
   line-height: 1.5;

@@ -1,24 +1,43 @@
 <template>
   <div class="app-layout">
     <!-- 左栏：文件导航 -->
-    <nav class="panel-left" :style="{ width: leftWidth }" aria-label="文件导航">
+    <nav
+      class="panel-left"
+      :style="{ width: leftWidth }"
+      aria-label="文件导航"
+    >
       <FileTree />
     </nav>
 
     <!-- 中栏分隔条 -->
-    <div class="divider divider-v" @mousedown="startHDrag"></div>
+    <div
+      class="divider divider-v"
+      @mousedown="startHDrag"
+    />
 
     <!-- 中栏：主编辑区 -->
-    <main class="panel-center" :style="{ width: centerWidth }">
-      <div class="center-top" :style="{ height: topHeight }">
+    <main
+      class="panel-center"
+      :style="{ width: centerWidth }"
+    >
+      <div
+        class="center-top"
+        :style="{ height: topHeight }"
+      >
         <div class="area-editor">
           <EditorTabs />
           <EditorToolbar />
           <MarkdownEditor />
         </div>
       </div>
-      <div class="divider divider-h" @mousedown="startVDrag"></div>
-      <div class="center-bottom" :style="{ height: bottomHeight }">
+      <div
+        class="divider divider-h"
+        @mousedown="startVDrag"
+      />
+      <div
+        class="center-bottom"
+        :style="{ height: bottomHeight }"
+      >
         <div class="area-chat">
           <ChatPanel />
         </div>
@@ -26,10 +45,17 @@
     </main>
 
     <!-- 右栏分隔条 -->
-    <div class="divider divider-v" @mousedown="startRightDrag"></div>
+    <div
+      class="divider divider-v"
+      @mousedown="startRightDrag"
+    />
 
     <!-- 右栏：辅助面板 -->
-    <aside class="panel-right" :style="{ width: rightWidth }" aria-label="辅助面板">
+    <aside
+      class="panel-right"
+      :style="{ width: rightWidth }"
+      aria-label="辅助面板"
+    >
       <RightPanel />
     </aside>
   </div>

@@ -3,13 +3,19 @@
     <!-- 左侧：Logo + 项目名 -->
     <div class="header-left">
       <div class="logo">
-        <span class="logo-icon" aria-hidden="true">墨</span>
+        <span
+          class="logo-icon"
+          aria-hidden="true"
+        >墨</span>
         <span class="logo-text">墨韵</span>
       </div>
 
-      <div class="header-divider"></div>
+      <div class="header-divider" />
 
-      <div class="project-name" v-if="projectStore.currentProject">
+      <div
+        v-if="projectStore.currentProject"
+        class="project-name"
+      >
         <input
           v-if="isEditingName"
           ref="nameInputRef"
@@ -18,22 +24,39 @@
           @blur="confirmNameEdit"
           @keydown.enter="confirmNameEdit"
           @keydown.escape="cancelNameEdit"
-        />
-        <span v-else class="project-name-text" @click="startNameEdit" :title="projectStore.currentProject.name">
+        >
+        <span
+          v-else
+          class="project-name-text"
+          :title="projectStore.currentProject.name"
+          @click="startNameEdit"
+        >
           {{ projectStore.currentProject.name }}
         </span>
-        <span class="project-name-hint" title="点击编辑项目名">✎</span>
-        <button class="mode-link" @click="switchWritingMode">
+        <span
+          class="project-name-hint"
+          title="点击编辑项目名"
+        >✎</span>
+        <button
+          class="mode-link"
+          @click="switchWritingMode"
+        >
           {{ isLiteRoute ? '专业模式' : '爽文模式' }}
         </button>
       </div>
-      <div class="project-name project-name--empty" v-else>
+      <div
+        v-else
+        class="project-name project-name--empty"
+      >
         <span class="project-name-placeholder">未打开项目</span>
       </div>
     </div>
 
     <!-- 中：通知位 -->
-    <div class="header-center" id="header-notifications"></div>
+    <div
+      id="header-notifications"
+      class="header-center"
+    />
 
     <!-- 右侧：状态 + 按钮 -->
     <div class="header-right">
@@ -41,78 +64,156 @@
       <button
         class="llm-status"
         :class="{ 'llm-status--connected': llmStore.isConnected }"
-        @click="uiStore.openSettings()"
         :title="`LLM: ${connectionStatus}`"
+        @click="uiStore.openSettings()"
       >
         <span class="status-dot">
-          <span class="status-dot-inner"></span>
+          <span class="status-dot-inner" />
         </span>
         <span class="status-text">{{ llmStore.isConnected ? '已连接' : '未连接' }}</span>
-        <span v-if="sseConnected" class="sse-indicator" title="SSE已连接">SSE</span>
+        <span
+          v-if="sseConnected"
+          class="sse-indicator"
+          title="SSE已连接"
+        >SSE</span>
       </button>
 
       <!-- LLM 调用中 -->
-      <div class="llm-generating" v-if="llmStore.isGenerating">
+      <div
+        v-if="llmStore.isGenerating"
+        class="llm-generating"
+      >
         <span class="generating-dots">
-          <span></span><span></span><span></span>
+          <span /><span /><span />
         </span>
-        <span class="generating-text">{{ generatingLabel }}<span v-if="llmStore.currentStepLabel" class="step-label"> — {{ llmStore.currentStepLabel }}</span></span>
+        <span class="generating-text">{{ generatingLabel }}<span
+          v-if="llmStore.currentStepLabel"
+          class="step-label"
+        > — {{ llmStore.currentStepLabel }}</span></span>
       </div>
 
       <!-- Thinking 开关 -->
-      <div class="thinking-toggle" v-if="llmStore.config && llmStore.config.apiType">
+      <div
+        v-if="llmStore.config && llmStore.config.apiType"
+        class="thinking-toggle"
+      >
         <span class="thinking-label">Thinking</span>
         <button
           class="toggle-btn"
           :class="{ 'toggle-btn--on': llmStore.config.thinking }"
-          @click="toggleThinking"
           aria-label="切换思考模式"
+          @click="toggleThinking"
         >
-          <span class="toggle-knob"></span>
+          <span class="toggle-knob" />
         </button>
       </div>
 
       <!-- L1/L2 模式切换 -->
-      <div class="auto-mode-switch" v-if="projectStore.currentProject">
+      <div
+        v-if="projectStore.currentProject"
+        class="auto-mode-switch"
+      >
         <button
           class="mode-btn"
           :class="{ 'mode-btn--active': autoMode === 'L1' }"
-          @click="setAutoMode('L1')"
           title="L1 半自动：每完成一个文件后暂停，需手动点「写下一部分」继续"
-        >L1</button>
+          @click="setAutoMode('L1')"
+        >
+          L1
+        </button>
         <button
           class="mode-btn"
           :class="{ 'mode-btn--active': autoMode === 'L2' }"
-          @click="setAutoMode('L2')"
           title="L2 自动：生成完成后自动继续下一个文件，可随时点「停止」暂停"
-        >L2</button>
+          @click="setAutoMode('L2')"
+        >
+          L2
+        </button>
         <span class="auto-mode-label">{{ autoMode === 'L1' ? '半自动' : '自动' }}</span>
       </div>
 
       <!-- 操作按钮组 -->
       <div class="action-buttons">
-        <button class="btn btn-ghost" @click="openProjectWithGuard" title="打开项目">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        <button
+          class="btn btn-ghost"
+          title="打开项目"
+          @click="openProjectWithGuard"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
           <span class="btn-label">打开</span>
         </button>
 
-        <button v-if="projectStore.currentProject" class="btn btn-ghost" @click="uiStore.openBackup()" title="项目备份">
-          <i class="fa-solid fa-box-archive"></i>
+        <button
+          v-if="projectStore.currentProject"
+          class="btn btn-ghost"
+          title="项目备份"
+          @click="uiStore.openBackup()"
+        >
+          <i class="fa-solid fa-box-archive" />
           <span class="btn-label">备份</span>
         </button>
 
-        <button class="btn btn-primary" @click="createProjectWithGuard" title="新建项目">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        <button
+          class="btn btn-primary"
+          title="新建项目"
+          @click="createProjectWithGuard"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line
+              x1="12"
+              y1="5"
+              x2="12"
+              y2="19"
+            /><line
+              x1="5"
+              y1="12"
+              x2="19"
+              y2="12"
+            />
           </svg>
           <span class="btn-label">新建</span>
         </button>
 
-        <button class="btn btn-icon" @click="uiStore.openSettings()" title="设置">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        <button
+          class="btn btn-icon"
+          title="设置"
+          @click="uiStore.openSettings()"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="3"
+            /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
       </div>

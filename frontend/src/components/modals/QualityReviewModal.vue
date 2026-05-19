@@ -10,10 +10,17 @@
     <div class="quality-review-modal">
       <a-form layout="vertical">
         <a-form-item label="审查文件">
-          <a-input v-model:value="targetFile" placeholder="选择或输入文件路径">
+          <a-input
+            v-model:value="targetFile"
+            placeholder="选择或输入文件路径"
+          >
             <template #addonAfter>
               <a-tooltip title="使用当前文件">
-                <i class="fa-solid fa-file" style="cursor: pointer;" @click="useCurrentFile" />
+                <i
+                  class="fa-solid fa-file"
+                  style="cursor: pointer;"
+                  @click="useCurrentFile"
+                />
               </a-tooltip>
             </template>
           </a-input>
@@ -21,7 +28,10 @@
       </a-form>
 
       <div class="actions">
-        <a-button @click="loadHistory" :loading="isLoadingHistory">
+        <a-button
+          :loading="isLoadingHistory"
+          @click="loadHistory"
+        >
           刷新历史
         </a-button>
         <a-button
@@ -31,8 +41,15 @@
         >
           批量审查章节
         </a-button>
-        <a-button type="primary" :loading="isReviewing" :disabled="!targetFile" @click="handleReview">
-          <template #icon><i class="fa-solid fa-check-circle"></i></template>
+        <a-button
+          type="primary"
+          :loading="isReviewing"
+          :disabled="!targetFile"
+          @click="handleReview"
+        >
+          <template #icon>
+            <i class="fa-solid fa-check-circle" />
+          </template>
           {{ isReviewing ? '审查中...' : '审查当前文件' }}
         </a-button>
       </div>
@@ -45,19 +62,33 @@
         :message="batchSummary"
       />
 
-      <div v-if="result" class="result-area">
+      <div
+        v-if="result"
+        class="result-area"
+      >
         <a-divider />
-        <a-alert type="info" show-icon class="summary-alert">
+        <a-alert
+          type="info"
+          show-icon
+          class="summary-alert"
+        >
           <template #message>
             <strong>{{ result.summary || '审查完成' }}</strong>
           </template>
         </a-alert>
 
         <div class="scores-grid">
-          <div v-for="item in scoreItems" :key="item.key" class="score-item">
+          <div
+            v-for="item in scoreItems"
+            :key="item.key"
+            class="score-item"
+          >
             <div class="score-label">
               <span>{{ item.label }}</span>
-              <span class="score-value" :class="scoreColorClass(item.value)">{{ item.value }}/10</span>
+              <span
+                class="score-value"
+                :class="scoreColorClass(item.value)"
+              >{{ item.value }}/10</span>
             </div>
             <a-progress
               :percent="item.value * 10"
@@ -68,44 +99,80 @@
           </div>
         </div>
 
-        <div v-if="result.issues.length > 0" class="section">
+        <div
+          v-if="result.issues.length > 0"
+          class="section"
+        >
           <h4 class="section-title">
-            <i class="fa-solid fa-triangle-exclamation"></i>
+            <i class="fa-solid fa-triangle-exclamation" />
             问题 ({{ result.issues.length }})
           </h4>
-          <div v-for="(issue, i) in result.issues" :key="i" class="issue-item">
-            <a-tag :color="severityColor(issue.severity)" class="severity-tag">
+          <div
+            v-for="(issue, i) in result.issues"
+            :key="i"
+            class="issue-item"
+          >
+            <a-tag
+              :color="severityColor(issue.severity)"
+              class="severity-tag"
+            >
               {{ severityLabel(issue.severity) }}
             </a-tag>
             <span class="issue-desc">{{ issue.description }}</span>
-            <span v-if="issue.location" class="issue-loc">{{ issue.location }}</span>
+            <span
+              v-if="issue.location"
+              class="issue-loc"
+            >{{ issue.location }}</span>
           </div>
         </div>
 
-        <div v-if="result.strengths.length > 0" class="section">
+        <div
+          v-if="result.strengths.length > 0"
+          class="section"
+        >
           <h4 class="section-title">
-            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star" />
             优点
           </h4>
           <ul class="strength-list">
-            <li v-for="(s, i) in result.strengths" :key="i">{{ s }}</li>
+            <li
+              v-for="(s, i) in result.strengths"
+              :key="i"
+            >
+              {{ s }}
+            </li>
           </ul>
         </div>
 
-        <div v-if="result.suggestions.length > 0" class="section">
+        <div
+          v-if="result.suggestions.length > 0"
+          class="section"
+        >
           <h4 class="section-title">
-            <i class="fa-solid fa-lightbulb"></i>
+            <i class="fa-solid fa-lightbulb" />
             改进建议
           </h4>
           <ul class="suggestion-list">
-            <li v-for="(s, i) in result.suggestions" :key="i">{{ s }}</li>
+            <li
+              v-for="(s, i) in result.suggestions"
+              :key="i"
+            >
+              {{ s }}
+            </li>
           </ul>
         </div>
       </div>
 
-      <div v-else-if="error" class="result-area">
+      <div
+        v-else-if="error"
+        class="result-area"
+      >
         <a-divider />
-        <a-alert type="error" show-icon :message="error" />
+        <a-alert
+          type="error"
+          show-icon
+          :message="error"
+        />
       </div>
 
       <div class="history-area">
@@ -114,8 +181,14 @@
           <h4>审查历史</h4>
           <span>{{ reviews.length }} 条</span>
         </div>
-        <a-empty v-if="reviews.length === 0" description="暂无审查记录" />
-        <div v-else class="history-list">
+        <a-empty
+          v-if="reviews.length === 0"
+          description="暂无审查记录"
+        />
+        <div
+          v-else
+          class="history-list"
+        >
           <button
             v-for="review in reviews"
             :key="review.review_id || `${review.target_file}-${review.created_at}`"

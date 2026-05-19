@@ -2,20 +2,32 @@
   <div class="recent-context-panel">
     <div class="panel-header">
       <h3>近期上下文</h3>
-      <button class="btn-action" @click="handleAppend">
-        <i class="fa-solid fa-plus"></i> 追加记录
+      <button
+        class="btn-action"
+        @click="handleAppend"
+      >
+        <i class="fa-solid fa-plus" /> 追加记录
       </button>
     </div>
 
     <div class="panel-content">
-      <div v-if="isLoading" class="panel-loading">
-        <i class="fa-solid fa-spinner fa-spin"></i> 加载中...
+      <div
+        v-if="isLoading"
+        class="panel-loading"
+      >
+        <i class="fa-solid fa-spinner fa-spin" /> 加载中...
       </div>
-      <div v-else-if="entries.length === 0" class="panel-empty">
-        <i class="fa-solid fa-clock-rotate-left"></i>
+      <div
+        v-else-if="entries.length === 0"
+        class="panel-empty"
+      >
+        <i class="fa-solid fa-clock-rotate-left" />
         <p>暂无上下文记录</p>
       </div>
-      <div v-else class="entries-list">
+      <div
+        v-else
+        class="entries-list"
+      >
         <div
           v-for="(entry, i) in entries"
           :key="entry.time"
@@ -23,25 +35,44 @@
         >
           <div class="entry-header">
             <span class="entry-time">{{ entry.time }}</span>
-            <button class="entry-delete" @click="deleteEntry(i)" title="删除">
-              <i class="fa-solid fa-trash"></i>
+            <button
+              class="entry-delete"
+              title="删除"
+              @click="deleteEntry(i)"
+            >
+              <i class="fa-solid fa-trash" />
             </button>
           </div>
-          <div class="entry-content">{{ entry.text }}</div>
+          <div class="entry-content">
+            {{ entry.text }}
+          </div>
         </div>
       </div>
     </div>
 
     <!-- 追加对话框 -->
-    <div v-if="showAppendDialog" class="append-dialog">
+    <div
+      v-if="showAppendDialog"
+      class="append-dialog"
+    >
       <textarea
         v-model="appendText"
         placeholder="输入新的上下文记录..."
         rows="4"
-      ></textarea>
+      />
       <div class="dialog-actions">
-        <button class="btn-cancel" @click="showAppendDialog = false">取消</button>
-        <button class="btn-confirm" @click="confirmAppend">追加</button>
+        <button
+          class="btn-cancel"
+          @click="showAppendDialog = false"
+        >
+          取消
+        </button>
+        <button
+          class="btn-confirm"
+          @click="confirmAppend"
+        >
+          追加
+        </button>
       </div>
     </div>
   </div>

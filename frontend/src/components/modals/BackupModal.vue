@@ -14,29 +14,63 @@
           placeholder="备份说明，例如：第一卷完成前"
           @press-enter="createBackup"
         />
-        <a-button type="primary" :loading="isCreating" :disabled="!projectId" @click="createBackup">
+        <a-button
+          type="primary"
+          :loading="isCreating"
+          :disabled="!projectId"
+          @click="createBackup"
+        >
           创建备份
         </a-button>
       </div>
 
       <div class="toolbar">
         <span>{{ backups.length }} 个备份</span>
-        <a-button size="small" :loading="isLoading" @click="loadBackups">刷新</a-button>
+        <a-button
+          size="small"
+          :loading="isLoading"
+          @click="loadBackups"
+        >
+          刷新
+        </a-button>
       </div>
 
-      <a-empty v-if="!isLoading && backups.length === 0" description="暂无备份" />
-      <div v-else class="backup-list">
-        <div v-for="backup in backups" :key="backup.backup_id" class="backup-item">
+      <a-empty
+        v-if="!isLoading && backups.length === 0"
+        description="暂无备份"
+      />
+      <div
+        v-else
+        class="backup-list"
+      >
+        <div
+          v-for="backup in backups"
+          :key="backup.backup_id"
+          class="backup-item"
+        >
           <div class="backup-main">
-            <div class="backup-title">{{ backup.description || '未命名备份' }}</div>
+            <div class="backup-title">
+              {{ backup.description || '未命名备份' }}
+            </div>
             <div class="backup-meta">
               {{ formatTime(backup.created_at) }} · {{ backup.file_count }} 个文件 · {{ formatSize(backup.total_size) }}
             </div>
             <code>{{ backup.backup_id }}</code>
           </div>
           <div class="backup-actions">
-            <a-button size="small" @click="restoreBackup(backup.backup_id)">恢复</a-button>
-            <a-button size="small" danger @click="deleteBackup(backup.backup_id)">删除</a-button>
+            <a-button
+              size="small"
+              @click="restoreBackup(backup.backup_id)"
+            >
+              恢复
+            </a-button>
+            <a-button
+              size="small"
+              danger
+              @click="deleteBackup(backup.backup_id)"
+            >
+              删除
+            </a-button>
           </div>
         </div>
       </div>

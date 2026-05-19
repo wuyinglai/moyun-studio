@@ -3,22 +3,43 @@
     <!-- 工作流步骤展示 -->
     <div class="wf-guide">
       <div class="wf-guide-header">
-        <span class="wf-guide-title" v-if="workflowLabel">{{ workflowLabel }}</span>
-        <span class="wf-guide-title" v-else>创作任务</span>
-        <button class="wf-refresh" @click="reloadWorkflow" title="刷新工作流">
-          <i class="fa-solid fa-rotate"></i>
+        <span
+          v-if="workflowLabel"
+          class="wf-guide-title"
+        >{{ workflowLabel }}</span>
+        <span
+          v-else
+          class="wf-guide-title"
+        >创作任务</span>
+        <button
+          class="wf-refresh"
+          title="刷新工作流"
+          @click="reloadWorkflow"
+        >
+          <i class="fa-solid fa-rotate" />
         </button>
       </div>
 
       <!-- 加载失败 -->
-      <div v-if="wfError" class="wf-error">
-        <i class="fa-solid fa-triangle-exclamation"></i>
+      <div
+        v-if="wfError"
+        class="wf-error"
+      >
+        <i class="fa-solid fa-triangle-exclamation" />
         <span>{{ wfError }}</span>
-        <button class="wf-retry" @click="reloadWorkflow">重试</button>
+        <button
+          class="wf-retry"
+          @click="reloadWorkflow"
+        >
+          重试
+        </button>
       </div>
 
       <!-- 步骤列表 -->
-      <div v-if="!wfError" class="wf-steps">
+      <div
+        v-if="!wfError"
+        class="wf-steps"
+      >
         <div
           v-for="step in guide.steps.value"
           :key="step.id"
@@ -29,76 +50,139 @@
           <span class="wf-step-icon">{{ stepIcon(step.status) }}</span>
           <span class="wf-step-label">{{ step.label }}</span>
           <span class="wf-step-badge">{{ step.type === 'loop' ? '循环' : '' }}</span>
-          <a v-if="step.pipeline || step.type === 'loop'" class="wf-step-pipeline-link" @click.stop="openPipeline(step.pipeline || 'generate')">{{ pipelineLabel(step.pipeline || 'generate') }}</a>
-          <div class="wf-step-action" v-if="step.status === 'running' || step.status === 'waiting'">
-            <span v-if="step.status === 'running'" class="wf-spinner">
-              <i class="fa-solid fa-spinner fa-spin"></i>
+          <a
+            v-if="step.pipeline || step.type === 'loop'"
+            class="wf-step-pipeline-link"
+            @click.stop="openPipeline(step.pipeline || 'generate')"
+          >{{ pipelineLabel(step.pipeline || 'generate') }}</a>
+          <div
+            v-if="step.status === 'running' || step.status === 'waiting'"
+            class="wf-step-action"
+          >
+            <span
+              v-if="step.status === 'running'"
+              class="wf-spinner"
+            >
+              <i class="fa-solid fa-spinner fa-spin" />
             </span>
-            <span v-else-if="step.status === 'waiting'" class="wf-waiting-badge">
+            <span
+              v-else-if="step.status === 'waiting'"
+              class="wf-waiting-badge"
+            >
               等待确认
             </span>
           </div>
         </div>
       </div>
-
     </div>
 
     <!-- 生成状态提示 -->
-    <div v-if="(guide.isRunning.value && !guide.isPaused.value) || fileGen.isGenerating.value" class="generation-status">
-      <i class="fa-solid fa-spinner fa-spin"></i>
+    <div
+      v-if="(guide.isRunning.value && !guide.isPaused.value) || fileGen.isGenerating.value"
+      class="generation-status"
+    >
+      <i class="fa-solid fa-spinner fa-spin" />
       <span>AI 正在生成...</span>
     </div>
-    <div v-else-if="guide.isPaused.value" class="generation-status generation-paused">
-      <i class="fa-solid fa-pause"></i>
+    <div
+      v-else-if="guide.isPaused.value"
+      class="generation-status generation-paused"
+    >
+      <i class="fa-solid fa-pause" />
       <span>已完成，点「写下一部分」继续</span>
     </div>
-    <div v-else-if="fileGen.currentPrompt.value" class="generation-status generation-done">
-      <i class="fa-solid fa-check"></i>
+    <div
+      v-else-if="fileGen.currentPrompt.value"
+      class="generation-status generation-done"
+    >
+      <i class="fa-solid fa-check" />
       <span>上次生成完成，prompt 已填入下方编辑框</span>
     </div>
 
     <!-- Prompt 历史导航 -->
-    <div class="history-nav" v-if="promptHistory.length > 0">
-      <button class="history-btn" :disabled="!promptCanGoBack" @click="promptGoBack" title="上一个版本">
-        <i class="fa-solid fa-chevron-left"></i>
+    <div
+      v-if="promptHistory.length > 0"
+      class="history-nav"
+    >
+      <button
+        class="history-btn"
+        :disabled="!promptCanGoBack"
+        title="上一个版本"
+        @click="promptGoBack"
+      >
+        <i class="fa-solid fa-chevron-left" />
       </button>
       <span class="history-indicator">{{ promptHistoryPos }}</span>
-      <button class="history-btn" :disabled="!promptCanGoForward" @click="promptGoForward" title="下一个版本">
-        <i class="fa-solid fa-chevron-right"></i>
+      <button
+        class="history-btn"
+        :disabled="!promptCanGoForward"
+        title="下一个版本"
+        @click="promptGoForward"
+      >
+        <i class="fa-solid fa-chevron-right" />
       </button>
-      <button class="history-btn history-clear" @click="promptClearHistory" title="清空历史">
-        <i class="fa-solid fa-trash-can"></i>
+      <button
+        class="history-btn history-clear"
+        title="清空历史"
+        @click="promptClearHistory"
+      >
+        <i class="fa-solid fa-trash-can" />
       </button>
-      <span v-if="promptIsBrowsing" class="browsing-badge">浏览历史</span>
-      <button v-if="promptIsBrowsing" class="history-btn history-save" @click="promptSaveVersion" title="保存此版本">
-        <i class="fa-solid fa-check"></i>
+      <span
+        v-if="promptIsBrowsing"
+        class="browsing-badge"
+      >浏览历史</span>
+      <button
+        v-if="promptIsBrowsing"
+        class="history-btn history-save"
+        title="保存此版本"
+        @click="promptSaveVersion"
+      >
+        <i class="fa-solid fa-check" />
       </button>
     </div>
 
     <!-- Prompt 编辑区 -->
     <div class="editor-section">
       <div class="editor-header">
-        <div class="editor-label">{{ viewMode === 'template' ? '原始模板' : '已编译 Prompt' }}</div>
+        <div class="editor-label">
+          {{ viewMode === 'template' ? '原始模板' : '已编译 Prompt' }}
+        </div>
         <div class="view-mode-toggle">
-          <button :class="{ active: viewMode === 'template' }" @click="viewMode = 'template'">原始模板</button>
-          <button :class="{ active: viewMode === 'compiled' }" @click="switchToCompiled">已编译</button>
+          <button
+            :class="{ active: viewMode === 'template' }"
+            @click="viewMode = 'template'"
+          >
+            原始模板
+          </button>
+          <button
+            :class="{ active: viewMode === 'compiled' }"
+            @click="switchToCompiled"
+          >
+            已编译
+          </button>
         </div>
       </div>
       <div class="prompt-editor-wrap">
         <!-- 高亮层 -->
-        <div ref="highlightRef" class="prompt-highlight" v-html="highlightedText" :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"></div>
+        <div
+          ref="highlightRef"
+          class="prompt-highlight"
+          :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"
+          v-html="highlightedText"
+        />
         <!-- 编辑层（透明文本，仅显示光标） -->
         <a-textarea
           ref="promptTextareaRef"
           v-model:value="localPrompt"
           :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"
           :auto-size="{ minRows: 8, maxRows: 16 }"
+          class="prompt-editor"
           @input="handlePromptInput"
           @drop.stop.prevent="handleDrop"
           @dragover.prevent
           @click="handleTextareaClick"
           @scroll="syncHighlightScroll"
-          class="prompt-editor"
         />
       </div>
       <div class="editor-hint">
@@ -109,7 +193,7 @@
         :disabled="!canSend || fileGen.isGenerating.value"
         @click="handleSendPrompt"
       >
-        <i class="fa-solid fa-wand-magic-sparkles"></i> 重新生成
+        <i class="fa-solid fa-wand-magic-sparkles" /> 重新生成
       </button>
     </div>
   </div>
@@ -217,7 +301,7 @@ const fileRefs = computed(() => {
   }
   return refs
 })
-void fileRefs
+void fileRefs.value
 
 /** 将 @{path} 和 {% include '...' %} 高亮为 <mark> */
 const highlightedText = computed(() => {

@@ -464,8 +464,8 @@ test('11 - 正文生成全流程', async ({ page, request }) => {
     `http://localhost:8000/api/file?project_id=${projectId}&path=${sectionPath}`
   )
   expect(fileCheckResp.ok()).toBeTruthy()
-  let fileData = await fileCheckResp.json()
-  let fileContent = fileData?.data?.content || ''
+  const fileData = await fileCheckResp.json()
+  const fileContent = fileData?.data?.content || ''
   console.log(`[CHECK] 生成前章节文件: ${fileContent.length} 字符 — "${fileContent.substring(0, 50)}..."`)
 
   // 调用 batch generate API 生成正文（使用 generate/chapter 模板）

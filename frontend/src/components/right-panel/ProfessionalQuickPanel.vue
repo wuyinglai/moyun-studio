@@ -3,45 +3,86 @@
     <section class="quick-section">
       <div class="section-head">
         <span>当前写作</span>
-        <button class="link-btn" :disabled="!projectId" @click="refreshEngine">刷新</button>
+        <button
+          class="link-btn"
+          :disabled="!projectId"
+          @click="refreshEngine"
+        >
+          刷新
+        </button>
       </div>
       <div class="current-file">
         <strong>{{ currentFileLabel }}</strong>
         <p>{{ currentFileHint }}</p>
       </div>
       <div class="action-grid">
-        <button class="quick-action primary" :disabled="!canGenerate || running" @click="handleContinue">
-          <i class="fa-solid fa-pen-nib"></i>
+        <button
+          class="quick-action primary"
+          :disabled="!canGenerate || running"
+          @click="handleContinue"
+        >
+          <i class="fa-solid fa-pen-nib" />
           <span>{{ continueLabel }}</span>
         </button>
-        <button class="quick-action" :disabled="!canGenerate || running" @click="handleRewrite">
-          <i class="fa-solid fa-rotate"></i>
+        <button
+          class="quick-action"
+          :disabled="!canGenerate || running"
+          @click="handleRewrite"
+        >
+          <i class="fa-solid fa-rotate" />
           <span>{{ rewriteLabel }}</span>
         </button>
-        <button class="quick-action" :disabled="!canGenerate || running" @click="handleBoost">
-          <i class="fa-solid fa-bolt"></i>
+        <button
+          class="quick-action"
+          :disabled="!canGenerate || running"
+          @click="handleBoost"
+        >
+          <i class="fa-solid fa-bolt" />
           <span>补强爽点</span>
         </button>
-        <button class="quick-action" :disabled="!projectId" @click="openStoryEngine">
-          <i class="fa-solid fa-compass"></i>
+        <button
+          class="quick-action"
+          :disabled="!projectId"
+          @click="openStoryEngine"
+        >
+          <i class="fa-solid fa-compass" />
           <span>故事引擎</span>
         </button>
-        <button class="quick-action" :disabled="!projectId" @click="openStoryState">
-          <i class="fa-solid fa-book-open"></i>
+        <button
+          class="quick-action"
+          :disabled="!projectId"
+          @click="openStoryState"
+        >
+          <i class="fa-solid fa-book-open" />
           <span>故事状态</span>
         </button>
-        <button class="quick-action" :disabled="!projectId" @click="openCurrentPlan">
-          <i class="fa-solid fa-route"></i>
+        <button
+          class="quick-action"
+          :disabled="!projectId"
+          @click="openCurrentPlan"
+        >
+          <i class="fa-solid fa-route" />
           <span>章规划</span>
         </button>
       </div>
-      <p v-if="statusText" class="status-line">{{ statusText }}</p>
+      <p
+        v-if="statusText"
+        class="status-line"
+      >
+        {{ statusText }}
+      </p>
     </section>
 
     <section class="quick-section">
       <div class="section-head">
         <span>故事引擎摘要</span>
-        <button class="link-btn" :disabled="!projectId" @click="openStoryEngine">编辑</button>
+        <button
+          class="link-btn"
+          :disabled="!projectId"
+          @click="openStoryEngine"
+        >
+          编辑
+        </button>
       </div>
       <dl class="engine-summary">
         <dt>人物欲望</dt>
@@ -60,9 +101,15 @@
         <span>专业能力</span>
       </div>
       <div class="nav-actions">
-        <button @click="rightPanelStore.setActiveTab('workflow')">工作流编排</button>
-        <button @click="rightPanelStore.setActiveTab('pipeline')">管线编辑</button>
-        <button @click="rightPanelStore.setActiveTab('prompt')">Prompt 调整</button>
+        <button @click="rightPanelStore.setActiveTab('workflow')">
+          工作流编排
+        </button>
+        <button @click="rightPanelStore.setActiveTab('pipeline')">
+          管线编辑
+        </button>
+        <button @click="rightPanelStore.setActiveTab('prompt')">
+          Prompt 调整
+        </button>
       </div>
     </section>
   </div>

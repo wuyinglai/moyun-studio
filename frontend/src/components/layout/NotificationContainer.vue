@@ -1,5 +1,8 @@
 <template>
-  <div class="notification-ticker" v-if="visibleNotifications.length > 0">
+  <div
+    v-if="visibleNotifications.length > 0"
+    class="notification-ticker"
+  >
     <div
       v-for="item in visibleNotifications"
       :key="item.id"

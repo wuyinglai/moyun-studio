@@ -1,0 +1,22 @@
+{
+  "name": "修改摘要分析",
+  "description": "对比原文和修改后的内容，输出结构化的修改分析报告",
+  "version": "1.0",
+  "author": "墨韵AI",
+  "updated": "2026-05-14",
+  "tags": ["analysis", "diff", "review"],
+  "variables": {
+    "original_content": {
+      "type": "textarea",
+      "label": "原文内容",
+      "source": "修改前的文件内容",
+      "required": true
+    },
+    "modified_content": {
+      "type": "textarea",
+      "label": "修改后内容",
+      "source": "修改后的文件内容",
+      "required": true
+    }
+  }
+}

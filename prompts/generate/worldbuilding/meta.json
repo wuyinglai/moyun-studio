@@ -1,0 +1,35 @@
+{
+  "name": "世界观设定",
+  "description": "设计完整的世界观设定",
+  "version": "1.3",
+  "author": "墨韵AI",
+  "updated": "2026-05-14",
+  "tags": ["worldbuilding", "generation"],
+  "variables": {
+    "genre": {
+      "type": "text",
+      "label": "题材",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "theme": {
+      "type": "text",
+      "label": "核心主题",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "genre_type": {
+      "type": "select",
+      "label": "题材类型",
+      "source": "project-meta.json",
+      "options": ["玄幻/修真", "都市", "科幻", "悬疑/推理", "古言", "现言", "其他"],
+      "required": true
+    },
+    "tone": {
+      "type": "text",
+      "label": "基调",
+      "source": "project-meta.json",
+      "required": false
+    }
+  }
+}

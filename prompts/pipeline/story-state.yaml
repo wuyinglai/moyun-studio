@@ -1,0 +1,8 @@
+name: story-state
+label: 更新故事状态
+steps:
+  - id: analyze
+    label: 分析章节
+    prompt: pipeline/story-state/analyze
+    fallback: null
+    output: story-state.md

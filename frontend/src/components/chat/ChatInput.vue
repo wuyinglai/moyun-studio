@@ -6,21 +6,38 @@
         v-model="inputText"
         :placeholder="placeholder || '输入消息...'"
         :disabled="disabled"
+        rows="1"
         @keydown="handleKeydown"
         @input="autoResize"
-        rows="1"
-      ></textarea>
+      />
 
       <div class="input-actions">
-        <span class="char-count" v-if="showCharCount">{{ charCount }}</span>
+        <span
+          v-if="showCharCount"
+          class="char-count"
+        >{{ charCount }}</span>
         <button
           class="send-btn"
           :disabled="!canSend"
-          @click="handleSend"
           title="发送 (Enter)"
+          @click="handleSend"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line
+              x1="22"
+              y1="2"
+              x2="11"
+              y2="13"
+            /><polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
         </button>
       </div>

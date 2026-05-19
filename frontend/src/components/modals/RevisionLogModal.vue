@@ -3,18 +3,28 @@
     :open="visible"
     title="修改日志管理"
     :width="800"
-    @cancel="close"
     :footer="null"
+    @cancel="close"
   >
     <div class="revision-modal">
       <a-spin :spinning="isLoading">
-        <a-empty v-if="logs.length === 0" description="暂无修改日志" style="margin-top: 24px;" />
-        <a-list v-else :data-source="logs" item-layout="vertical">
+        <a-empty
+          v-if="logs.length === 0"
+          description="暂无修改日志"
+          style="margin-top: 24px;"
+        />
+        <a-list
+          v-else
+          :data-source="logs"
+          item-layout="vertical"
+        >
           <template #renderItem="{ item }">
             <a-list-item>
               <a-list-item-meta>
                 <template #title>
-                  <a-tag :color="typeColor(item.revision_type)">{{ typeLabel(item.revision_type) }}</a-tag>
+                  <a-tag :color="typeColor(item.revision_type)">
+                    {{ typeLabel(item.revision_type) }}
+                  </a-tag>
                   {{ item.description }}
                 </template>
                 <template #description>
@@ -26,14 +36,25 @@
                 </template>
               </a-list-item-meta>
               <template #extra>
-                <a-button size="small" @click="showDiff(item)">
-                  <template #icon><i class="fa-solid fa-code-compare"></i></template>
+                <a-button
+                  size="small"
+                  @click="showDiff(item)"
+                >
+                  <template #icon>
+                    <i class="fa-solid fa-code-compare" />
+                  </template>
                   查看差异
                 </a-button>
               </template>
-              <div v-if="selectedLog?.id === item.id && selectedLog?.diff" class="diff-block">
+              <div
+                v-if="selectedLog?.id === item.id && selectedLog?.diff"
+                class="diff-block"
+              >
                 <a-divider>差异</a-divider>
-                <pre class="diff-content" v-text="selectedLog.diff"></pre>
+                <pre
+                  class="diff-content"
+                  v-text="selectedLog.diff"
+                />
               </div>
             </a-list-item>
           </template>

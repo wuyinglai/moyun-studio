@@ -1,0 +1,59 @@
+{
+  "name": "整体蓝图生成",
+  "description": "生成小说的整体蓝图规划",
+  "version": "1.3",
+  "author": "墨韵AI",
+  "updated": "2026-05-14",
+  "tags": ["blueprint", "generation"],
+  "variables": {
+    "genre": {
+      "type": "text",
+      "label": "题材",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "theme": {
+      "type": "text",
+      "label": "核心主题",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "scale": {
+      "type": "select",
+      "label": "目标字数",
+      "source": "project-meta.json / pipeline extra_vars",
+      "options": ["5万", "10万", "15万", "20万", "30万", "50万"],
+      "required": true
+    },
+    "name": {
+      "type": "text",
+      "label": "项目名称",
+      "source": "pipeline extra_vars",
+      "required": false
+    },
+    "tone": {
+      "type": "text",
+      "label": "基调",
+      "source": "project-meta.json",
+      "required": false
+    },
+    "target_word_count": {
+      "type": "number",
+      "label": "目标字数（数字）",
+      "source": "pipeline extra_vars",
+      "required": false
+    },
+    "background": {
+      "type": "textarea",
+      "label": "故事背景",
+      "source": "project-meta.json",
+      "required": false
+    },
+    "writing_style": {
+      "type": "text",
+      "label": "写作风格",
+      "source": "project-meta.json",
+      "required": false
+    }
+  }
+}

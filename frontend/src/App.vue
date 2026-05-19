@@ -92,7 +92,9 @@ function handleGlobalError(event: ErrorEvent) {
   if (event.error && !event.message.includes('ResizeObserver')) {
     try {
       useNotificationStore().error(`发生错误: ${event.message}`)
-    } catch {}
+    } catch {
+      // 通知失败时忽略
+    }
   }
 }
 
@@ -100,7 +102,9 @@ function handlePromiseRejection(event: PromiseRejectionEvent) {
   console.error('未捕获的 Promise 错误:', event.reason)
   try {
     useNotificationStore().error(`异步错误: ${(event.reason as any)?.message || '未知错误'}`)
-  } catch {}
+  } catch {
+    // 通知失败时忽略
+  }
 }
 
 function settingsBtn() {
@@ -155,15 +159,21 @@ function findFirstMarkdown(nodes: Array<{ name: string; path: string; type: stri
       class="backend-warning"
     >
       <div class="backend-warning-content">
-        <i class="fa-solid fa-triangle-exclamation"></i>
+        <i class="fa-solid fa-triangle-exclamation" />
         <span>无法连接到后端服务</span>
         <code v-if="customUrl">{{ customUrl }}</code>
         <code v-else>/api → Vite proxy</code>
-        <button class="retry-btn" @click="checkBackend">
-          <i class="fa-solid fa-rotate"></i> 重试
+        <button
+          class="retry-btn"
+          @click="checkBackend"
+        >
+          <i class="fa-solid fa-rotate" /> 重试
         </button>
-        <button class="settings-btn" @click="settingsBtn">
-          <i class="fa-solid fa-gear"></i> 配置
+        <button
+          class="settings-btn"
+          @click="settingsBtn"
+        >
+          <i class="fa-solid fa-gear" /> 配置
         </button>
       </div>
     </div>

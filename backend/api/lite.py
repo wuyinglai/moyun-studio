@@ -101,38 +101,6 @@ SECTIONS_PER_CHAPTER = 4
 CHAPTERS_PER_VOLUME = 10
 
 
-def _story_engine_template(card: LiteIdeaCard, prefs_text: str) -> str:
-    return f"""# 故事引擎
-
-## 人物欲望
-- 主角：证明自己，摆脱羞辱，获得真正能改变命运的力量。
-- 主要对手：压制主角，维护既得利益，阻止主角翻身。
-
-## 冲突推进
-- 明面冲突：{card.core_conflict}
-- 下一步升级：让主角在公开场景中用行动回应质疑。
-
-## 场景直觉
-- 最适合下一章的场景：能让人物正面碰撞、围观者足够多的场景。
-- 可触发的人物碰撞：主角、直接羞辱者、旁观势力、潜在盟友。
-
-## 前文记忆
-- 开局方向：{card.one_liner}
-- 主角钩子：{card.protagonist_hook}
-
-## 读者期待
-- 已承诺爽点：{card.selling_point}
-- 本阶段需要兑现：反击、成长、钩子。
-
-## 阶段性目标
-- 当前 5 章目标：完成开局压迫到第一次漂亮反击。
-- 完成标志：主角得到明确收益，并引出更高层级冲突。
-
-## 用户口味
-{prefs_text}
-"""
-
-
 def _prefs_to_text(prefs) -> str:
     params = "；".join(f"{k}：{v}" for k, v in prefs.genre_params.items() if v)
     return "\n".join([
@@ -144,6 +112,58 @@ def _prefs_to_text(prefs) -> str:
         f"- 不要写的内容：{prefs.dislikes or '未指定'}",
         f"- 题材参数：{params or '未指定'}",
     ])
+
+
+def _story_engine_template(card: LiteIdeaCard, prefs_text: str) -> str:
+    return f"""# 故事引擎
+
+## 人物欲望
+- 当前目标：主角要从“{card.protagonist_hook}”出发，证明自己并拿到第一份真实收益。
+- 长期目标：摆脱被动命运，获得足以改变处境的力量、身份或关系。
+- 底层执念：不再被轻慢、误解或安排，必须亲手夺回选择权。
+
+## 冲突推进
+- 明面冲突：{card.core_conflict}
+- 隐藏冲突：既得利益者不愿主角翻身，旁观者的态度会随战果变化。
+- 下一步压力：把质疑和代价摆到台面上，让主角必须当场回应。
+
+## 场景直觉
+- 下一场景：选择能让人物正面碰撞、旁观者足够多、反馈足够快的场合。
+- 可碰撞人物：主角、直接羞辱者、旁观势力、潜在盟友或更高层对手。
+- 场景原则：每一节都要有明确行动、即时反馈、结尾钩子。
+
+## 爽点账本
+- 已承诺爽点：{card.selling_point}
+- 待兑现爽点：反击、成长、奖励、身份变化或关系反转。
+- 正在铺垫：第一次漂亮反击之后，引出更高层级冲突。
+
+## 伏笔账本
+- 已埋伏笔：{card.one_liner}
+- 待回收伏笔：主角能力来源、对手后台、关键奖励的真实价值。
+- 已回收伏笔：暂无。
+
+## 前文记忆
+- 开局方向：{card.one_liner}
+- 主角钩子：{card.protagonist_hook}
+- 最近事件：尚未开始正文。
+
+## 读者期待
+- 期待兑现：主角不能空喊，要用行动拿到可见收益。
+- 期待节奏：先压迫，再反击，再给奖励或新威胁。
+- 期待边界：爽但不乱，胜利要有可感知的代价、证据或能力支撑。
+
+## 阶段性目标
+- 当前 5-10 节目标：完成开局压迫到第一次漂亮反击，并抬出更高层级冲突。
+- 完成标志：主角得到明确收益，旧秩序第一次松动。
+- 下一章规划触发：每完成 4 节，整理下一章 4 节方向。
+
+## 用户口味
+{prefs_text}
+"""
+
+
+def _compact_line(value: str, limit: int = 90) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip())[:limit]
 
 
 def _rotate_cards(seed: str) -> list[LiteIdeaCard]:
@@ -298,16 +318,20 @@ def _fallback_section_content(
         (line.strip("- ").strip() for line in story_engine.splitlines() if line.strip().startswith("-")),
         "有人想把他按回尘埃里，可他偏要在所有人面前站起来。",
     )
+    card_desire = selected_card.protagonist_desire or desire_hint
+    card_obstacle = selected_card.obstacle or selected_card.scene
+    card_advancement = selected_card.advancement or selected_card.payoff
     return "\n\n".join([
         f"# {label} {selected_card.title}",
         f"{selected_card.scene}里，人声原本很稳。直到门口那道身影出现，所有目光才像被一只看不见的手拨动，同时转了过去。",
         f"最先笑出声的人没有压低音量。他把手里的茶盏轻轻一放，慢条斯理地说：“你还真敢来。”旁边几个人跟着露出笑意，那种笑不是惊讶，而是早就等着看人出丑的轻慢。",
-        f"那道身影没有退。袖口沾着一路赶来的风尘，眼神却冷得很稳。{desire_hint}这句话像一枚钉子，钉在心口，也钉住了脚下的位置。",
+        f"那道身影没有退。袖口沾着一路赶来的风尘，眼神却冷得很稳。{card_desire}这句话像一枚钉子，钉在心口，也钉住了脚下的位置。",
+        f"真正的阻力不是几句冷嘲，而是{card_obstacle}。他明白，今天只要退半步，后面的每一步都会被人替他安排。",
         "对方把准备好的条件一条条抛出来：认错，低头，交出本该属于自己的东西。每一句都像是在给台阶，其实每一级都通向更深的泥里。",
         "场面安静下来。所有人都以为会听见求饶，或者至少听见一句辩解。",
         "可他只是抬眼，先问了一个很轻的问题。那问题轻得像随手一掸，却刚好掸在对方最怕被碰到的地方。笑声断了。茶盏边缘磕在桌面上，发出短促的一声响。",
         f"紧接着，证据、旧账和对方藏起来的破绽被一层层摆开。刚才还稳坐上风的人脸色终于变了，嘴唇动了几次，却一句完整的话也没接上。{selected_card.payoff}，而旁观的人也在这一刻明白，今天被逼到台前的人，未必就是该低头的人。",
-        f"风从门外灌进来，吹得烛火一偏。有人在角落里悄悄收起笑意，也有人第一次认真打量他。更远处，一道沉默的视线停了很久，因为{selected_card.hook}。",
+        f"风从门外灌进来，吹得烛火一偏。有人在角落里悄悄收起笑意，也有人第一次认真打量他。{card_advancement}。更远处，一道沉默的视线停了很久，因为{selected_card.hook}。",
     ])
 
 
@@ -330,16 +354,22 @@ def _parse_option_cards(raw: str, next_label: str) -> list[LiteNextOptionCard]:
             continue
         title = str(item.get("title") or "").strip()
         scene = str(item.get("scene") or item.get("conflict_upgrade") or item.get("conflict") or "").strip()
+        protagonist_desire = str(item.get("protagonist_desire") or item.get("desire") or item.get("goal") or "").strip()
+        obstacle = str(item.get("obstacle") or item.get("resistance") or item.get("pressure") or "").strip()
         payoff = str(item.get("payoff") or item.get("beat") or "").strip()
         hook = str(item.get("hook") or "").strip()
+        advancement = str(item.get("advancement") or item.get("push") or item.get("progress") or "").strip()
         if title and scene and payoff and hook:
             cards.append(LiteNextOptionCard(
                 id=f"next-{next_label}-{idx}",
                 title=title[:16],
                 beat=payoff[:90],
                 scene=scene[:90],
+                protagonist_desire=protagonist_desire[:90] or "主角要拿到一个可见的阶段性收益。",
+                obstacle=obstacle[:90] or scene[:90],
                 payoff=payoff[:80],
                 hook=hook[:80],
+                advancement=advancement[:90] or "推动冲突升级，并让下一节有明确接力点。",
             ))
     return cards[:3]
 
@@ -354,9 +384,9 @@ def _fallback_next_cards(next_label: str, current_content: str, recent_context: 
     context = " ".join(useful_lines)
     hint = (useful_lines[-1] if useful_lines else context)[:32] or "当前冲突"
     options = [
-        ("当场反逼", f"对手借“{hint}”继续施压，把主角逼到众人面前。", "主角抓住对方话里的破绽，当众把主动权夺回来。", "幕后撑腰的人被迫露出一句关键口风。"),
-        ("旧账翻面", f"看似对主角不利的旧账，被对手拿来公开施压。", "主角顺势翻出被忽略的细节，让刚占上风的人反而失态。", "旧账牵出一个更大的交换条件。"),
-        ("战果藏钩", f"冲突暂时收束，但旁观者开始重新站队。", "主角拿到实在奖励，同时让羞辱者付出可见代价。", "奖励里藏着下一节必须打开的新线索。"),
+        ("当场反逼", f"对手借“{hint}”继续施压，把主角逼到众人面前。", "主角要当众守住尊严，并拿回被抢走的话语权。", "对手把旁观者和规矩都变成压力，逼主角低头认错。", "主角抓住对方话里的破绽，当众把主动权夺回来。", "幕后撑腰的人被迫露出一句关键口风。", "完成第一次正面反击，并把矛盾推向幕后人物。"),
+        ("旧账翻面", f"看似对主角不利的旧账，被对手拿来公开施压。", "主角要证明旧账另有隐情，洗掉眼前的污名。", "旧证据被对手抢先解释，旁观者暂时站在对面。", "主角顺势翻出被忽略的细节，让刚占上风的人反而失态。", "旧账牵出一个更大的交换条件。", "回收一条旧线索，同时制造新的利益交换。"),
+        ("战果藏钩", f"冲突暂时收束，但旁观者开始重新站队。", "主角要把胜势落成实物奖励，而不是只赢口舌。", "奖励被人暗中设限，拿到它反而会引来更高层注意。", "主角拿到实在奖励，同时让羞辱者付出可见代价。", "奖励里藏着下一节必须打开的新线索。", "把本节爽点变成下一节冲突的燃料。"),
     ]
     return [
         LiteNextOptionCard(
@@ -364,10 +394,13 @@ def _fallback_next_cards(next_label: str, current_content: str, recent_context: 
             title=title,
             beat=payoff,
             scene=scene,
+            protagonist_desire=protagonist_desire,
+            obstacle=obstacle,
             payoff=payoff,
             hook=hook,
+            advancement=advancement,
         )
-        for idx, (title, scene, payoff, hook) in enumerate(options, 1)
+        for idx, (title, scene, protagonist_desire, obstacle, payoff, hook, advancement) in enumerate(options, 1)
     ]
 
 
@@ -501,8 +534,35 @@ def _summarize_story_engine(text: str) -> dict[str, str]:
         "protagonist_goal": section("人物欲望"),
         "current_conflict": section("冲突推进"),
         "foreshadowing": section("前文记忆"),
+        "payoff_ledger": section("爽点账本"),
+        "reader_expectation": section("读者期待"),
         "stage_goal": section("阶段性目标"),
     }
+
+
+def _build_story_engine_update(
+    story_engine: str,
+    target_file: str,
+    selected_card: LiteNextOptionCard,
+    content: str,
+) -> str:
+    excerpt = _compact_line(" ".join(
+        line.strip()
+        for line in content.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ), 140)
+    update = "\n".join([
+        f"## 最近推进 {datetime.now(timezone.utc).date().isoformat()}",
+        f"- 章节：{target_file}",
+        f"- 选择：{selected_card.title}",
+        f"- 主角想要：{selected_card.protagonist_desire or '继续夺回主动权'}",
+        f"- 阻力：{selected_card.obstacle or selected_card.scene}",
+        f"- 兑现：{selected_card.payoff}",
+        f"- 推进：{selected_card.advancement or '把当前冲突推到下一层'}",
+        f"- 钩子：{selected_card.hook}",
+        f"- 正文记忆：{excerpt or selected_card.beat}",
+    ])
+    return story_engine.rstrip() + "\n\n" + update + "\n"
 
 
 def _is_blank_chapter(content: str) -> bool:
@@ -753,8 +813,8 @@ async def generate_next_options(
             "每张卡必须至少引用一个前文出现的人名、地点、物件、组织、称呼或伏笔。",
             "三张卡方向要明显不同：一张强硬反击，一张反转揭底，一张拿奖励并埋钩子；标题必须根据剧情改写，不要直接写这些模板名。",
             "不要写“围绕某某推进、保持快节奏、标准爽点”这类说明书句式。",
-            "只返回 JSON 数组，每项包含 title, conflict_upgrade, payoff, hook。",
-            "字段含义：conflict_upgrade=冲突升级，payoff=爽点兑现，hook=结尾钩子。",
+            "只返回 JSON 数组，每项包含 title, conflict_upgrade, protagonist_desire, obstacle, payoff, hook, advancement。",
+            "字段含义：conflict_upgrade=冲突升级，protagonist_desire=主角此刻想要什么，obstacle=谁/什么挡住他，payoff=爽点兑现，hook=结尾钩子，advancement=本节怎样推进故事。",
             "",
             f"下一节：{next_label}",
             f"偏好：{_prefs_to_text(req.prefs)}",
@@ -830,8 +890,11 @@ async def write_lite_next(
         f"本章爽点卡：{req.selected_card.title}",
         f"剧情节拍：{req.selected_card.beat}",
         f"场景：{req.selected_card.scene}",
+        f"主角此刻想要：{req.selected_card.protagonist_desire}",
+        f"阻力/对手：{req.selected_card.obstacle}",
         f"兑现：{req.selected_card.payoff}",
         f"结尾钩子：{req.selected_card.hook}",
+        f"故事推进：{req.selected_card.advancement}",
         "写作偏好：",
         _prefs_to_text(req.prefs),
         f"{'章规划：\n' + chapter_plan if chapter_plan else ''}",
@@ -934,13 +997,7 @@ async def write_lite_next(
             logger.warning("爽文模式质量审查失败: %s", e)
             quality_summary = _quality_one_line("", req.action)
 
-    updated_engine = story_engine.rstrip() + "\n\n" + "\n".join([
-        f"## 最近推进 {datetime.now(timezone.utc).date().isoformat()}",
-        f"- 章节：{target_file}",
-        f"- 选择：{req.selected_card.title}",
-        f"- 兑现：{req.selected_card.payoff}",
-        f"- 钩子：{req.selected_card.hook}",
-    ]) + "\n"
+    updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
     await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
     await file_service.write_file(
         f"{req.project_id}/recent-context.md",
@@ -1039,8 +1096,11 @@ async def write_lite_next_stream(
                 f"本章爽点卡：{req.selected_card.title}",
                 f"剧情节拍：{req.selected_card.beat}",
                 f"场景：{req.selected_card.scene}",
+                f"主角此刻想要：{req.selected_card.protagonist_desire}",
+                f"阻力/对手：{req.selected_card.obstacle}",
                 f"兑现：{req.selected_card.payoff}",
                 f"结尾钩子：{req.selected_card.hook}",
+                f"故事推进：{req.selected_card.advancement}",
                 "如果这是续写草稿：只能从当前草稿末尾自然接着写，不要重写开头，不要重复已经写过的句子。",
                 "写作偏好：",
                 prefs_text,
@@ -1146,13 +1206,7 @@ async def write_lite_next_stream(
                     quality_summary = _quality_one_line("", req.action)
 
             yield _lite_stream_event("status", {"message": "正在更新故事状态..."})
-            updated_engine = story_engine.rstrip() + "\n\n" + "\n".join([
-                f"## 最近推进 {datetime.now(timezone.utc).date().isoformat()}",
-                f"- 章节：{target_file}",
-                f"- 选择：{req.selected_card.title}",
-                f"- 兑现：{req.selected_card.payoff}",
-                f"- 钩子：{req.selected_card.hook}",
-                ]) + "\n"
+            updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
             await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
             await file_service.write_file(
                 f"{req.project_id}/recent-context.md",

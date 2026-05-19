@@ -1,0 +1,52 @@
+{
+  "name": "续写",
+  "description": "在当前内容基础上续写",
+  "version": "1.3",
+  "author": "墨韵AI",
+  "updated": "2026-05-11",
+  "tags": ["continuation", "generation"],
+  "variables": {
+    "current_content": {
+      "type": "textarea",
+      "label": "当前内容",
+      "source": "章节正文",
+      "required": true
+    },
+    "chapter_memory": {
+      "type": "textarea",
+      "label": "章节记忆",
+      "source": "ch-meta.json",
+      "required": false
+    },
+    "continuation_goal": {
+      "type": "textarea",
+      "label": "续写目标",
+      "source": "ch-meta.json",
+      "required": false
+    },
+    "story_state": {
+      "type": "textarea",
+      "label": "当前故事状态",
+      "source": "story-state.md",
+      "required": false
+    },
+    "style_guide": {
+      "type": "textarea",
+      "label": "文风指南",
+      "source": "style-guide.md",
+      "required": false
+    },
+    "recent_context": {
+      "type": "textarea",
+      "label": "近期上下文",
+      "source": "recent-context.md",
+      "required": false
+    },
+    "pending_foreshadowing": {
+      "type": "textarea",
+      "label": "待回收伏笔",
+      "source": "story-state.md",
+      "required": false
+    }
+  }
+}

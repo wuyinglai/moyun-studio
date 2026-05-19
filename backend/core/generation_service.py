@@ -73,7 +73,7 @@ class GenerationService:
         """
         llm_cfg = load_llm_config_from_workspace(self.settings)
         svc = LLMService.from_workspace_config(llm_cfg)
-        runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service)
+        runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service, system_prompts_path=self.settings.system_prompts_path)
 
         # 构建 LLM 额外参数（含 thinking 配置）
         llm_extra_kwargs = {}
@@ -247,7 +247,7 @@ class GenerationService:
 
         llm_cfg = load_llm_config_from_workspace(self.settings)
         svc = LLMService.from_workspace_config(llm_cfg)
-        runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service)
+        runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service, system_prompts_path=self.settings.system_prompts_path)
 
         shared_vars = await runner.load_system_variables(project_id)
         project_meta = await runner.load_project_meta(project_id)

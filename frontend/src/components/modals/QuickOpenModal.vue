@@ -4,8 +4,8 @@
     title="快速打开文件"
     :width="600"
     :footer="null"
-    @cancel="close"
     class="quick-open-modal"
+    @cancel="close"
   >
     <div class="quick-open-container">
       <a-input-search
@@ -25,11 +25,14 @@
           @click="openFile(file)"
           @mouseenter="selectedIndex = filteredFiles.indexOf(file)"
         >
-          <i class="fa-solid fa-file-lines"></i>
+          <i class="fa-solid fa-file-lines" />
           <span class="file-name">{{ file.name }}</span>
           <span class="file-path">{{ file.path }}</span>
         </div>
-        <div v-if="filteredFiles.length === 0 && query" class="no-results">
+        <div
+          v-if="filteredFiles.length === 0 && query"
+          class="no-results"
+        >
           未找到匹配文件
         </div>
       </div>

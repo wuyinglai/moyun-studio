@@ -4,8 +4,8 @@
     title="全文搜索"
     :width="700"
     :footer="null"
-    @cancel="close"
     class="search-modal"
+    @cancel="close"
   >
     <div class="search-container">
       <a-input-search
@@ -14,17 +14,29 @@
         size="large"
         autofocus
         @search="doSearch"
-        @pressEnter="doSearch"
+        @press-enter="doSearch"
       />
       <div class="search-options">
-        <a-checkbox v-model:checked="caseSensitive">区分大小写</a-checkbox>
-        <a-checkbox v-model:checked="regexMode">正则表达式</a-checkbox>
+        <a-checkbox v-model:checked="caseSensitive">
+          区分大小写
+        </a-checkbox>
+        <a-checkbox v-model:checked="regexMode">
+          正则表达式
+        </a-checkbox>
       </div>
-      <div v-if="isSearching" class="search-loading">
+      <div
+        v-if="isSearching"
+        class="search-loading"
+      >
         <a-spin /> 搜索中...
       </div>
-      <div v-else-if="results.length > 0" class="search-results">
-        <div class="results-count">找到 {{ results.length }} 个匹配</div>
+      <div
+        v-else-if="results.length > 0"
+        class="search-results"
+      >
+        <div class="results-count">
+          找到 {{ results.length }} 个匹配
+        </div>
         <div
           v-for="(result, idx) in results"
           :key="idx"
@@ -32,19 +44,28 @@
           @click="jumpToResult(result)"
         >
           <div class="result-file">
-            <i class="fa-solid fa-file-lines"></i>
+            <i class="fa-solid fa-file-lines" />
             {{ result.file }}
           </div>
           <div class="result-line">
             <span class="line-num">第 {{ result.line }} 行</span>
-            <span class="line-content" v-html="highlight(result.content)"></span>
+            <span
+              class="line-content"
+              v-html="highlight(result.content)"
+            />
           </div>
         </div>
       </div>
-      <div v-else-if="searched && query" class="search-empty">
+      <div
+        v-else-if="searched && query"
+        class="search-empty"
+      >
         未找到匹配结果
       </div>
-      <div v-else class="search-hint">
+      <div
+        v-else
+        class="search-hint"
+      >
         输入内容后按 Enter 或点击搜索
       </div>
     </div>

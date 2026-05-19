@@ -1,58 +1,134 @@
 <template>
-  <div class="step-editor-card" :style="{ marginLeft: depth * 16 + 'px' }">
+  <div
+    class="step-editor-card"
+    :style="{ marginLeft: depth * 16 + 'px' }"
+  >
     <div class="step-editor-header">
       <div class="step-drag-handle">
-        <button class="btn-icon-sm" @click="$emit('move-up')" :disabled="!canMoveUp" title="上移">↑</button>
-        <button class="btn-icon-sm" @click="$emit('move-down')" :disabled="!canMoveDown" title="下移">↓</button>
-        <span class="step-order" @click="expanded = !expanded">{{ index + 1 }}</span>
+        <button
+          class="btn-icon-sm"
+          :disabled="!canMoveUp"
+          title="上移"
+          @click="$emit('move-up')"
+        >
+          ↑
+        </button>
+        <button
+          class="btn-icon-sm"
+          :disabled="!canMoveDown"
+          title="下移"
+          @click="$emit('move-down')"
+        >
+          ↓
+        </button>
+        <span
+          class="step-order"
+          @click="expanded = !expanded"
+        >{{ index + 1 }}</span>
       </div>
-      <input class="step-label-input" v-model="local.label" @input="emitUpdate" placeholder="步骤名称" />
-      <select class="step-type-select" :value="local.type" @change="changeType">
-        <option value="pipeline">管线</option>
-        <option value="loop">循环</option>
-        <option value="file">文件</option>
+      <input
+        v-model="local.label"
+        class="step-label-input"
+        placeholder="步骤名称"
+        @input="emitUpdate"
+      >
+      <select
+        class="step-type-select"
+        :value="local.type"
+        @change="changeType"
+      >
+        <option value="pipeline">
+          管线
+        </option>
+        <option value="loop">
+          循环
+        </option>
+        <option value="file">
+          文件
+        </option>
       </select>
-      <button class="btn-icon-sm btn-remove" @click="$emit('remove')" title="删除">✕</button>
+      <button
+        class="btn-icon-sm btn-remove"
+        title="删除"
+        @click="$emit('remove')"
+      >
+        ✕
+      </button>
     </div>
 
-    <div class="step-config" v-if="expanded">
+    <div
+      v-if="expanded"
+      class="step-config"
+    >
       <template v-if="local.type === 'pipeline'">
         <div class="cfg-row">
           <label>管线</label>
-          <input v-model="local.pipeline" @input="emitUpdate" placeholder="generate/blueprint" />
+          <input
+            v-model="local.pipeline"
+            placeholder="generate/blueprint"
+            @input="emitUpdate"
+          >
         </div>
         <div class="cfg-row">
           <label>输出路径</label>
-          <input v-model="local.output" @input="emitUpdate" placeholder='projects/{{project_id}}/...' />
+          <input
+            v-model="local.output"
+            placeholder="projects/{{project_id}}/..."
+            @input="emitUpdate"
+          >
         </div>
         <div class="cfg-row">
           <label>模式</label>
-          <select v-model="local.output_mode" @change="emitUpdate">
-            <option value="overwrite">覆盖</option>
-            <option value="append">追加</option>
-            <option value="dimension_file">设定提取</option>
+          <select
+            v-model="local.output_mode"
+            @change="emitUpdate"
+          >
+            <option value="overwrite">
+              覆盖
+            </option>
+            <option value="append">
+              追加
+            </option>
+            <option value="dimension_file">
+              设定提取
+            </option>
           </select>
         </div>
         <div class="cfg-row">
           <label>输入文件</label>
-          <input v-model="local.input" @input="emitUpdate" placeholder='可选，{{steps.xxx.output}}' />
+          <input
+            v-model="local.input"
+            placeholder="可选，{{steps.xxx.output}}"
+            @input="emitUpdate"
+          >
         </div>
       </template>
 
       <template v-if="local.type === 'loop'">
         <div class="cfg-row">
           <label>次数</label>
-          <input v-model="local.count" @input="emitUpdate" placeholder='10 或 {{variables.xxx}}' />
+          <input
+            v-model="local.count"
+            placeholder="10 或 {{variables.xxx}}"
+            @input="emitUpdate"
+          >
         </div>
         <div class="cfg-row">
           <label>变量名</label>
-          <input v-model="local.var" @input="emitUpdate" placeholder="i" />
+          <input
+            v-model="local.var"
+            placeholder="i"
+            @input="emitUpdate"
+          >
         </div>
         <div class="sub-steps-section">
           <div class="sub-steps-header">
             <span class="section-label">子步骤</span>
-            <button class="btn-icon" @click="addSubStep">
-              <i class="fa-solid fa-plus"></i>
+            <button
+              class="btn-icon"
+              @click="addSubStep"
+            >
+              <i class="fa-solid fa-plus" />
             </button>
           </div>
           <StepEditor
@@ -68,30 +144,62 @@
             @move-up="moveSubStep(si, -1)"
             @move-down="moveSubStep(si, 1)"
           />
-          <div v-if="!local.steps || local.steps.length === 0" class="no-vars">暂无子步骤</div>
+          <div
+            v-if="!local.steps || local.steps.length === 0"
+            class="no-vars"
+          >
+            暂无子步骤
+          </div>
         </div>
       </template>
 
       <template v-if="local.type === 'file'">
         <div class="cfg-row">
           <label>操作</label>
-          <select v-model="local.action" @change="emitUpdate">
-            <option value="mkdir">创建目录</option>
-            <option value="copy">复制文件</option>
-            <option value="delete">删除</option>
+          <select
+            v-model="local.action"
+            @change="emitUpdate"
+          >
+            <option value="mkdir">
+              创建目录
+            </option>
+            <option value="copy">
+              复制文件
+            </option>
+            <option value="delete">
+              删除
+            </option>
           </select>
         </div>
         <div class="cfg-row">
           <label>路径</label>
-          <input v-model="local.path" @input="emitUpdate" placeholder="projects/.../dir" />
+          <input
+            v-model="local.path"
+            placeholder="projects/.../dir"
+            @input="emitUpdate"
+          >
         </div>
-        <div class="cfg-row" v-if="local.action === 'copy'">
+        <div
+          v-if="local.action === 'copy'"
+          class="cfg-row"
+        >
           <label>源路径</label>
-          <input v-model="local.input" @input="emitUpdate" placeholder="来源路径" />
+          <input
+            v-model="local.input"
+            placeholder="来源路径"
+            @input="emitUpdate"
+          >
         </div>
-        <div class="cfg-row" v-if="local.action === 'copy'">
+        <div
+          v-if="local.action === 'copy'"
+          class="cfg-row"
+        >
           <label>目标路径</label>
-          <input v-model="local.output" @input="emitUpdate" placeholder="目标路径" />
+          <input
+            v-model="local.output"
+            placeholder="目标路径"
+            @input="emitUpdate"
+          >
         </div>
       </template>
     </div>

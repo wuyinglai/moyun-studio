@@ -1,0 +1,8 @@
+name: style-guide
+label: 生成文风指南
+steps:
+  - id: generate
+    label: 生成文风指南
+    prompt: pipeline/blueprint/generate_style_guide
+    fallback: null
+    confirm: false

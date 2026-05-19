@@ -24,12 +24,13 @@ async def test_llm():
     print(f"结果: {result}")
     
     if result.get("success"):
-        print("\n✓ LLM 连接成功！")
+        print("\n�?LLM 连接成功�?)
         return True
     else:
-        print("\n✗ LLM 连接失败")
+        print("\n�?LLM 连接失败")
         return False
 
 if __name__ == "__main__":
     success = asyncio.run(test_llm())
     sys.exit(0 if success else 1)
+

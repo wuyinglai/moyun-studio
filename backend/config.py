@@ -31,11 +31,17 @@ class Settings(BaseSettings):
     # ─── 工作区配置 ─────────────────────────────────────────────
     workspace_path: Path = Field(
         default=Path("workspace"),
-        description="工作区根目录（存放用户项目和Prompt模板）",
+        description="工作区根目录（存放用户项目和自定义Prompt）",
     )
     projects_subdir: str = Field(default="projects", description="项目子目录名")
-    prompts_subdir: str = Field(default="prompts", description="Prompt模板子目录名")
+    prompts_subdir: str = Field(default="prompts", description="用户自定义Prompt子目录名")
     templates_subdir: str = Field(default="templates", description="模板文件子目录名")
+    
+    # ─── 系统Prompt配置 ────────────────────────────────────────
+    system_prompts_path: Path = Field(
+        default=Path("prompts"),
+        description="系统默认Prompt模板目录（Git追踪）",
+    )
 
     # ─── LLM 配置 ───────────────────────────────────────────────
     llm_provider: Literal["openai", "anthropic", "ollama", "custom"] = Field(

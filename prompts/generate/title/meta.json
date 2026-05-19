@@ -1,0 +1,35 @@
+{
+  "name": "书名+创意生成",
+  "description": "根据项目设置生成书名和创意简介",
+  "version": "1.2",
+  "author": "墨韵AI",
+  "updated": "2026-05-11",
+  "tags": ["title", "generation"],
+  "variables": {
+    "genre": {
+      "type": "text",
+      "label": "题材",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "theme": {
+      "type": "text",
+      "label": "核心主题",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "tone": {
+      "type": "select",
+      "label": "作品基调",
+      "source": "project-meta.json",
+      "options": ["热血", "轻松", "悬疑", "虐心", "甜宠", "正剧", "暗黑"],
+      "required": true
+    },
+    "setting": {
+      "type": "text",
+      "label": "故事背景",
+      "source": "project-meta.json",
+      "required": false
+    }
+  }
+}

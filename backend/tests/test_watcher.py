@@ -57,11 +57,11 @@ class TestFileWatcherEvents:
         """验证 added 事件被发布到 EventBus"""
         watcher = FileWatcher(tmp_path, mock_event_bus)
 
-        # Mock watchfiles.watch 返回一个添加事件
+        # Mock watchfiles.watch 返回一个添加事件（同步 generator）
         changes = [(1, str(tmp_path / "new.md"))]  # 1 = Change.added
 
         with patch("backend.core.watcher.watchfiles.watch") as mock_watch:
-            async def mock_watch_iter(*args, **kwargs):
+            def mock_watch_iter(*args, **kwargs):
                 yield changes
             mock_watch.return_value = mock_watch_iter()
 
@@ -81,7 +81,7 @@ class TestFileWatcherEvents:
         changes = [(2, str(tmp_path / "edit.md"))]  # 2 = Change.modified
 
         with patch("backend.core.watcher.watchfiles.watch") as mock_watch:
-            async def mock_watch_iter(*args, **kwargs):
+            def mock_watch_iter(*args, **kwargs):
                 yield changes
             mock_watch.return_value = mock_watch_iter()
 
@@ -98,7 +98,7 @@ class TestFileWatcherEvents:
         changes = [(3, str(tmp_path / "gone.md"))]  # 3 = Change.deleted
 
         with patch("backend.core.watcher.watchfiles.watch") as mock_watch:
-            async def mock_watch_iter(*args, **kwargs):
+            def mock_watch_iter(*args, **kwargs):
                 yield changes
             mock_watch.return_value = mock_watch_iter()
 
@@ -115,7 +115,7 @@ class TestFileWatcherEvents:
         changes = [(99, str(tmp_path / "unknown.md"))]  # 99 = unknown
 
         with patch("backend.core.watcher.watchfiles.watch") as mock_watch:
-            async def mock_watch_iter(*args, **kwargs):
+            def mock_watch_iter(*args, **kwargs):
                 yield changes
             mock_watch.return_value = mock_watch_iter()
 
@@ -133,7 +133,7 @@ class TestFileWatcherEvents:
         changes = [(1, str(outside_path))]
 
         with patch("backend.core.watcher.watchfiles.watch") as mock_watch:
-            async def mock_watch_iter(*args, **kwargs):
+            def mock_watch_iter(*args, **kwargs):
                 yield changes
             mock_watch.return_value = mock_watch_iter()
 
@@ -150,11 +150,13 @@ class TestFileWatcherEvents:
         watcher = FileWatcher(tmp_path, mock_event_bus)
 
         with patch("backend.core.watcher.watchfiles.watch") as mock_watch:
-            # 模拟抛出异常
-            async def mock_watch_iter(*args, **kwargs):
-                raise Exception("watch error")
-                yield  # unreachable
-            mock_watch.return_value = mock_watch_iter()
+            # 模拟抛出异常（同步 generator）
+            class MockWatchIter:
+                def __iter__(self):
+                    return self
+                def __next__(self):
+                    raise Exception("watch error")
+            mock_watch.return_value = MockWatchIter()
 
             await watcher.start()
             await asyncio.sleep(0.1)

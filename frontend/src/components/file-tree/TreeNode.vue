@@ -10,30 +10,87 @@
       @contextmenu.prevent.stop="openNodeMenu"
       @click="handleClick"
     >
-      <span v-if="node.type === 'directory'" class="node-arrow" :class="{ expanded: isExpanded }" @click.stop="toggleExpand">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"/>
+      <span
+        v-if="node.type === 'directory'"
+        class="node-arrow"
+        :class="{ expanded: isExpanded }"
+        @click.stop="toggleExpand"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
         </svg>
       </span>
-      <span v-else class="node-arrow node-arrow--spacer"></span>
+      <span
+        v-else
+        class="node-arrow node-arrow--spacer"
+      />
 
-      <span class="node-icon" :class="`icon-${iconType}`">
+      <span
+        class="node-icon"
+        :class="`icon-${iconType}`"
+      >
         <component :is="iconComponent" />
       </span>
 
-      <span class="node-name" :title="node.name">{{ displayName }}</span>
-      <span v-if="isDirty" class="node-dirty" title="有未保存的更改"></span>
-      <button class="node-menu-btn" title="更多操作" @click.stop="openNodeMenu">⋯</button>
+      <span
+        class="node-name"
+        :title="node.name"
+      >{{ displayName }}</span>
+      <span
+        v-if="isDirty"
+        class="node-dirty"
+        title="有未保存的更改"
+      />
+      <button
+        class="node-menu-btn"
+        title="更多操作"
+        @click.stop="openNodeMenu"
+      >
+        ⋯
+      </button>
     </div>
 
-    <div v-if="menuOpen" class="node-menu" @click.stop>
-      <button v-if="node.type === 'directory'" @click="emitAction('create-file')">新建文件</button>
-      <button v-if="node.type === 'directory'" @click="emitAction('create-directory')">新建目录</button>
-      <button @click="emitAction('rename')">重命名</button>
-      <button class="danger" @click="emitAction('delete')">移入回收站</button>
+    <div
+      v-if="menuOpen"
+      class="node-menu"
+      @click.stop
+    >
+      <button
+        v-if="node.type === 'directory'"
+        @click="emitAction('create-file')"
+      >
+        新建文件
+      </button>
+      <button
+        v-if="node.type === 'directory'"
+        @click="emitAction('create-directory')"
+      >
+        新建目录
+      </button>
+      <button @click="emitAction('rename')">
+        重命名
+      </button>
+      <button
+        class="danger"
+        @click="emitAction('delete')"
+      >
+        移入回收站
+      </button>
     </div>
 
-    <div v-if="node.type === 'directory' && isExpanded" class="node-children">
+    <div
+      v-if="node.type === 'directory' && isExpanded"
+      class="node-children"
+    >
       <TreeNode
         v-for="child in node.children"
         :key="child.path"

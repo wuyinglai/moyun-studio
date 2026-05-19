@@ -1,7 +1,6 @@
 """墨韵 AI小说创作助手 - 完整UI功能测试
 
-通过模拟点击前端页面，测试页面上的全部功能，验证返回结果是否符合预期。
-"""
+通过模拟点击前端页面，测试页面上的全部功能，验证返回结果是否符合预期�?"""
 
 import asyncio
 import time
@@ -20,7 +19,7 @@ test_results = []
 
 def record_test(name, passed, details=""):
     test_results.append({"name": name, "passed": passed, "details": details})
-    status = "✓" if passed else "✗"
+    status = "�? if passed else "�?
     print(f"  [{status}] {name}" + (f" - {details}" if details else ""))
 
 
@@ -49,8 +48,7 @@ async def test_page_load(page):
         title = await page.title()
         record_test("页面标题正确", "墨韵" in title, f"标题: {title}")
         
-        # 检查关键元素是否存在
-        header = await page.locator("text=墨韵").first.is_visible()
+        # 检查关键元素是否存�?        header = await page.locator("text=墨韵").first.is_visible()
         record_test("头部显示正常", header)
         
         await take_screenshot(page, "01_page_loaded.png")
@@ -61,7 +59,7 @@ async def test_page_load(page):
 
 
 async def test_settings_modal(page):
-    """测试2: 设置功能 - 配置DeepSeek并测试连接"""
+    """测试2: 设置功能 - 配置DeepSeek并测试连�?""
     print("\n=== 测试2: 设置功能 ===")
     try:
         # 点击设置按钮
@@ -87,13 +85,13 @@ async def test_settings_modal(page):
         if await provider_select.count() > 0:
             options = await provider_select.locator('option').all_text_contents()
             has_deepseek = any("deepseek" in opt.lower() or "deepseek" in opt.lower() for opt in options)
-            record_test("DeepSeek在Provider选项中", has_deepseek, f"选项: {options}")
+            record_test("DeepSeek在Provider选项�?, has_deepseek, f"选项: {options}")
         
         # 填写DeepSeek配置
         # API Key
         api_key_inputs = page.locator('input[type="password"], input[name*="key"], input[placeholder*="key"]')
         if await api_key_inputs.count() > 0:
-            await api_key_inputs.first.fill("sk-4ea45b73004f44a98c2f472d354430d1")
+            await api_key_inputs.first.fill("sk-test-placeholder")
             await asyncio.sleep(0.5)
         
         # API URL
@@ -119,10 +117,9 @@ async def test_settings_modal(page):
             await test_btn.click()
             await asyncio.sleep(10)  # 等待连接测试结果
             
-            # 检查连接结果
-            content = await page.content()
+            # 检查连接结�?            content = await page.content()
             connection_success = "连接成功" in content or "success" in content.lower() or "connected" in content.lower()
-            record_test("DeepSeek连接测试", connection_success, "等待10秒后检查结果")
+            record_test("DeepSeek连接测试", connection_success, "等待10秒后检查结�?)
             
             await take_screenshot(page, "02_connection_result.png")
         
@@ -151,8 +148,7 @@ async def test_create_project_wizard(page):
         await asyncio.sleep(1.5)
         await take_screenshot(page, "03_wizard_opened.png")
         
-        # 检查向导弹窗
-        modal = page.locator('.modal, .dialog, [role="dialog"]').first
+        # 检查向导弹�?        modal = page.locator('.modal, .dialog, [role="dialog"]').first
         modal_visible = await modal.is_visible()
         record_test("新建项目弹窗打开", modal_visible)
         
@@ -186,13 +182,13 @@ async def test_create_project_wizard(page):
                 record_test("选择基调", True)
         
         # 步骤3: 选择写作风格
-        style_options = page.locator('.style-option, [data-style], button:has-text("快节奏"), button:has-text("慢热")')
+        style_options = page.locator('.style-option, [data-style], button:has-text("快节�?), button:has-text("慢热")')
         if await style_options.count() > 0:
-            fast_btn = page.locator('button:has-text("快节奏")').first
+            fast_btn = page.locator('button:has-text("快节�?)').first
             if await fast_btn.count() > 0:
                 await fast_btn.click()
                 await asyncio.sleep(0.5)
-                record_test("选择写作风格-快节奏", True)
+                record_test("选择写作风格-快节�?, True)
             else:
                 await style_options.first.click()
                 record_test("选择写作风格", True)
@@ -212,30 +208,28 @@ async def test_create_project_wizard(page):
         await take_screenshot(page, "03_params_filled.png")
         
         # 点击生成书名
-        generate_btn = page.locator('button:has-text("生成书名"), button:has-text("生成创意"), button:has-text("开始生成")').first
+        generate_btn = page.locator('button:has-text("生成书名"), button:has-text("生成创意"), button:has-text("开始生�?)').first
         if await generate_btn.count() > 0:
             await generate_btn.click()
             
-            # 等待AI生成（最多30秒）
+            # 等待AI生成（最�?0秒）
             for i in range(15):
                 await asyncio.sleep(2)
                 content = await page.content()
-                if "《" in content or "书名" in content:
+                if "�? in content or "书名" in content:
                     break
             
             await take_screenshot(page, "03_book_idea_generated.png")
             
-            # 检查书名是否生成
-            content = await page.content()
-            has_book_name = "《" in content and "》" in content
-            record_test("AI生成书名", has_book_name, "检查是否包含书名格式")
+            # 检查书名是否生�?            content = await page.content()
+            has_book_name = "�? in content and "�? in content
+            record_test("AI生成书名", has_book_name, "检查是否包含书名格�?)
         
-        # 点击下一步
-        next_btn = page.locator('button:has-text("下一步"), button:has-text("Next"), button:has-text("继续")').first
+        # 点击下一�?        next_btn = page.locator('button:has-text("下一�?), button:has-text("Next"), button:has-text("继续")').first
         if await next_btn.count() > 0:
             await next_btn.click()
             await asyncio.sleep(1)
-            record_test("点击下一步", True)
+            record_test("点击下一�?, True)
         
         await take_screenshot(page, "03_proceeding.png")
         return True
@@ -257,24 +251,22 @@ async def test_outline_generation(page):
         if await generate_outline_btn.count() > 0:
             await generate_outline_btn.click()
             
-            # 等待大纲生成（最多60秒）
-            print("  等待大纲生成中...")
+            # 等待大纲生成（最�?0秒）
+            print("  等待大纲生成�?..")
             for i in range(30):
                 await asyncio.sleep(2)
                 content = await page.content()
-                # 检查是否生成完成
-                if "第1章" in content or "第2章" in content or "确认大纲" in content:
-                    print(f"  大纲生成完成 (等待了{i*2}秒)")
+                # 检查是否生成完�?                if "�?�? in content or "�?�? in content or "确认大纲" in content:
+                    print(f"  大纲生成完成 (等待了{i*2}�?")
                     break
                 if i % 5 == 0:
-                    print(f"  已等待 {i*2} 秒...")
+                    print(f"  已等�?{i*2} �?..")
             
             await take_screenshot(page, "04_outline_result.png")
             
-            # 检查大纲内容
-            content = await page.content()
-            has_chapters = "第" in content and "章" in content
-            has_detailed = "简介" in content or "情节" in content or "待生成" not in content
+            # 检查大纲内�?            content = await page.content()
+            has_chapters = "�? in content and "�? in content
+            has_detailed = "简�? in content or "情节" in content or "待生�? not in content
             record_test("大纲生成成功", has_chapters, f"包含章节标题: {has_chapters}")
             record_test("大纲内容详细", has_detailed, f"包含详细内容: {has_detailed}")
         
@@ -294,8 +286,8 @@ async def test_outline_generation(page):
 
 
 async def test_editor(page):
-    """测试5: 编辑器功能"""
-    print("\n=== 测试5: 编辑器功能 ===")
+    """测试5: 编辑器功�?""
+    print("\n=== 测试5: 编辑器功�?===")
     try:
         # 等待项目加载
         await asyncio.sleep(3)
@@ -303,21 +295,20 @@ async def test_editor(page):
         # 检查编辑器是否可见
         editor = page.locator('.editor, [contenteditable="true"], .CodeMirror, .monaco-editor').first
         editor_visible = await editor.count() > 0
-        record_test("编辑器可见", editor_visible)
+        record_test("编辑器可�?, editor_visible)
         
         if editor_visible:
             # 尝试输入文本
             await editor.click()
             await asyncio.sleep(0.5)
-            await page.keyboard.type("这是UI自动化测试输入的文本。")
+            await page.keyboard.type("这是UI自动化测试输入的文本�?)
             await asyncio.sleep(1)
             
             content = await page.content()
-            has_text = "UI自动化测试" in content
-            record_test("编辑器输入文本", has_text)
+            has_text = "UI自动化测�? in content
+            record_test("编辑器输入文�?, has_text)
             
-            # 测试工具栏按钮
-            toolbar_btns = page.locator('.toolbar button, .editor-toolbar button')
+            # 测试工具栏按�?            toolbar_btns = page.locator('.toolbar button, .editor-toolbar button')
             if await toolbar_btns.count() > 0:
                 first_btn = toolbar_btns.first
                 await first_btn.click()
@@ -327,24 +318,24 @@ async def test_editor(page):
         await take_screenshot(page, "05_editor_test.png")
         return True
     except Exception as e:
-        record_test("编辑器功能", False, str(e))
+        record_test("编辑器功�?, False, str(e))
         await take_screenshot(page, "05_editor_error.png")
         return False
 
 
 async def test_file_tree(page):
-    """测试6: 文件树管理"""
-    print("\n=== 测试6: 文件树管理 ===")
+    """测试6: 文件树管�?""
+    print("\n=== 测试6: 文件树管�?===")
     try:
         # 检查文件树
         file_tree = page.locator('.file-tree, .sidebar, .tree').first
         tree_visible = await file_tree.count() > 0
-        record_test("文件树可见", tree_visible)
+        record_test("文件树可�?, tree_visible)
         
         if tree_visible:
             # 检查是否有章节文件
             content = await page.content()
-            has_chapters = "chapter" in content.lower() or "章节" in content or "第1章" in content
+            has_chapters = "chapter" in content.lower() or "章节" in content or "�?�? in content
             record_test("章节文件存在", has_chapters)
             
             # 尝试点击文件
@@ -357,7 +348,7 @@ async def test_file_tree(page):
         await take_screenshot(page, "06_file_tree.png")
         return True
     except Exception as e:
-        record_test("文件树管理", False, str(e))
+        record_test("文件树管�?, False, str(e))
         await take_screenshot(page, "06_file_tree_error.png")
         return False
 
@@ -366,8 +357,7 @@ async def test_chat_panel(page):
     """测试7: AI对话面板"""
     print("\n=== 测试7: AI对话面板 ===")
     try:
-        # 检查聊天面板
-        chat_input = page.locator('input[placeholder*="输入消息"], textarea[placeholder*="输入"], .chat-input').first
+        # 检查聊天面�?        chat_input = page.locator('input[placeholder*="输入消息"], textarea[placeholder*="输入"], .chat-input').first
         chat_visible = await chat_input.count() > 0
         record_test("聊天面板可见", chat_visible)
         
@@ -375,15 +365,14 @@ async def test_chat_panel(page):
             # 尝试输入消息
             await chat_input.click()
             await asyncio.sleep(0.5)
-            await page.keyboard.type("你好，请帮我写一个故事开头")
+            await page.keyboard.type("你好，请帮我写一个故事开�?)
             await asyncio.sleep(0.5)
             
-            # 查找发送按钮
-            send_btn = page.locator('button:has-text("发送"), button:has-text("Send"), .send-btn').first
+            # 查找发送按�?            send_btn = page.locator('button:has-text("发�?), button:has-text("Send"), .send-btn').first
             if await send_btn.count() > 0:
                 await send_btn.click()
                 await asyncio.sleep(5)  # 等待响应
-                record_test("发送消息", True)
+                record_test("发送消�?, True)
         
         await take_screenshot(page, "07_chat_panel.png")
         return True
@@ -430,13 +419,11 @@ async def main():
         )
         page = await context.new_page()
         
-        # 启用控制台日志
-        page.on("console", lambda msg: print(f"  [Console] {msg.text}"))
+        # 启用控制台日�?        page.on("console", lambda msg: print(f"  [Console] {msg.text}"))
         page.on("pageerror", lambda err: print(f"  [Error] {err}"))
         
         try:
-            # 执行所有测试
-            await test_page_load(page)
+            # 执行所有测�?            await test_page_load(page)
             await test_settings_modal(page)
             await test_create_project_wizard(page)
             await test_outline_generation(page)
@@ -445,11 +432,10 @@ async def main():
             await test_chat_panel(page)
             await test_save_functionality(page)
             
-            # 最终截图
-            await take_screenshot(page, "final_overview.png")
+            # 最终截�?            await take_screenshot(page, "final_overview.png")
             
         except Exception as e:
-            print(f"\n测试过程中发生错误: {e}")
+            print(f"\n测试过程中发生错�? {e}")
             await take_screenshot(page, "error_state.png")
         finally:
             await browser.close()
@@ -463,19 +449,19 @@ async def main():
     failed = sum(1 for t in test_results if not t["passed"])
     total = len(test_results)
     
-    print(f"\n总计: {total} 项测试")
-    print(f"通过: {passed} ✓")
-    print(f"失败: {failed} ✗")
-    print(f"通过率: {passed/total*100:.1f}%")
+    print(f"\n总计: {total} 项测�?)
+    print(f"通过: {passed} �?)
+    print(f"失败: {failed} �?)
+    print(f"通过�? {passed/total*100:.1f}%")
     
     print("\n详细结果:")
     for i, t in enumerate(test_results, 1):
-        status = "✓" if t["passed"] else "✗"
+        status = "�? if t["passed"] else "�?
         details = f" - {t['details']}" if t["details"] else ""
         print(f"  {i}. [{status}] {t['name']}{details}")
     
     print("\n" + "=" * 60)
-    print("测试完成！")
+    print("测试完成�?)
     print("=" * 60)
     
     return failed == 0
@@ -484,3 +470,4 @@ async def main():
 if __name__ == "__main__":
     success = asyncio.run(main())
     exit(0 if success else 1)
+

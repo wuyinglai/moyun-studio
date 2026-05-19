@@ -140,7 +140,8 @@ class TestSnapshotManagerRestore:
     @pytest.mark.asyncio
     async def test_restore_uses_file_service(self, mock_file_service, tmp_path):
         # _find_snapshot uses direct filesystem access, so write snapshot file to disk
-        snap_dir = tmp_path / ".snapshots" / "chapters" / "test.md"
+        # 使用与 SnapshotManager.SNAPSHOT_DIR 一致的路径
+        snap_dir = tmp_path / "backup" / "snapshots" / "chapters" / "test.md"
         snap_dir.mkdir(parents=True, exist_ok=True)
         snapshot_data = {
             "snapshot_id": "snap-001",
@@ -153,6 +154,9 @@ class TestSnapshotManagerRestore:
         (snap_dir / "snap-001.json").write_text(
             json.dumps(snapshot_data, ensure_ascii=False), encoding="utf-8"
         )
+
+        # 设置 file_service.workspace 以便 _find_snapshot 能找到正确路径
+        mock_file_service.workspace = str(tmp_path)
 
         mgr = SnapshotManager(mock_file_service)
         await mgr.restore_snapshot("snap-001")

@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """
-墨韵 - 工作流 & 管线 CRUD 端到端测试
-
-覆盖：
-  1. Pipeline CRUD（增删改查 + 回收站恢复）
-  2. Workflow CRUD（增删改查 + 回收站恢复）
+墨韵 - 工作�?& 管线 CRUD 端到端测�?
+覆盖�?  1. Pipeline CRUD（增删改�?+ 回收站恢复）
+  2. Workflow CRUD（增删改�?+ 回收站恢复）
   3. 拖拽排序（UI 级）
   4. 修改后能否正常运行（API 级）
 
-使用方法：
-  python tests/test_workflow_pipeline_crud.py
+使用方法�?  python tests/test_workflow_pipeline_crud.py
   python tests/test_workflow_pipeline_crud.py --skip-llm
   python tests/test_workflow_pipeline_crud.py --verbose
 """
@@ -517,3 +514,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

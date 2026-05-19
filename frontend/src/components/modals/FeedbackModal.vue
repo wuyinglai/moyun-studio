@@ -3,36 +3,79 @@
     :open="visible"
     title="用户反馈管理"
     :width="700"
-    @cancel="close"
     :footer="null"
+    @cancel="close"
   >
     <div class="feedback-modal">
       <!-- 新建反馈 -->
       <a-collapse ghost>
-        <a-collapse-panel key="new" header="提交新反馈">
-          <a-form layout="inline" class="feedback-form">
+        <a-collapse-panel
+          key="new"
+          header="提交新反馈"
+        >
+          <a-form
+            layout="inline"
+            class="feedback-form"
+          >
             <a-form-item label="类型">
-              <a-select v-model:value="newFeedback.type" style="width: 140px;">
-                <a-select-option value="suggestion">建议</a-select-option>
-                <a-select-option value="error">错误</a-select-option>
-                <a-select-option value="improvement">改进</a-select-option>
+              <a-select
+                v-model:value="newFeedback.type"
+                style="width: 140px;"
+              >
+                <a-select-option value="suggestion">
+                  建议
+                </a-select-option>
+                <a-select-option value="error">
+                  错误
+                </a-select-option>
+                <a-select-option value="improvement">
+                  改进
+                </a-select-option>
               </a-select>
             </a-form-item>
             <a-form-item label="满意度">
-              <a-select v-model:value="newFeedback.satisfaction" style="width: 100px;" allow-clear>
-                <a-select-option value="满意">满意</a-select-option>
-                <a-select-option value="一般">一般</a-select-option>
-                <a-select-option value="不满意">不满意</a-select-option>
+              <a-select
+                v-model:value="newFeedback.satisfaction"
+                style="width: 100px;"
+                allow-clear
+              >
+                <a-select-option value="满意">
+                  满意
+                </a-select-option>
+                <a-select-option value="一般">
+                  一般
+                </a-select-option>
+                <a-select-option value="不满意">
+                  不满意
+                </a-select-option>
               </a-select>
             </a-form-item>
             <a-form-item label="位置">
-              <a-input v-model:value="newFeedback.location" placeholder="章节路径" style="width: 200px;" />
+              <a-input
+                v-model:value="newFeedback.location"
+                placeholder="章节路径"
+                style="width: 200px;"
+              />
             </a-form-item>
-            <a-form-item label="内容" style="width: 100%;">
-              <a-textarea v-model:value="newFeedback.content" placeholder="反馈内容" :rows="2" />
+            <a-form-item
+              label="内容"
+              style="width: 100%;"
+            >
+              <a-textarea
+                v-model:value="newFeedback.content"
+                placeholder="反馈内容"
+                :rows="2"
+              />
             </a-form-item>
-            <a-button type="primary" @click="submitFeedback" :disabled="!newFeedback.content" size="small">
-              <template #icon><i class="fa-solid fa-paper-plane"></i></template>
+            <a-button
+              type="primary"
+              :disabled="!newFeedback.content"
+              size="small"
+              @click="submitFeedback"
+            >
+              <template #icon>
+                <i class="fa-solid fa-paper-plane" />
+              </template>
               提交
             </a-button>
           </a-form>
@@ -41,13 +84,24 @@
 
       <!-- 反馈列表 -->
       <a-spin :spinning="isLoading">
-        <a-empty v-if="feedbacks.length === 0" description="暂无反馈" style="margin-top: 24px;" />
-        <a-list v-else :data-source="feedbacks" item-layout="horizontal" style="margin-top: 16px;">
+        <a-empty
+          v-if="feedbacks.length === 0"
+          description="暂无反馈"
+          style="margin-top: 24px;"
+        />
+        <a-list
+          v-else
+          :data-source="feedbacks"
+          item-layout="horizontal"
+          style="margin-top: 16px;"
+        >
           <template #renderItem="{ item }">
             <a-list-item>
               <a-list-item-meta>
                 <template #title>
-                  <a-tag :color="typeColor(item.type)">{{ typeLabel(item.type) }}</a-tag>
+                  <a-tag :color="typeColor(item.type)">
+                    {{ typeLabel(item.type) }}
+                  </a-tag>
                   <span :class="{ 'resolved-text': item.resolved }">{{ item.content }}</span>
                 </template>
                 <template #description>
@@ -68,7 +122,12 @@
                 >
                   标记已解决
                 </a-button>
-                <a-tag v-else color="green">已解决</a-tag>
+                <a-tag
+                  v-else
+                  color="green"
+                >
+                  已解决
+                </a-tag>
               </template>
             </a-list-item>
           </template>

@@ -1,25 +1,63 @@
 <template>
   <div class="chat-panel">
     <!-- 未打开项目: 空状态 -->
-    <div v-if="!projectStore.currentProject" class="chat-empty">
+    <div
+      v-if="!projectStore.currentProject"
+      class="chat-empty"
+    >
       <div class="empty-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </div>
       <span class="empty-text">未打开项目</span>
       <span class="empty-hint">打开一个项目后即可开始 AI 对话</span>
     </div>
     <template v-else>
-      <div class="chat-messages" ref="messagesContainer">
-        <ChatMessages :messages="messages" :is-thinking="!!currentThinking" @send-suggestion="handleSuggestion" />
+      <div
+        ref="messagesContainer"
+        class="chat-messages"
+      >
+        <ChatMessages
+          :messages="messages"
+          :is-thinking="!!currentThinking"
+          @send-suggestion="handleSuggestion"
+        />
       </div>
       <div class="chat-input-area">
-        <ChatInput v-model="inputText" @send="sendMessage" :disabled="isStreaming" />
+        <ChatInput
+          v-model="inputText"
+          :disabled="isStreaming"
+          @send="sendMessage"
+        />
         <div class="chat-actions">
-          <button v-if="isStreaming" class="btn-cancel" @click="cancelStream">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2"/>
+          <button
+            v-if="isStreaming"
+            class="btn-cancel"
+            @click="cancelStream"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <rect
+                x="6"
+                y="6"
+                width="12"
+                height="12"
+                rx="2"
+              />
             </svg>
             取消生成
           </button>

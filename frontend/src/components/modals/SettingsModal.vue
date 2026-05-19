@@ -3,26 +3,40 @@
     :open="visible"
     title="设置"
     :width="500"
-    @cancel="close"
-    @ok="saveSettings"
     :confirm-loading="false"
     ok-text="保存设置"
     cancel-text="取消"
+    @cancel="close"
+    @ok="saveSettings"
   >
     <div class="settings-modal">
-      <a-tabs v-model:activeKey="activeTab">
-        <a-tab-pane key="llm" tab="AI 设置">
+      <a-tabs v-model:active-key="activeTab">
+        <a-tab-pane
+          key="llm"
+          tab="AI 设置"
+        >
           <template #tab>
-            <span><i class="fa-solid fa-brain"></i> AI 设置</span>
+            <span><i class="fa-solid fa-brain" /> AI 设置</span>
           </template>
 
           <a-form layout="vertical">
             <a-form-item label="API Provider">
-              <a-select v-model:value="config.apiType" placeholder="选择 API 提供商">
-                <a-select-option value="openai">OpenAI</a-select-option>
-                <a-select-option value="deepseek">DeepSeek</a-select-option>
-                <a-select-option value="anthropic">Anthropic</a-select-option>
-                <a-select-option value="ollama">Ollama (本地)</a-select-option>
+              <a-select
+                v-model:value="config.apiType"
+                placeholder="选择 API 提供商"
+              >
+                <a-select-option value="openai">
+                  OpenAI
+                </a-select-option>
+                <a-select-option value="deepseek">
+                  DeepSeek
+                </a-select-option>
+                <a-select-option value="anthropic">
+                  Anthropic
+                </a-select-option>
+                <a-select-option value="ollama">
+                  Ollama (本地)
+                </a-select-option>
               </a-select>
             </a-form-item>
 
@@ -34,12 +48,24 @@
               />
             </a-form-item>
 
-            <a-form-item v-if="config.apiType === 'deepseek'" label="DeepSeek API 地址">
-              <a-input v-model:value="config.apiUrl" placeholder="https://api.deepseek.com" />
+            <a-form-item
+              v-if="config.apiType === 'deepseek'"
+              label="DeepSeek API 地址"
+            >
+              <a-input
+                v-model:value="config.apiUrl"
+                placeholder="https://api.deepseek.com"
+              />
             </a-form-item>
 
-            <a-form-item v-if="config.apiType === 'ollama'" label="Ollama 地址">
-              <a-input v-model:value="config.apiUrl" placeholder="http://localhost:11434" />
+            <a-form-item
+              v-if="config.apiType === 'ollama'"
+              label="Ollama 地址"
+            >
+              <a-input
+                v-model:value="config.apiUrl"
+                placeholder="http://localhost:11434"
+              />
             </a-form-item>
 
             <a-form-item label="模型">
@@ -48,14 +74,19 @@
                 placeholder="输入模型名称，如 gpt-4、deepseek-chat"
                 style="width: 100%;"
               />
-              <div v-if="llmStore.availableModels.length > 0" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+              <div
+                v-if="llmStore.availableModels.length > 0"
+                style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;"
+              >
                 <a-tag
                   v-for="m in llmStore.availableModels"
                   :key="m"
-                  @click="selectModel(m)"
                   style="cursor: pointer;"
                   :color="config.model === m ? 'blue' : undefined"
-                >{{ m }}</a-tag>
+                  @click="selectModel(m)"
+                >
+                  {{ m }}
+                </a-tag>
               </div>
             </a-form-item>
 
@@ -71,27 +102,53 @@
             <a-divider>后端服务</a-divider>
 
             <a-form-item label="后端服务地址">
-              <a-input v-model:value="backendUrl" placeholder="留空则使用 Vite 代理（默认）" />
+              <a-input
+                v-model:value="backendUrl"
+                placeholder="留空则使用 Vite 代理（默认）"
+              />
               <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 8px; align-items: center;">
                 <span>例如 http://127.0.0.1:8001</span>
-                <a-button size="small" @click="resetBackendUrl">恢复默认</a-button>
-                <a-button size="small" type="primary" @click="applyBackendUrl">应用</a-button>
+                <a-button
+                  size="small"
+                  @click="resetBackendUrl"
+                >
+                  恢复默认
+                </a-button>
+                <a-button
+                  size="small"
+                  type="primary"
+                  @click="applyBackendUrl"
+                >
+                  应用
+                </a-button>
               </div>
             </a-form-item>
 
             <a-divider>连接测试</a-divider>
 
             <a-space wrap>
-              <a-button @click="testConnection" :loading="isTesting" :disabled="isTesting">
-                <i class="fa-solid fa-plug"></i>
+              <a-button
+                :loading="isTesting"
+                :disabled="isTesting"
+                @click="testConnection"
+              >
+                <i class="fa-solid fa-plug" />
                 测试连接
               </a-button>
-              <a-button @click="fetchModels" :loading="isFetchingModels" :disabled="isFetchingModels">
-                <i class="fa-solid fa-list"></i>
+              <a-button
+                :loading="isFetchingModels"
+                :disabled="isFetchingModels"
+                @click="fetchModels"
+              >
+                <i class="fa-solid fa-list" />
                 获取模型列表
               </a-button>
-              <a-button v-if="isTesting || isFetchingModels" @click="cancelRequest" danger>
-                <i class="fa-solid fa-stop"></i>
+              <a-button
+                v-if="isTesting || isFetchingModels"
+                danger
+                @click="cancelRequest"
+              >
+                <i class="fa-solid fa-stop" />
                 取消
               </a-button>
               <a-alert
@@ -104,9 +161,12 @@
           </a-form>
         </a-tab-pane>
 
-        <a-tab-pane key="automation" tab="自动化">
+        <a-tab-pane
+          key="automation"
+          tab="自动化"
+        >
           <template #tab>
-            <span><i class="fa-solid fa-robot"></i> 自动化</span>
+            <span><i class="fa-solid fa-robot" /> 自动化</span>
           </template>
 
           <a-form layout="vertical">
@@ -114,7 +174,10 @@
               <div style="margin-bottom: 8px; font-size: 13px; color: var(--text-secondary);">
                 控制 AI 任务的执行方式
               </div>
-              <a-radio-group v-model:value="autoMode" button-style="solid">
+              <a-radio-group
+                v-model:value="autoMode"
+                button-style="solid"
+              >
                 <a-radio-button value="L1">
                   <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 8px;">
                     <strong>L1 半自动</strong>
@@ -132,20 +195,30 @@
           </a-form>
         </a-tab-pane>
 
-        <a-tab-pane key="theme" tab="外观">
+        <a-tab-pane
+          key="theme"
+          tab="外观"
+        >
           <template #tab>
-            <span><i class="fa-solid fa-palette"></i> 外观</span>
+            <span><i class="fa-solid fa-palette" /> 外观</span>
           </template>
 
           <a-form layout="vertical">
             <a-form-item label="主题">
-              <a-radio-group v-model:value="currentTheme" button-style="solid">
-                <a-radio-button v-for="t in themes" :key="t.id" :value="t.id">
+              <a-radio-group
+                v-model:value="currentTheme"
+                button-style="solid"
+              >
+                <a-radio-button
+                  v-for="t in themes"
+                  :key="t.id"
+                  :value="t.id"
+                >
                   <span style="display: flex; align-items: center; gap: 8px">
                     <div
                       class="theme-preview"
                       :style="{ background: t.preview }"
-                    ></div>
+                    />
                     {{ t.name }}
                   </span>
                 </a-radio-button>
@@ -309,7 +382,7 @@ async function saveSettings() {
     await llmStore.saveConfig(config.value)
     notification.success('设置已保存')
     close()
-  } catch (e) {
+  } catch {
     notification.error('保存失败')
   }
 }

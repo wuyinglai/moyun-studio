@@ -1,4 +1,4 @@
-"""端到端测试脚本"""
+"""端到端测试脚�?""
 import requests
 import json
 
@@ -14,7 +14,7 @@ def test_llm_config():
     config = {
         "api_type": "deepseek",
         "api_url": "https://api.deepseek.com",
-        "api_key": "sk-4ea45b73004f44a98c2f472d354430d1",
+        "api_key": "sk-test-placeholder",
         "model": "deepseek/deepseek-v4-flash",
         "thinking": False
     }
@@ -25,7 +25,7 @@ def test_llm_config():
     resp = requests.post(f"{BASE_URL}/api/llm/test")
     result = resp.json()
     print(f"POST /api/llm/test: {result}")
-    print(f"LLM连接状态: {'✅ 成功' if result['data']['connected'] else '❌ 失败'}")
+    print(f"LLM连接状�? {'�?成功' if result['data']['connected'] else '�?失败'}")
     return result['data']['connected']
 
 def test_projects():
@@ -38,7 +38,7 @@ def test_projects():
         "author": "阿来",
         "genre": "玄幻",
         "tone": "热血",
-        "background": "异世界",
+        "background": "异世�?,
         "theme": "冒险",
         "writing_style": "网络文学",
         "target_word_count": 100000
@@ -47,19 +47,18 @@ def test_projects():
     print(f"POST /api/projects: {resp.status_code}")
     if resp.status_code == 201:
         project = resp.json()['data']
-        print(f"✅ 项目创建成功: {project['project_id']} - {project['name']}")
+        print(f"�?项目创建成功: {project['project_id']} - {project['name']}")
         project_id = project['project_id']
     else:
-        print(f"❌ 创建失败: {resp.text}")
+        print(f"�?创建失败: {resp.text}")
         return None
 
     # 获取项目列表
     resp = requests.get(f"{BASE_URL}/api/projects")
     data = resp.json()
-    print(f"GET /api/projects: 共有 {data['data']['total']} 个项目")
+    print(f"GET /api/projects: 共有 {data['data']['total']} 个项�?)
 
-    # 获取文件树
-    resp = requests.get(f"{BASE_URL}/api/tree?project_id={project_id}")
+    # 获取文件�?    resp = requests.get(f"{BASE_URL}/api/tree?project_id={project_id}")
     tree = resp.json()['data']
     print(f"GET /api/tree: 项目包含 {len(tree.get('tree', []))} 个根项目/目录")
 
@@ -73,20 +72,19 @@ def test_file_operations(project_id):
     resp = requests.get(f"{BASE_URL}/api/file?project_id={project_id}&path=outline.md")
     if resp.status_code == 200:
         content = resp.json()['data']
-        print(f"GET /api/file outline.md: ✅ 读取成功 ({len(content)} 字符)")
+        print(f"GET /api/file outline.md: �?读取成功 ({len(content)} 字符)")
     else:
-        print(f"GET /api/file outline.md: ❌ 失败")
+        print(f"GET /api/file outline.md: �?失败")
 
 def test_llm_generation():
     """测试4: LLM生成"""
     print("\n=== 测试4: LLM生成测试 ===")
 
-    # 简单聊天测试
-    resp = requests.post(
+    # 简单聊天测�?    resp = requests.post(
         f"{BASE_URL}/api/chat",
         json={
             "project_id": "test",
-            "message": "用一句话描述秋天的黄昏"
+            "message": "用一句话描述秋天的黄�?
         },
         stream=True,
         timeout=30
@@ -102,11 +100,11 @@ def test_llm_generation():
                     data = json.loads(line[5:])
                     if 'delta' in data:
                         content += data['delta']
-        print(f"✅ AI回复: {content[:100]}...")
+        print(f"�?AI回复: {content[:100]}...")
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🧪 墨韵 - 端到端集成测试")
+    print("🧪 墨韵 - 端到端集成测�?)
     print("=" * 60)
 
     connected = test_llm_config()
@@ -120,5 +118,6 @@ if __name__ == "__main__":
     test_llm_generation()
 
     print("\n" + "=" * 60)
-    print("✅ 端到端测试完成")
+    print("�?端到端测试完�?)
     print("=" * 60)
+

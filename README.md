@@ -1,60 +1,97 @@
-# 墨韵 (Moyun) - AI 小说创作助手
+# 墨韵 Moyun
 
-墨韵是一个 AI 辅助小说创作平台，提供从项目创建、大纲生成、章节写作到内容润色的全流程工具。
+AI 小说创作助手，支持爽文模式和专业工作台。
+
+## 功能特点
+
+- **爽文模式**：开局卡、爽点卡、自动写下一节、质量摘要、故事引擎
+- **专业模式**：文件树、Prompt、管线、工作流、快照、对比、备份、回收站
+- **本地文件系统存储**：数据完全本地化，隐私安全
+- **多模型支持**：支持 OpenAI / DeepSeek / Ollama 等模型
+
+## 技术栈
+
+- **Backend**: FastAPI, LiteLLM, Pydantic, Jinja2
+- **Frontend**: Vue 3, TypeScript, Vite, Pinia, Ant Design Vue, CodeMirror 6
 
 ## 快速开始
 
-```bash
-# 后端
-cd backend
-pip install -r requirements.txt
-cp .env.example .env   # 填入 API Key
-uvicorn backend.main:app --reload   # http://localhost:8000
+### 后端
 
-# 前端
-cd frontend
-npm install
-npm run dev            # http://localhost:5173
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+copy ..\.env.example ..\.env
+uvicorn backend.main:app --reload
 ```
 
-API 文档：启动后端后访问 http://localhost:8000/docs
+### 前端
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## 配置 LLM
+
+复制 `.env.example` 为 `.env`，填入自己的 API Key：
+
+```env
+# OpenAI
+LLM_API_KEY=sk-xxx
+LLM_API_BASE=https://api.openai.com/v1
+LLM_MODEL=gpt-4
+
+# 或 DeepSeek
+LLM_API_KEY=sk-xxx
+LLM_API_BASE=https://api.deepseek.com/v1
+LLM_MODEL=deepseek-chat
+```
+
+## 数据目录
+
+- `prompts/`：系统 Prompt 模板（Git 追踪）
+- `workspace/projects/`：用户项目数据（不追踪）
+- `workspace/prompts/`：用户自定义 Prompt（不追踪）
+
+## 开发命令
+
+```bash
+# 前端构建
+cd frontend && npm run build
+
+# 后端测试
+python -m pytest backend/tests -q
+```
 
 ## 项目结构
 
 ```
-├── backend/          FastAPI 后端（api/ 路由层 + core/ 业务层）
-├── frontend/         Vue 3 + TypeScript 前端
-├── workspace/        用户数据目录（项目文件 + Prompt 模板）
-│   ├── projects/     项目文件（每个项目一个文件夹）
-│   └── prompts/      Prompt 模板（Jinja2 格式）
-├── docs/             项目文档
-├── _misc/            杂项（归档、脚本、技术方案）
-└── tests/            测试
+├── backend/          # FastAPI 后端
+│   ├── api/          # REST API 端点
+│   ├── core/         # 核心服务
+│   ├── schemas/      # Pydantic 模型
+│   └── tests/        # 单元测试
+├── frontend/         # Vue 3 前端
+│   ├── src/
+│   │   ├── components/   # 组件
+│   │   ├── composables/  # 组合式函数
+│   │   ├── stores/       # Pinia 状态管理
+│   │   └── views/        # 页面视图
+│   └── tests/        # 端到端测试
+├── prompts/          # 系统 Prompt 模板
+└── workspace/        # 用户数据（gitignore）
 ```
 
-## 技术栈
+## 注意事项
 
-| 层 | 技术 |
-|----|------|
-| 后端框架 | Python 3.10+ / FastAPI |
-| LLM 调用 | LiteLLM（支持 OpenAI / Claude / DeepSeek / Ollama） |
-| 前端框架 | Vue 3 + TypeScript + Vite + Pinia |
-| UI 组件 | Ant Design Vue + CodeMirror 6 |
-| 存储 | 本地文件系统（无数据库） |
+- **请勿提交** `.env`、`.config.json`、`workspace/` 到版本控制
+- 首次启动会自动创建 `workspace/` 目录
+- 未配置 LLM 时，生成功能会提示前往设置
 
-## 核心概念
+## License
 
-- **管线（Pipeline）**：多步骤 LLM 调用链，支持步骤级 fallback
-- **工作流（Workflow）**：管线的编排层，支持 loop、变量传递、断点续跑
-- **Prompt 模板**：Jinja2 格式的 LLM 提示词模板，支持 `@{path}` 文件引用
-- **SSE 事件**：基于 EventSource 的实时通信，推送生成进度和状态变更
-
-## 关键文档
-
-- [功能清单](docs/功能清单.md) — 功能定义和执行逻辑
-- [Prompt 模板说明](docs/Prompt模板说明.md) — 模板系统规范
-- [后端架构设计](docs/后端架构设计.md) — 后端架构概览
-- [文件系统设计](docs/文件系统设计.md) — 文件存储结构和命名规则
-- [技术选型速查](docs/技术选型速查.md) — 技术栈和禁止清单
-- [编码规范](docs/编码规范.md) — 代码编写规范
-- [开发步骤](docs/开发步骤.md) — 迭代开发流程
+MIT License

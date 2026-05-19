@@ -3,12 +3,19 @@
     :open="visible"
     title="版本对比"
     :width="860"
-    @cancel="close"
     :footer="null"
+    @cancel="close"
   >
     <div class="compare-modal">
-      <a-alert v-if="currentPath" type="info" show-icon class="current-file-alert">
-        <template #message>当前文件：{{ currentPath }}</template>
+      <a-alert
+        v-if="currentPath"
+        type="info"
+        show-icon
+        class="current-file-alert"
+      >
+        <template #message>
+          当前文件：{{ currentPath }}
+        </template>
       </a-alert>
 
       <a-form layout="vertical">
@@ -21,11 +28,19 @@
                 placeholder="选择历史快照，或手动输入下方文本"
                 style="width: 100%; margin-bottom: 8px;"
               >
-                <a-select-option v-for="s in snapshots" :key="s.snapshot_id" :value="s.snapshot_id">
+                <a-select-option
+                  v-for="s in snapshots"
+                  :key="s.snapshot_id"
+                  :value="s.snapshot_id"
+                >
                   {{ snapshotLabel(s) }}
                 </a-select-option>
               </a-select>
-              <a-textarea v-model:value="oldText" :rows="8" placeholder="输入旧版本内容" />
+              <a-textarea
+                v-model:value="oldText"
+                :rows="8"
+                placeholder="输入旧版本内容"
+              />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -36,38 +51,79 @@
                 placeholder="选择历史快照，或使用当前编辑器内容"
                 style="width: 100%; margin-bottom: 8px;"
               >
-                <a-select-option v-for="s in snapshots" :key="s.snapshot_id" :value="s.snapshot_id">
+                <a-select-option
+                  v-for="s in snapshots"
+                  :key="s.snapshot_id"
+                  :value="s.snapshot_id"
+                >
                   {{ snapshotLabel(s) }}
                 </a-select-option>
               </a-select>
-              <a-textarea v-model:value="newText" :rows="8" placeholder="输入新版本内容" />
+              <a-textarea
+                v-model:value="newText"
+                :rows="8"
+                placeholder="输入新版本内容"
+              />
             </a-form-item>
           </a-col>
         </a-row>
         <div class="compare-actions">
-          <a-button @click="loadSnapshots" :disabled="!currentPath" :loading="isLoadingSnapshots">加载历史版本</a-button>
-          <a-button @click="loadCurrentVersion">使用当前内容</a-button>
-          <a-button danger :disabled="!oldSnapshotId && !newSnapshotId" @click="restoreSelectedSnapshot">恢复所选版本</a-button>
-          <a-button type="primary" @click="compare" :loading="isComparing">
-            <template #icon><i class="fa-solid fa-code-compare"></i></template>
+          <a-button
+            :disabled="!currentPath"
+            :loading="isLoadingSnapshots"
+            @click="loadSnapshots"
+          >
+            加载历史版本
+          </a-button>
+          <a-button @click="loadCurrentVersion">
+            使用当前内容
+          </a-button>
+          <a-button
+            danger
+            :disabled="!oldSnapshotId && !newSnapshotId"
+            @click="restoreSelectedSnapshot"
+          >
+            恢复所选版本
+          </a-button>
+          <a-button
+            type="primary"
+            :loading="isComparing"
+            @click="compare"
+          >
+            <template #icon>
+              <i class="fa-solid fa-code-compare" />
+            </template>
             对比
           </a-button>
         </div>
       </a-form>
 
-      <div v-if="snapshots.length > 0" class="snapshot-list">
-        <span v-for="s in snapshots.slice(0, 6)" :key="s.snapshot_id" class="snapshot-chip">
+      <div
+        v-if="snapshots.length > 0"
+        class="snapshot-list"
+      >
+        <span
+          v-for="s in snapshots.slice(0, 6)"
+          :key="s.snapshot_id"
+          class="snapshot-chip"
+        >
           {{ snapshotLabel(s) }}
         </span>
       </div>
 
-      <div v-if="diffResult" class="diff-result">
+      <div
+        v-if="diffResult"
+        class="diff-result"
+      >
         <a-divider>差异结果</a-divider>
         <div class="diff-stats">
           <span class="stat-added">+{{ diffResult.added_lines }} 行</span>
           <span class="stat-removed">-{{ diffResult.removed_lines }} 行</span>
         </div>
-        <pre class="diff-content" v-text="diffResult.diff || '两个版本没有差异'"></pre>
+        <pre
+          class="diff-content"
+          v-text="diffResult.diff || '两个版本没有差异'"
+        />
       </div>
     </div>
   </a-modal>

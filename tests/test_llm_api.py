@@ -21,14 +21,14 @@ async def test_llm():
     
     print(f'\n调用模型: {model}')
     api_key = llm_cfg.get('apiKey', '')
-    print(f'API Key: {api_key[:20]}...' if api_key else 'API Key: (空)')
+    print(f'API Key: {api_key[:20]}...' if api_key else 'API Key: (�?')
     print(f'API URL: {llm_cfg.get("apiUrl", "")}')
     
     try:
         start = time.time()
         response = await litellm.acompletion(
             model=model,
-            messages=[{'role': 'user', 'content': '请用一句话回答：你好'}],
+            messages=[{'role': 'user', 'content': '请用一句话回答：你�?}],
             temperature=0.7,
             max_tokens=100,
             api_key=api_key,
@@ -54,10 +54,10 @@ async def test_outline_api():
                 'genre': '玄幻',
                 'tone': '热血',
                 'theme': '',
-                'writing_style': '快节奏',
+                'writing_style': '快节�?,
                 'target_word_count': 100000,
                 'book_name': '测试书名',
-                'book_description': '这是一个测试描述'
+                'book_description': '这是一个测试描�?
             },
             timeout=120
         )
@@ -71,8 +71,8 @@ async def test_outline_api():
             print(f'大纲内容长度: {len(outline)} 字符')
             print(f'大纲预览: {outline[:300]}')
             
-            if '待生成' in outline:
-                print('\n警告: 大纲返回的是占位内容，说明LLM调用可能失败了')
+            if '待生�? in outline:
+                print('\n警告: 大纲返回的是占位内容，说明LLM调用可能失败�?)
             else:
                 print('\n成功: 大纲包含实际内容')
         else:
@@ -90,3 +90,4 @@ async def main():
         print('\nLLM调用失败，跳过API测试')
 
 asyncio.run(main())
+

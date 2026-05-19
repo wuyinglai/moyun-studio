@@ -53,15 +53,22 @@ class PipelineRunner:
         llm_service: LLMService,
         file_service: FileService,
         source: str = "system",
+        system_prompts_path: Path | None = None,
     ):
         self.prompts_path = Path(prompts_path)
+        self.system_prompts_path = system_prompts_path
         self.llm_service = llm_service
         self.file_service = file_service
         self.source = source
         # 同一章内 context 步骤输出缓存，key=章目录路径 → context 文本
         self._context_cache: dict[str, str] = {}
+        
+        # 构建搜索路径：用户自定义路径优先，系统路径次之
+        search_paths = [str(self.prompts_path)]
+        if self.system_prompts_path:
+            search_paths.append(str(self.system_prompts_path))
         self.env = Environment(
-            loader=FileSystemLoader(str(self.prompts_path)),
+            loader=FileSystemLoader(search_paths),
             autoescape=False,
         )
 
@@ -173,10 +180,25 @@ class PipelineRunner:
             pass
         return vars
 
+    def _find_pipeline_yaml(self, name: str) -> Path | None:
+        """查找管线 YAML 文件（用户路径优先，系统路径次之）"""
+        # 优先从用户路径查找
+        user_path = self._get_pipeline_yaml_path(name)
+        if user_path.exists():
+            return user_path
+        
+        # 从系统路径查找
+        if self.system_prompts_path:
+            system_path = self.system_prompts_path / "pipeline" / f"{name}.yaml"
+            if system_path.exists():
+                return system_path
+        
+        return None
+
     def load_pipeline(self, name: str) -> PipelineDef:
         """加载管线 YAML 定义"""
-        yaml_path = self._get_pipeline_yaml_path(name)
-        if not yaml_path.exists():
+        yaml_path = self._find_pipeline_yaml(name)
+        if not yaml_path:
             raise PipelineError(f"管线不存在: {name}")
 
         try:
@@ -186,16 +208,38 @@ class PipelineRunner:
             raise PipelineError(f"加载管线定义失败 {name}: {e}")
 
     def list_pipelines(self) -> list[PipelineDef]:
-        """列出所有可用管线（系统预置）"""
-        pipeline_dir = self._get_pipeline_dir()
-        if not pipeline_dir.exists():
-            return []
+        """列出所有可用管线（系统预置 + 用户自定义）"""
         pipelines = []
-        for f in sorted(pipeline_dir.glob("*.yaml")):
-            try:
-                pipelines.append(self.load_pipeline(f.stem))
-            except Exception as e:
-                logger.warning("跳过无效管线定义 %s: %s", f.name, e)
+        seen = set()
+
+        # 先从系统路径加载
+        if self.system_prompts_path:
+            system_pipeline_dir = self.system_prompts_path / "pipeline"
+            if system_pipeline_dir.exists():
+                for f in sorted(system_pipeline_dir.glob("*.yaml")):
+                    try:
+                        pipeline = self.load_pipeline(f.stem)
+                        seen.add(pipeline.name)
+                        pipelines.append(pipeline)
+                    except Exception as e:
+                        logger.warning("跳过无效系统管线定义 %s: %s", f.name, e)
+
+        # 再从用户路径加载（覆盖同名系统管线）
+        pipeline_dir = self._get_pipeline_dir()
+        if pipeline_dir.exists():
+            for f in sorted(pipeline_dir.glob("*.yaml")):
+                try:
+                    pipeline = self.load_pipeline(f.stem)
+                    # 如果用户定义了同名管线，替换系统管线
+                    if pipeline.name in seen:
+                        idx = next(i for i, p in enumerate(pipelines) if p.name == pipeline.name)
+                        pipelines[idx] = pipeline
+                    else:
+                        pipelines.append(pipeline)
+                        seen.add(pipeline.name)
+                except Exception as e:
+                    logger.warning("跳过无效用户管线定义 %s: %s", f.name, e)
+
         return pipelines
 
     async def run(

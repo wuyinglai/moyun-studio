@@ -1,41 +1,69 @@
 <template>
-  <div class="markdown-editor" ref="editorContainer">
-    <div v-if="!fileStore.currentFile" class="editor-welcome">
+  <div
+    class="markdown-editor"
+  >
+    <div
+      v-if="!fileStore.currentFile"
+      class="editor-welcome"
+    >
       <div class="welcome-card">
         <div class="welcome-icon">
-          <i class="fa-solid fa-feather-pointed"></i>
+          <i class="fa-solid fa-feather-pointed" />
         </div>
-        <h1 class="welcome-title">欢迎使用墨韵</h1>
-        <p class="welcome-desc">AI 辅助小说创作工具，从零开始创作你的第一部小说</p>
+        <h1 class="welcome-title">
+          欢迎使用墨韵
+        </h1>
+        <p class="welcome-desc">
+          AI 辅助小说创作工具，从零开始创作你的第一部小说
+        </p>
         <div class="welcome-actions">
-          <a-button type="primary" size="large" @click="uiStore.openCreateProject()">
-            <template #icon><i class="fa-solid fa-plus"></i></template>
+          <a-button
+            type="primary"
+            size="large"
+            @click="uiStore.openCreateProject()"
+          >
+            <template #icon>
+              <i class="fa-solid fa-plus" />
+            </template>
             开始创作
           </a-button>
-          <a-button size="large" @click="uiStore.openOpenProject()">
-            <template #icon><i class="fa-solid fa-folder-open"></i></template>
+          <a-button
+            size="large"
+            @click="uiStore.openOpenProject()"
+          >
+            <template #icon>
+              <i class="fa-solid fa-folder-open" />
+            </template>
             打开项目
           </a-button>
         </div>
         <div class="welcome-features">
           <div class="feature-item">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <i class="fa-solid fa-wand-magic-sparkles" />
             <span>AI 自动生成</span>
           </div>
           <div class="feature-item">
-            <i class="fa-solid fa-pen-nib"></i>
+            <i class="fa-solid fa-pen-nib" />
             <span>全流程写作</span>
           </div>
           <div class="feature-item">
-            <i class="fa-solid fa-sliders"></i>
+            <i class="fa-solid fa-sliders" />
             <span>灵活控制</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-show="fileStore.currentFile && !isPreviewMode" ref="codemirrorEl" class="codemirror-container"></div>
-    <div v-show="fileStore.currentFile && isPreviewMode" class="preview-container" v-html="previewHtml"></div>
+    <div
+      v-show="fileStore.currentFile && !isPreviewMode"
+      ref="codemirrorEl"
+      class="codemirror-container"
+    />
+    <div
+      v-show="fileStore.currentFile && isPreviewMode"
+      class="preview-container"
+      v-html="previewHtml"
+    />
   </div>
 </template>
 
@@ -250,7 +278,9 @@ function handleJumpToLine(e: Event) {
       scrollIntoView: true,
     })
     editorView.focus()
-  } catch {}
+  } catch {
+    // 编辑器未就绪时忽略
+  }
 }
 </script>
 

@@ -3,25 +3,35 @@
     <div class="panel-header">
       <h3>故事状态</h3>
       <div class="panel-actions">
-        <button class="btn-action" @click="handleSave" :disabled="isSaving">
-          <i class="fa-solid fa-save"></i> 保存
+        <button
+          class="btn-action"
+          :disabled="isSaving"
+          @click="handleSave"
+        >
+          <i class="fa-solid fa-save" /> 保存
         </button>
-        <button class="btn-action secondary" @click="autoGenerate">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> AI 更新
+        <button
+          class="btn-action secondary"
+          @click="autoGenerate"
+        >
+          <i class="fa-solid fa-wand-magic-sparkles" /> AI 更新
         </button>
       </div>
     </div>
 
     <div class="panel-content">
-      <div v-if="isLoading" class="panel-loading">
-        <i class="fa-solid fa-spinner fa-spin"></i> 加载中...
+      <div
+        v-if="isLoading"
+        class="panel-loading"
+      >
+        <i class="fa-solid fa-spinner fa-spin" /> 加载中...
       </div>
       <textarea
         v-else
         v-model="content"
         class="state-editor"
         placeholder="记录当前故事状态：主要人物位置、已发生的关键事件、下一步计划等..."
-      ></textarea>
+      />
     </div>
   </div>
 </template>

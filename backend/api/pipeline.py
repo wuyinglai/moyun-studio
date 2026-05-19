@@ -52,7 +52,7 @@ async def run_pipeline(
     file_service = FileService(settings.projects_path)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
-    runner = PipelineRunner(settings.prompts_path, llm_service, file_service)
+    runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
     async def _stream():
         task_id = f"pipeline-{req.pipeline}"
@@ -95,7 +95,7 @@ async def list_pipelines(
     file_service = FileService(settings.projects_path)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
-    runner = PipelineRunner(settings.prompts_path, llm_service, file_service)
+    runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
     pipelines = runner.list_pipelines()
     result = [
@@ -139,7 +139,7 @@ async def get_pipeline(
     if custom_yaml.exists():
         runner = PipelineRunner(custom_dir, llm_service, file_service)
     else:
-        runner = PipelineRunner(settings.prompts_path, llm_service, file_service)
+        runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
     try:
         detail = runner.get_pipeline_detail(name)

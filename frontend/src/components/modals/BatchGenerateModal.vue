@@ -3,9 +3,9 @@
     :open="visible"
     title="批量生成章节"
     :width="640"
-    @cancel="close"
     :footer="null"
     :destroy-on-close="true"
+    @cancel="close"
   >
     <div class="batch-gen-modal">
       <!-- 选择范围 -->
@@ -23,7 +23,9 @@
                 v-for="v in availableVolumes"
                 :key="v"
                 :value="v"
-              >第{{ v }}卷</a-select-option>
+              >
+                第{{ v }}卷
+              </a-select-option>
             </a-select>
             <span class="range-hint">留空则全部卷</span>
           </a-space>
@@ -42,7 +44,9 @@
                 v-for="ch in availableChapters"
                 :key="ch"
                 :value="ch"
-              >第{{ ch }}章</a-select-option>
+              >
+                第{{ ch }}章
+              </a-select-option>
             </a-select>
             <span class="range-hint">留空则全部章</span>
           </a-space>
@@ -51,51 +55,89 @@
         <!-- 节选择 -->
         <a-form-item label="节">
           <a-checkbox-group v-model:value="sectionNumbers">
-            <a-checkbox value="1">第1节</a-checkbox>
-            <a-checkbox value="2">第2节</a-checkbox>
-            <a-checkbox value="3">第3节</a-checkbox>
-            <a-checkbox value="4">第4节</a-checkbox>
+            <a-checkbox value="1">
+              第1节
+            </a-checkbox>
+            <a-checkbox value="2">
+              第2节
+            </a-checkbox>
+            <a-checkbox value="3">
+              第3节
+            </a-checkbox>
+            <a-checkbox value="4">
+              第4节
+            </a-checkbox>
           </a-checkbox-group>
-          <div class="range-hint" style="margin-top: 4px;">留空则全部节</div>
+          <div
+            class="range-hint"
+            style="margin-top: 4px;"
+          >
+            留空则全部节
+          </div>
         </a-form-item>
       </a-form>
 
       <!-- 预览 -->
-      <div v-if="previewTargets >= 0" class="preview-area">
-        <a-alert type="info" show-icon>
+      <div
+        v-if="previewTargets >= 0"
+        class="preview-area"
+      >
+        <a-alert
+          type="info"
+          show-icon
+        >
           <template #message>
             将生成 <strong>{{ previewTargets }}</strong> 个文件
-            <template v-if="volumeNumber">（第{{ volumeNumber }}卷）</template>
-            <template v-if="chapterNumber">（第{{ chapterNumber }}章）</template>
-            <template v-if="sectionNumbers.length">（{{ sectionNumbers.map(s => '第' + s + '节').join('、') }}）</template>
+            <template v-if="volumeNumber">
+              （第{{ volumeNumber }}卷）
+            </template>
+            <template v-if="chapterNumber">
+              （第{{ chapterNumber }}章）
+            </template>
+            <template v-if="sectionNumbers.length">
+              （{{ sectionNumbers.map(s => '第' + s + '节').join('、') }}）
+            </template>
           </template>
         </a-alert>
       </div>
 
       <!-- 操作 -->
       <div class="actions">
-        <a-button @click="close">取消</a-button>
+        <a-button @click="close">
+          取消
+        </a-button>
         <a-button
           type="primary"
           :loading="isGenerating"
           :disabled="previewTargets <= 0"
           @click="handleGenerate"
         >
-          <template #icon><i class="fa-solid fa-wand-magic-sparkles"></i></template>
+          <template #icon>
+            <i class="fa-solid fa-wand-magic-sparkles" />
+          </template>
           {{ isGenerating ? '生成中...' : '开始生成' }}
         </a-button>
       </div>
 
       <!-- 进度 -->
-      <div v-if="isGenerating" class="progress-area">
-        <a-progress :percent="progressPercent" :status="progressStatus" />
+      <div
+        v-if="isGenerating"
+        class="progress-area"
+      >
+        <a-progress
+          :percent="progressPercent"
+          :status="progressStatus"
+        />
         <div class="progress-text">
           已完成 {{ progressDone }} / {{ previewTargets }} 个文件
         </div>
       </div>
 
       <!-- 结果 -->
-      <div v-if="results.length > 0" class="results-area">
+      <div
+        v-if="results.length > 0"
+        class="results-area"
+      >
         <a-table
           :data-source="results"
           :columns="resultColumns"

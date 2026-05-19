@@ -25,7 +25,7 @@ export const useHistoryStore = defineStore('history', () => {
 
   function pushHistory(path: string, content: string) {
     let history = getHistory(path)
-    let currentIndex = getCurrentIndex(path)
+    const currentIndex = getCurrentIndex(path)
 
     // 如果当前不在最新位置，删除之后的历史
     if (currentIndex < history.length - 1 && history.length > 0) {

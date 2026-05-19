@@ -1,0 +1,67 @@
+{
+  "chapter_id": "ch-001",
+  "chapter_title": "",
+  "chapter_index": 1,
+  "volume_name": "第一卷",
+  "created_date": "",
+  "last_modified": "",
+  "version": "1.3",
+  "status": "draft",
+  "template_type": "generate/chapter",
+  "variables": {
+    "chapter_goal": {
+      "type": "textarea",
+      "label": "本章目标",
+      "source": "ch-meta.json",
+      "required": true
+    },
+    "chapter_summary": {
+      "type": "textarea",
+      "label": "本章摘要",
+      "source": "ch-meta.json",
+      "required": false
+    },
+    "chapter_memory": {
+      "type": "textarea",
+      "label": "章节记忆",
+      "source": "ch-meta.json",
+      "required": false
+    },
+    "previous_context": {
+      "type": "textarea",
+      "label": "前文背景",
+      "source": "前一章摘要",
+      "required": false
+    },
+    "story_state": {
+      "type": "textarea",
+      "label": "故事状态",
+      "source": "story-state.md",
+      "required": false
+    },
+    "foreshadowing": {
+      "type": "array",
+      "label": "埋设伏笔",
+      "source": "ch-meta.json",
+      "required": false
+    },
+    "pending_foreshadowing": {
+      "type": "array",
+      "label": "待回收伏笔",
+      "source": "story-state.md",
+      "required": false
+    },
+    "active_quests": {
+      "type": "array",
+      "label": "进行中支线",
+      "source": "ch-meta.json",
+      "required": false
+    },
+    "style_notes": {
+      "type": "textarea",
+      "label": "风格备注",
+      "source": "ch-meta.json",
+      "required": false
+    }
+  }
+}

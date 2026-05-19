@@ -1,0 +1,28 @@
+{
+  "name": "角色设定",
+  "description": "设计立体、真实的角色",
+  "version": "1.2",
+  "author": "墨韵AI",
+  "updated": "2026-05-11",
+  "tags": ["character", "generation"],
+  "variables": {
+    "genre": {
+      "type": "text",
+      "label": "题材",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "theme": {
+      "type": "text",
+      "label": "核心主题",
+      "source": "project-meta.json",
+      "required": true
+    },
+    "character_info": {
+      "type": "textarea",
+      "label": "角色信息",
+      "source": "用户输入或 ch-meta.json",
+      "required": true
+    }
+  }
+}

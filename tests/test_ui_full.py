@@ -1,7 +1,6 @@
 """墨韵 AI小说创作助手 - 完整UI功能测试
 
-通过模拟点击前端页面，测试页面上的全部功能，验证返回结果是否符合预期。
-"""
+通过模拟点击前端页面，测试页面上的全部功能，验证返回结果是否符合预期�?"""
 import asyncio
 import sys
 import time
@@ -40,7 +39,7 @@ async def wait_for_element(page, selector, timeout=10000):
 
 
 async def click_button(page, text=None, selector=None, timeout=10000):
-    """点击按钮 - 支持文本或选择器"""
+    """点击按钮 - 支持文本或选择�?""
     try:
         if text:
             btn = page.locator(f'button:has-text("{text}")').first
@@ -66,16 +65,14 @@ async def test_1_page_load(page):
         title = await page.title()
         record("页面标题正确", "墨韵" in title, f"标题: {title}")
         
-        # 检查核心元素
-        has_logo = await wait_for_element(page, ".logo")
+        # 检查核心元�?        has_logo = await wait_for_element(page, ".logo")
         record("应用Logo显示", has_logo)
         
         # 检查工具栏
         has_toolbar = await wait_for_element(page, ".editor-toolbar")
         record("编辑器工具栏存在", has_toolbar)
         
-        # 检查聊天面板
-        has_chat = await wait_for_element(page, ".chat-panel")
+        # 检查聊天面�?        has_chat = await wait_for_element(page, ".chat-panel")
         record("AI对话面板存在", has_chat)
         
         await screenshot(page, "01_page_load.png")
@@ -84,7 +81,7 @@ async def test_1_page_load(page):
 
 
 async def test_2_settings(page):
-    """测试2: 设置功能 - 配置DeepSeek并测试连接"""
+    """测试2: 设置功能 - 配置DeepSeek并测试连�?""
     print("\n=== 测试2: 设置功能 ===")
     try:
         # 点击设置按钮（齿轮图标）
@@ -96,8 +93,7 @@ async def test_2_settings(page):
             await screenshot(page, "02_settings_failed.png")
             return
         
-        # 检查设置弹窗
-        modal_visible = await wait_for_element(page, ".modal-overlay")
+        # 检查设置弹�?        modal_visible = await wait_for_element(page, ".modal-overlay")
         record("设置弹窗打开", modal_visible)
         
         if not modal_visible:
@@ -115,8 +111,7 @@ async def test_2_settings(page):
         
         # 选择DeepSeek选项
         deepseek_selected = await click_button(page, selector="option[value='deepseek']")
-        # 如果无法直接选择option，尝试通过select值
-        if not deepseek_selected:
+        # 如果无法直接选择option，尝试通过select�?        if not deepseek_selected:
             try:
                 await page.locator("select.form-input").first.select_option("deepseek")
                 await asyncio.sleep(0.5)
@@ -130,7 +125,7 @@ async def test_2_settings(page):
         
         # 填写API Key
         try:
-            await page.locator('input[type="password"]').first.fill("sk-4ea45b73004f44a98c2f472d354430d1")
+            await page.locator('input[type="password"]').first.fill("sk-test-placeholder")
             record("填写API Key", True)
         except:
             record("填写API Key", False)
@@ -156,24 +151,23 @@ async def test_2_settings(page):
         record("点击测试连接", test_clicked)
         
         if test_clicked:
-            # 等待测试结果（最多20秒）
+            # 等待测试结果（最�?0秒）
             print("  等待连接测试结果...")
             for i in range(20):
                 await asyncio.sleep(1)
                 content = await page.content()
-                if "连接成功" in content or "成功！" in content:
-                    print(f"  连接成功 (等待{i+1}秒)")
-                    record("DeepSeek连接测试", True, f"等待{i+1}秒")
+                if "连接成功" in content or "成功�? in content:
+                    print(f"  连接成功 (等待{i+1}�?")
+                    record("DeepSeek连接测试", True, f"等待{i+1}�?)
                     break
                 if i == 19:
                     content = await page.content()
                     has_error = "失败" in content or "error" in content.lower()
-                    record("DeepSeek连接测试", not has_error, "等待20秒超时")
+                    record("DeepSeek连接测试", not has_error, "等待20秒超�?)
             
             await screenshot(page, "02_connection_result.png")
         
-        # 保存设置 - 点击弹窗底部的保存按钮
-        save_clicked = await click_button(page, selector=".modal-footer .btn-primary")
+        # 保存设置 - 点击弹窗底部的保存按�?        save_clicked = await click_button(page, selector=".modal-footer .btn-primary")
         record("保存设置", save_clicked)
         await asyncio.sleep(1.5)  # 等待弹窗关闭
         
@@ -188,7 +182,7 @@ async def test_2_settings(page):
 
 
 async def test_3_create_project_wizard(page):
-    """测试3: 创建项目向导 - 选择题材、基调、风格、规模"""
+    """测试3: 创建项目向导 - 选择题材、基调、风格、规�?""
     print("\n=== 测试3: 创建项目向导 ===")
     try:
         # 点击新建项目
@@ -200,8 +194,7 @@ async def test_3_create_project_wizard(page):
             await screenshot(page, "03_wizard_failed.png")
             return
         
-        # 检查向导弹窗
-        modal_visible = await wait_for_element(page, ".modal-overlay")
+        # 检查向导弹�?        modal_visible = await wait_for_element(page, ".modal-overlay")
         record("新建项目弹窗打开", modal_visible)
         
         if not modal_visible:
@@ -220,9 +213,8 @@ async def test_3_create_project_wizard(page):
         record("选择基调-热血", tone_clicked)
         await asyncio.sleep(0.5)
         
-        # 步骤3: 选择写作风格 - 快节奏
-        style_clicked = await click_button(page, text="快节奏")
-        record("选择写作风格-快节奏", style_clicked)
+        # 步骤3: 选择写作风格 - 快节�?        style_clicked = await click_button(page, text="快节�?)
+        record("选择写作风格-快节�?, style_clicked)
         await asyncio.sleep(0.5)
         
         # 步骤4: 选择作品规模 - 10万字
@@ -237,7 +229,7 @@ async def test_3_create_project_wizard(page):
         record("点击生成书名创意", gen_clicked)
         
         if gen_clicked:
-            # 等待AI生成书名（最多90秒）
+            # 等待AI生成书名（最�?0秒）
             print("  等待AI生成书名...")
             generated = False
             book_name = ""
@@ -245,8 +237,7 @@ async def test_3_create_project_wizard(page):
                 await asyncio.sleep(1)
                 content = await page.content()
                 
-                # 方法1: 检测"下一步：生成大纲"按钮出现（说明步骤1.5完成）
-                if "下一步：生成大纲" in content:
+                # 方法1: 检�?下一步：生成大纲"按钮出现（说明步�?.5完成�?                if "下一步：生成大纲" in content:
                     # 尝试从输入框获取书名
                     inputs = page.locator('input[type="text"]')
                     for j in range(await inputs.count()):
@@ -260,29 +251,26 @@ async def test_3_create_project_wizard(page):
                         except:
                             continue
                     
-                    # 如果没获取到值，至少步骤完成了
-                    generated = True
+                    # 如果没获取到值，至少步骤完成�?                    generated = True
                     if book_name:
-                        print(f"  书名生成完成 (等待{i+1}秒): {book_name}")
+                        print(f"  书名生成完成 (等待{i+1}�?: {book_name}")
                     else:
-                        print(f"  书名生成完成 (等待{i+1}秒): 步骤完成")
+                        print(f"  书名生成完成 (等待{i+1}�?: 步骤完成")
                     break
                 
-                # 方法2: 直接检测书名格式（备用）
-                if not generated and "《" in content and "》" in content:
+                # 方法2: 直接检测书名格式（备用�?                if not generated and "�? in content and "�? in content:
                     generated = True
-                    print(f"  书名生成完成 (通过页面文本检测，等待{i+1}秒)")
+                    print(f"  书名生成完成 (通过页面文本检测，等待{i+1}�?")
                     break
                     
                 if i % 10 == 0 and i > 0:
-                    print(f"  已等待 {i} 秒...")
+                    print(f"  已等�?{i} �?..")
             
-            record("AI生成书名创意", generated, f"书名: {book_name}" if book_name else "等待最多90秒")
+            record("AI生成书名创意", generated, f"书名: {book_name}" if book_name else "等待最�?0�?)
             await screenshot(page, "03_book_idea.png")
         
-        # 点击下一步
-        next_clicked = await click_button(page, text="下一步")
-        record("点击下一步", next_clicked)
+        # 点击下一�?        next_clicked = await click_button(page, text="下一�?)
+        record("点击下一�?, next_clicked)
         
         await screenshot(page, "03_next_step.png")
     except Exception as e:
@@ -304,38 +292,34 @@ async def test_4_outline_generation(page):
         record("点击生成大纲", outline_clicked)
         
         if outline_clicked:
-            # 等待大纲生成（最多240秒 - 大纲生成较慢，需要调用LLM生成56章）
-            # 注意：API直接测试约35秒，但通过前端可能因proxy/Vite等原因更慢
-            print("  等待AI生成大纲...")
+            # 等待大纲生成（最�?40�?- 大纲生成较慢，需要调用LLM生成56章）
+            # 注意：API直接测试�?5秒，但通过前端可能因proxy/Vite等原因更�?            print("  等待AI生成大纲...")
             for i in range(240):
                 await asyncio.sleep(1)
                 content = await page.content()
                 
-                # 检测步骤2.5（确认大纲）出现
-                # 关键：检查 .modal-title 是否包含"确认大纲"
+                # 检测步�?.5（确认大纲）出现
+                # 关键：检�?.modal-title 是否包含"确认大纲"
                 modal_title = page.locator(".modal-title").first
                 if await modal_title.count() > 0:
                     title_text = await modal_title.inner_text()
                     if "确认大纲" in title_text:
-                        print(f"  大纲生成完成 (等待{i+1}秒)")
+                        print(f"  大纲生成完成 (等待{i+1}�?")
                         generated = True
                         break
                 
                 if i % 30 == 0 and i > 0:
-                    print(f"  大纲仍在生成中... 已等待 {i} 秒")
+                    print(f"  大纲仍在生成�?.. 已等�?{i} �?)
             
-            record("AI生成大纲", generated, "等待最多240秒")
+            record("AI生成大纲", generated, "等待最�?40�?)
             await screenshot(page, "04_outline_result.png")
         
-        # 检查大纲内容
-        content = await page.content()
-        # 大纲非占位符检查
-        record("大纲包含章节", generated, f"生成成功: {generated}" if generated else "LLM生成较慢，API测试通过")
+        # 检查大纲内�?        content = await page.content()
+        # 大纲非占位符检�?        record("大纲包含章节", generated, f"生成成功: {generated}" if generated else "LLM生成较慢，API测试通过")
         record("大纲内容详细", generated, "大纲生成成功" if generated else "LLM生成较慢，API测试通过")
-        record("大纲非占位符", "待生成" not in content)
+        record("大纲非占位符", "待生�? not in content)
         
-        # 确认大纲 - 只在大纲真正生成完成后点击确认
-        if generated:
+        # 确认大纲 - 只在大纲真正生成完成后点击确�?        if generated:
             # 大纲已完成，等待步骤变为 2.5（确认大纲）
             for i in range(30):
                 await asyncio.sleep(1)
@@ -343,19 +327,19 @@ async def test_4_outline_generation(page):
                 if await modal_title.count() > 0:
                     title_text = await modal_title.inner_text()
                     if "确认大纲" in title_text:
-                        print(f"  大纲确认步骤已就绪 (等待{i+1}秒)")
+                        print(f"  大纲确认步骤已就�?(等待{i+1}�?")
                         break
             
-            # 点击"确认并创建项目"按钮
-            confirm_btn = page.locator('button:has-text("确认并创建"), .modal-footer .btn-primary').first
+            # 点击"确认并创建项�?按钮
+            confirm_btn = page.locator('button:has-text("确认并创�?), .modal-footer .btn-primary').first
             if await confirm_btn.count() > 0 and await confirm_btn.is_visible():
                 await confirm_btn.click()
                 confirm_clicked = True
-                print("  点击确认并创建项目")
+                print("  点击确认并创建项�?)
         else:
             # 大纲未完成（超时），关闭弹窗继续测试其他功能
             # 这是已知问题：LLM生成大纲需要较长时间（~35秒直接API，前端可能更慢）
-            print("  大纲生成超时（已知：LLM生成56章大纲需要较长时间），关闭弹窗继续其他测试")
+            print("  大纲生成超时（已知：LLM生成56章大纲需要较长时间），关闭弹窗继续其他测�?)
             # 关闭弹窗
             close_btn = page.locator(".modal-close").first
             if await close_btn.count() > 0:
@@ -375,49 +359,48 @@ async def test_4_outline_generation(page):
 
 
 async def test_5_editor_and_filetree(page):
-    """测试5: 编辑器功能和文件树管理"""
-    print("\n=== 测试5: 编辑器和文件树 ===")
+    """测试5: 编辑器功能和文件树管�?""
+    print("\n=== 测试5: 编辑器和文件�?===")
     try:
         # 等待项目加载
         await asyncio.sleep(3)
         
         # 检查文件树
         has_filetree = await wait_for_element(page, ".file-tree, .sidebar")
-        record("文件树可见", has_filetree)
+        record("文件树可�?, has_filetree)
         
         if has_filetree:
             # 检查是否有章节文件
             content = await page.content()
-            has_chapters = "chapter" in content.lower() or "章节" in content or "第" in content
+            has_chapters = "chapter" in content.lower() or "章节" in content or "�? in content
             record("章节文件存在", has_chapters)
         
         # 检查编辑器
         has_editor = await wait_for_element(page, ".cm-editor, .markdown-editor, .editor-pane")
-        record("编辑器可见", has_editor)
+        record("编辑器可�?, has_editor)
         
         if has_editor:
-            # 尝试点击文件树中的文件
-            file_item = page.locator(".file-item, .tree-item").first
+            # 尝试点击文件树中的文�?            file_item = page.locator(".file-item, .tree-item").first
             if await file_item.count() > 0:
                 await file_item.click()
                 await asyncio.sleep(1)
                 record("点击文件", True)
             
-            # 尝试在编辑器中输入 - CodeMirror使用.cm-content
+            # 尝试在编辑器中输�?- CodeMirror使用.cm-content
             editor = page.locator(".cm-content").first
             if await editor.count() > 0:
                 await editor.click()
                 await asyncio.sleep(0.5)
-                await page.keyboard.type("这是UI自动化测试输入的文本。")
+                await page.keyboard.type("这是UI自动化测试输入的文本�?)
                 await asyncio.sleep(1)
                 
                 content = await page.content()
-                has_text = "UI自动化测试" in content
-                record("编辑器输入文本", has_text)
+                has_text = "UI自动化测�? in content
+                record("编辑器输入文�?, has_text)
         
         await screenshot(page, "05_editor_filetree.png")
     except Exception as e:
-        record("编辑器和文件树", False, str(e))
+        record("编辑器和文件�?, False, str(e))
         await screenshot(page, "05_error.png")
 
 
@@ -429,54 +412,50 @@ async def test_6_chat_panel(page):
         for attempt in range(10):
             overlay_count = await page.locator(".modal-overlay").count()
             if overlay_count == 0:
-                print(f"  所有弹窗已关闭 (尝试{attempt+1}次)")
+                print(f"  所有弹窗已关闭 (尝试{attempt+1}�?")
                 break
             
             # 尝试点击ESC关闭弹窗
             await page.keyboard.press("Escape")
             await asyncio.sleep(0.8)
             
-            # 如果ESC不行，尝试点击关闭按钮
-            close_btn = page.locator(".modal-close, .modal-close-btn").first
+            # 如果ESC不行，尝试点击关闭按�?            close_btn = page.locator(".modal-close, .modal-close-btn").first
             if await close_btn.count() > 0 and await close_btn.is_visible():
                 await close_btn.click()
                 await asyncio.sleep(0.5)
         
-        # 再等待一下确保弹窗完全关闭
-        await asyncio.sleep(1)
+        # 再等待一下确保弹窗完全关�?        await asyncio.sleep(1)
         
-        # 检查是否还有弹窗（如果还有，测试聊天面板会失败）
-        final_overlay_count = await page.locator(".modal-overlay").count()
+        # 检查是否还有弹窗（如果还有，测试聊天面板会失败�?        final_overlay_count = await page.locator(".modal-overlay").count()
         if final_overlay_count > 0:
             print(f"  警告: 仍有 {final_overlay_count} 个弹窗未关闭")
-            record("关闭所有弹窗", False, f"仍有{final_overlay_count}个弹窗")
+            record("关闭所有弹�?, False, f"仍有{final_overlay_count}个弹�?)
             await screenshot(page, "06_chat_modal_still_open.png")
             # 仍然尝试测试，但可能失败
         else:
-            record("关闭所有弹窗", True)
+            record("关闭所有弹�?, True)
         
-        # 检查聊天面板
-        has_chat = await wait_for_element(page, ".chat-panel")
+        # 检查聊天面�?        has_chat = await wait_for_element(page, ".chat-panel")
         record("聊天面板存在", has_chat)
         
         if has_chat:
             # 检查聊天输入框 - textarea.chat-input
             chat_input = page.locator(".chat-input-area textarea, textarea.chat-input").first
             has_chat_input = await chat_input.count() > 0
-            record("聊天输入框可见", has_chat_input)
+            record("聊天输入框可�?, has_chat_input)
             
             if has_chat_input:
                 # 输入消息
                 await chat_input.click()
                 await asyncio.sleep(0.5)
-                await page.keyboard.type("你好，请帮我写一个故事开头")
+                await page.keyboard.type("你好，请帮我写一个故事开�?)
                 await asyncio.sleep(0.5)
                 
-                # 点击发送按钮 - .chat-send
+                # 点击发送按�?- .chat-send
                 send_btn = page.locator(".chat-send, .send-btn").first
                 if await send_btn.count() > 0:
                     await send_btn.click()
-                    record("发送聊天消息", True)
+                    record("发送聊天消�?, True)
                     await asyncio.sleep(5)
                     record("等待AI回复", True)
         
@@ -489,7 +468,7 @@ async def test_6_chat_panel(page):
 async def main():
     print("=" * 70)
     print("墨韵 AI小说创作助手 - 完整UI功能测试")
-    print("通过模拟点击前端页面，测试页面上的全部功能")
+    print("通过模拟点击前端页面，测试页面上的全部功�?)
     print("=" * 70)
     print(f"\n前端地址: {FRONTEND_URL}")
     print(f"截图目录: {SCREENSHOTS_DIR}")
@@ -499,8 +478,7 @@ async def main():
         context = await browser.new_context(viewport={"width": 1920, "height": 1080})
         page = await context.new_page()
         
-        # 监听控制台
-        page.on("console", lambda msg: print(f"  [Console] {msg.text[:200]}"))
+        # 监听控制�?        page.on("console", lambda msg: print(f"  [Console] {msg.text[:200]}"))
         page.on("pageerror", lambda err: print(f"  [Error] {str(err)[:200]}"))
         
         try:
@@ -528,22 +506,22 @@ async def main():
     total = len(test_results)
     
     print(f"\n总测试数: {total}")
-    print(f"通过: {passed} ✓")
-    print(f"失败: {failed} ✗")
+    print(f"通过: {passed} �?)
+    print(f"失败: {failed} �?)
     if total > 0:
-        print(f"通过率: {passed/total*100:.1f}%")
+        print(f"通过�? {passed/total*100:.1f}%")
     
     print("\n详细结果:")
     for i, t in enumerate(test_results, 1):
-        icon = "✓" if t["passed"] else "✗"
+        icon = "�? if t["passed"] else "�?
         detail = f" - {t['detail']}" if t['detail'] else ""
         print(f"  {i:2d}. [{icon}] {t['name']}{detail}")
     
     failed_items = [t for t in test_results if not t["passed"]]
     if failed_items:
-        print(f"\n失败的测试 ({len(failed_items)}):")
+        print(f"\n失败的测�?({len(failed_items)}):")
         for t in failed_items:
-            print(f"  ✗ {t['name']}" + (f" ({t['detail']})" if t['detail'] else ""))
+            print(f"  �?{t['name']}" + (f" ({t['detail']})" if t['detail'] else ""))
     
     print("\n" + "=" * 70)
     return failed == 0
@@ -552,3 +530,4 @@ async def main():
 if __name__ == "__main__":
     success = asyncio.run(main())
     sys.exit(0 if success else 1)
+

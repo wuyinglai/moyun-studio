@@ -3,25 +3,42 @@
     :open="visible"
     title="回收站"
     :width="760"
-    @cancel="close"
     :footer="null"
+    @cancel="close"
   >
     <div class="trash-modal">
       <div class="trash-actions">
-        <a-button @click="loadTrash" :loading="loading">刷新</a-button>
+        <a-button
+          :loading="loading"
+          @click="loadTrash"
+        >
+          刷新
+        </a-button>
         <a-popconfirm
           title="确定清空回收站吗？"
           ok-text="清空"
           cancel-text="取消"
           @confirm="emptyTrash"
         >
-          <a-button danger :disabled="items.length === 0">清空回收站</a-button>
+          <a-button
+            danger
+            :disabled="items.length === 0"
+          >
+            清空回收站
+          </a-button>
         </a-popconfirm>
       </div>
 
       <a-spin :spinning="loading">
-        <a-empty v-if="items.length === 0" description="回收站为空" />
-        <a-list v-else :data-source="items" item-layout="horizontal">
+        <a-empty
+          v-if="items.length === 0"
+          description="回收站为空"
+        />
+        <a-list
+          v-else
+          :data-source="items"
+          item-layout="horizontal"
+        >
           <template #renderItem="{ item }">
             <a-list-item>
               <a-list-item-meta>
@@ -33,7 +50,14 @@
                 </template>
               </a-list-item-meta>
               <template #actions>
-                <a-button size="small" type="primary" ghost @click="restore(item.trash_name)">恢复</a-button>
+                <a-button
+                  size="small"
+                  type="primary"
+                  ghost
+                  @click="restore(item.trash_name)"
+                >
+                  恢复
+                </a-button>
               </template>
             </a-list-item>
           </template>

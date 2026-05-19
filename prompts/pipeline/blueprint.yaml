@@ -5,3 +5,4 @@ steps:
     label: 生成蓝图
     prompt: pipeline/blueprint/generate
     fallback: null
+    fallback: null

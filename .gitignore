@@ -37,6 +37,10 @@ wheels/
 # 工作区（用户数据）
 workspace/
 
+# 前端构建产物
+frontend/dist/
+frontend/node_modules/
+
 # 工具临时目录
 .claude/
 .sisyphus/

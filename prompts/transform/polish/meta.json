@@ -1,0 +1,30 @@
+{
+  "name": "润色",
+  "description": "润色文本，提升写作质量",
+  "version": "1.3",
+  "author": "墨韵AI",
+  "updated": "2026-05-11",
+  "tags": ["polish", "transform"],
+  "variables": {
+    "text": {
+      "type": "textarea",
+      "label": "原文",
+      "source": "章节正文",
+      "required": true
+    },
+    "style_guide": {
+      "type": "textarea",
+      "label": "文风指南",
+      "source": "style-guide.md",
+      "required": false
+    },
+    "style": {
+      "type": "select",
+      "label": "润色风格",
+      "source": "ch-meta.json",
+      "options": ["通用润色", "简洁", "华丽", "古风", "白话"],
+      "default": "通用润色",
+      "required": false
+    }
+  }
+}

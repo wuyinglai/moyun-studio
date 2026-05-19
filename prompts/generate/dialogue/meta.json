@@ -1,0 +1,47 @@
+{
+  "name": "对话生成",
+  "description": "生成特定场景的对话",
+  "version": "1.3",
+  "author": "墨韵AI",
+  "updated": "2026-05-11",
+  "tags": ["dialogue", "generation"],
+  "variables": {
+    "scene_context": {
+      "type": "textarea",
+      "label": "场景背景",
+      "source": "用户输入或 ch-meta.json",
+      "required": true
+    },
+    "characters": {
+      "type": "textarea",
+      "label": "角色设定",
+      "source": "characters/*.json",
+      "required": false
+    },
+    "dialogue_goal": {
+      "type": "textarea",
+      "label": "对话目标",
+      "source": "ch-meta.json",
+      "required": true
+    },
+    "emotion_tone": {
+      "type": "select",
+      "label": "情感基调",
+      "source": "ch-meta.json",
+      "options": ["紧张", "轻松", "温馨", "对抗", "悲伤", "悬疑"],
+      "required": true
+    },
+    "story_state": {
+      "type": "textarea",
+      "label": "当前故事状态",
+      "source": "story-state.md",
+      "required": false
+    },
+    "style_guide": {
+      "type": "textarea",
+      "label": "文风指南",
+      "source": "style-guide.md",
+      "required": false
+    }
+  }
+}

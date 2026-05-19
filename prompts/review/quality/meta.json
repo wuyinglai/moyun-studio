@@ -1,0 +1,39 @@
+{
+  "name": "质量审查",
+  "description": "对小说章节进行多维度质量评估，检查连贯性、角色一致性、设定一致性、写作质量和逻辑合理性",
+  "version": "1.0",
+  "author": "墨韵AI",
+  "updated": "2026-05-13",
+  "tags": ["review", "quality"],
+  "variables": {
+    "content": {
+      "type": "textarea",
+      "label": "章节内容",
+      "source": "章节正文",
+      "required": true
+    },
+    "chapter_title": {
+      "type": "string",
+      "label": "章节标题",
+      "required": true
+    },
+    "story_state": {
+      "type": "textarea",
+      "label": "故事状态",
+      "source": "story-state.md",
+      "required": false
+    },
+    "style_guide": {
+      "type": "textarea",
+      "label": "文风指南",
+      "source": "style-guide.md",
+      "required": false
+    },
+    "characters": {
+      "type": "textarea",
+      "label": "角色档案",
+      "source": "characters/*.json",
+      "required": false
+    }
+  }
+}

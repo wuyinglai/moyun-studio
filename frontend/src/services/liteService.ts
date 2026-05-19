@@ -25,8 +25,11 @@ export interface LiteNextOptionCard {
   title: string
   beat: string
   scene: string
+  protagonist_desire: string
+  obstacle: string
   payoff: string
   hook: string
+  advancement: string
 }
 
 export interface LiteProjectCreateResponse {

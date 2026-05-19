@@ -1,0 +1,78 @@
+{
+  "name": "章节撰写",
+  "description": "根据上下文信息撰写章节内容",
+  "version": "1.3",
+  "author": "墨韵AI",
+  "updated": "2026-05-11",
+  "tags": ["chapter", "generation"],
+  "variables": {
+    "chapter_name": {
+      "type": "text",
+      "label": "章节名称",
+      "source": "章节文件名",
+      "required": true
+    },
+    "pov": {
+      "type": "select",
+      "label": "叙事视角",
+      "source": "project-meta.json",
+      "options": ["第三人称", "第一人称", "第三人称限定", "全知视角"],
+      "default": "第三人称",
+      "required": true
+    },
+    "goal": {
+      "type": "textarea",
+      "label": "本章目标",
+      "source": "ch-meta.json",
+      "required": true
+    },
+    "chapter_memory": {
+      "type": "textarea",
+      "label": "章节记忆",
+      "source": "ch-meta.json",
+      "required": false
+    },
+    "context": {
+      "type": "textarea",
+      "label": "前文背景",
+      "source": "前一章摘要",
+      "required": false
+    },
+    "worldbuilding": {
+      "type": "textarea",
+      "label": "世界观设定",
+      "source": "extracted/worldbuilding.md",
+      "required": false
+    },
+    "characters": {
+      "type": "textarea",
+      "label": "角色设定",
+      "source": "extracted/characters/*.md",
+      "required": false
+    },
+    "story_state": {
+      "type": "textarea",
+      "label": "当前故事状态",
+      "source": "story-state.md",
+      "required": false
+    },
+    "style_guide": {
+      "type": "textarea",
+      "label": "文风指南",
+      "source": "style-guide.md",
+      "required": false
+    },
+    "recent_context": {
+      "type": "textarea",
+      "label": "近期上下文",
+      "source": "recent-context.md",
+      "required": false
+    },
+    "pending_foreshadowing": {
+      "type": "textarea",
+      "label": "待回收伏笔",
+      "source": "story-state.md",
+      "required": false
+    }
+  }
+}

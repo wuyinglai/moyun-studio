@@ -5,39 +5,67 @@
       <div class="panel-section-header">
         <span class="section-title">工作流</span>
         <div class="header-actions">
-          <button class="btn-icon" @click="refresh" :disabled="isRunning" title="刷新">
-            <i class="fa-solid fa-rotate"></i>
+          <button
+            class="btn-icon"
+            :disabled="isRunning"
+            title="刷新"
+            @click="refresh"
+          >
+            <i class="fa-solid fa-rotate" />
           </button>
-          <button class="btn-icon" @click="startNew" title="新建">
-            <i class="fa-solid fa-plus"></i>
+          <button
+            class="btn-icon"
+            title="新建"
+            @click="startNew"
+          >
+            <i class="fa-solid fa-plus" />
           </button>
         </div>
       </div>
 
-      <div v-if="workflows.length === 0" class="section-empty">
-        <i class="fa-solid fa-diagram-project"></i>
+      <div
+        v-if="workflows.length === 0"
+        class="section-empty"
+      >
+        <i class="fa-solid fa-diagram-project" />
         <span>{{ isLoading ? '加载中...' : '暂无工作流' }}</span>
       </div>
 
-      <div v-else class="workflow-list">
+      <div
+        v-else
+        class="workflow-list"
+      >
         <div
           v-for="wf in workflows"
           :key="wf.name"
           class="workflow-card"
         >
-          <div class="wf-card-body" @click="selectWorkflow(wf.name)">
+          <div
+            class="wf-card-body"
+            @click="selectWorkflow(wf.name)"
+          >
             <div class="wf-card-header">
               <span class="wf-name">{{ wf.label }}</span>
               <span class="wf-badge">{{ countSteps(wf.steps as WorkflowStep[]) }} 步</span>
             </div>
-            <p class="wf-desc">{{ wf.description || '无描述' }}</p>
+            <p class="wf-desc">
+              {{ wf.description || '无描述' }}
+            </p>
           </div>
           <div class="wf-card-actions">
-            <button class="btn-action" @click="editWorkflow(wf.name)" title="编辑">
-              <i class="fa-solid fa-pen"></i>
+            <button
+              class="btn-action"
+              title="编辑"
+              @click="editWorkflow(wf.name)"
+            >
+              <i class="fa-solid fa-pen" />
             </button>
-            <button class="btn-action btn-action--del" @click="handleDelete(wf.name)" title="删除">
-              <i class="fa-solid fa-trash-can"></i>
+            <button
+              class="btn-action btn-action--del"
+              title="删除"
+              @click="handleDelete(wf.name)"
+            >
+              <i class="fa-solid fa-trash-can" />
             </button>
           </div>
         </div>
@@ -48,8 +76,11 @@
     <template v-if="mode === 'detail'">
       <div class="detail-view">
         <div class="detail-header">
-          <button class="btn-back" @click="mode = 'list'">
-            <i class="fa-solid fa-arrow-left"></i>
+          <button
+            class="btn-back"
+            @click="mode = 'list'"
+          >
+            <i class="fa-solid fa-arrow-left" />
           </button>
           <div class="detail-title">
             <strong>{{ detail?.label || selectedName }}</strong>
@@ -58,9 +89,15 @@
         </div>
 
         <div class="step-overview">
-          <div class="section-label">步骤预览</div>
+          <div class="section-label">
+            步骤预览
+          </div>
           <div class="step-tree">
-            <div v-for="step in detail?.steps || []" :key="step.id" class="tree-step">
+            <div
+              v-for="step in detail?.steps || []"
+              :key="step.id"
+              class="tree-step"
+            >
               <span class="step-icon">{{ stepIcon(step.type) }}</span>
               <span class="step-label">{{ step.label }}</span>
               <span class="step-badge">{{ step.type }}</span>
@@ -68,34 +105,83 @@
           </div>
         </div>
 
-        <div v-if="!hasRun" class="var-config">
-          <div class="section-label">变量配置</div>
-          <div class="var-field" v-for="(_val, key) in varOverrides" :key="key">
-            <label :for="'wf-var-' + key">{{ key }}</label>
-            <input :id="'wf-var-' + key" v-model="varOverrides[key]" type="text" />
+        <div
+          v-if="!hasRun"
+          class="var-config"
+        >
+          <div class="section-label">
+            变量配置
           </div>
-          <div v-if="Object.keys(varOverrides).length === 0" class="no-vars">无需配置变量</div>
+          <div
+            v-for="(_val, key) in varOverrides"
+            :key="key"
+            class="var-field"
+          >
+            <label :for="'wf-var-' + key">{{ key }}</label>
+            <input
+              :id="'wf-var-' + key"
+              v-model="varOverrides[key]"
+              type="text"
+            >
+          </div>
+          <div
+            v-if="Object.keys(varOverrides).length === 0"
+            class="no-vars"
+          >
+            无需配置变量
+          </div>
         </div>
 
-        <div v-if="runLogs.length > 0" class="run-logs">
-          <div class="section-label">执行日志</div>
-          <div class="log-container" ref="logRef">
-            <div v-for="(log, i) in runLogs" :key="i" class="log-line" :class="logClass(log)">{{ log }}</div>
+        <div
+          v-if="runLogs.length > 0"
+          class="run-logs"
+        >
+          <div class="section-label">
+            执行日志
+          </div>
+          <div
+            ref="logRef"
+            class="log-container"
+          >
+            <div
+              v-for="(log, i) in runLogs"
+              :key="i"
+              class="log-line"
+              :class="logClass(log)"
+            >
+              {{ log }}
+            </div>
           </div>
         </div>
 
         <div class="detail-actions">
-          <button v-if="!isRunning && !hasRun" class="btn-run" @click="handleRun">
-            <i class="fa-solid fa-play"></i> 运行
+          <button
+            v-if="!isRunning && !hasRun"
+            class="btn-run"
+            @click="handleRun"
+          >
+            <i class="fa-solid fa-play" /> 运行
           </button>
-          <button v-if="isRunning" class="btn-stop" @click="handleStop">
-            <i class="fa-solid fa-stop"></i> 停止
+          <button
+            v-if="isRunning"
+            class="btn-stop"
+            @click="handleStop"
+          >
+            <i class="fa-solid fa-stop" /> 停止
           </button>
-          <button v-if="hasRun && !isRunning" class="btn-run" @click="handleRunAgain">
-            <i class="fa-solid fa-rotate"></i> 重新运行
+          <button
+            v-if="hasRun && !isRunning"
+            class="btn-run"
+            @click="handleRunAgain"
+          >
+            <i class="fa-solid fa-rotate" /> 重新运行
           </button>
-          <button class="btn-ghost" @click="editWorkflow(selectedName!)" title="编辑">
-            <i class="fa-solid fa-pen"></i> 编辑
+          <button
+            class="btn-ghost"
+            title="编辑"
+            @click="editWorkflow(selectedName!)"
+          >
+            <i class="fa-solid fa-pen" /> 编辑
           </button>
         </div>
       </div>
@@ -105,31 +191,50 @@
     <template v-if="mode === 'editor'">
       <div class="editor-view">
         <div class="detail-header">
-          <button class="btn-back" @click="exitEditor">
-            <i class="fa-solid fa-arrow-left"></i>
+          <button
+            class="btn-back"
+            @click="exitEditor"
+          >
+            <i class="fa-solid fa-arrow-left" />
           </button>
           <div class="detail-title">
             <strong>{{ editData.name ? '编辑: ' + editData.label : '新建工作流' }}</strong>
           </div>
-          <button class="btn-save" @click="handleSave" :disabled="!editData.name || !editData.label">
-            <i class="fa-solid fa-floppy-disk"></i> 保存
+          <button
+            class="btn-save"
+            :disabled="!editData.name || !editData.label"
+            @click="handleSave"
+          >
+            <i class="fa-solid fa-floppy-disk" /> 保存
           </button>
         </div>
 
         <!-- 基本信息 -->
         <div class="editor-section">
-          <div class="section-label">基本信息</div>
+          <div class="section-label">
+            基本信息
+          </div>
           <div class="form-field">
             <label>标识名</label>
-            <input v-model="editData.name" placeholder="write-chapters" :disabled="isEditing" />
+            <input
+              v-model="editData.name"
+              placeholder="write-chapters"
+              :disabled="isEditing"
+            >
           </div>
           <div class="form-field">
             <label>名称</label>
-            <input v-model="editData.label" placeholder="批量写章节" />
+            <input
+              v-model="editData.label"
+              placeholder="批量写章节"
+            >
           </div>
           <div class="form-field">
             <label>描述</label>
-            <input v-model="editData.description" placeholder="工作流描述" />
+            <input
+              v-model="editData.description"
+              placeholder="工作流描述"
+            >
           </div>
         </div>
 
@@ -137,42 +242,78 @@
         <div class="editor-section">
           <div class="section-label-row">
             <span class="section-label">变量</span>
-            <button class="btn-icon" @click="addVariable">
-              <i class="fa-solid fa-plus"></i>
+            <button
+              class="btn-icon"
+              @click="addVariable"
+            >
+              <i class="fa-solid fa-plus" />
             </button>
           </div>
-          <div v-for="(_, idx) in editVarKeys" :key="'var-' + idx" class="var-row">
-            <input class="var-key" v-model="editVarKeys[idx]" placeholder="key" />
-            <input class="var-val" v-model="editData.variables[editVarKeys[idx]]" placeholder="default" />
-            <button class="btn-icon-sm" @click="removeVariable(idx)">✕</button>
+          <div
+            v-for="(_, idx) in editVarKeys"
+            :key="'var-' + idx"
+            class="var-row"
+          >
+            <input
+              v-model="editVarKeys[idx]"
+              class="var-key"
+              placeholder="key"
+            >
+            <input
+              v-model="editData.variables[editVarKeys[idx]]"
+              class="var-val"
+              placeholder="default"
+            >
+            <button
+              class="btn-icon-sm"
+              @click="removeVariable(idx)"
+            >
+              ✕
+            </button>
           </div>
-          <div v-if="editVarKeys.length === 0" class="no-vars">无变量</div>
+          <div
+            v-if="editVarKeys.length === 0"
+            class="no-vars"
+          >
+            无变量
+          </div>
         </div>
 
         <!-- 步骤 -->
         <div class="editor-section steps-section">
           <div class="section-label-row">
             <span class="section-label">步骤</span>
-            <button class="btn-icon" @click="addStep">
-              <i class="fa-solid fa-plus"></i>
+            <button
+              class="btn-icon"
+              @click="addStep"
+            >
+              <i class="fa-solid fa-plus" />
             </button>
           </div>
-          <div class="step-editor-list" ref="stepEditorListRef">
+          <div
+            ref="stepEditorListRef"
+            class="step-editor-list"
+          >
             <StepEditor
               v-for="(step, idx) in editData.steps"
               :key="step.id"
               :step="step"
               :depth="0"
               :index="idx"
+              :can-move-up="idx > 0"
+              :can-move-down="idx < editData.steps.length - 1"
               @update="(s) => updateStep(idx, s)"
               @remove="removeStep(idx)"
               @move-up="moveStep(idx, -1)"
               @move-down="moveStep(idx, 1)"
-              :can-move-up="idx > 0"
-              :can-move-down="idx < editData.steps.length - 1"
             />
           </div>
-          <div v-if="editData.steps.length === 0" class="no-vars">暂无步骤，点击 + 添加</div>
+          <div
+            v-if="editData.steps.length === 0"
+            class="no-vars"
+          >
+            暂无步骤，点击 + 添加
+          </div>
         </div>
       </div>
     </template>

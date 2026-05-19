@@ -3,33 +3,58 @@
     :open="visible"
     title="Token 计数"
     :width="500"
-    @cancel="close"
     :footer="null"
+    @cancel="close"
   >
     <div class="token-count-modal">
       <a-form layout="vertical">
         <a-form-item label="计数来源">
-          <a-radio-group v-model:value="source" button-style="solid">
-            <a-radio-button value="editor">当前编辑器内容</a-radio-button>
-            <a-radio-button value="prompt">当前 Prompt 内容</a-radio-button>
+          <a-radio-group
+            v-model:value="source"
+            button-style="solid"
+          >
+            <a-radio-button value="editor">
+              当前编辑器内容
+            </a-radio-button>
+            <a-radio-button value="prompt">
+              当前 Prompt 内容
+            </a-radio-button>
           </a-radio-group>
         </a-form-item>
 
         <a-form-item label="模型">
-          <a-select v-model:value="model" style="width: 100%;" placeholder="选择模型">
-            <a-select-option v-for="m in llmStore.availableModels" :key="m" :value="m">
+          <a-select
+            v-model:value="model"
+            style="width: 100%;"
+            placeholder="选择模型"
+          >
+            <a-select-option
+              v-for="m in llmStore.availableModels"
+              :key="m"
+              :value="m"
+            >
               {{ m }}
             </a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-button type="primary" @click="countTokens" :loading="isCounting" :disabled="!model">
-          <template #icon><i class="fa-solid fa-calculator"></i></template>
+        <a-button
+          type="primary"
+          :loading="isCounting"
+          :disabled="!model"
+          @click="countTokens"
+        >
+          <template #icon>
+            <i class="fa-solid fa-calculator" />
+          </template>
           计算 Token
         </a-button>
       </a-form>
 
-      <div v-if="result" class="token-result">
+      <div
+        v-if="result"
+        class="token-result"
+      >
         <a-divider>计数结果</a-divider>
         <div class="result-grid">
           <div class="result-item">
@@ -44,7 +69,10 @@
             <span class="result-label">最大上下文</span>
             <span class="result-value">{{ result.max_context.toLocaleString() }}</span>
           </div>
-          <div class="result-item" :class="{ warning: result.remaining < 1000, danger: result.remaining < 100 }">
+          <div
+            class="result-item"
+            :class="{ warning: result.remaining < 1000, danger: result.remaining < 100 }"
+          >
             <span class="result-label">剩余 Token</span>
             <span class="result-value">{{ result.remaining.toLocaleString() }}</span>
           </div>

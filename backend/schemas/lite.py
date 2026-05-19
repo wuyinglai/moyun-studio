@@ -39,8 +39,11 @@ class LiteNextOptionCard(BaseModel):
     title: str
     beat: str
     scene: str
+    protagonist_desire: str = ""
+    obstacle: str = ""
     payoff: str
     hook: str
+    advancement: str = ""
 
 
 class LiteIdeasRequest(BaseModel):

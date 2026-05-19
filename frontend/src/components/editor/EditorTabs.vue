@@ -10,36 +10,48 @@
         @click="switchToTab(file.path)"
       >
         <!-- 文件图标 -->
-        <i :class="getFileIcon(file.name)" class="tab-icon"></i>
+        <i
+          :class="getFileIcon(file.name)"
+          class="tab-icon"
+        />
 
         <!-- 文件名 -->
         <span class="tab-name">{{ file.name }}</span>
 
         <!-- 脏标记 -->
-        <span v-if="fileStore.unsavedFiles.has(file.path)" class="tab-dirty">●</span>
+        <span
+          v-if="fileStore.unsavedFiles.has(file.path)"
+          class="tab-dirty"
+        >●</span>
 
         <!-- 关闭按钮 -->
         <button
           class="tab-close"
-          @click.stop="closeTab(file.path)"
           title="关闭"
+          @click.stop="closeTab(file.path)"
         >
-          <i class="fa-solid fa-times"></i>
+          <i class="fa-solid fa-times" />
         </button>
       </div>
     </div>
 
     <!-- 状态栏 -->
-    <div class="tabs-status" v-if="fileStore.currentFile">
+    <div
+      v-if="fileStore.currentFile"
+      class="tabs-status"
+    >
       <span class="status-item">
-        <i class="fa-solid fa-font"></i>
+        <i class="fa-solid fa-font" />
         {{ editorStore.wordCount.toLocaleString() }} 字
       </span>
       <span class="status-item">
-        <i class="fa-solid fa-location-dot"></i>
+        <i class="fa-solid fa-location-dot" />
         Ln {{ editorStore.cursorPosition.line }}, Col {{ editorStore.cursorPosition.col }}
       </span>
-      <span class="status-item status-save" :class="saveStatusClass">
+      <span
+        class="status-item status-save"
+        :class="saveStatusClass"
+      >
         {{ saveStatusText }}
       </span>
     </div>

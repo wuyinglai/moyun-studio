@@ -2,59 +2,137 @@
   <div class="file-tree">
     <div class="tree-header">
       <div class="tree-title-group">
-        <span class="tree-icon" aria-hidden="true">📚</span>
+        <span
+          class="tree-icon"
+          aria-hidden="true"
+        >📚</span>
         <span class="tree-title">文件</span>
       </div>
       <div class="tree-actions">
-        <button class="tree-refresh-btn" @click="refreshTree" :title="isLoading ? '加载中' : '刷新文件树'">
+        <button
+          class="tree-refresh-btn"
+          :title="isLoading ? '加载中' : '刷新文件树'"
+          @click="refreshTree"
+        >
           <svg
-            width="14" height="14" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             :class="{ spinning: isLoading }"
           >
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
         </button>
-        <button class="tree-refresh-btn" :disabled="!projectStore.currentProject" title="新建文件" @click="createAtRoot('file')">+</button>
-        <button class="tree-refresh-btn" :disabled="!projectStore.currentProject" title="回收站" @click="uiStore.openTrash()">♻</button>
+        <button
+          class="tree-refresh-btn"
+          :disabled="!projectStore.currentProject"
+          title="新建文件"
+          @click="createAtRoot('file')"
+        >
+          +
+        </button>
+        <button
+          class="tree-refresh-btn"
+          :disabled="!projectStore.currentProject"
+          title="回收站"
+          @click="uiStore.openTrash()"
+        >
+          ♻
+        </button>
       </div>
     </div>
 
-    <div v-if="isLoading" class="tree-loading">
+    <div
+      v-if="isLoading"
+      class="tree-loading"
+    >
       <div class="loading-ink">
-        <span></span><span></span><span></span>
+        <span /><span /><span />
       </div>
       <span>加载中...</span>
     </div>
 
-    <div v-else-if="!projectStore.currentProject" class="tree-empty">
+    <div
+      v-else-if="!projectStore.currentProject"
+      class="tree-empty"
+    >
       <div class="empty-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
         </svg>
       </div>
       <span class="empty-text">暂无项目</span>
       <span class="empty-hint">创建或打开一个项目开始创作</span>
       <div class="empty-actions">
-        <button class="empty-btn empty-btn--primary" @click="uiStore.openCreateProject()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        <button
+          class="empty-btn empty-btn--primary"
+          @click="uiStore.openCreateProject()"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line
+              x1="12"
+              y1="5"
+              x2="12"
+              y2="19"
+            /><line
+              x1="5"
+              y1="12"
+              x2="19"
+              y2="12"
+            />
           </svg>
           新建项目
         </button>
-        <button class="empty-btn empty-btn--secondary" @click="uiStore.openOpenProject()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        <button
+          class="empty-btn empty-btn--secondary"
+          @click="uiStore.openOpenProject()"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
           打开项目
         </button>
       </div>
     </div>
 
-    <div v-else class="tree-content">
+    <div
+      v-else
+      class="tree-content"
+    >
       <TreeNode
         v-for="node in fileStore.tree"
         :key="node.path"
