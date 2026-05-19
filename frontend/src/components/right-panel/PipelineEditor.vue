@@ -18,7 +18,7 @@
     <!-- 步骤列表 -->
     <div class="step-list-section">
       <div class="section-label">步骤列表</div>
-      <div class="step-list">
+      <div class="step-list" ref="stepListRef">
         <div
           v-for="(step, index) in localSteps"
           :key="step.id"
@@ -74,11 +74,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Button as AButton, Select as ASelect, SelectOption as ASelectOption } from 'ant-design-vue'
 import { usePipelineStore } from '@/stores/pipeline'
 import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
+import Sortable from 'sortablejs'
 
 const pipelineStore = usePipelineStore()
 const historyStore = useHistoryStore()
@@ -89,6 +90,8 @@ const editingStepIndex = ref(0)
 const localSteps = ref<{ id: string; label: string; prompt_content: string; fallback: string | null }[]>([])
 const editingPrompt = ref('')
 const lastSnapshotContent = ref('')
+const stepListRef = ref<HTMLElement | null>(null)
+let sortableInstance: Sortable | null = null
 let snapshotTimer: ReturnType<typeof setTimeout> | null = null
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -113,17 +116,44 @@ const editingStep = computed(() => {
   return localSteps.value[editingStepIndex.value]
 })
 
+function initSortable() {
+  destroySortable()
+  if (!stepListRef.value) return
+  sortableInstance = Sortable.create(stepListRef.value, {
+    handle: '.step-drag',
+    animation: 150,
+    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+    ghostClass: 'step-dragging',
+    onEnd: (evt) => {
+      const { oldIndex, newIndex } = evt
+      if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+      const item = localSteps.value.splice(oldIndex, 1)[0]
+      localSteps.value.splice(newIndex, 0, item)
+      editingStepIndex.value = newIndex
+    },
+  })
+}
+
+function destroySortable() {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+    sortableInstance = null
+  }
+}
+
 onMounted(() => {
   if (pipelineStore.pipelines.length === 0) pipelineStore.fetchPipelines()
   if (pipelineStore.currentDetail) loadFromStore()
+  nextTick(() => initSortable())
 })
 
 onUnmounted(() => {
+  destroySortable()
   if (snapshotTimer) clearTimeout(snapshotTimer)
   if (saveTimer) clearTimeout(saveTimer)
 })
 
-watch(() => pipelineStore.currentDetail, (d) => { if (d) loadFromStore() })
+watch(() => pipelineStore.currentDetail, (d) => { if (d) { loadFromStore(); nextTick(() => initSortable()) } })
 
 function loadFromStore() {
   if (!pipelineStore.currentDetail) return
@@ -279,6 +309,13 @@ function addStep() {
   color: var(--text-muted);
   font-size: 14px;
   user-select: none;
+  touch-action: none;
+}
+
+.step-dragging {
+  opacity: 0.5;
+  border-color: var(--accent-primary) !important;
+  background: var(--bg-hover) !important;
 }
 
 .step-label {

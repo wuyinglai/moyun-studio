@@ -120,8 +120,11 @@ async def delete_workflow(
     """删除工作流"""
     runner = _build_runner(settings)
     try:
-        runner.delete_workflow(name)
-        return ApiResponse.ok({"message": f"工作流 {name} 已删除"})
+        result = runner.delete_workflow(name)
+        return ApiResponse.ok({
+            "message": f"工作流 {name} 已删除到回收站",
+            "trash": result,
+        })
     except WorkflowError:
         from backend.core.exceptions import ResourceNotFoundError
         raise ResourceNotFoundError(resource="workflow", identifier=name)

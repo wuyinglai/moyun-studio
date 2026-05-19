@@ -86,21 +86,26 @@ rawApi.interceptors.response.use(
   (error) => {
     // 记录详细错误信息到控制台
     logErrorDetail(error)
-    let message: string
-    try {
-      message = error.response?.data?.message || error.message || '请求失败'
-    } catch {
-      message = '请求失败'
-    }
-    try {
-      const notificationStore = useNotificationStore()
-      notificationStore.addNotification({
-        type: 'error',
-        message,
-        autoClose: true,
-      })
-    } catch {
-      // Pinia store 可能还未初始化，忽略
+    const status = error.response?.status
+    // 只在 5xx 服务器错误或网络断连时弹出通知，4xx 由调用方自行处理
+    const isServerError = !status || status >= 500 || status === 429
+    if (isServerError) {
+      let message: string
+      try {
+        message = error.response?.data?.message || error.message || '请求失败'
+      } catch {
+        message = '请求失败'
+      }
+      try {
+        const notificationStore = useNotificationStore()
+        notificationStore.addNotification({
+          type: 'error',
+          message,
+          autoClose: true,
+        })
+      } catch {
+        // Pinia store 可能还未初始化，忽略
+      }
     }
     return Promise.reject(error)
   }

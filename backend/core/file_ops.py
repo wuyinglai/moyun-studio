@@ -13,6 +13,7 @@ import aiofiles
 import frontmatter
 
 from backend.core.exceptions import MoyunFileNotFoundError
+from backend.core.trash import TrashService
 
 
 class FileService:
@@ -32,6 +33,13 @@ class FileService:
     def _resolve_path(self, relative_path: str) -> Path:
         """解析相对路径为绝对路径"""
         return self.workspace / relative_path
+
+    @property
+    def _trash(self) -> TrashService:
+        """懒初始化的回收站服务（指向 workspace 的父级）"""
+        if not hasattr(self, "_trash_service"):
+            self._trash_service = TrashService(self.workspace.parent)
+        return self._trash_service
 
     async def read_file(
         self,
@@ -88,17 +96,27 @@ class FileService:
         dir_path = self._resolve_path(relative_path)
         dir_path.mkdir(parents=True, exist_ok=True)
 
-    async def delete_file(self, relative_path: str) -> None:
-        """删除文件"""
-        file_path = self._resolve_path(relative_path)
-        if file_path.exists():
-            file_path.unlink()
+    async def delete_file(self, relative_path: str) -> dict | None:
+        """删除文件（移到回收站）
 
-    async def delete_directory(self, relative_path: str) -> None:
-        """删除目录"""
+        Returns:
+            回收站记录，若文件不存在返回 None
+        """
+        file_path = self._resolve_path(relative_path)
+        if not file_path.exists():
+            return None
+        return self._trash.move_to_trash(file_path)
+
+    async def delete_directory(self, relative_path: str) -> dict | None:
+        """删除目录（移到回收站）
+
+        Returns:
+            回收站记录，若目录不存在返回 None
+        """
         dir_path = self._resolve_path(relative_path)
-        if dir_path.exists() and dir_path.is_dir():
-            shutil.rmtree(dir_path)
+        if not dir_path.exists() or not dir_path.is_dir():
+            return None
+        return self._trash.move_to_trash(dir_path)
 
     async def exists(self, relative_path: str) -> bool:
         """检查文件是否存在"""

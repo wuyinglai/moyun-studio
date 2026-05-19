@@ -73,7 +73,7 @@ class PipelineDetail(BaseModel):
 
 class PipelineSaveRequest(BaseModel):
     """保存管线"""
-    name: str
+    name: str = ""
     label: str | None = None
     steps: list[dict] | None = None  # [{id, label, prompt_content, fallback}]
 

@@ -157,7 +157,7 @@
               <i class="fa-solid fa-plus"></i>
             </button>
           </div>
-          <div class="step-editor-list">
+          <div class="step-editor-list" ref="stepEditorListRef">
             <StepEditor
               v-for="(step, idx) in editData.steps"
               :key="step.id"
@@ -186,6 +186,7 @@ import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
 import { useWorkflow, type WorkflowStep, type Workflow } from '@/composables/useWorkflow'
 import StepEditor from './StepEditor.vue'
+import Sortable from 'sortablejs'
 
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
@@ -201,6 +202,8 @@ const detail = ref<Workflow | null>(null)
 const varOverrides = ref<Record<string, string>>({})
 const hasRun = ref(false)
 const logRef = ref<HTMLElement | null>(null)
+const stepEditorListRef = ref<HTMLElement | null>(null)
+let sortableInstance: Sortable | null = null
 
 // 编辑器数据
 const editData = reactive<{ name: string; label: string; description: string; variables: Record<string, string>; steps: WorkflowStep[] }>({
@@ -213,6 +216,41 @@ watch(runLogs, async () => {
   await nextTick()
   if (logRef.value) logRef.value.scrollTop = logRef.value.scrollHeight
 }, { deep: true })
+
+// ─── SortableJS 拖拽排序 ───
+
+function initSortable() {
+  destroySortable()
+  if (!stepEditorListRef.value) return
+  sortableInstance = Sortable.create(stepEditorListRef.value, {
+    handle: '.step-drag-handle',
+    animation: 150,
+    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+    ghostClass: 'step-dragging',
+    onEnd: (evt) => {
+      const { oldIndex, newIndex } = evt
+      if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+      const item = editData.steps.splice(oldIndex, 1)[0]
+      editData.steps.splice(newIndex, 0, item)
+    },
+  })
+}
+
+function destroySortable() {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+    sortableInstance = null
+  }
+}
+
+watch(mode, async (val) => {
+  if (val === 'editor') {
+    await nextTick()
+    initSortable()
+  } else {
+    destroySortable()
+  }
+})
 
 function countSteps(steps: WorkflowStep[]): number {
   let total = 0
@@ -604,5 +642,6 @@ onMounted(() => { fetchWorkflows() })
 }
 
 .steps-section { flex: 1; }
-.step-editor-list { display: flex; flex-direction: column; gap: 6px; }
+.step-editor-list { display: flex; flex-direction: column; gap: 6px; min-height: 40px; }
+.step-dragging { opacity: 0.5; outline: 2px dashed var(--accent-primary); outline-offset: -2px; }
 </style>

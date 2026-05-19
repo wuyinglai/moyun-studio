@@ -77,7 +77,13 @@
 
     <!-- Prompt 编辑区 -->
     <div class="editor-section">
-      <div class="editor-label">{{ isFreeMode ? '提示词（自由编辑）' : '当前步骤 Prompt（可直接编辑）' }}</div>
+      <div class="editor-header">
+        <div class="editor-label">{{ viewMode === 'template' ? '原始模板' : '已编译 Prompt' }}</div>
+        <div class="view-mode-toggle">
+          <button :class="{ active: viewMode === 'template' }" @click="viewMode = 'template'">原始模板</button>
+          <button :class="{ active: viewMode === 'compiled' }" @click="switchToCompiled">已编译</button>
+        </div>
+      </div>
       <div class="prompt-editor-wrap">
         <!-- 高亮层 -->
         <div ref="highlightRef" class="prompt-highlight" v-html="highlightedText" :placeholder="isFreeMode ? '输入提示词，点击发送...' : '选择管线步骤查看 Prompt...'"></div>
@@ -135,6 +141,7 @@ const highlightRef = ref<HTMLElement | null>(null)
 const lastPromptSnapshot = ref('')
 const varHint = '{{变量名}}'
 const isFreeMode = ref(true)
+const viewMode = ref<'template' | 'compiled'>('template')
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 let promptSnapshotTimer: ReturnType<typeof setTimeout> | null = null
 const historyKey = 'prompt-current'
@@ -420,6 +427,51 @@ function handlePromptInput() {
   promptSnapshotTimer = setTimeout(promptCheckSnapshot, 10000)
   if (!lastPromptSnapshot.value) lastPromptSnapshot.value = localPrompt.value
 }
+
+function switchToCompiled() {
+  viewMode.value = 'compiled'
+  const path = editorStore.currentFilePath
+  if (path) {
+    const compiled = editorStore.getCompiledPrompt(path)
+    if (compiled) {
+      localPrompt.value = compiled
+      rightPanelStore.updatePrompt(compiled)
+    }
+  }
+}
+
+// 切换视图模式时更新编辑框内容
+watch(viewMode, (mode) => {
+  const path = editorStore.currentFilePath
+  if (!path) return
+  if (mode === 'template') {
+    const tmpl = editorStore.getFilePrompt(path)
+    if (tmpl) {
+      localPrompt.value = tmpl
+      rightPanelStore.updatePrompt(tmpl)
+    }
+  } else {
+    const compiled = editorStore.getCompiledPrompt(path)
+    if (compiled) {
+      localPrompt.value = compiled
+      rightPanelStore.updatePrompt(compiled)
+    }
+  }
+})
+
+// 编译模式下实时显示最新的 compiled prompt
+watch(
+  () => editorStore.compiledPrompts,
+  (prompts) => {
+    if (viewMode.value !== 'compiled') return
+    const path = editorStore.currentFilePath
+    if (path && prompts[path]) {
+      localPrompt.value = prompts[path]
+      rightPanelStore.updatePrompt(prompts[path])
+    }
+  },
+  { deep: true },
+)
 
 </script>
 
@@ -821,7 +873,42 @@ function handlePromptInput() {
 .editor-label {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 6px;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  padding: 2px;
+
+  button {
+    font-size: 10px;
+    padding: 2px 8px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    &:hover:not(.active) {
+      color: var(--text-secondary);
+    }
+  }
 }
 
 .prompt-editor-wrap {

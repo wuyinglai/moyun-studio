@@ -98,7 +98,7 @@ export function useFileGeneration() {
         // filePath 已在 closure 中，通过 emitter detail 传递
       }, (prompt) => {
         _currentPrompt.value = prompt
-        editorStore.setFilePrompt(filePathForEmitter, prompt)
+        editorStore.setCompiledPrompt(filePathForEmitter, prompt)
       }, filePathForEmitter)
 
       // 生成成功后保存元数据（含 user_prompt，供重新生成使用）
@@ -182,7 +182,7 @@ export function useFileGeneration() {
         // filePath 已在 closure 中，通过 emitter detail 传递
       }, (prompt) => {
         _currentPrompt.value = prompt
-        editorStore.setFilePrompt(filePathForEmitter, prompt)
+        editorStore.setCompiledPrompt(filePathForEmitter, prompt)
       }, filePathForEmitter)
 
       // 管线写入文件后，从磁盘重新加载内容到编辑器

@@ -20,6 +20,7 @@ from typing import Any, AsyncGenerator
 import yaml
 
 from backend.core.pipeline import PipelineRunner, PipelineError
+from backend.core.trash import TrashService
 from backend.schemas.workflow import (
     WorkflowDef,
     WorkflowStepDef,
@@ -206,13 +207,18 @@ class WorkflowRunner:
         except Exception as e:
             raise WorkflowError(f"保存工作流失败 {req.name}: {e}")
 
-    def delete_workflow(self, name: str) -> None:
-        """删除工作流 YAML 文件"""
+    def delete_workflow(self, name: str) -> dict:
+        """删除工作流 YAML 文件（移到回收站）
+
+        Returns:
+            回收站记录
+        """
         yaml_path = self._get_workflow_yaml_path(name)
         if not yaml_path.exists():
             raise WorkflowError(f"工作流不存在: {name}")
         try:
-            yaml_path.unlink()
+            trash = TrashService(self.workflows_path.parent)
+            return trash.move_to_trash(yaml_path)
         except Exception as e:
             raise WorkflowError(f"删除工作流失败 {name}: {e}")
 
@@ -466,6 +472,11 @@ class WorkflowRunner:
         # 合并 step 级 extra_vars
         for k, v in step.extra_vars.items():
             extra_vars[k] = context.resolve(v)
+
+        # 注入循环变量（vol、ch 等），让 pipeline 模板可知当前章节编号
+        for k, v in context.loop_vars.items():
+            if k not in extra_vars:
+                extra_vars[k] = str(v)
 
         runner = PipelineRunner(
             self.prompts_path,

@@ -10,6 +10,8 @@ export const useEditorStore = defineStore('editor', () => {
   const currentFilePath = ref<string | null>(null)
   // 文件路径 → 最后一次用于生成该文件的 prompt
   const filePrompts = ref<Record<string, string>>({})
+  // 文件路径 → 最后一次生成时编译后发给 LLM 的 prompt（含 @{path} 和变量解析结果）
+  const compiledPrompts = ref<Record<string, string>>({})
   // 内容来源标记：'local' = 用户本地编辑，'external' = AI生成等外部更新
   const contentSource = ref<'local' | 'external'>('local')
   const isDirty = computed(() => {
@@ -23,7 +25,7 @@ export const useEditorStore = defineStore('editor', () => {
   const cursorPosition = ref({ line: 1, col: 1 })
 
   // 按 projectId 隔离的编辑器状态（持久化）
-  const perProjectData = ref<Record<string, { currentFilePath: string | null; filePrompts: Record<string, string> }>>({})
+  const perProjectData = ref<Record<string, { currentFilePath: string | null; filePrompts: Record<string, string>; compiledPrompts: Record<string, string> }>>({})
 
   function loadContent(path: string, content: string, fm?: Record<string, unknown>) {
     contents.value[path] = content
@@ -87,6 +89,16 @@ export const useEditorStore = defineStore('editor', () => {
     return filePrompts.value[path] || ''
   }
 
+  function setCompiledPrompt(path: string, prompt: string) {
+    if (prompt) {
+      compiledPrompts.value[path] = prompt
+    }
+  }
+
+  function getCompiledPrompt(path: string): string {
+    return compiledPrompts.value[path] || ''
+  }
+
   /** 标记本地编辑已发生，用于防止外部更新覆盖本地编辑 */
   function markLocalEdit() {
     contentSource.value = 'local'
@@ -100,14 +112,17 @@ export const useEditorStore = defineStore('editor', () => {
         perProjectData.value[oldProj.id] = {
           currentFilePath: currentFilePath.value,
           filePrompts: { ...filePrompts.value },
+          compiledPrompts: { ...compiledPrompts.value },
         }
       }
       currentFilePath.value = null
       filePrompts.value = {}
+      compiledPrompts.value = {}
       if (newProj && perProjectData.value[newProj.id]) {
         const saved = perProjectData.value[newProj.id]
         if (saved.currentFilePath) currentFilePath.value = saved.currentFilePath
         if (saved.filePrompts) filePrompts.value = saved.filePrompts
+        if (saved.compiledPrompts) compiledPrompts.value = saved.compiledPrompts
       }
     },
   )
@@ -116,6 +131,7 @@ export const useEditorStore = defineStore('editor', () => {
     contents,
     frontmatter,
     filePrompts,
+    compiledPrompts,
     contentSource,
     isDirty,
     wordCount,
@@ -131,6 +147,8 @@ export const useEditorStore = defineStore('editor', () => {
     setCurrentFile,
     setFilePrompt,
     getFilePrompt,
+    setCompiledPrompt,
+    getCompiledPrompt,
     markLocalEdit,
     perProjectData,
   }

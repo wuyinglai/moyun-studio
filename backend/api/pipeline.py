@@ -1,11 +1,12 @@
 """墨韵 - 管线引擎 API
 
 端点：
-  POST /api/pipeline/run         运行管线（SSE）
-  GET  /api/pipeline/list        获取管线列表
-  GET  /api/pipeline/{name}      获取管线详情（含 prompt）
-  PUT  /api/pipeline/{name}      保存管线/步骤 prompt
-  POST /api/pipeline/custom      创建自定义管线
+  POST   /api/pipeline/run         运行管线（SSE）
+  GET    /api/pipeline/list        获取管线列表
+  GET    /api/pipeline/{name}      获取管线详情（含 prompt）
+  PUT    /api/pipeline/{name}      保存管线/步骤 prompt
+  POST   /api/pipeline/custom      创建自定义管线
+  DELETE /api/pipeline/{name}      删除管线（移到回收站）
 """
 
 import json
@@ -19,6 +20,7 @@ from backend.config import Settings, get_settings
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.file_ops import FileService
 from backend.core.pipeline import PipelineRunner, PipelineError
+from backend.core.trash import TrashService
 from backend.schemas.common import ApiResponse
 from backend.schemas.pipeline import (
     PipelineRunRequest,
@@ -104,16 +106,19 @@ async def list_pipelines(
     # 检查自定义管线
     custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
     if custom_dir.exists():
-        for f in sorted(custom_dir.glob("*.yaml")):
-            try:
-                p = runner.load_pipeline(f.stem)
-                result.append({
-                    "name": p.name, "label": p.label,
-                    "steps": [{"id": s.id, "label": s.label} for s in p.steps],
-                    "source": "custom",
-                })
-            except Exception:
-                pass
+        custom_pipeline_dir = custom_dir / "pipeline"
+        if custom_pipeline_dir.exists():
+            custom_runner = PipelineRunner(custom_dir, llm_service, file_service, source="custom")
+            for f in sorted(custom_pipeline_dir.glob("*.yaml")):
+                try:
+                    p = custom_runner.load_pipeline(f.stem)
+                    result.append({
+                        "name": p.name, "label": p.label,
+                        "steps": [{"id": s.id, "label": s.label} for s in p.steps],
+                        "source": "custom",
+                    })
+                except Exception:
+                    pass
 
     return ApiResponse.ok({"pipelines": result, "total": len(result)})
 
@@ -127,7 +132,14 @@ async def get_pipeline(
     file_service = FileService(settings.projects_path)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
-    runner = PipelineRunner(settings.prompts_path, llm_service, file_service)
+
+    # 判断是系统管线还是自定义管线
+    custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
+    custom_yaml = custom_dir / "pipeline" / f"{name}.yaml"
+    if custom_yaml.exists():
+        runner = PipelineRunner(custom_dir, llm_service, file_service)
+    else:
+        runner = PipelineRunner(settings.prompts_path, llm_service, file_service)
 
     try:
         detail = runner.get_pipeline_detail(name)
@@ -147,7 +159,16 @@ async def save_pipeline(
     file_service = FileService(settings.projects_path)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
-    runner = PipelineRunner(settings.prompts_path, llm_service, file_service)
+
+    # 判断是系统管线还是自定义管线
+    custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
+    custom_yaml = custom_dir / "pipeline" / f"{name}.yaml"
+    if custom_yaml.exists():
+        prompts_path = custom_dir
+    else:
+        prompts_path = settings.prompts_path
+
+    runner = PipelineRunner(prompts_path, llm_service, file_service)
 
     if req.steps is not None:
         runner.save_pipeline_yaml(name, req.label or name, req.steps)
@@ -183,3 +204,41 @@ async def create_custom_pipeline(
             runner.save_step_prompt(req.name, step["id"], step["prompt_content"])
 
     return ApiResponse.ok(message=f"自定义管线 {req.name} 已创建")
+
+
+@router.delete("/pipeline/{name}")
+async def delete_pipeline(
+    name: str,
+    settings: Settings = Depends(get_settings),
+):
+    """删除管线（移到回收站）"""
+    trash = TrashService(settings.workspace_path)
+
+    # 判断是系统管线还是自定义管线
+    system_yaml = settings.prompts_path / "pipeline" / f"{name}.yaml"
+    system_dir = settings.prompts_path / "pipeline" / name
+    custom_yaml = settings.workspace_path / ".moyun" / "custom-pipelines" / "pipeline" / f"{name}.yaml"
+    custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines" / "pipeline" / name
+
+    found = False
+
+    if system_yaml.exists() or system_dir.exists():
+        if system_yaml.exists():
+            trash.move_to_trash(system_yaml)
+            found = True
+        if system_dir.exists():
+            trash.move_to_trash(system_dir)
+            found = True
+    elif custom_yaml.exists() or custom_dir.exists():
+        if custom_yaml.exists():
+            trash.move_to_trash(custom_yaml)
+            found = True
+        if custom_dir.exists():
+            trash.move_to_trash(custom_dir)
+            found = True
+
+    if not found:
+        from backend.core.exceptions import ResourceNotFoundError
+        raise ResourceNotFoundError(resource="pipeline", identifier=name)
+
+    return ApiResponse.ok({"message": f"管线 {name} 已删除到回收站"})

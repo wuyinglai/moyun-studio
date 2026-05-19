@@ -206,6 +206,7 @@ def create_app() -> FastAPI:
         snapshots,
         config,
         workflows,
+        trash,
         lite,
     )
 
@@ -232,6 +233,7 @@ def create_app() -> FastAPI:
     app.include_router(snapshots.router, prefix="/api")
     app.include_router(config.router, prefix="/api")
     app.include_router(workflows.router, prefix="/api")
+    app.include_router(trash.router, prefix="/api")
     app.include_router(lite.router, prefix="/api")
 
     # ── 前端静态文件 & 单页入口 ──────────────────────────────────

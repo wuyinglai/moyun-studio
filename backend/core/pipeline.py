@@ -286,6 +286,15 @@ class PipelineRunner:
                     **extra_vars,
                 }
 
+                # 从 file_path 解析章节目录（作为 workflow loop_vars 的兜底）
+                if target_file:
+                    import re
+                    m = re.search(r'vol-(\d+)/ch-(\d+)(?:/sec-(\d+))?', target_file)
+                    if m:
+                        step_vars.setdefault("vol", m.group(1))
+                        step_vars.setdefault("ch", m.group(2))
+                        step_vars.setdefault("sec", m.group(3) or "1")
+
                 # 渲染 prompt 模板（使用 step.prompt 保证与 YAML 定义一致）
                 prompt_relative = f"{step.prompt}.md"
                 prompt_text = self.render_prompt(prompt_relative, step_vars)
@@ -450,7 +459,9 @@ class PipelineRunner:
                 new_content = (original_content + "\n\n" + final_output).strip()
                 await self.file_service.write_file(f"{project_id}/{target_file}", new_content, frontmatter)
             elif output_mode == "dimension_file":
-                await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
+                # dimension_file 模式：各步骤已通过 step.output 写入各自文件
+                # 不覆写目标文件（如正文章节），跳过 final write
+                pass
 
         # 生成完成后自动更新 story-state 和 recent-context
         if target_file and final_output:
@@ -670,6 +681,7 @@ class PipelineRunner:
     def save_pipeline_yaml(self, name: str, label: str, steps: list[dict]) -> None:
         """保存管线 YAML 定义（保存前自动归档旧版本）"""
         yaml_path = self._get_pipeline_yaml_path(name)
+        yaml_path.parent.mkdir(parents=True, exist_ok=True)
         # 归档旧版本
         if yaml_path.exists():
             archive_prompt(yaml_path, self.prompts_path, note=f"更新 {name} 定义")

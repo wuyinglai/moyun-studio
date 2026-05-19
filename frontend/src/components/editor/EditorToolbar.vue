@@ -124,6 +124,9 @@ const _l2AutoRunning = ref(false)
 /** 当前在 PROJECT_CHAIN 中的位置（用于 silent step 自动推进时不受 editor store 干扰） */
 let _chainIndex = -1
 
+/** L1 模式下 auto-advance 打开但尚未生成的文件（用户需再点一次"写下一部分"触发生成） */
+let _nextConfirmQueued: string | null = null
+
 function getAutoMode(): string {
   return localStorage.getItem('moyun-auto-mode') || 'L1'
 }
@@ -233,6 +236,9 @@ const canGoForward = computed(() => {
 })
 
 function handleStop() {
+  // 清除任何 L1 排队中的文件
+  _nextConfirmQueued = null
+
   // L2 自动推进中 → 标记停止，当前文件生成完毕后停
   if (getAutoMode() === 'L2' && (_l2AutoRunning.value || fileGen.isGenerating.value)) {
     _l2StopRequested.value = true
@@ -326,12 +332,28 @@ async function handleGenerateNext() {
     return
   }
 
-  // 读取右侧面板中用户手工修改的 prompt，传入 pipeline 的 extra_vars
+  // 提前读取右侧面板中用户手工修改的 prompt（queue check 和正常流程都需要）
   const rightPanelStore = useRightPanelStore()
   const customPrompt = rightPanelStore.promptContent
   const extraVars: Record<string, unknown> = {}
   if (customPrompt && customPrompt.length > 50) {
     extraVars.user_prompt = customPrompt
+  }
+
+  // L1 auto-advance 已打开但未生成的文件 → 本次点击触发生成
+  if (_nextConfirmQueued) {
+    const queued = _nextConfirmQueued
+    _nextConfirmQueued = null
+    if (queued === filePath) {
+      const chainItem = PROJECT_CHAIN.find(item => item.path === filePath)
+      if (chainItem) {
+        loadFilePrompt(projectId, filePath)
+        syncGuideStep(filePath, 'running')
+        await fileGen.runPipeline(projectId, filePath, chainItem.pipeline, extraVars)
+        syncGuideStep(filePath, 'done')
+      }
+      return
+    }
   }
 
   // 从当前文件路径推导下一个文件和 pipeline
@@ -375,15 +397,23 @@ async function handleGenerateNext() {
     if (nextIdx >= 0 && nextIdx < PROJECT_CHAIN.length - 1) {
       const nextNext = PROJECT_CHAIN[nextIdx + 1]
       console.log('[handleGenerateNext] auto-advancing to:', nextNext)
-      // 打开下一文件、运行 pipeline（confirm=true 的正常流程）
+      // 打开下一文件（confirm=true 的正常流程）
       const node2 = { name: nextNext.path.split('/').pop() || '', path: nextNext.path, type: 'file' as const }
       fileStore.openFile(node2)
       editorStore.setCurrentFile(nextNext.path)
       loadFilePrompt(projectId, nextNext.path)
+
+      if (getAutoMode() === 'L1') {
+        // L1: 打开文件但不运行 pipeline，标记为排队等待用户确认
+        _nextConfirmQueued = nextNext.path
+        notification.info(`已打开 ${nextNext.path}，点击「写下一部分」开始生成`)
+        return
+      }
+
+      // L2: 运行 pipeline 后继续推进
       syncGuideStep(nextNext.path, 'running')
       await fileGen.runPipeline(projectId, nextNext.path, nextNext.pipeline, extraVars)
       syncGuideStep(nextNext.path, 'done')
-      // L1 pause or L2 auto
       if (getAutoMode() === 'L2') {
         if (_l2StopRequested.value) {
           _l2StopRequested.value = false
@@ -394,7 +424,7 @@ async function handleGenerateNext() {
           setTimeout(() => handleGenerateNext(), 800)
         }
       }
-      // L1: 不继续，等待用户点"写下一部分"
+      // L1: 不继续（已在上面 return）
     }
     return
   }
