@@ -67,14 +67,17 @@
           </div>
         </div>
         <textarea
+          ref="textareaRef"
           v-model="content"
           class="chapter-textarea"
           placeholder="选择右侧爽点卡开始生成，或在这里直接修改正文..."
           @input="dirty = true"
+          @scroll="handleTextareaScroll"
         />
         <div class="editor-actions">
           <button class="ghost-btn" :disabled="!dirty || saving" @click="saveCurrent">保存</button>
           <button v-if="generating" class="ghost-btn danger-btn" @click="stopGeneration">停止生成</button>
+          <button v-else-if="canContinueDraft" class="ghost-btn continue-btn" @click="continueDraft">继续生成</button>
           <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="rewriteCurrent">重写这一章</button>
           <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="improveCurrent('more_exciting')">更爽一点</button>
           <button class="ghost-btn" :disabled="!currentFilePath || generating" @click="improveCurrent('more_reasonable')">更合理一点</button>
@@ -140,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Modal } from 'ant-design-vue'
 import { useProjectStore } from '@/stores/project'
@@ -154,6 +157,7 @@ import {
   fetchLiteNextOptions,
   streamLiteNext,
   type LiteIdeaCard,
+  type LiteWriteAction,
   type LiteNextOptionCard,
 } from '@/services/liteService'
 import { consumeOrFetch, clearCache } from '@/composables/useLitePrefetch'
@@ -171,6 +175,7 @@ const nextTargetFile = ref('')
 const pendingTargetLabel = ref('')
 const content = ref('')
 const currentFilePath = ref('')
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const streamingFilePath = ref('')
 const streamingBuffers = ref<Record<string, string>>({})
 const chapterStatus = ref<Record<string, 'done' | 'blank' | 'draft'>>({})
@@ -183,6 +188,8 @@ const optionRequestId = ref(0)
 const creating = ref(false)
 const generating = ref(false)
 const generationAbortController = ref<AbortController | null>(null)
+const lastGenerationCard = ref<LiteNextOptionCard | null>(null)
+const autoScrollDuringGeneration = ref(true)
 const saving = ref(false)
 const dirty = ref(false)
 const prefs = reactive(defaultLitePrefs())
@@ -234,6 +241,15 @@ const nextTargetHint = computed(() => {
   if (loadingOptions.value) return ''
   if (!nextTargetFile.value) return ''
   return `选择一张卡，自动写${formatChapterLabel(nextTargetFile.value)}`
+})
+
+const canContinueDraft = computed(() => {
+  return Boolean(
+    currentFilePath.value
+    && chapterStatus.value[currentFilePath.value] === 'draft'
+    && content.value.trim()
+    && lastGenerationCard.value,
+  )
 })
 
 onMounted(async () => {
@@ -347,6 +363,30 @@ function chapterProgressText(path: string) {
 
 function isAbortError(e: unknown) {
   return e instanceof DOMException && e.name === 'AbortError'
+}
+
+function isTextareaNearBottom() {
+  const el = textareaRef.value
+  if (!el) return true
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - 32
+}
+
+function handleTextareaScroll() {
+  if (!generating.value) return
+  autoScrollDuringGeneration.value = isTextareaNearBottom()
+}
+
+async function scrollTextareaToBottom() {
+  if (!autoScrollDuringGeneration.value || currentFilePath.value !== streamingFilePath.value) return
+  await nextTick()
+  const el = textareaRef.value
+  if (el) el.scrollTop = el.scrollHeight
+}
+
+function appendDraftContent(base: string, addition: string) {
+  if (!base.trim()) return addition
+  if (!addition.trim()) return base
+  return `${base.replace(/\s+$/, '')}\n\n${addition.replace(/^\s+/, '')}`
 }
 
 function isBlankChapter(text: string) {
@@ -528,13 +568,22 @@ function stopGeneration() {
   generationAbortController.value?.abort()
 }
 
-async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrite' | 'more_exciting' | 'more_reasonable', targetFile: string | null) {
+async function continueDraft() {
+  if (generating.value || !currentFilePath.value || !lastGenerationCard.value) return
+  streamingBuffers.value[currentFilePath.value] = content.value
+  await runGeneration(lastGenerationCard.value, 'continue', currentFilePath.value)
+}
+
+async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, targetFile: string | null) {
   const projectId = projectStore.currentProject?.id
   if (!projectId || generating.value) return
   generating.value = true
   const abortController = new AbortController()
   generationAbortController.value = abortController
+  lastGenerationCard.value = card
+  autoScrollDuringGeneration.value = true
   let generatedFilePath = targetFile || nextTargetFile.value || currentFilePath.value || ''
+  const continueBaseContent = action === 'continue' && generatedFilePath ? (streamingBuffers.value[generatedFilePath] || content.value) : ''
   pendingTargetLabel.value = formatChapterLabel(targetFile || nextTargetFile.value || currentFilePath.value || '')
   qualitySummary.value = `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
   try {
@@ -542,15 +591,16 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
       onMeta: (meta) => {
         generatedFilePath = meta.file_path
         streamingFilePath.value = meta.file_path
-        streamingBuffers.value[meta.file_path] = ''
+        streamingBuffers.value[meta.file_path] = action === 'continue' ? continueBaseContent : ''
         chapterStatus.value[meta.file_path] = 'blank'
         currentFilePath.value = meta.file_path
         pendingTargetLabel.value = formatChapterLabel(meta.file_path)
-        content.value = ''
+        content.value = action === 'continue' ? continueBaseContent : ''
         dirty.value = false
         fileStore.openFile({ name: meta.file_path.split('/').pop() || '', path: meta.file_path, type: 'file' })
         editorStore.setCurrentFile(meta.file_path)
-        editorStore.loadContent(meta.file_path, '')
+        editorStore.loadContent(meta.file_path, content.value)
+        void scrollTextareaToBottom()
       },
       onStatus: (message) => {
         qualitySummary.value = message === 'AI 正在写正文...'
@@ -559,11 +609,15 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
       },
       onDelta: (delta) => {
         if (!generatedFilePath) return
-        const nextContent = (streamingBuffers.value[generatedFilePath] || '') + delta
+        const currentBuffer = streamingBuffers.value[generatedFilePath] || ''
+        const nextContent = action === 'continue' && currentBuffer === continueBaseContent
+          ? appendDraftContent(currentBuffer, delta)
+          : currentBuffer + delta
         streamingBuffers.value[generatedFilePath] = nextContent
         editorStore.loadContent(generatedFilePath, nextContent)
         if (currentFilePath.value === generatedFilePath) {
           content.value = nextContent
+          void scrollTextareaToBottom()
         }
         if (!isBlankChapter(nextContent)) {
           chapterStatus.value[generatedFilePath] = 'done'
@@ -576,6 +630,7 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
         editorStore.loadContent(generatedFilePath, nextContent)
         if (currentFilePath.value === generatedFilePath) {
           content.value = nextContent
+          void scrollTextareaToBottom()
         }
       },
       onDone: (result) => {
@@ -593,6 +648,7 @@ async function runGeneration(card: LiteNextOptionCard, action: 'write' | 'rewrit
         if (currentFilePath.value === result.file_path) {
           content.value = result.content
           editorStore.setCurrentFile(result.file_path)
+          void scrollTextareaToBottom()
         }
       },
     }, { signal: abortController.signal })
@@ -960,6 +1016,11 @@ label textarea {
 .danger-btn {
   border-color: rgba(220, 88, 88, .45);
   color: #ff9a9a;
+}
+
+.continue-btn {
+  border-color: rgba(45, 138, 110, .45);
+  color: var(--jade-light);
 }
 
 .link-btn {

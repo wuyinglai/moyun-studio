@@ -256,6 +256,8 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
 def _quality_one_line(summary: str, action: str) -> str:
     if summary:
         return summary.splitlines()[0][:80]
+    if action == "continue":
+        return "已续写草稿，并更新故事状态。"
     if action == "more_exciting":
         return "已增强冲突、爽点和结尾钩子。"
     if action == "more_reasonable":
@@ -983,7 +985,7 @@ async def write_lite_next_stream(
         file_service = FileService(settings.projects_path)
         requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
         is_blank_requested = _is_blank_chapter(requested_content)
-        if req.action != "write" and req.target_file:
+        if req.action in ("continue", "rewrite", "more_exciting", "more_reasonable") and req.target_file:
             target_file = req.target_file
         elif req.target_file and is_blank_requested:
             target_file = req.target_file
@@ -1035,6 +1037,7 @@ async def write_lite_next_stream(
                 f"场景：{req.selected_card.scene}",
                 f"兑现：{req.selected_card.payoff}",
                 f"结尾钩子：{req.selected_card.hook}",
+                "如果这是续写草稿：只能从当前草稿末尾自然接着写，不要重写开头，不要重复已经写过的句子。",
                 "写作偏好：",
                 prefs_text,
                 f"{'章规划：\n' + chapter_plan if chapter_plan else ''}",
@@ -1078,9 +1081,14 @@ async def write_lite_next_stream(
                 fallback = _fallback_section_content(target_file, req.selected_card, prefs_text, story_engine)
                 content_parts = [fallback]
                 used_fallback = True
-            yield _lite_stream_event("replace", {"content": "".join(content_parts).strip()})
+            generated_text = "".join(content_parts).strip()
+            if req.action == "continue" and target_content.strip():
+                content = target_content.rstrip() + "\n\n" + generated_text
+            else:
+                content = generated_text
+            yield _lite_stream_event("replace", {"content": content.strip()})
 
-            content = _ensure_section_heading(target_file, req.selected_card.title, "".join(content_parts).strip())
+            content = _ensure_section_heading(target_file, req.selected_card.title, content.strip())
             await file_service.write_file(f"{req.project_id}/{target_file}", content)
 
             # 更新章节记忆和待回收伏笔

@@ -79,7 +79,7 @@ class LiteWriteNextRequest(BaseModel):
     target_file: str | None = Field(default=None, description="目标章节文件")
     selected_card: LiteNextOptionCard
     prefs: LiteWritingPrefs = Field(default_factory=LiteWritingPrefs)
-    action: Literal["write", "rewrite", "more_exciting", "more_reasonable"] = "write"
+    action: Literal["write", "rewrite", "more_exciting", "more_reasonable", "continue"] = "write"
 
 
 class LiteWriteNextResponse(BaseModel):

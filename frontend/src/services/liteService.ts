@@ -49,6 +49,8 @@ export interface LiteWriteNextResponse {
   chapter_plan?: string | null
 }
 
+export type LiteWriteAction = 'write' | 'rewrite' | 'more_exciting' | 'more_reasonable' | 'continue'
+
 export interface LiteWriteStreamCallbacks {
   onMeta?: (data: { file_path: string; label: string }) => void
   onDelta?: (delta: string) => void
@@ -95,7 +97,7 @@ export async function writeLiteNext(
   targetFile: string | null,
   selectedCard: LiteNextOptionCard,
   prefs: LiteWritingPrefs,
-  action: 'write' | 'rewrite' | 'more_exciting' | 'more_reasonable' = 'write',
+  action: LiteWriteAction = 'write',
 ) {
   return await api.post<LiteWriteNextResponse>('/lite/write-next', {
     project_id: projectId,
@@ -113,7 +115,7 @@ export async function streamLiteNext(
   targetFile: string | null,
   selectedCard: LiteNextOptionCard,
   prefs: LiteWritingPrefs,
-  action: 'write' | 'rewrite' | 'more_exciting' | 'more_reasonable' = 'write',
+  action: LiteWriteAction = 'write',
   callbacks: LiteWriteStreamCallbacks = {},
   options: LiteWriteStreamOptions = {},
 ) {
