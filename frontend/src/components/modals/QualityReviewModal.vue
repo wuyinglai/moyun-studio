@@ -2,13 +2,12 @@
   <a-modal
     :open="visible"
     title="质量审查"
-    :width="640"
-    @cancel="close"
+    :width="760"
     :footer="null"
     :destroy-on-close="true"
+    @cancel="close"
   >
     <div class="quality-review-modal">
-      <!-- 选择文件 -->
       <a-form layout="vertical">
         <a-form-item label="审查文件">
           <a-input v-model:value="targetFile" placeholder="选择或输入文件路径">
@@ -21,27 +20,39 @@
         </a-form-item>
       </a-form>
 
-      <!-- 操作按钮 -->
       <div class="actions">
-        <a-button @click="close">关闭</a-button>
+        <a-button @click="loadHistory" :loading="isLoadingHistory">
+          刷新历史
+        </a-button>
+        <a-button
+          :loading="isBatchReviewing"
+          :disabled="chapterFiles.length === 0"
+          @click="handleBatchReview"
+        >
+          批量审查章节
+        </a-button>
         <a-button type="primary" :loading="isReviewing" :disabled="!targetFile" @click="handleReview">
           <template #icon><i class="fa-solid fa-check-circle"></i></template>
-          {{ isReviewing ? '审查中...' : '开始审查' }}
+          {{ isReviewing ? '审查中...' : '审查当前文件' }}
         </a-button>
       </div>
 
-      <!-- 审查结果 -->
+      <a-alert
+        v-if="batchSummary"
+        class="batch-alert"
+        type="success"
+        show-icon
+        :message="batchSummary"
+      />
+
       <div v-if="result" class="result-area">
         <a-divider />
-
-        <!-- 总体评价 -->
         <a-alert type="info" show-icon class="summary-alert">
           <template #message>
             <strong>{{ result.summary || '审查完成' }}</strong>
           </template>
         </a-alert>
 
-        <!-- 评分面板 -->
         <div class="scores-grid">
           <div v-for="item in scoreItems" :key="item.key" class="score-item">
             <div class="score-label">
@@ -57,7 +68,6 @@
           </div>
         </div>
 
-        <!-- 问题列表 -->
         <div v-if="result.issues.length > 0" class="section">
           <h4 class="section-title">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -72,7 +82,6 @@
           </div>
         </div>
 
-        <!-- 优点 -->
         <div v-if="result.strengths.length > 0" class="section">
           <h4 class="section-title">
             <i class="fa-solid fa-star"></i>
@@ -83,7 +92,6 @@
           </ul>
         </div>
 
-        <!-- 改进建议 -->
         <div v-if="result.suggestions.length > 0" class="section">
           <h4 class="section-title">
             <i class="fa-solid fa-lightbulb"></i>
@@ -95,24 +103,55 @@
         </div>
       </div>
 
-      <!-- 错误 -->
       <div v-else-if="error" class="result-area">
         <a-divider />
         <a-alert type="error" show-icon :message="error" />
+      </div>
+
+      <div class="history-area">
+        <a-divider />
+        <div class="history-head">
+          <h4>审查历史</h4>
+          <span>{{ reviews.length }} 条</span>
+        </div>
+        <a-empty v-if="reviews.length === 0" description="暂无审查记录" />
+        <div v-else class="history-list">
+          <button
+            v-for="review in reviews"
+            :key="review.review_id || `${review.target_file}-${review.created_at}`"
+            class="history-item"
+            type="button"
+            @click="selectHistory(review)"
+          >
+            <span class="history-title">{{ review.target_file || '未知文件' }}</span>
+            <span class="history-meta">
+              {{ formatTime(review.created_at) }}
+              <template v-if="review.result?.summary"> · {{ review.result.summary }}</template>
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useReviewStore } from '@/stores/review'
 import { useNotificationStore } from '@/stores/notification'
 import { useLLMStore } from '@/stores/llm'
+import { useFileStore, type FileNode } from '@/stores/file'
 import type { QualityReviewResult } from '@/types/chat'
+
+interface ReviewHistoryItem {
+  review_id?: string
+  target_file?: string
+  created_at?: string
+  result?: QualityReviewResult
+}
 
 const uiStore = useUIStore()
 const editorStore = useEditorStore()
@@ -120,15 +159,21 @@ const projectStore = useProjectStore()
 const reviewStore = useReviewStore()
 const notification = useNotificationStore()
 const llmStore = useLLMStore()
+const fileStore = useFileStore()
 
 const visible = computed(() => uiStore.modals.qualityReview)
+const currentFilePath = computed(() => editorStore.currentFilePath)
 
 const targetFile = ref('')
 const isReviewing = ref(false)
+const isBatchReviewing = ref(false)
+const isLoadingHistory = ref(false)
 const result = ref<QualityReviewResult | null>(null)
 const error = ref('')
+const reviews = ref<ReviewHistoryItem[]>([])
+const batchSummary = ref('')
 
-const currentFilePath = computed(() => editorStore.currentFilePath)
+const chapterFiles = computed(() => collectChapterFiles(fileStore.tree))
 
 const scoreItems = computed(() => {
   if (!result.value) return []
@@ -143,18 +188,47 @@ const scoreItems = computed(() => {
   ]
 })
 
-watch(visible, (v) => {
+watch(visible, async (v) => {
   if (v) {
     targetFile.value = currentFilePath.value || ''
     isReviewing.value = false
+    isBatchReviewing.value = false
     result.value = null
     error.value = ''
+    batchSummary.value = ''
+    await loadHistory()
   }
 })
+
+function collectChapterFiles(nodes: FileNode[]): string[] {
+  const files: string[] = []
+  for (const node of nodes) {
+    if (node.type === 'file' && /^chapters\/.+\/sec-\d+\.md$/.test(node.path)) {
+      files.push(node.path)
+    }
+    if (node.children?.length) {
+      files.push(...collectChapterFiles(node.children))
+    }
+  }
+  return files
+}
 
 function useCurrentFile() {
   if (currentFilePath.value) {
     targetFile.value = currentFilePath.value
+  }
+}
+
+async function loadHistory() {
+  if (!projectStore.currentProject) return
+  isLoadingHistory.value = true
+  try {
+    const data = await reviewStore.listReviews(projectStore.currentProject.id)
+    reviews.value = (data.reviews || []) as ReviewHistoryItem[]
+  } catch {
+    reviews.value = []
+  } finally {
+    isLoadingHistory.value = false
   }
 }
 
@@ -168,6 +242,7 @@ async function handleReview() {
   isReviewing.value = true
   result.value = null
   error.value = ''
+  batchSummary.value = ''
 
   try {
     const res = await reviewStore.reviewChapter({
@@ -176,12 +251,56 @@ async function handleReview() {
     })
     result.value = res.result
     notification.success('审查完成')
+    await loadHistory()
   } catch (e: any) {
     error.value = e?.message || '审查失败'
     notification.error('审查失败')
   } finally {
     isReviewing.value = false
   }
+}
+
+async function handleBatchReview() {
+  if (!projectStore.currentProject || chapterFiles.value.length === 0) return
+  if (!llmStore.isConnected) {
+    notification.warning('请先配置 LLM 连接')
+    return
+  }
+
+  isBatchReviewing.value = true
+  batchSummary.value = ''
+  error.value = ''
+
+  try {
+    const res = await reviewStore.reviewBatch({
+      project_id: projectStore.currentProject.id,
+      target_files: chapterFiles.value,
+    })
+    batchSummary.value = `批量审查完成：成功 ${res.succeeded}，失败 ${res.failed}，共 ${res.total} 个章节。`
+    notification.success('批量审查完成')
+    await loadHistory()
+  } catch (e: any) {
+    error.value = e?.message || '批量审查失败'
+    notification.error('批量审查失败')
+  } finally {
+    isBatchReviewing.value = false
+  }
+}
+
+function selectHistory(review: ReviewHistoryItem) {
+  if (review.target_file) {
+    targetFile.value = review.target_file
+  }
+  if (review.result) {
+    result.value = review.result
+    error.value = ''
+  }
+}
+
+function formatTime(value?: string) {
+  if (!value) return '未知时间'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
 function scoreColor(score: number): string {
@@ -226,6 +345,10 @@ function close() {
     justify-content: flex-end;
     gap: 8px;
     margin-bottom: 8px;
+  }
+
+  .batch-alert {
+    margin-top: 12px;
   }
 
   .result-area {
@@ -305,11 +428,65 @@ function close() {
     }
   }
 
-  .strength-list, .suggestion-list {
+  .strength-list,
+  .suggestion-list {
     padding-left: 20px;
     font-size: 13px;
     color: var(--text-primary);
     line-height: 1.8;
+  }
+
+  .history-area {
+    margin-top: 8px;
+  }
+
+  .history-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    h4 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow: auto;
+  }
+
+  .history-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    text-align: left;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    cursor: pointer;
+  }
+
+  .history-title {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .history-meta {
+    color: var(--text-muted);
+    font-size: 12px;
   }
 }
 </style>

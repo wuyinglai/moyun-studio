@@ -31,10 +31,12 @@ import { ref, onUnmounted } from 'vue'
 import { useStoryStateStore } from '@/stores/storyState'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
+import { useEditorStore } from '@/stores/editor'
 
 const storyStateStore = useStoryStateStore()
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
+const editorStore = useEditorStore()
 
 const content = ref(storyStateStore.content)
 const isLoading = ref(false)
@@ -74,7 +76,28 @@ async function handleSave() {
 }
 
 async function autoGenerate() {
-  notification.warning('AI 自动更新功能待后端实现')
+  if (!projectStore.currentProject) return
+  const filePath = editorStore.currentFilePath
+  const chapterContent = filePath ? editorStore.getContent(filePath).trim() : ''
+  if (!filePath || !chapterContent) {
+    notification.warning('请先打开有正文的章节')
+    return
+  }
+
+  isSaving.value = true
+  try {
+    await storyStateStore.updateAfterChapter(
+      projectStore.currentProject.id,
+      chapterContent,
+      filePath,
+    )
+    content.value = storyStateStore.content
+    notification.success('故事状态已根据当前章节更新')
+  } catch {
+    notification.error('故事状态更新失败')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 defineExpose({ loadState })

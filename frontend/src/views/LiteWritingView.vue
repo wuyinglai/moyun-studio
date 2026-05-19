@@ -38,7 +38,7 @@
             {{ currentChapterProgress }}
           </p>
         </div>
-        <button class="primary-btn full" @click="refreshOptions">
+        <button class="primary-btn full" @click="() => refreshOptions()">
           换个方向
         </button>
         <div class="chapter-list">
@@ -99,7 +99,7 @@
           </div>
           <div class="panel-title">
             <span>下一节爽点卡</span>
-            <button class="link-btn" :disabled="loadingOptions" @click="refreshOptions">刷新</button>
+            <button class="link-btn" :disabled="loadingOptions" @click="() => refreshOptions()">刷新</button>
           </div>
           <p v-if="nextTargetHint" class="next-target-hint">{{ nextTargetHint }}</p>
           <p v-if="loadingOptions" class="option-loading">正在根据前文生成爽点卡...</p>
@@ -177,7 +177,7 @@ import {
   type LiteWriteAction,
   type LiteNextOptionCard,
 } from '@/services/liteService'
-import { consumeOrFetch, clearCache } from '@/composables/useLitePrefetch'
+import { consumeOrFetch } from '@/composables/useLitePrefetch'
 
 const route = useRoute()
 const router = useRouter()

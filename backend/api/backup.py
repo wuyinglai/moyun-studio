@@ -1,11 +1,4 @@
-"""墨韵 - 备份快照 API
-
-端点：
-  GET    /api/backup           获取备份列表
-  POST   /api/backup           创建备份快照
-  POST   /api/backup/{id}     恢复指定备份
-  DELETE /api/backup/{id}      删除备份
-"""
+"""墨韵 - 项目备份 API."""
 
 import asyncio
 import json
@@ -27,15 +20,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["backup"])
 
 
-# ─── Schema ─────────────────────────────────────────────────────────
-
 class BackupInfo(BaseModel):
     backup_id: str
     project_id: str
     description: str
     created_at: str
     file_count: int
-    total_size: int  # bytes
+    total_size: int
 
 
 class BackupListResponse(BaseModel):
@@ -49,19 +40,17 @@ class BackupCreateRequest(BaseModel):
 
 
 class BackupRestoreRequest(BaseModel):
-    target_project_id: str | None = None  # 恢复到指定项目，默认覆盖原项目
+    target_project_id: str | None = None
 
-
-# ─── 辅助函数 ──────────────────────────────────────────────────────
 
 def _backup_dir(project_dir: Path) -> Path:
     return project_dir / "backup"
 
 
 def _ensure_backup_dir(project_dir: Path) -> Path:
-    bd = _backup_dir(project_dir)
-    bd.mkdir(parents=True, exist_ok=True)
-    return bd
+    backup_dir = _backup_dir(project_dir)
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    return backup_dir
 
 
 def _load_backup_meta(backup_path: Path) -> dict | None:
@@ -84,6 +73,10 @@ def _compute_backup_size(backup_path: Path) -> int:
     return total
 
 
+def _count_files(backup_path: Path) -> int:
+    return sum(1 for item in backup_path.rglob("*") if item.is_file())
+
+
 def _get_backup_info(backup_path: Path) -> BackupInfo | None:
     meta = _load_backup_meta(backup_path)
     if meta is None:
@@ -98,27 +91,19 @@ def _get_backup_info(backup_path: Path) -> BackupInfo | None:
     )
 
 
-def _count_files(backup_path: Path) -> int:
-    return sum(1 for item in backup_path.rglob("*") if item.is_file())
-
-
 async def _copytree_async(src: Path, dst: Path) -> None:
-    """异步复制目录树"""
     await asyncio.to_thread(shutil.copytree, src, dst, dirs_exist_ok=True)
 
 
 async def _rmtree_async(path: Path) -> None:
-    """异步删除目录树"""
     await asyncio.to_thread(shutil.rmtree, path)
 
 
 async def _copy2_async(src: Path, dst: Path) -> None:
-    """异步复制单个文件"""
     await asyncio.to_thread(shutil.copy2, src, dst)
 
 
 def _create_backup_snapshot(source_dir: Path, backup_path: Path) -> None:
-    """复制源目录到备份路径（排除 backup 目录自身）"""
     for item in source_dir.iterdir():
         if item.name == "backup":
             continue
@@ -129,14 +114,11 @@ def _create_backup_snapshot(source_dir: Path, backup_path: Path) -> None:
             shutil.copy2(item, dest)
 
 
-# ─── 路由 ─────────────────────────────────────────────────────────
-
 @router.get("/backup", response_model=ApiResponse[BackupListResponse])
 async def list_backups(
     project_id: str,
     settings: Settings = Depends(get_settings),
 ):
-    """获取项目的备份列表"""
     logger.info("获取备份列表", extra={"project_id": project_id})
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
@@ -147,9 +129,9 @@ async def list_backups(
         return ApiResponse.ok(BackupListResponse(backups=[], total=0))
 
     backups: list[BackupInfo] = []
-    for d in sorted(backup_root.iterdir(), key=lambda x: x.name, reverse=True):
-        if d.is_dir():
-            info = _get_backup_info(d)
+    for path in sorted(backup_root.iterdir(), key=lambda x: x.name, reverse=True):
+        if path.is_dir():
+            info = _get_backup_info(path)
             if info:
                 backups.append(info)
 
@@ -161,19 +143,16 @@ async def create_backup(
     req: BackupCreateRequest,
     settings: Settings = Depends(get_settings),
 ):
-    """创建备份快照"""
     logger.info("创建备份", extra={"project_id": req.project_id, "description": req.description})
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    # 创建备份
     backup_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
     backup_path = _ensure_backup_dir(project_dir) / backup_id
     backup_path.mkdir(parents=True, exist_ok=True)
     await asyncio.to_thread(_create_backup_snapshot, project_dir, backup_path)
 
-    # 写入 meta.json
     file_count = _count_files(backup_path)
     now = datetime.now(timezone.utc).isoformat()
     meta = {
@@ -203,7 +182,6 @@ async def restore_backup(
     req: BackupRestoreRequest,
     settings: Settings = Depends(get_settings),
 ):
-    """恢复备份到项目"""
     logger.info("恢复备份", extra={"backup_id": backup_id, "project_id": project_id, "target": req.target_project_id})
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():
@@ -213,10 +191,9 @@ async def restore_backup(
     if not backup_path.exists():
         raise ResourceNotFoundError(resource="backup", identifier=backup_id)
 
-    # 目标项目
     target_dir = settings.projects_path / req.target_project_id if req.target_project_id else project_dir
+    target_dir.mkdir(parents=True, exist_ok=True)
 
-    # 先删除目标目录（保留 backup）
     for item in target_dir.iterdir():
         if item.name == "backup":
             continue
@@ -225,7 +202,6 @@ async def restore_backup(
         else:
             await asyncio.to_thread(item.unlink)
 
-    # 恢复备份
     for item in backup_path.iterdir():
         dest = target_dir / item.name
         if item.is_dir():
@@ -234,7 +210,6 @@ async def restore_backup(
             await _copy2_async(item, dest)
 
     logger.info("备份恢复成功", extra={"backup_id": backup_id, "project_id": project_id, "target": str(target_dir)})
-
     return ApiResponse.ok(message="备份恢复成功")
 
 
@@ -244,7 +219,6 @@ async def delete_backup(
     project_id: str,
     settings: Settings = Depends(get_settings),
 ):
-    """删除备份"""
     logger.info("删除备份", extra={"backup_id": backup_id, "project_id": project_id})
     project_dir = settings.projects_path / project_id
     if not project_dir.exists():

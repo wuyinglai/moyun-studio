@@ -25,6 +25,8 @@ export interface ModalState {
   qualityReview: boolean
   search: boolean
   quickOpen: boolean
+  trash: boolean
+  backup: boolean
 }
 
 const THEME_LABELS: Record<Theme, string> = {
@@ -51,6 +53,8 @@ export const useUIStore = defineStore('ui', () => {
     qualityReview: false,
     search: false,
     quickOpen: false,
+    trash: false,
+    backup: false,
   })
 
   // 初始化时应用主题
@@ -212,6 +216,24 @@ export const useUIStore = defineStore('ui', () => {
     modals.value.quickOpen = false
   }
 
+  function openTrash() {
+    _closeAllModals()
+    modals.value.trash = true
+  }
+
+  function closeTrash() {
+    modals.value.trash = false
+  }
+
+  function openBackup() {
+    _closeAllModals()
+    modals.value.backup = true
+  }
+
+  function closeBackup() {
+    modals.value.backup = false
+  }
+
   return {
     theme,
     modals,
@@ -243,6 +265,10 @@ export const useUIStore = defineStore('ui', () => {
     closeSearch,
     openQuickOpen,
     closeQuickOpen,
+    openTrash,
+    closeTrash,
+    openBackup,
+    closeBackup,
   }
 }, {
   persist: {

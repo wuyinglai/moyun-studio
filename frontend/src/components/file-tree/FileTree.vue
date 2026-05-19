@@ -1,26 +1,28 @@
 <template>
   <div class="file-tree">
-    <!-- 文件树头部 -->
     <div class="tree-header">
       <div class="tree-title-group">
-        <span class="tree-icon" aria-hidden="true">📄</span>
+        <span class="tree-icon" aria-hidden="true">📚</span>
         <span class="tree-title">文件</span>
       </div>
-      <button class="tree-refresh-btn" @click="refreshTree" :title="isLoading ? '加载中...' : '刷新文件树'">
-        <svg
-          width="14" height="14" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round"
-          :class="{ spinning: isLoading }"
-        >
-          <polyline points="23 4 23 10 17 10"/>
-          <polyline points="1 20 1 14 7 14"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-        </svg>
-      </button>
+      <div class="tree-actions">
+        <button class="tree-refresh-btn" @click="refreshTree" :title="isLoading ? '加载中' : '刷新文件树'">
+          <svg
+            width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"
+            :class="{ spinning: isLoading }"
+          >
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </button>
+        <button class="tree-refresh-btn" :disabled="!projectStore.currentProject" title="新建文件" @click="createAtRoot('file')">+</button>
+        <button class="tree-refresh-btn" :disabled="!projectStore.currentProject" title="回收站" @click="uiStore.openTrash()">♻</button>
+      </div>
     </div>
 
-    <!-- 加载状态 -->
     <div v-if="isLoading" class="tree-loading">
       <div class="loading-ink">
         <span></span><span></span><span></span>
@@ -28,7 +30,6 @@
       <span>加载中...</span>
     </div>
 
-    <!-- 空状态 -->
     <div v-else-if="!projectStore.currentProject" class="tree-empty">
       <div class="empty-icon">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -53,7 +54,6 @@
       </div>
     </div>
 
-    <!-- 文件树 -->
     <div v-else class="tree-content">
       <TreeNode
         v-for="node in fileStore.tree"
@@ -61,6 +61,10 @@
         :node="node"
         :depth="0"
         @file-click="handleFileClick"
+        @create-file="handleCreateFile"
+        @create-directory="handleCreateDirectory"
+        @rename="handleRename"
+        @delete="handleDelete"
       />
     </div>
   </div>
@@ -108,9 +112,87 @@ async function handleFileClick(node: FileNode) {
       fileStore.openFile(node)
       editorStore.loadContent(node.path, fileData.content)
       editorStore.setCurrentFile(node.path)
-    } catch (e) {
+    } catch {
       notification.error(`无法打开文件: ${node.name}`)
     }
+  }
+}
+
+function joinPath(base: string, name: string) {
+  return base ? `${base.replace(/\/$/, '')}/${name}` : name
+}
+
+function targetDir(node: FileNode) {
+  if (node.type === 'directory') return node.path
+  const idx = node.path.lastIndexOf('/')
+  return idx >= 0 ? node.path.slice(0, idx) : ''
+}
+
+async function createAtRoot(type: 'file' | 'directory') {
+  const root: FileNode = { name: '', path: '', type: 'directory', children: [] }
+  if (type === 'file') await handleCreateFile(root)
+  else await handleCreateDirectory(root)
+}
+
+async function handleCreateFile(node: FileNode) {
+  if (!projectStore.currentProject) return
+  const name = window.prompt('新建文件名', 'new-file.md')?.trim()
+  if (!name) return
+  const path = joinPath(targetDir(node), name)
+  try {
+    await fileStore.createFile(projectStore.currentProject.id, path, '')
+    await fileStore.loadTree(projectStore.currentProject.id)
+    notification.success('文件已创建')
+  } catch (e: any) {
+    notification.error(e?.message || '创建文件失败')
+  }
+}
+
+async function handleCreateDirectory(node: FileNode) {
+  if (!projectStore.currentProject) return
+  const name = window.prompt('新建目录名', 'new-folder')?.trim()
+  if (!name) return
+  const path = joinPath(targetDir(node), name)
+  try {
+    await fileStore.createDirectory(projectStore.currentProject.id, path)
+    await fileStore.loadTree(projectStore.currentProject.id)
+    notification.success('目录已创建')
+  } catch (e: any) {
+    notification.error(e?.message || '创建目录失败')
+  }
+}
+
+async function handleRename(node: FileNode) {
+  if (!projectStore.currentProject) return
+  const nextName = window.prompt('重命名为', node.name)?.trim()
+  if (!nextName || nextName === node.name) return
+  const base = node.path.includes('/') ? node.path.slice(0, node.path.lastIndexOf('/')) : ''
+  const newPath = joinPath(base, nextName)
+  try {
+    await fileStore.renameFile(projectStore.currentProject.id, node.path, newPath)
+    await fileStore.loadTree(projectStore.currentProject.id)
+    notification.success('已重命名')
+  } catch (e: any) {
+    notification.error(e?.message || '重命名失败')
+  }
+}
+
+async function handleDelete(node: FileNode) {
+  if (!projectStore.currentProject) return
+  const ok = window.confirm(`移入回收站：${node.path}？`)
+  if (!ok) return
+  try {
+    if (node.type === 'directory') {
+      await fileStore.deleteDirectory(projectStore.currentProject.id, node.path)
+    } else {
+      await fileStore.deleteFile(projectStore.currentProject.id, node.path)
+      fileStore.closeFile(node.path)
+      editorStore.clearFile(node.path)
+    }
+    await fileStore.loadTree(projectStore.currentProject.id)
+    notification.success('已移入回收站')
+  } catch (e: any) {
+    notification.error(e?.message || '删除失败')
   }
 }
 </script>
@@ -123,7 +205,6 @@ async function handleFileClick(node: FileNode) {
   background: var(--ink-dark);
 }
 
-/* ── 头部 ── */
 .tree-header {
   display: flex;
   align-items: center;
@@ -143,7 +224,8 @@ async function handleFileClick(node: FileNode) {
   }
 }
 
-.tree-title-group {
+.tree-title-group,
+.tree-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -174,10 +256,16 @@ async function handleFileClick(node: FileNode) {
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
+  font-size: 14px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--ink-hover);
     color: var(--gold-primary);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: .35;
   }
 }
 
@@ -185,7 +273,6 @@ async function handleFileClick(node: FileNode) {
   animation: spin 0.8s linear infinite;
 }
 
-/* ── 加载状态 ── */
 .tree-loading {
   flex: 1;
   display: flex;
@@ -220,7 +307,6 @@ async function handleFileClick(node: FileNode) {
   40% { transform: scale(1); opacity: 1; }
 }
 
-/* ── 空状态 ── */
 .tree-empty {
   flex: 1;
   display: flex;
@@ -278,27 +364,15 @@ async function handleFileClick(node: FileNode) {
     background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
     color: var(--ink-deepest);
     border: none;
-
-    &:hover {
-      box-shadow: 0 4px 12px rgba(201, 169, 110, 0.3);
-      transform: translateY(-1px);
-    }
   }
 
   &--secondary {
     background: var(--ink-mid);
     color: var(--text-ink);
     border: 1px solid var(--border-ink);
-
-    &:hover {
-      background: var(--ink-hover);
-      border-color: var(--gold-primary);
-      color: var(--gold-primary);
-    }
   }
 }
 
-/* ── 树内容 ── */
 .tree-content {
   flex: 1;
   overflow-y: auto;

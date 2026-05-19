@@ -15,6 +15,8 @@ import ExtractModal from '@/components/modals/ExtractModal.vue'
 import QualityReviewModal from '@/components/modals/QualityReviewModal.vue'
 import SearchModal from '@/components/modals/SearchModal.vue'
 import QuickOpenModal from '@/components/modals/QuickOpenModal.vue'
+import TrashModal from '@/components/modals/TrashModal.vue'
+import BackupModal from '@/components/modals/BackupModal.vue'
 import { useNotificationStore } from '@/stores/notification'
 import { useAppInit } from '@/composables/useApp'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
@@ -180,6 +182,8 @@ function findFirstMarkdown(nodes: Array<{ name: string; path: string; type: stri
     <QualityReviewModal />
     <SearchModal />
     <QuickOpenModal />
+    <TrashModal />
+    <BackupModal />
   </div>
 </template>
 

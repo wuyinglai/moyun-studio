@@ -91,7 +91,7 @@ const localSteps = ref<{ id: string; label: string; prompt_content: string; fall
 const editingPrompt = ref('')
 const lastSnapshotContent = ref('')
 const stepListRef = ref<HTMLElement | null>(null)
-let sortableInstance: Sortable | null = null
+let sortableInstance: any = null
 let snapshotTimer: ReturnType<typeof setTimeout> | null = null
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -124,7 +124,7 @@ function initSortable() {
     animation: 150,
     easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
     ghostClass: 'step-dragging',
-    onEnd: (evt) => {
+    onEnd: (evt: any) => {
       const { oldIndex, newIndex } = evt
       if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
       const item = localSteps.value.splice(oldIndex, 1)[0]
@@ -228,6 +228,21 @@ function saveHistoryVersion() {
 
 async function onPipelineSelect(name: string) {
   await pipelineStore.selectPipeline(name)
+}
+
+async function showNewPipelineDialog() {
+  const name = window.prompt('请输入新管线标识，例如 custom-polish')
+  if (!name) return
+  const safeName = name.trim()
+  if (!safeName) return
+  const label = window.prompt('请输入新管线名称', safeName) || safeName
+  await pipelineStore.createCustomPipeline(safeName, label.trim() || safeName, [{
+    id: 'step-1',
+    label: '第一步',
+    prompt_content: '# 第一步\n\n请处理以下文本：\n\n{{ file_content }}\n',
+  }])
+  await pipelineStore.selectPipeline(safeName)
+  notification.success('已创建自定义管线')
 }
 
 function removeStep(index: number) {

@@ -42,6 +42,11 @@ class CreateDirectoryRequest(BaseModel):
     path: str = Field(..., description="目录路径（相对于项目根目录）")
 
 
+class DeletePathRequest(BaseModel):
+    project_id: str = Field(..., description="项目ID")
+    path: str = Field(..., description="要移入回收站的路径")
+
+
 class SearchRequest(BaseModel):
     project_id: str = Field(..., description="项目ID")
     query: str = Field(..., description="搜索关键词")
@@ -206,6 +211,56 @@ async def create_directory(
         })
 
     return ApiResponse.ok(message="目录已创建")
+
+
+@router.post("/file/delete", response_model=ApiResponse[dict | None])
+async def delete_file(
+    req: DeletePathRequest,
+    request: Request,
+    fs: FileService = Depends(_get_file_service),
+    settings: Settings = Depends(get_settings),
+):
+    """将文件移入回收站"""
+    project_dir = settings.projects_path / req.project_id
+    if not project_dir.exists():
+        raise ProjectNotFoundError(req.project_id)
+
+    full_path = f"{req.project_id}/{req.path}"
+    result = await fs.delete_file(full_path)
+
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        await event_bus.publish("file-deleted", {
+            "path": full_path,
+            "trash": result,
+        })
+
+    return ApiResponse.ok(result, message="文件已移入回收站")
+
+
+@router.post("/directory/delete", response_model=ApiResponse[dict | None])
+async def delete_directory(
+    req: DeletePathRequest,
+    request: Request,
+    fs: FileService = Depends(_get_file_service),
+    settings: Settings = Depends(get_settings),
+):
+    """将目录移入回收站"""
+    project_dir = settings.projects_path / req.project_id
+    if not project_dir.exists():
+        raise ProjectNotFoundError(req.project_id)
+
+    full_path = f"{req.project_id}/{req.path}"
+    result = await fs.delete_directory(full_path)
+
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        await event_bus.publish("directory-deleted", {
+            "path": full_path,
+            "trash": result,
+        })
+
+    return ApiResponse.ok(result, message="目录已移入回收站")
 
 
 @router.get("/tree", response_model=ApiResponse[FileTreeResponse])

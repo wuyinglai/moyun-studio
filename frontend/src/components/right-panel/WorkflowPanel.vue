@@ -203,7 +203,7 @@ const varOverrides = ref<Record<string, string>>({})
 const hasRun = ref(false)
 const logRef = ref<HTMLElement | null>(null)
 const stepEditorListRef = ref<HTMLElement | null>(null)
-let sortableInstance: Sortable | null = null
+let sortableInstance: any = null
 
 // 编辑器数据
 const editData = reactive<{ name: string; label: string; description: string; variables: Record<string, string>; steps: WorkflowStep[] }>({
@@ -227,7 +227,7 @@ function initSortable() {
     animation: 150,
     easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
     ghostClass: 'step-dragging',
-    onEnd: (evt) => {
+    onEnd: (evt: any) => {
       const { oldIndex, newIndex } = evt
       if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
       const item = editData.steps.splice(oldIndex, 1)[0]

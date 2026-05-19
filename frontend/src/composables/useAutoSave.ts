@@ -1,7 +1,6 @@
 /**
- * useAutoSave - 自动保存 composable
- * 防抖机制：300ms 内不触发，超过后自动保存
- * 编辑10秒后自动创建后端版本快照
+ * useAutoSave - 自动保存 composable。
+ * 输入 300ms 后保存；编辑 10 秒后创建持久快照。
  */
 import { ref } from 'vue'
 import { useFileStore } from '@/stores/file'
@@ -13,13 +12,25 @@ import api from '@/services/api'
 
 const DEBOUNCE_MS = 300
 
-/** 在后台创建版本快照（不阻塞调用方） */
 function createBackendSnapshot(projectId: string, filePath: string, label?: string) {
   api.post(`/snapshots/${projectId}`, {
     file_path: filePath,
     label: label || null,
   }).catch(() => {
-    // 快照创建失败不应影响编辑体验，静默忽略
+    // 快照创建失败不应影响编辑体验。
+  })
+}
+
+function createRevisionLog(projectId: string, filePath: string, before: string, after: string) {
+  if (!before || before === after) return
+  api.post(`/revision-log/${projectId}`, {
+    chapter_path: filePath,
+    revision_type: 'auto_save',
+    description: '自动保存',
+    content_before: before,
+    content_after: after,
+  }).catch(() => {
+    // 修改日志不应阻断保存。
   })
 }
 
@@ -34,24 +45,17 @@ export function useAutoSave() {
   let timer: ReturnType<typeof setTimeout> | null = null
   let snapshotTimer: ReturnType<typeof setTimeout> | null = null
 
-  /** 标记文件已修改，启动防抖计时 */
   function triggerAutoSave(filePath: string) {
-    if (timer) {
-      clearTimeout(timer)
-    }
+    if (timer) clearTimeout(timer)
     timer = setTimeout(() => {
       doSave(filePath)
     }, DEBOUNCE_MS)
 
-    // G0101: 版本快照 — 编辑10秒后生成快照（内存 + 后端持久化）
-    if (snapshotTimer) {
-      clearTimeout(snapshotTimer)
-    }
+    if (snapshotTimer) clearTimeout(snapshotTimer)
     snapshotTimer = setTimeout(() => {
       const content = editorStore.getContent(filePath)
       if (content) {
         historyStore.pushHistory(filePath, content)
-        // 同步创建后端快照
         if (projectStore.currentProject) {
           createBackendSnapshot(projectStore.currentProject.id, filePath)
         }
@@ -59,7 +63,6 @@ export function useAutoSave() {
     }, 10000)
   }
 
-  /** 执行保存 */
   async function doSave(filePath: string) {
     if (isSaving.value) return
     if (!projectStore.currentProject) return
@@ -67,11 +70,12 @@ export function useAutoSave() {
 
     isSaving.value = true
     try {
-      // 保存前先生成版本快照
       const content = editorStore.getContent(filePath)
+      const previous = fileStore.fileContents[filePath]?.content || ''
       if (content) {
         historyStore.pushHistory(filePath, content)
         createBackendSnapshot(projectStore.currentProject.id, filePath, '自动保存')
+        createRevisionLog(projectStore.currentProject.id, filePath, previous, content)
       }
       await fileStore.saveFile(projectStore.currentProject.id, filePath, content)
     } catch {
@@ -81,7 +85,6 @@ export function useAutoSave() {
     }
   }
 
-  /** 立即保存（忽略防抖） */
   async function saveNow(filePath: string) {
     if (timer) {
       clearTimeout(timer)
@@ -90,7 +93,6 @@ export function useAutoSave() {
     await doSave(filePath)
   }
 
-  /** 清理 */
   function cleanup() {
     if (timer) {
       clearTimeout(timer)

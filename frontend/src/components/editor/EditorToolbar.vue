@@ -67,6 +67,9 @@
                 <i class="fa-solid fa-clock-rotate-left"></i> 修改日志
               </a-menu-item>
               <a-menu-divider />
+              <a-menu-item @click="handleExtractModal">
+                <i class="fa-solid fa-brain"></i> 智能提取
+              </a-menu-item>
               <a-menu-item @click="handleBatchGenerate">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> 批量生成
               </a-menu-item>
@@ -366,7 +369,7 @@ async function handleGenerateNext() {
 
   // 检查管线的 confirm 标记（第一步是否需用户确认）
   await pipelineStore.fetchPipelineDetail(next.pipeline)
-  const needConfirm = pipelineStore.currentDetail?.steps?.[0]?.confirm !== false
+  const needConfirm = (pipelineStore.currentDetail?.steps?.[0] as any)?.confirm !== false
   console.log('[handleGenerateNext] needConfirm:', needConfirm)
 
   if (needConfirm) {
@@ -629,6 +632,7 @@ function handleTokenCount() { uiStore.openTokenCount() }
 function handleCompare() { uiStore.openCompare() }
 function handleFeedback() { uiStore.openFeedback() }
 function handleRevisionLog() { uiStore.openRevisionLog() }
+function handleExtractModal() { uiStore.openExtract() }
 function handleBatchGenerate() { uiStore.openBatchGenerate() }
 function handleQualityReview() { uiStore.openQualityReview() }
 

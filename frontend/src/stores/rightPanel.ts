@@ -71,6 +71,7 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
   }
 
   function navigateToPipeline(pipelineName: string) {
+    void pipelineName
     activeTab.value = 'pipeline'
     activePipelineTab.value = 'editor'
     // 设置 pipeline store 的 currentPipelineName
@@ -96,6 +97,7 @@ export const useRightPanelStore = defineStore('rightPanel', () => {
     setPipelineTab,
     setActiveTab,
     setPipelineRunning,
+    navigateToPipeline,
   }
 }, {
   persist: {

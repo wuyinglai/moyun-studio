@@ -17,11 +17,11 @@ export interface FileContent {
 }
 
 export interface VersionSnapshot {
-  id: string
-  path: string
-  version: number
-  createdAt: string
-  wordCount: number
+  snapshot_id: string
+  file_path: string
+  label?: string | null
+  created_at: string
+  word_count: number
 }
 
 export const useFileStore = defineStore('file', () => {
@@ -84,16 +84,24 @@ export const useFileStore = defineStore('file', () => {
     return await api.post('/file/rename', { project_id: projectId, old_path: oldPath, new_path: newPath })
   }
 
+  async function deleteFile(projectId: string, path: string) {
+    return await api.post('/file/delete', { project_id: projectId, path })
+  }
+
+  async function deleteDirectory(projectId: string, path: string) {
+    return await api.post('/directory/delete', { project_id: projectId, path })
+  }
+
   async function loadSnapshots(projectId: string, path: string) {
-    const data = await api.get<VersionSnapshot[]>(`/backup/${projectId}/snapshots`, {
-      params: { path },
+    const data = await api.get<VersionSnapshot[]>(`/snapshots/${projectId}`, {
+      params: { file_path: path },
     })
     snapshots.value[path] = data || []
     return data
   }
 
   async function restoreSnapshot(projectId: string, path: string, snapshotId: string) {
-    return await api.post('/backup/restore', {
+    return await api.post(`/snapshots/${projectId}/restore`, {
       project_id: projectId,
       path,
       snapshot_id: snapshotId,
@@ -196,6 +204,8 @@ export const useFileStore = defineStore('file', () => {
     createFile,
     createDirectory,
     renameFile,
+    deleteFile,
+    deleteDirectory,
     loadSnapshots,
     restoreSnapshot,
     forwardVersion,

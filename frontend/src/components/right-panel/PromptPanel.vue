@@ -126,6 +126,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
+import type { FileNode } from '@/stores/file'
 
 const rightPanelStore = useRightPanelStore()
 const editorStore = useEditorStore()
@@ -216,6 +217,7 @@ const fileRefs = computed(() => {
   }
   return refs
 })
+void fileRefs
 
 /** 将 @{path} 和 {% include '...' %} 高亮为 <mark> */
 const highlightedText = computed(() => {
@@ -265,7 +267,6 @@ function handleTextareaClick(e: MouseEvent) {
 }
 
 /** 同步高亮层滚动与 textarea 一致 */
-const highlightScrollRef = ref(0)
 function syncHighlightScroll(e: Event) {
   const ta = e.target as HTMLTextAreaElement
   if (highlightRef.value) {

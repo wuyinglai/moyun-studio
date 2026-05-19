@@ -7,9 +7,9 @@
       :draggable="node.type === 'file'"
       @dragstart="handleDragStart"
       @dragend="handleDragEnd"
+      @contextmenu.prevent.stop="openNodeMenu"
       @click="handleClick"
     >
-      <!-- 展开箭头 / 缩进占位 -->
       <span v-if="node.type === 'directory'" class="node-arrow" :class="{ expanded: isExpanded }" @click.stop="toggleExpand">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"/>
@@ -17,19 +17,22 @@
       </span>
       <span v-else class="node-arrow node-arrow--spacer"></span>
 
-      <!-- 文件类型图标 -->
       <span class="node-icon" :class="`icon-${iconType}`">
         <component :is="iconComponent" />
       </span>
 
-      <!-- 文件名 -->
       <span class="node-name" :title="node.name">{{ displayName }}</span>
-
-      <!-- 修改标记 -->
       <span v-if="isDirty" class="node-dirty" title="有未保存的更改"></span>
+      <button class="node-menu-btn" title="更多操作" @click.stop="openNodeMenu">⋯</button>
     </div>
 
-    <!-- 子节点 -->
+    <div v-if="menuOpen" class="node-menu" @click.stop>
+      <button v-if="node.type === 'directory'" @click="emitAction('create-file')">新建文件</button>
+      <button v-if="node.type === 'directory'" @click="emitAction('create-directory')">新建目录</button>
+      <button @click="emitAction('rename')">重命名</button>
+      <button class="danger" @click="emitAction('delete')">移入回收站</button>
+    </div>
+
     <div v-if="node.type === 'directory' && isExpanded" class="node-children">
       <TreeNode
         v-for="child in node.children"
@@ -37,13 +40,17 @@
         :node="child"
         :depth="depth + 1"
         @file-click="$emit('file-click', $event)"
+        @create-file="$emit('create-file', $event)"
+        @create-directory="$emit('create-directory', $event)"
+        @rename="$emit('rename', $event)"
+        @delete="$emit('delete', $event)"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useFileStore } from '@/stores/file'
 import type { FileNode } from '@/stores/file'
 
@@ -54,6 +61,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'file-click', node: FileNode): void
+  (e: 'create-file', node: FileNode): void
+  (e: 'create-directory', node: FileNode): void
+  (e: 'rename', node: FileNode): void
+  (e: 'delete', node: FileNode): void
 }>()
 
 const fileStore = useFileStore()
@@ -76,6 +87,7 @@ const isExpanded = ref(
   !!props.node.name.match(/^ch-\d+$/) ||
   getExpandedDirs().includes(props.node.path)
 )
+const menuOpen = ref(false)
 
 const displayName = computed(() => {
   const name = props.node.name
@@ -91,7 +103,6 @@ const displayName = computed(() => {
   return name
 })
 
-// 图标类型 — 使用内联 SVG
 const iconType = computed(() => {
   if (props.node.type === 'directory') {
     return isExpanded.value ? 'folder-open' : 'folder'
@@ -100,17 +111,12 @@ const iconType = computed(() => {
   if (['md', 'txt', 'markdown'].includes(ext || '')) return 'markdown'
   if (['json'].includes(ext || '')) return 'json'
   if (['yaml', 'yml'].includes(ext || '')) return 'yaml'
-  if (['py'].includes(ext || '')) return 'python'
-  if (['js'].includes(ext || '')) return 'javascript'
-  if (['ts'].includes(ext || '')) return 'typescript'
-  if (['css', 'scss', 'less'].includes(ext || '')) return 'css'
-  if (['html', 'htm'].includes(ext || '')) return 'html'
+  if (['py', 'js', 'ts', 'css', 'scss', 'less', 'html', 'htm'].includes(ext || '')) return 'code'
   if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '')) return 'image'
   if (['pdf'].includes(ext || '')) return 'pdf'
   return 'file'
 })
 
-// 简化处理：用文字标签代替复杂 SVG
 const iconComponent = computed(() => {
   const map: Record<string, string> = {
     'folder': 'folder',
@@ -118,11 +124,7 @@ const iconComponent = computed(() => {
     'markdown': 'markdown',
     'json': 'code',
     'yaml': 'code',
-    'python': 'code',
-    'javascript': 'code',
-    'typescript': 'code',
-    'css': 'code',
-    'html': 'code',
+    'code': 'code',
     'image': 'image',
     'pdf': 'pdf',
     'file': 'file',
@@ -168,12 +170,34 @@ function handleDragStart(e: DragEvent) {
 function handleDragEnd() {
   _dragFlag = false
 }
+
+function openNodeMenu() {
+  menuOpen.value = true
+  window.addEventListener('click', closeMenu, { once: true })
+}
+
+function closeMenu() {
+  menuOpen.value = false
+}
+
+function emitAction(action: 'create-file' | 'create-directory' | 'rename' | 'delete') {
+  menuOpen.value = false
+  if (action === 'create-file') emit('create-file', props.node)
+  else if (action === 'create-directory') emit('create-directory', props.node)
+  else if (action === 'rename') emit('rename', props.node)
+  else emit('delete', props.node)
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', closeMenu)
+})
 </script>
 
 <style scoped lang="scss">
 .tree-node {
   user-select: none;
   animation: fade-in-up 0.25s ease both;
+  position: relative;
 }
 
 .node-row {
@@ -194,6 +218,7 @@ function handleDragEnd() {
     color: var(--text-warm-white);
 
     .node-arrow { color: var(--text-muted-ink); }
+    .node-menu-btn { opacity: 1; }
   }
 
   &.active {
@@ -205,7 +230,6 @@ function handleDragEnd() {
   }
 }
 
-/* ── 箭头 ── */
 .node-arrow {
   width: 16px;
   height: 16px;
@@ -223,7 +247,6 @@ function handleDragEnd() {
   }
 }
 
-/* ── 图标 ── */
 .node-icon {
   width: 16px;
   height: 16px;
@@ -234,30 +257,18 @@ function handleDragEnd() {
   font-size: 11px;
   font-weight: 700;
   border-radius: 3px;
-
-  // 用文字图标简化而优雅
-  &.icon-folder,
-  &.icon-folder-open {
-    font-size: 13px;
-  }
 }
 
-/* 用序列字符替代 Font Awesome 图标 */
 .icon-folder::before { content: '📁'; font-size: 12px; }
 .icon-folder-open::before { content: '📂'; font-size: 12px; }
-.icon-markdown::before { content: '📝'; font-size: 11px; }
+.icon-markdown::before { content: 'MD'; font-size: 8px; color: var(--gold-primary); }
 .icon-json::before { content: '{ }'; font-size: 9px; color: var(--gold-primary); }
 .icon-yaml::before { content: '~'; font-size: 13px; color: var(--vermillion-light); }
-.icon-python::before { content: '🐍'; font-size: 11px; }
-.icon-javascript::before { content: 'JS'; font-size: 8px; font-weight: 700; color: var(--gold-primary); letter-spacing: 0; }
-.icon-typescript::before { content: 'TS'; font-size: 8px; font-weight: 700; color: var(--jade-light); letter-spacing: 0; }
-.icon-css::before { content: '# '; font-size: 9px; color: var(--vermillion-light); }
-.icon-html::before { content: '<>'; font-size: 8px; font-weight: 700; color: var(--gold-primary); }
-.icon-image::before { content: '🖼'; font-size: 11px; }
-.icon-pdf::before { content: '📕'; font-size: 11px; }
-.icon-file::before { content: '📄'; font-size: 11px; }
+.icon-code::before { content: '</>'; font-size: 8px; font-weight: 700; color: var(--jade-light); }
+.icon-image::before { content: '▣'; font-size: 11px; color: var(--gold-primary); }
+.icon-pdf::before { content: 'PDF'; font-size: 7px; color: var(--vermillion-light); }
+.icon-file::before { content: '□'; font-size: 11px; }
 
-/* ── 文件名 ── */
 .node-name {
   flex: 1;
   overflow: hidden;
@@ -267,7 +278,6 @@ function handleDragEnd() {
   font-size: 13px;
 }
 
-/* ── 脏标记 ── */
 .node-dirty {
   width: 6px;
   height: 6px;
@@ -277,13 +287,62 @@ function handleDragEnd() {
   animation: dirty-pulse 1.5s ease-in-out infinite;
 }
 
+.node-menu-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted-ink);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.node-menu-btn:hover {
+  border-color: var(--border-ink);
+  color: var(--gold-primary);
+}
+
+.node-menu {
+  position: absolute;
+  right: 8px;
+  top: 28px;
+  z-index: 30;
+  min-width: 116px;
+  padding: 4px;
+  border: 1px solid var(--border-ink);
+  border-radius: 6px;
+  background: var(--ink-dark);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+}
+
+.node-menu button {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.node-menu button:hover {
+  background: var(--ink-hover);
+  color: var(--gold-primary);
+}
+
+.node-menu button.danger:hover {
+  color: var(--vermillion-light);
+}
+
 @keyframes dirty-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
-}
-
-/* ── 子节点 ── */
-.node-children {
-  // padding 由样式绑定控制
 }
 </style>
