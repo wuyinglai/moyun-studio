@@ -17,7 +17,7 @@ import * as path from 'path'
 import { openLiteEntry, openMainEntry } from './helpers/entryHelpers'
 import { getLLMEnv, shouldSkipLLMTests } from './helpers/llmEnv'
 import { getByTestId, dismissViteOverlay, createErrorCollector, filterSevereErrors } from './helpers/e2eUtils'
-import { evaluateFictionScene } from './helpers/evaluateQuality'
+import { evaluateFictionScene } from './helpers/qualityRubric'
 
 const llmEnv = getLLMEnv()
 

@@ -15,7 +15,7 @@ import { getLLMEnv, shouldSkipLLMTests } from './helpers/llmEnv'
 import { getByTestId, dismissViteOverlay, createErrorCollector, filterSevereErrors } from './helpers/e2eUtils'
 import { TEST_PROJECT } from './helpers/testData'
 import { getNextScenePath, buildScenePath } from './helpers/scenePath'
-import { evaluateFictionScene } from './helpers/evaluateQuality'
+import { evaluateFictionScene } from './helpers/qualityRubric'
 
 const llmEnv = getLLMEnv()
 
