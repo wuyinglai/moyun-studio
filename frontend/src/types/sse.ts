@@ -1,10 +1,29 @@
 /**
  * SSE 事件类型定义
+ *
+ * 所有事件都带 project_id，有任务上下文时带 task_id。
+ * file.updated 不发送完整正文 content。
+ * 前端收到 SSE 后按 project_id/task_id 过滤。
  */
 
 export type TaskStatus = 'pending' | 'running' | 'done' | 'failed'
 
 export interface BaseEvent {
+  /** 事件唯一标识 */
+  event_id?: string
+  /** 事件类型 */
+  type?: string
+  /** 项目ID（所有事件都带） */
+  project_id?: string
+  /** 任务ID（有任务上下文时） */
+  task_id?: string
+  /** 运行ID */
+  run_id?: string
+  /** 事件来源模块 */
+  source?: string
+  /** 事件时间 */
+  timestamp?: string
+  /** 旧字段兼容 */
   taskId?: string
 }
 
@@ -14,22 +33,27 @@ export interface GenerationEvent extends BaseEvent {
   _targetFilePath?: string
 }
 
-export interface FileCreatedEvent {
+export interface FileCreatedEvent extends BaseEvent {
   path: string
   name?: string
 }
 
-export interface FileUpdatedEvent {
+export interface FileUpdatedEvent extends BaseEvent {
   path: string
   content?: string
+  size?: number
+  mtime?: number
+  /** 重命名时包含旧路径 */
+  oldPath?: string
+  newPath?: string
 }
 
-export interface FileRenamedEvent {
+export interface FileRenamedEvent extends BaseEvent {
   oldPath: string
   newPath: string
 }
 
-export interface DirectoryCreatedEvent {
+export interface DirectoryCreatedEvent extends BaseEvent {
   path: string
   name?: string
 }
@@ -40,21 +64,21 @@ export interface TaskEvent extends BaseEvent {
   progress?: number
 }
 
-export interface QueueEvent {
+export interface QueueEvent extends BaseEvent {
   queue: unknown[]
 }
 
-export interface LLMStatusEvent {
+export interface LLMStatusEvent extends BaseEvent {
   connected: boolean
   model?: string
 }
 
-export interface ThinkingEvent {
+export interface ThinkingEvent extends BaseEvent {
   thinking?: boolean
   content?: string
 }
 
-export interface ErrorEvent {
+export interface ErrorEvent extends BaseEvent {
   message: string
   code?: string
   warning?: boolean
@@ -80,11 +104,40 @@ export interface PromptEvent extends BaseEvent {
   step_id?: string
 }
 
+/** 候选稿创建事件 */
+export interface CandidateCreatedEvent extends BaseEvent {
+  candidate_id: string
+  source_path: string
+  action: string
+}
+
+/** 候选稿采用事件 */
+export interface CandidateAdoptedEvent extends BaseEvent {
+  candidate_id: string
+  source_path: string
+}
+
+/** 管线启动事件 */
+export interface PipelineStartedEvent extends BaseEvent {
+  pipeline: string
+}
+
+/** 管线步骤事件 */
+export interface PipelineStepEvent extends BaseEvent {
+  step_id: string
+  label?: string
+  error?: string
+}
+
+/** 记忆更新事件 */
+export interface MemoryUpdatedEvent extends BaseEvent {}
+
 export type SSEEventType =
   | 'generation'
   | 'file-created'
   | 'file-updated'
   | 'file-renamed'
+  | 'file-deleted'
   | 'directory-created'
   | 'task'
   | 'queue'
@@ -96,7 +149,15 @@ export type SSEEventType =
   | 'prompt'
   | 'diff_summary'
   | 'connected'
-  | 'file-deleted'
+  | 'candidate-created'
+  | 'candidate-adopted'
+  | 'pipeline-started'
+  | 'pipeline-step-started'
+  | 'pipeline-step-completed'
+  | 'pipeline-step-failed'
+  | 'task-waiting-for-user'
+  | 'task-completed'
+  | 'memory-updated'
 
 export type SSEEventData =
   | GenerationEvent
@@ -113,3 +174,8 @@ export type SSEEventData =
   | DiffSummaryEvent
   | StepDoneEvent
   | PromptEvent
+  | CandidateCreatedEvent
+  | CandidateAdoptedEvent
+  | PipelineStartedEvent
+  | PipelineStepEvent
+  | MemoryUpdatedEvent

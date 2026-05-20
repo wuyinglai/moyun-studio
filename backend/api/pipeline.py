@@ -20,6 +20,7 @@ from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
 from backend.core.trash import TrashService
+from backend.domain.events import make_pipeline_started_event
 from backend.schemas.common import ApiResponse
 from backend.schemas.pipeline import (
     CreatePipelineRequest,
@@ -56,11 +57,13 @@ async def run_pipeline(
         task_id = f"pipeline-{req.pipeline}"
 
         if event_bus:
-            await event_bus.publish("task", {
-                "task_id": task_id,
-                "status": "running",
-                "name": req.pipeline,
-            })
+            evt = make_pipeline_started_event(
+                project_id=req.project_id,
+                pipeline_name=req.pipeline,
+                task_id=task_id,
+                source="api/pipeline",
+            )
+            await event_bus.publish(evt.type, evt.to_sse_dict())
 
         try:
             async for event in runner.run(

@@ -17,6 +17,11 @@ from pydantic import BaseModel, Field
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError
 from backend.core.file_ops import FileService
+from backend.domain.events import (
+    make_file_created_event,
+    make_file_updated_event,
+    make_file_deleted_event,
+)
 from backend.schemas.common import ApiResponse
 from backend.schemas.file import (
     FileReadResponse,
@@ -145,17 +150,18 @@ async def write_file(
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
         file_size = len(req.content.encode("utf-8")) if req.content else 0
-        # 读取写入后的 mtime
         try:
             _, _, mtime = await fs.read_file(full_path)
         except Exception:
             mtime = None
-        await event_bus.publish("file-updated", {
-            "path": f"{project_id}/{req.path}",
-            "project_id": project_id,
-            "size": file_size,
-            "mtime": mtime,
-        })
+        evt = make_file_updated_event(
+            project_id=project_id,
+            path=f"{project_id}/{req.path}",
+            size=file_size,
+            mtime=mtime,
+            source="api/files",
+        )
+        await event_bus.publish(evt.type, evt.to_sse_dict())
 
     return ApiResponse.ok(message="文件已保存")
 
@@ -184,10 +190,13 @@ async def create_file(
 
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
-        await event_bus.publish("file-created", {
-            "path": full_path,
-            "name": req.path.split("/")[-1],
-        })
+        evt = make_file_created_event(
+            project_id=req.project_id,
+            path=full_path,
+            name=req.path.split("/")[-1],
+            source="api/files",
+        )
+        await event_bus.publish(evt.type, evt.to_sse_dict())
 
     return ApiResponse.ok(message="文件已创建")
 
@@ -212,10 +221,14 @@ async def rename_file(
 
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
-        await event_bus.publish("file-renamed", {
-            "oldPath": f"{req.project_id}/{req.old_path}",
-            "newPath": f"{req.project_id}/{req.new_path}",
-        })
+        evt = make_file_updated_event(
+            project_id=req.project_id,
+            path=f"{req.project_id}/{req.new_path}",
+            source="api/files",
+        )
+        evt.payload["oldPath"] = f"{req.project_id}/{req.old_path}"
+        evt.payload["newPath"] = f"{req.project_id}/{req.new_path}"
+        await event_bus.publish(evt.type, evt.to_sse_dict())
 
     return ApiResponse.ok(message="文件已重命名")
 
@@ -240,10 +253,13 @@ async def create_directory(
 
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
-        await event_bus.publish("directory-created", {
-            "path": f"{req.project_id}/{req.path}",
-            "name": req.path.split("/")[-1],
-        })
+        evt = make_file_created_event(
+            project_id=req.project_id,
+            path=f"{req.project_id}/{req.path}",
+            name=req.path.split("/")[-1],
+            source="api/files",
+        )
+        await event_bus.publish(evt.type, evt.to_sse_dict())
 
     return ApiResponse.ok(message="目录已创建")
 
@@ -266,10 +282,13 @@ async def delete_file(
 
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
-        await event_bus.publish("file-deleted", {
-            "path": full_path,
-            "trash": result,
-        })
+        evt = make_file_deleted_event(
+            project_id=req.project_id,
+            path=full_path,
+            source="api/files",
+        )
+        evt.payload["trash"] = result
+        await event_bus.publish(evt.type, evt.to_sse_dict())
 
     return ApiResponse.ok(result, message="文件已移入回收站")
 
@@ -292,10 +311,13 @@ async def delete_directory(
 
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
-        await event_bus.publish("directory-deleted", {
-            "path": full_path,
-            "trash": result,
-        })
+        evt = make_file_deleted_event(
+            project_id=req.project_id,
+            path=full_path,
+            source="api/files",
+        )
+        evt.payload["trash"] = result
+        await event_bus.publish(evt.type, evt.to_sse_dict())
 
     return ApiResponse.ok(result, message="目录已移入回收站")
 

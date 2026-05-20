@@ -85,6 +85,7 @@ class EventBus:
 class EventTypes:
     """事件类型常量"""
 
+    # 旧格式（兼容）
     FILE_CREATED = "file:created"
     FILE_MODIFIED = "file:modified"
     FILE_DELETED = "file:deleted"
@@ -99,3 +100,21 @@ class EventTypes:
 
     BACKUP_CREATED = "backup:created"
     BACKUP_RESTORED = "backup:restored"
+
+    # 新格式（点分命名）
+    FILE_CREATED_NEW = "file.created"
+    FILE_UPDATED_NEW = "file.updated"
+    FILE_DELETED_NEW = "file.deleted"
+
+    CANDIDATE_CREATED = "candidate.created"
+    CANDIDATE_ADOPTED = "candidate.adopted"
+
+    PIPELINE_STARTED = "pipeline.started"
+    PIPELINE_STEP_STARTED = "pipeline.step.started"
+    PIPELINE_STEP_COMPLETED = "pipeline.step.completed"
+    PIPELINE_STEP_FAILED = "pipeline.step.failed"
+
+    TASK_WAITING_FOR_USER = "task.waiting_for_user"
+    TASK_COMPLETED_NEW = "task.completed"
+
+    MEMORY_UPDATED = "memory.updated"

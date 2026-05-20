@@ -106,18 +106,43 @@ async def lifespan(app: FastAPI):
 
 
 async def _bridge_events_to_sse(event_bus: EventBus, sse_manager) -> None:
-    """将EventBus事件桥接到SSE"""
+    """将EventBus事件桥接到SSE
+
+    新事件类型使用点分格式（如 file.created），同时保留旧连字符格式兼容前端。
+    """
     _, queue = event_bus.subscribe()
+
+    # 新事件类型 → 前端兼容事件名映射
+    _NEW_TO_FRONTEND = {
+        "file.created": "file-created",
+        "file.updated": "file-updated",
+        "file.deleted": "file-deleted",
+        "candidate.created": "file-created",
+        "candidate.adopted": "file-updated",
+        "pipeline.started": "task",
+        "pipeline.step.started": "task",
+        "pipeline.step.completed": "task",
+        "pipeline.step.failed": "error",
+        "task.waiting_for_user": "task",
+        "task.completed": "task",
+        "memory.updated": "file-updated",
+    }
 
     try:
         while True:
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=5.0)
                 raw_type = event.get("type", "unknown")
-                # 标准化事件类型：file:created → file-created（匹配前端预期）
-                event_type = raw_type.replace(":", "-")
                 data = event.get("data", {})
-                await sse_manager.broadcast(event_type, data)
+
+                # 1. 新点分格式 → 映射到前端兼容名
+                if raw_type in _NEW_TO_FRONTEND:
+                    frontend_type = _NEW_TO_FRONTEND[raw_type]
+                else:
+                    # 2. 旧格式兼容：file:created → file-created
+                    frontend_type = raw_type.replace(":", "-")
+
+                await sse_manager.broadcast(frontend_type, data)
             except asyncio.TimeoutError:
                 continue
             except Exception as e:

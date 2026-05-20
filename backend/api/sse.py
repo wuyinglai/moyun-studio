@@ -37,6 +37,19 @@ class SSEManager:
         "thinking": "thinking",
         "step_done": "step_done",
         "prompt": "prompt",
+        # 新点分格式（主映射在 main.py _bridge_events_to_sse 中）
+        "file.created": "file-created",
+        "file.updated": "file-updated",
+        "file.deleted": "file-deleted",
+        "candidate.created": "candidate-created",
+        "candidate.adopted": "candidate-adopted",
+        "pipeline.started": "pipeline-started",
+        "pipeline.step.started": "pipeline-step-started",
+        "pipeline.step.completed": "pipeline-step-completed",
+        "pipeline.step.failed": "pipeline-step-failed",
+        "task.waiting_for_user": "task-waiting-for-user",
+        "task.completed": "task-completed",
+        "memory.updated": "memory-updated",
     }
 
     @staticmethod

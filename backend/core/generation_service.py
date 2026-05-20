@@ -18,6 +18,12 @@ from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
 from backend.schemas.llm import BatchGenerateItem, BatchGenerateResponse
 from backend.application.scene_service import SceneService
+from backend.domain.events import (
+    make_pipeline_started_event,
+    make_pipeline_step_completed_event,
+    make_pipeline_step_failed_event,
+    make_task_completed_event,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +114,13 @@ class GenerationService:
 
         # ——— 回退模式 ———
         if event_bus:
-            await event_bus.publish("task", {"task_id": task_id, "status": "running", "name": f"生成 {file_path}"})
+            evt = make_pipeline_started_event(
+                project_id=project_id,
+                pipeline_name=f"生成 {file_path}",
+                task_id=task_id,
+                source="generation_service",
+            )
+            await event_bus.publish(evt.type, evt.to_sse_dict())
 
         yield {"event": "task_start", "data": json.dumps({"task_id": task_id})}
 
@@ -231,14 +243,26 @@ class GenerationService:
 
             yield {"event": "done", "data": json.dumps({"task_id": task_id, "message": "生成完成"})}
             if event_bus:
-                await event_bus.publish("task", {"task_id": task_id, "status": "done"})
+                evt = make_task_completed_event(
+                    project_id=project_id,
+                    task_id=task_id,
+                    source="generation_service",
+                )
+                await event_bus.publish(evt.type, evt.to_sse_dict())
                 await event_bus.publish("done", {"task_id": task_id})
 
         except Exception as e:
             logger.error(f"生成任务异常: {e}", exc_info=True)
             yield {"event": "error", "data": json.dumps({"message": str(e), "task_id": task_id})}
             if event_bus:
-                await event_bus.publish("error", {"message": str(e)})
+                evt = make_pipeline_step_failed_event(
+                    project_id=project_id,
+                    step_id="fallback",
+                    error=str(e),
+                    task_id=task_id,
+                    source="generation_service",
+                )
+                await event_bus.publish(evt.type, evt.to_sse_dict())
 
     # ─── 批量生成 ────────────────────────────────────────
 

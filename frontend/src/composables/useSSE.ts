@@ -137,6 +137,7 @@ class SSEService {
       'file-created',
       'file-updated',
       'file-renamed',
+      'file-deleted',
       'directory-created',
       'task',
       'queue',
@@ -145,6 +146,15 @@ class SSEService {
       'error',
       'done',
       'diff_summary',
+      'candidate-created',
+      'candidate-adopted',
+      'pipeline-started',
+      'pipeline-step-started',
+      'pipeline-step-completed',
+      'pipeline-step-failed',
+      'task-waiting-for-user',
+      'task-completed',
+      'memory-updated',
     ]
 
     eventTypes.forEach((type) => {
@@ -165,6 +175,7 @@ class SSEService {
 
   /**
    * 处理各类事件
+   * 按 project_id 过滤：只处理当前项目的事件
    */
   private async handleEvent(type: SSEEventType, data: any) {
     const editorStore = useEditorStore()
@@ -173,15 +184,19 @@ class SSEService {
     const llmStore = useLLMStore()
     const notification = useNotificationStore()
     const chatStore = useChatStore()
+    const projectStore = useProjectStore()
+
+    // 按 project_id 过滤：只处理当前项目的事件
+    const currentProjectId = projectStore.currentProject?.id
+    if (data.project_id && currentProjectId && data.project_id !== currentProjectId) {
+      return
+    }
 
     switch (type) {
       case 'generation':
         // AI 生成内容 - 更新编辑器和聊天
-        // 后端发送格式: { delta: "...", content?: "...", _targetFilePath?: string }
-        // 通过 generationEmitter 接收，包含正确的目标文件路径
         if (data.delta) {
           chatStore.appendAIMessage(data.delta)
-          // 如果有 _targetFilePath，使用 appendContentToFile；否则使用 appendContent
           if (data._targetFilePath) {
             editorStore.appendContentToFile(data._targetFilePath, data.delta)
           } else {
@@ -198,10 +213,10 @@ class SSEService {
         break
 
       case 'file-created':
+      case 'candidate-created':
         // 新文件创建 - 刷新文件树
         if (data.path) {
           fileStore.handleFileCreated(data.path, data.name)
-          // 快照文件（backup/snapshots/）频繁创建，不弹通知
           if (!data.path.startsWith('backup/snapshots/')) {
             taskStore.addLog('success', `已创建文件: ${data.name || data.path}`)
             notification.success(`已创建文件: ${data.name || data.path}`)
@@ -210,14 +225,19 @@ class SSEService {
         break
 
       case 'file-updated':
-        // 文件更新 - 更新编辑器内容
+      case 'candidate-adopted':
+      case 'memory-updated':
+        // 文件更新 - 更新编辑器内容（不包含完整正文 content）
         if (data.path) {
-          // SSE 事件路径含 project_id 前缀（如 "7e7273e0/outline.md"），需剥离
-          const projectId = useProjectStore().currentProject?.id
+          const projectId = currentProjectId
           const cleanPath = projectId && data.path.startsWith(projectId + '/')
             ? data.path.slice(projectId.length + 1)
             : data.path
-          editorStore.updateContent(cleanPath, data.content)
+          // file.updated 事件不发送完整正文，前端需要时再 read_file
+          // 只在有 content 时更新编辑器
+          if (data.content) {
+            editorStore.updateContent(cleanPath, data.content)
+          }
           taskStore.addLog('info', `文件已更新: ${cleanPath}`)
         }
         break
@@ -230,6 +250,13 @@ class SSEService {
         }
         break
 
+      case 'file-deleted':
+        // 文件删除
+        if (data.path) {
+          taskStore.addLog('info', `文件已删除: ${data.path}`)
+        }
+        break
+
       case 'directory-created':
         // 目录创建 - 刷新文件树
         if (data.path) {
@@ -239,19 +266,35 @@ class SSEService {
         break
 
       case 'task':
-        // 任务状态变化
-        if (data.taskId) {
-          taskStore.updateTask(data.taskId, data)
+      case 'pipeline-started':
+      case 'pipeline-step-started':
+      case 'pipeline-step-completed':
+      case 'task-completed':
+      case 'task-waiting-for-user':
+        // 任务状态变化（兼容旧 taskId 和新 task_id）
+        const taskId = data.task_id || data.taskId
+        if (taskId) {
+          taskStore.updateTask(taskId, data)
           llmStore.setGenerating(data.status === 'running')
 
           if (data.status === 'running') {
-            taskStore.addLog('info', `任务开始: ${data.name || data.taskId}`)
-            chatStore.startAIMessage(data.taskId)
-          } else if (data.status === 'done') {
-            taskStore.addLog('success', `任务完成: ${data.name || data.taskId}`)
+            taskStore.addLog('info', `任务开始: ${data.name || taskId}`)
+            chatStore.startAIMessage(taskId)
+          } else if (data.status === 'done' || data.status === 'completed') {
+            taskStore.addLog('success', `任务完成: ${data.name || taskId}`)
           } else if (data.status === 'failed') {
-            taskStore.addLog('error', `任务失败: ${data.name || data.taskId}`)
+            taskStore.addLog('error', `任务失败: ${data.name || taskId}`)
+          } else if (data.status === 'waiting' || type === 'task-waiting-for-user') {
+            taskStore.addLog('info', `任务等待用户确认: ${data.name || taskId}`)
           }
+        }
+        break
+
+      case 'pipeline-step-failed':
+        // 管线步骤失败
+        if (data.error) {
+          taskStore.addLog('error', data.error)
+          notification.error(data.error)
         }
         break
 
