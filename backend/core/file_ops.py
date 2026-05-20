@@ -64,7 +64,7 @@ class FileService:
             or PureWindowsPath(relative_path).is_absolute()
             or PurePosixPath(relative_path).is_absolute()
         ):
-            raise ValidationError(f"闈炴硶璺緞: {relative_path}")
+            raise ValidationError(f"非法路径: {relative_path}")
 
         for prefix in self.FORBIDDEN_PREFIXES:
             if relative_path.startswith(prefix):
