@@ -29,16 +29,21 @@ class FileService:
     """
     logger = logging.getLogger(__name__)
 
-    # 禁止写入的文件路径模式
-    FORBIDDEN_PATHS = {'.env', '.config.json', '.git'}
+    # 禁止的路径段（任何层级出现都拦截）
+    FORBIDDEN_SEGMENTS = {'.env', '.config.json', '.git', 'node_modules', '__pycache__'}
     FORBIDDEN_PREFIXES = ('..', '/', '\\')
     FORBIDDEN_SUFFIXES = ('.py', '.pyc', '.sh', '.bat', '.exe')
 
     def __init__(self, workspace_path: Path | str):
         self.workspace = Path(workspace_path).resolve()
 
-    def _resolve_path(self, relative_path: str) -> Path:
-        """解析相对路径为绝对路径，包含安全检查"""
+    def _resolve_path(self, relative_path: str, check_write_suffix: bool = False) -> Path:
+        """解析相对路径为绝对路径，包含安全检查
+
+        Args:
+            relative_path: 相对路径
+            check_write_suffix: 是否检查写入文件的后缀（用于写操作）
+        """
         if not relative_path:
             raise ValidationError("路径不能为空")
 
@@ -53,10 +58,17 @@ class FileService:
         if '..' in parts:
             raise ValidationError(f"路径不能包含 '..': {relative_path}")
 
-        # 检查禁止的文件名
-        filename = Path(relative_path).name
-        if filename in self.FORBIDDEN_PATHS:
-            raise ValidationError(f"禁止操作: {filename}")
+        # 检查路径中任何段是否包含禁止的名称
+        path_parts = Path(relative_path).parts
+        for part in path_parts:
+            if part in self.FORBIDDEN_SEGMENTS:
+                raise ValidationError(f"禁止操作: 路径包含 '{part}'")
+
+        # 写入操作时检查禁止的后缀
+        if check_write_suffix:
+            suffix = Path(relative_path).suffix.lower()
+            if suffix in self.FORBIDDEN_SUFFIXES:
+                raise ValidationError(f"禁止写入 {suffix} 类型文件")
 
         # 解析并规范化路径
         target = (self.workspace / relative_path).resolve()
@@ -113,7 +125,7 @@ class FileService:
             content: 文件内容
             frontmatter_dict: frontmatter元数据
         """
-        file_path = self._resolve_path(relative_path)
+        file_path = self._resolve_path(relative_path, check_write_suffix=True)
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 

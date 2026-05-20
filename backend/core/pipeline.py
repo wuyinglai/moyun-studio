@@ -435,13 +435,35 @@ class PipelineRunner:
 
                 # 如果步骤指定了 output 路径，将步骤输出写入对应文件
                 if step.output and step_output:
-                    try:
-                        await self.file_service.write_file(
-                            f"{project_id}/{step.output}", step_output, None
-                        )
-                        logger.info("步骤输出已写入: %s", step.output)
-                    except Exception as e:
-                        logger.warning("步骤输出写入失败 %s: %s", step.output, e)
+                    output_path = step.output
+                    if self._is_dangerous_output(output_path):
+                        logger.warning("跳过危险路径写入: %s (需要候选稿机制)", output_path)
+                        # 将输出保存为候选稿
+                        try:
+                            candidate_service = CandidateService(self.file_service)
+                            candidate = await candidate_service.create_candidate(
+                                project_id=project_id,
+                                source_path=output_path,
+                                action=CandidateAction.MODIFY,
+                                content=step_output,
+                            )
+                            logger.info("危险路径输出已保存为候选稿: %s -> %s", output_path, candidate.id)
+                            yield {"event": "candidate_created", "data": json.dumps({
+                                "task_id": task_id,
+                                "candidate_id": candidate.id,
+                                "source_path": output_path,
+                                "action": CandidateAction.MODIFY.value,
+                            })}
+                        except Exception as e:
+                            logger.warning("创建候选稿失败: %s", e)
+                    else:
+                        try:
+                            await self.file_service.write_file(
+                                f"{project_id}/{output_path}", step_output, None
+                            )
+                            logger.info("步骤输出已写入: %s", output_path)
+                        except Exception as e:
+                            logger.warning("步骤输出写入失败 %s: %s", output_path, e)
 
                 logger.info(
                     "管线步骤完成: %s/%s (output_len=%d)",
@@ -720,13 +742,16 @@ class PipelineRunner:
             f"{project_id}/meta.json",
         ]
         
-        # 添加章节目录下的所有 .md 文件
+        # 添加章节目录下的文件（.md 和 ch-meta.json）
         try:
             chapter_dir = self.file_service._resolve_path(f"{project_id}/{chapter_path}")
             if chapter_dir.exists() and chapter_dir.is_dir():
                 for item in chapter_dir.iterdir():
-                    if item.is_file() and item.suffix == ".md":
-                        watched_files.append(f"{project_id}/{chapter_path}/{item.name}")
+                    if item.is_file():
+                        if item.suffix == ".md":
+                            watched_files.append(f"{project_id}/{chapter_path}/{item.name}")
+                        elif item.name == "ch-meta.json":
+                            watched_files.append(f"{project_id}/{chapter_path}/ch-meta.json")
         except Exception:
             pass
         
@@ -742,12 +767,14 @@ class PipelineRunner:
             except Exception:
                 mtimes.append("0")
         
-        # 构建缓存键
+        # 构建缓存键（带项目哈希前缀，便于按项目清除）
         key_parts = [project_id, chapter_path] + mtimes
         key_string = "|".join(key_parts)
+        content_hash = hashlib.md5(key_string.encode()).hexdigest()
         
-        # 使用 hash 压缩长度
-        return hashlib.md5(key_string.encode()).hexdigest()
+        # 添加项目哈希前缀
+        project_hash = self._hash_project_id(project_id)
+        return f"{project_hash}:{content_hash}"
 
     def clear_context_cache(self, project_id: str | None = None) -> None:
         """清除 context 缓存
@@ -789,6 +816,49 @@ class PipelineRunner:
             return CandidateAction.MODIFY
         else:
             return CandidateAction.REWRITE
+
+    def _is_dangerous_output(self, output_path: str) -> bool:
+        """判断输出路径是否为危险路径（需要候选稿保护）
+        
+        危险路径包括：
+        - 章节文件（chapters/vol-xx/ch-xx/sec-xx.md）
+        - 核心状态文件（style-guide.md, story-state.md, recent-context.md, outline.md）
+        
+        安全路径包括：
+        - materials/extracted/ 目录
+        - .candidates/ 目录
+        - revision-log/ 目录
+        - logs/ 目录
+        """
+        output_path_lower = output_path.lower()
+        
+        # 安全路径白名单
+        safe_prefixes = (
+            "materials/extracted/",
+            "materials/drafts/",
+            ".candidates/",
+            "revision-log/",
+            "logs/",
+        )
+        for prefix in safe_prefixes:
+            if output_path_lower.startswith(prefix):
+                return False
+        
+        # 危险路径检测
+        dangerous_patterns = (
+            "/sec-",           # 章节文件
+            "style-guide.md",  # 文风指南
+            "story-state.md",  # 故事状态
+            "recent-context.md", # 近期上下文
+            "outline.md",      # 大纲
+            "meta.json",       # 项目元数据
+            "ch-meta.json",    # 章节元数据
+        )
+        for pattern in dangerous_patterns:
+            if pattern in output_path_lower:
+                return True
+        
+        return False
 
     def _estimate_tokens(self, text: str) -> int:
         """估算文本的 token 数
