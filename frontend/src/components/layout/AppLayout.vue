@@ -1,5 +1,5 @@
 <template>
-  <div class="app-layout">
+  <div class="app-layout" data-testid="main-entry-root">
     <!-- 左栏：文件导航 -->
     <nav
       class="panel-left"

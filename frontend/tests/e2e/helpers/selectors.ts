@@ -9,6 +9,12 @@ export const SELECTORS = {
   // App root
   APP_ROOT: '[data-testid="app-root"]',
 
+  // Main entry (专业模式)
+  MAIN_ENTRY_ROOT: '[data-testid="main-entry-root"]',
+
+  // Lite entry (爽文模式)
+  LITE_ENTRY_ROOT: '[data-testid="lite-entry-root"]',
+
   // Project panel
   PROJECT_PANEL: '[data-testid="project-panel"]',
   PROJECT_LIST: '[data-testid="project-list"]',
@@ -51,6 +57,12 @@ export const SELECTORS = {
   // Task / SSE
   TASK_STATUS_PANEL: '[data-testid="task-status-panel"]',
   SSE_STATUS_INDICATOR: '[data-testid="sse-status-indicator"]',
+
+  // Lite entry specific
+  LITE_PROMPT_INPUT: '[data-testid="lite-prompt-input"]',
+  LITE_GENERATE_BUTTON: '[data-testid="lite-generate-button"]',
+  LITE_OUTPUT_PANEL: '[data-testid="lite-output-panel"]',
+  LITE_ACCEPT_BUTTON: '[data-testid="lite-accept-button"]',
 } as const
 
 export type SelectorKey = keyof typeof SELECTORS

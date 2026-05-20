@@ -1,7 +1,5 @@
 /**
  * E2E 测试数据
- *
- * 包含测试项目名、项目设定、角色、核心场景和初始正文。
  */
 
 export const TEST_PROJECT = {
@@ -31,19 +29,14 @@ export const TEST_PROJECT = {
     '林澈站在废弃地铁站的入口，雨水顺着铁栏往下淌。广告屏每隔十秒闪一下，屏幕上却不是商业广告，而是一张三年前的寻人启事。\n\n他没有立刻进去。\n\n口袋里的芯片微微发烫，像是在提醒他，有人正等着他走进这条被封死的地下通道。',
 } as const
 
-/**
- * 测试用 LLM 配置（DeepSeek 云模型）
- * 注意：实际 API Key 从环境变量读取，不在此处硬编码
- */
+/** 测试用 LLM 配置（DeepSeek 云模型）— API Key 从环境变量读取 */
 export const TEST_LLM_CLOUD = {
   provider: 'openai-compatible',
   baseUrl: 'https://api.deepseek.com/v1',
   model: 'deepseek-v4-flash',
 } as const
 
-/**
- * 测试用 LLM 配置（本地模型）
- */
+/** 测试用 LLM 配置（本地模型） */
 export const TEST_LLM_LOCAL = {
   provider: 'openai-compatible',
   baseUrl: 'http://127.0.0.1:1234/v1',

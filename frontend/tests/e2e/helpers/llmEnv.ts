@@ -17,8 +17,6 @@ export interface LLMEnvConfig {
   timeoutMs: number
 }
 
-const MASKED_KEY = '****masked****'
-
 function maskApiKey(key: string | undefined): string {
   if (!key) return '(未设置)'
   if (key.length <= 8) return '****'
@@ -43,9 +41,7 @@ export function getLLMEnv(): LLMEnvConfig {
   }
 }
 
-/**
- * 获取 LLM 配置的安全日志版本（API Key 已脱敏）
- */
+/** 获取 LLM 配置的安全日志版本（API Key 已脱敏） */
 export function getLLMEnvSafe(): Omit<LLMEnvConfig, 'apiKey'> & { apiKey: string } {
   const env = getLLMEnv()
   return {
@@ -54,9 +50,7 @@ export function getLLMEnvSafe(): Omit<LLMEnvConfig, 'apiKey'> & { apiKey: string
   }
 }
 
-/**
- * 验证 LLM 环境配置完整性，缺失时给出清晰提示
- */
+/** 验证 LLM 环境配置完整性，缺失时给出清晰提示 */
 export function validateLLMEnv(): { valid: boolean; errors: string[] } {
   const env = getLLMEnv()
   const errors: string[] = []
@@ -81,7 +75,7 @@ export function validateLLMEnv(): { valid: boolean; errors: string[] } {
     )
   }
 
-  if (!env.apiKey && env.baseUrl.includes('127.0.0.1') === false) {
+  if (!env.apiKey && !env.baseUrl.includes('127.0.0.1')) {
     errors.push(
       'MOYUN_E2E_API_KEY 未设置。云模型需要 API Key，请设置：\n' +
       '  MOYUN_E2E_API_KEY=sk-xxxx'
@@ -91,9 +85,7 @@ export function validateLLMEnv(): { valid: boolean; errors: string[] } {
   return { valid: errors.length === 0, errors }
 }
 
-/**
- * 供测试用的 skipIfNoLLM — 如果未启用真实 LLM 则跳过
- */
+/** 如果未启用真实 LLM 则返回 true，用于 test.skip */
 export function shouldSkipLLMTests(): boolean {
   return process.env.MOYUN_E2E_REAL_LLM !== 'true'
 }

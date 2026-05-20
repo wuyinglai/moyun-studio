@@ -1,15 +1,14 @@
 /**
- * 03 - 候选稿批量测试（占位）
+ * 05 - 候选稿批量真实 LLM 测试（占位）
  *
- * 后续任务补充完整测试用例。
- * 当前仅验证候选稿面板结构。
+ * 需要 MOYUN_E2E_REAL_LLM=true 才会执行。
+ * 后续补充完整测试用例。
  */
 
 import { test, expect } from '@playwright/test'
 import { shouldSkipLLMTests } from './helpers/llmEnv'
 
-test.describe('候选稿批量测试', () => {
-  // 真实 LLM 测试：需要 MOYUN_E2E_REAL_LLM=true
+test.describe('候选稿批量真实 LLM 测试', () => {
   test.skip(shouldSkipLLMTests(), '需要 MOYUN_E2E_REAL_LLM=true')
 
   test('候选稿面板基本结构（占位）', async ({ page }) => {

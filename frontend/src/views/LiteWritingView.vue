@@ -1,5 +1,5 @@
 <template>
-  <div class="lite-page">
+  <div class="lite-page" data-testid="lite-entry-root">
     <section
       v-if="!projectStore.currentProject"
       class="idea-screen"
@@ -109,6 +109,7 @@
           ref="textareaRef"
           v-model="content"
           class="chapter-textarea"
+          data-testid="lite-output-panel"
           placeholder="选择右侧爽点卡开始生成，或在这里直接修改正文..."
           @input="dirty = true"
           @scroll="handleTextareaScroll"
@@ -123,6 +124,7 @@
           </div>
           <button
             class="primary-btn compact"
+            data-testid="lite-accept-button"
             :disabled="saving || generating"
             @click="acceptCandidate"
           >
@@ -307,12 +309,14 @@
             <textarea
               v-model="chatRevisionInput"
               rows="4"
+              data-testid="lite-prompt-input"
               placeholder="比如：主角不够狠，改得更强势；结尾钩子再刺激一点。"
               @keydown.ctrl.enter.prevent="runChatRevision"
               @keydown.meta.enter.prevent="runChatRevision"
             />
             <button
               class="primary-btn full"
+              data-testid="lite-generate-button"
               :disabled="!canRunChatRevision"
               @click="runChatRevision"
             >
