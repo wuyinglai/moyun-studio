@@ -1,26 +1,40 @@
-# 墨韵 Moyun
+# Moyun Studio / 墨韵
 
-墨韵是一个本地优先的 AI 小说创作助手，面向中文长篇小说创作。项目同时支持两种使用方式：
+![Moyun Studio Screenshot](test_result.png)
 
-- **爽文模式**：给普通用户的轻量创作页，围绕开局卡、爽点卡、流式生成、候选稿、质量摘要和故事引擎推进。
-- **专业模式**：给进阶作者和开发者的工作台，提供文件树、Prompt、管线、工作流、变量、快照、对比和可配置执行流程。
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Vue](https://img.shields.io/badge/Vue-3-42b883)
+![Local-first](https://img.shields.io/badge/Local--first-AI%20Writing-purple)
 
-当前产品方向是 **人机协同创作**：AI 负责生成、总结、审稿和候选改写；作者通过聊天、选择、确认、编辑来控制方向；工作流把 Prompt、人工节点、文件节点、记忆节点和质量节点串起来。
+Moyun Studio is a local-first AI fiction writing studio for long-form storytelling. It combines story memory, safe AI revisions, customizable workflows, and human-in-the-loop creation.
 
-## 快速开始
+墨韵是一个本地优先的 AI 小说创作工作台，面向中文长篇小说创作，支持故事记忆、安全候选稿、可配置工作流与人机协同创作。
 
-### 后端
+## Features
+
+- **Casual Mode**: Lightweight writing page for casual users, featuring opening hooks, satisfying plot points, streaming generation, candidate drafts, quality summaries, and story engine progression.
+- **Professional Mode**: Workbench for advanced authors and developers, providing file tree, Prompts, pipelines, workflows, variables, snapshots, comparison, and configurable execution flows.
+
+The current product direction is **human-AI collaborative creation**: AI handles generation, summarization, review, and candidate rewriting; authors control direction through chat, selection, confirmation, and editing; workflows connect Prompt, human nodes, file nodes, memory nodes, and quality nodes.
+
+## Quick Start
+
+### Backend
 
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate
+# Windows
+.\venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 pip install -r requirements.txt
-copy ..\.env.example ..\.env
+cp ..\.env.example ..\.env  # copy on Windows
 uvicorn backend.main:app --reload
 ```
 
-### 前端
+### Frontend
 
 ```bash
 cd frontend
@@ -28,11 +42,21 @@ npm install
 npm run dev
 ```
 
-启动后访问前端开发服务器地址。后端 API 文档可访问 `/docs` 或 `/redoc`。
+After starting, access the frontend development server URL. Backend API documentation is available at `/docs` or `/redoc`.
 
-## 配置 LLM
+## First Demo
 
-复制 `.env.example` 为 `.env`，填入自己的 API Key：
+1. Start backend and frontend as above.
+2. Open the web UI (typically `http://localhost:5173`).
+3. Configure your LLM provider in Settings.
+4. Create a new project with your preferred genre and settings.
+5. Select a section to write.
+6. Click "Continue / 写下一部分" to generate content.
+7. Review the candidate draft before applying changes.
+
+## LLM Configuration
+
+Copy `.env.example` to `.env` and fill in your API Key:
 
 ```env
 LLM_API_KEY=sk-xxx
@@ -40,64 +64,62 @@ LLM_API_BASE=https://api.openai.com/v1
 LLM_MODEL=gpt-4
 ```
 
-也可以配置 DeepSeek、Ollama 等兼容 LiteLLM 的模型。
+You can also configure DeepSeek, Ollama, or other LiteLLM-compatible models.
 
-## 技术栈
+## Tech Stack
 
-- **后端**：FastAPI, LiteLLM, aiofiles, Pydantic, Jinja2
-- **前端**：Vue 3, TypeScript, Vite, Pinia, Vue Router, Ant Design Vue, CodeMirror 6
-- **存储**：本地文件系统，无数据库
-- **AI 调用**：通过 LiteLLM 统一接入
+- **Backend**: FastAPI, LiteLLM, aiofiles, Pydantic, Jinja2
+- **Frontend**: Vue 3, TypeScript, Vite, Pinia, Vue Router, Ant Design Vue, CodeMirror 6
+- **Storage**: Local file system (no database required)
+- **AI Integration**: Unified access through LiteLLM
 
-## 核心目录
+## Project Structure
 
 ```text
-backend/       FastAPI 后端
-frontend/      Vue 3 前端
-prompts/       系统 Prompt 模板
-tests/         E2E 与辅助测试脚本
-docs/          产品、架构、规范和设计文档
-_misc/plans/   迁移计划和阶段方案
-workspace/     用户项目数据，不提交 Git
+backend/       FastAPI backend
+frontend/      Vue 3 frontend
+prompts/       System Prompt templates
+tests/         E2E and auxiliary test scripts
+docs/          Product, architecture, specifications, and design documents
+_misc/plans/   Migration plans and phase schemes
+workspace/     User project data (not committed to Git)
 ```
 
-## 文档入口
+## Documentation
 
-先读这些文件，能最快理解项目：
+Start with these files to quickly understand the project:
 
-- [AGENTS.md](AGENTS.md)：AI 协作规则、禁区、GitNexus 要求。
-- [CONTEXT.md](CONTEXT.md)：领域术语。
-- [docs/文档索引.md](docs/文档索引.md)：文档导航。
-- [docs/产品架构-人机协同工作流.md](docs/产品架构-人机协同工作流.md)：新版产品架构。
-- [docs/专业版节点化改造计划.md](docs/专业版节点化改造计划.md)：专业版后续改造方向。
-- [docs/功能清单.md](docs/功能清单.md)：功能定义和执行逻辑。
-- [docs/features/README.md](docs/features/README.md)：功能规格后续拆分入口。
-- [docs/技术选型速查.md](docs/技术选型速查.md)：技术栈和禁止清单。
-- [docs/编码规范.md](docs/编码规范.md)：编码规范。
-- [docs/文件系统设计.md](docs/文件系统设计.md)：项目文件结构。
-- [docs/api/README.md](docs/api/README.md)：API 契约后续拆分入口。
+- [AGENTS.md](AGENTS.md): AI collaboration rules, forbidden zones, GitNexus requirements.
+- [CONTEXT.md](CONTEXT.md): Domain terminology.
+- [docs/文档索引.md](docs/文档索引.md): Documentation navigation.
+- [docs/产品架构-人机协同工作流.md](docs/产品架构-人机协同工作流.md): New product architecture.
+- [docs/专业版节点化改造计划.md](docs/专业版节点化改造计划.md): Professional edition roadmap.
+- [docs/功能清单.md](docs/功能清单.md): Feature definitions and execution logic.
+- [docs/技术选型速查.md](docs/技术选型速查.md): Tech stack and forbidden list.
+- [docs/编码规范.md](docs/编码规范.md): Coding standards.
+- [docs/文件系统设计.md](docs/文件系统设计.md): Project file structure.
 
-## 开发命令
+## Development Commands
 
 ```bash
-# 前端构建
+# Frontend build
 cd frontend
 npm run build
 
-# 后端测试
+# Backend tests
 python -m pytest backend/tests -q
 
-# 后端语法检查示例
+# Backend syntax check example
 python -m py_compile backend/api/lite.py backend/schemas/lite.py
 ```
 
-## 重要约束
+## Important Constraints
 
-- 不要提交 `.env`、`.config.json`、`workspace/`。
-- 不要修改 `_misc/archive/`，它是历史归档。
-- 修改 `backend/` 或 `frontend/` 前，先读对应 README 或上下文文档。
-- 代码修改后检查 [docs/技术选型速查.md](docs/技术选型速查.md) 的禁止清单。
-- 涉及函数、类、方法修改时，按 `AGENTS.md` 的 GitNexus 要求先做影响分析。
+- Do not commit `.env`, `.config.json`, or `workspace/`.
+- Do not modify `_misc/archive/` - it contains historical archives.
+- Read the corresponding README or context documents before modifying `backend/` or `frontend/`.
+- Check the forbidden list in [docs/技术选型速查.md](docs/技术选型速查.md) after code changes.
+- Follow GitNexus requirements in `AGENTS.md` for impact analysis when modifying functions, classes, or methods.
 
 ## License
 
