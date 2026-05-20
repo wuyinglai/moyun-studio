@@ -17,6 +17,7 @@ from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
 from backend.schemas.llm import BatchGenerateItem, BatchGenerateResponse
+from backend.application.scene_service import SceneService
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class GenerationService:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.file_service = FileService(settings.projects_path)
+        self.scene_service = SceneService(self.file_service)
         self._stop_signals: dict[str, asyncio.Event] = {}
 
     # ─── 停止信号管理 ────────────────────────────────────
@@ -291,20 +293,26 @@ class GenerationService:
                 else:
                     sec_nums = []
                     for sec_file in sorted(ch_dir.glob("sec-*.md")):
-                        sec_num = int(sec_file.stem.split("-")[1])
-                        sec_nums.append(sec_num)
+                        info = self.scene_service.parse_scene_path(
+                            f"chapters/{vol_dir.name}/{ch_dir.name}/{sec_file.name}"
+                        )
+                        if info:
+                            sec_nums.append(info.scene)
 
                 for sec_num in sec_nums:
+                    target_rel_path = self.scene_service.build_scene_path(
+                        int(vol_dir.name.split("-")[1]),
+                        int(ch_dir.name.split("-")[1]),
+                        sec_num,
+                    )
                     sec_file = ch_dir / f"sec-{sec_num:03d}.md"
                     if sec_file.exists():
-                        # 保存项目内相对路径（不带 project_id）
-                        target_rel_path = f"chapters/{vol_dir.name}/{ch_dir.name}/sec-{sec_num:03d}.md"
                         targets.append({
                             "ch_dir": ch_dir,
-                            "ch_num": ch_num,
+                            "ch_num": int(ch_dir.name.split("-")[1]),
                             "sec_num": sec_num,
-                            "target_rel_path": target_rel_path,  # 不带 project_id，用于 CandidateService
-                            "target_full_path": f"{project_id}/{target_rel_path}",  # 带 project_id，用于 FileService
+                            "target_rel_path": target_rel_path,
+                            "target_full_path": f"{project_id}/{target_rel_path}",
                         })
 
         if not targets:
@@ -366,12 +374,7 @@ class GenerationService:
                 )
 
                 # 安全策略：检查目标文件是否为空，空则直接写入，否则生成候选稿
-                target_exists = False
-                try:
-                    existing_content, _, _ = await self.file_service.read_file(tgt["target_full_path"])
-                    target_exists = existing_content and len(existing_content.strip()) > 0
-                except Exception:
-                    pass
+                target_exists = not await self.scene_service.is_scene_empty(project_id, tgt["target_rel_path"])
 
                 if target_exists:
                     # 目标文件已有内容：生成候选稿
