@@ -134,9 +134,12 @@ class GenerationService:
 
             # token 检查（使用模型实际的上下文窗口）
             try:
-                import tiktoken
-                enc = tiktoken.get_encoding("cl100k_base")
-                prompt_tokens = len(enc.encode(prompt_text))
+                if tiktoken is not None:
+                    enc = tiktoken.get_encoding("cl100k_base")
+                    prompt_tokens = len(enc.encode(prompt_text))
+                else:
+                    from backend.utils.token_utils import estimate_tokens_fallback
+                    prompt_tokens = estimate_tokens_fallback(prompt_text)
                 max_prompt_tokens = svc.config.max_prompt_tokens
                 context_window = svc.config.context_window
 

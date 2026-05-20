@@ -8,8 +8,12 @@ from pathlib import Path
 import re
 from typing import Any
 
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
+
 from jinja2 import Environment, FileSystemLoader
-import tiktoken
 
 
 class PromptEngine:
@@ -134,12 +138,14 @@ class PromptEngine:
 
     async def estimate_tokens(self, text: str) -> int:
         """估算token数"""
-        try:
-            enc = tiktoken.encoding_for_model("gpt-4")
-            return len(enc.encode(text))
-        except Exception:
-            from backend.utils.token_utils import estimate_tokens_fallback
-            return estimate_tokens_fallback(text)
+        if tiktoken is not None:
+            try:
+                enc = tiktoken.encoding_for_model("gpt-4")
+                return len(enc.encode(text))
+            except Exception:
+                pass
+        from backend.utils.token_utils import estimate_tokens_fallback
+        return estimate_tokens_fallback(text)
 
     def get_template_path(self, category: str, template_type: str) -> Path:
         """获取模板文件路径"""

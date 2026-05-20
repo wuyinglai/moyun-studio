@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING, Any
 
 import litellm
 from tenacity import retry, stop_after_attempt, wait_exponential
-import tiktoken
+
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
 
 from backend.core.exceptions import LLMError
 
@@ -361,6 +365,9 @@ class LLMService:
 
     async def count_tokens(self, text: str, model: str = "gpt-4") -> int:
         """计算token数"""
+        if tiktoken is None:
+            from backend.utils.token_utils import estimate_tokens_fallback
+            return estimate_tokens_fallback(text)
         try:
             enc = tiktoken.encoding_for_model(model)
         except Exception:

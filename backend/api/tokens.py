@@ -10,7 +10,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-import tiktoken
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError, ValidationError
@@ -115,19 +118,21 @@ def _get_context_length(model: str) -> int:
 
 async def _count_tokens_async(text: str, model: str = "gpt-4") -> int:
     """异步计算Token数"""
-    try:
+    if tiktoken is not None:
         try:
-            enc = tiktoken.encoding_for_model(model)
-        except (KeyError, tiktoken.TiktokenError):
-            enc = tiktoken.get_encoding("cl100k_base")
+            try:
+                enc = tiktoken.encoding_for_model(model)
+            except (KeyError, tiktoken.TiktokenError):
+                enc = tiktoken.get_encoding("cl100k_base")
 
-        tokens = len(enc.encode(text))
-        return tokens
+            tokens = len(enc.encode(text))
+            return tokens
 
-    except Exception as e:
-        logger.warning(f"tiktoken 计算失败，使用估算方法: {e}")
-        from backend.utils.token_utils import estimate_tokens_fallback
-        return estimate_tokens_fallback(text)
+        except Exception as e:
+            logger.warning(f"tiktoken 计算失败，使用估算方法: {e}")
+
+    from backend.utils.token_utils import estimate_tokens_fallback
+    return estimate_tokens_fallback(text)
 
 # ─── 路由 ────────────────────────────────────────────────────────────
 
