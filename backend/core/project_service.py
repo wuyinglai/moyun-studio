@@ -189,6 +189,11 @@ class ProjectService:
         now = datetime.now(timezone.utc).isoformat()
         project_dir = self._project_dir(project_id)
 
+        # 场景级参数（sec = 单场景）
+        scene_target_chars = getattr(req, 'scene_target_chars', 800)
+        scenes_per_chapter = getattr(req, 'scenes_per_chapter', 5)
+        chapters_per_volume = getattr(req, 'chapters_per_volume', 12)
+
         # 写 meta.json
         meta = {
             "project_id": project_id,
@@ -202,6 +207,11 @@ class ProjectService:
             "author": req.author,
             "created_at": now,
             "updated_at": now,
+            # 场景级配置
+            "scene_target_chars": scene_target_chars,
+            "scenes_per_chapter": scenes_per_chapter,
+            "chapters_per_volume": chapters_per_volume,
+            "unit_label": "scene",
         }
         return meta
 

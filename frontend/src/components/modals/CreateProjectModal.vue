@@ -388,11 +388,12 @@ const toneOptions = computed(() => customParamsStore.getOptions('tone'))
 const styleOptions = computed(() => customParamsStore.getOptions('writing_style'))
 const bgOptions = computed(() => customParamsStore.getOptions('background'))
 const themeOptions = computed(() => customParamsStore.getOptions('theme'))
+// 场景级规模计算：scene_target_chars = 800, scenes_per_chapter = 5
 const scaleOptions = [
-  { label: '5万字', value: 50000, hint: '≈ 28章' },
-  { label: '10万字', value: 100000, hint: '≈ 56章' },
-  { label: '15万字', value: 150000, hint: '≈ 84章' },
-  { label: '20万字', value: 200000, hint: '≈ 112章' },
+  { label: '5万字', value: 50000, hint: '≈ 13章 / 63场景' },
+  { label: '10万字', value: 100000, hint: '≈ 25章 / 125场景' },
+  { label: '15万字', value: 150000, hint: '≈ 38章 / 188场景' },
+  { label: '20万字', value: 200000, hint: '≈ 50章 / 250场景' },
 ]
 
 async function handleCreate() {

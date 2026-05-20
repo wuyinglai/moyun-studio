@@ -265,11 +265,14 @@ const customPipelines = computed(() =>
   pipelineStore.pipelines.filter(p => p.source === 'custom')
 )
 
-/** 当前文件是否为正文章节（sec-*.md） */
-const isChapterFile = computed(() => {
+/** 当前文件是否为场景正文文件（sec-*.md），每个 sec = 一个完整场景 */
+const isSceneFile = computed(() => {
   const path = editorStore.currentFilePath || ''
   return /\/sec-\d+\.md$/.test(path)
 })
+
+// 兼容旧名称
+const isChapterFile = isSceneFile
 
 /** 当前文件是否为系统维护文件（不应触发任何生成操作） */
 const isSystemFile = computed(() => {
@@ -592,7 +595,7 @@ async function loadFilePrompt(projectId: string, filePath: string) {
   }
 }
 
-/** 从当前文件路径推导下一个章节文件路径 */
+/** 从当前文件路径推导下一个场景文件路径 */
 function getNextSectionPath(currentPath: string): string | null {
   // 匹配 chapters/vol-NN/ch-NNN/sec-NNN.md
   const match = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
@@ -600,15 +603,13 @@ function getNextSectionPath(currentPath: string): string | null {
   const [, prefix, base, num, ext] = match
   const secNum = Number(num)
 
-  // 从项目目标字数计算章节参数（与 expandLoopStep 算法一致）
-  const projectStore = useProjectStore()
-  const tgt = projectStore.currentProject?.target_word_count || 50000
-  const sections = Math.max(1, Math.floor(tgt / 1800))
-  const SECTIONS_PER_CHAPTER = 4
-  const CHAPTERS_PER_VOLUME = Math.ceil(sections / 4)
+  // 场景级参数（sec = 单场景）
+  const SCENE_TARGET_CHARS = 800
+  const SCENES_PER_CHAPTER = 5
+  const CHAPTERS_PER_VOLUME = 12
 
-  // 如果当前 section < 每章上限，直接递增
-  if (secNum < SECTIONS_PER_CHAPTER) {
+  // 如果当前 scene < 每章上限，直接递增
+  if (secNum < SCENES_PER_CHAPTER) {
     const nextNum = String(secNum + 1).padStart(num.length, '0')
     return `${prefix}${base}${nextNum}${ext}`
   }

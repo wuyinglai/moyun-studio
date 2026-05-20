@@ -132,16 +132,25 @@ class GenerationService:
 
             yield {"event": "prompt", "data": json.dumps({"prompt": prompt_text, "task_id": task_id})}
 
-            # token 检查
+            # token 检查（使用模型实际的上下文窗口）
             try:
                 import tiktoken
                 enc = tiktoken.get_encoding("cl100k_base")
                 prompt_tokens = len(enc.encode(prompt_text))
-                if prompt_tokens > 120000:
+                max_prompt_tokens = svc.config.max_prompt_tokens
+                context_window = svc.config.context_window
+                
+                if prompt_tokens > max_prompt_tokens:
+                    warning_msg = f"Prompt 过长（约 {prompt_tokens} tokens），超出模型建议限制 {max_prompt_tokens} tokens"
+                    if prompt_tokens > context_window:
+                        warning_msg += "，建议：减少 recent_context / 只引用当前场景摘要 / 分段执行"
                     yield {"event": "error", "data": json.dumps({
-                        "message": f"Prompt 过长（约 {prompt_tokens} tokens），可能超出模型上下文限制",
+                        "message": warning_msg,
                         "task_id": task_id,
                         "warning": True,
+                        "prompt_tokens": prompt_tokens,
+                        "max_prompt_tokens": max_prompt_tokens,
+                        "context_window": context_window,
                     })}
             except Exception:
                 pass
@@ -187,7 +196,7 @@ class GenerationService:
         section_numbers: list[int] | None,
         temperature: float = 0.8,
     ) -> BatchGenerateResponse:
-        """批量生成章节内容"""
+        """批量生成场景正文（sec = 单场景，默认800字，每章5场景）"""
         project_dir = self.settings.projects_path / project_id
         from backend.core.exceptions import ProjectNotFoundError
         if not project_dir.exists():
@@ -264,7 +273,8 @@ class GenerationService:
             try:
                 chapter_vars = await runner.load_chapter_vars(project_id, tgt["target_file"])
                 chapter_title = ""
-                ch_meta_path = f"{project_id}/chapters/{Path(tgt['target_file']).parent.name}/ch-meta.json"
+                # 修复 ch_meta_path：使用正确的路径（vol-xx/ch-xx/ch-meta.json）
+                ch_meta_path = str(Path(tgt["target_file"]).parent / "ch-meta.json")
                 try:
                     meta_content, _ = await self.file_service.read_file(ch_meta_path)
                     if meta_content:
@@ -286,8 +296,10 @@ class GenerationService:
                 item.prompt = prompt_text
 
                 messages = [{"role": "user", "content": prompt_text}]
+                # 场景级 max_tokens：单场景目标800字，约2500 tokens
+                max_output_tokens = 2500
                 generated = await svc.complete_sync(
-                    messages, temperature=temperature, max_tokens=16000, timeout=180
+                    messages, temperature=temperature, max_tokens=max_output_tokens, timeout=180
                 )
 
                 await self.file_service.write_file(tgt["target_file"], generated.strip())

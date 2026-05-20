@@ -15,6 +15,10 @@ class ProjectCreateRequest(BaseModel):
     writing_style: str = Field(default="", description="写作风格")
     target_word_count: int = Field(default=100000, ge=10000, description="目标字数")
     author: str = Field(default="", description="作者名")
+    # 场景级配置（sec = 单场景）
+    scene_target_chars: int = Field(default=800, description="单场景目标字数")
+    scenes_per_chapter: int = Field(default=5, description="每章节场景数")
+    chapters_per_volume: int = Field(default=12, description="每卷章节数")
 
 
 class ProjectUpdateRequest(BaseModel):
@@ -26,6 +30,10 @@ class ProjectUpdateRequest(BaseModel):
     writing_style: Optional[str] = Field(default=None, description="写作风格")
     target_word_count: Optional[int] = Field(default=None, ge=10000, description="目标字数")
     author: Optional[str] = Field(default=None, description="作者名")
+    # 场景级配置
+    scene_target_chars: Optional[int] = Field(default=None, description="单场景目标字数")
+    scenes_per_chapter: Optional[int] = Field(default=None, description="每章节场景数")
+    chapters_per_volume: Optional[int] = Field(default=None, description="每卷章节数")
 
 
 class ProjectInfo(BaseModel):
@@ -42,6 +50,11 @@ class ProjectInfo(BaseModel):
     total_words: int = 0
     created_at: datetime
     updated_at: datetime
+    # 场景级配置（sec = 单场景）
+    scene_target_chars: int = 800
+    scenes_per_chapter: int = 5
+    chapters_per_volume: int = 12
+    unit_label: str = "scene"
 
 
 class ProjectListResponse(BaseModel):
@@ -92,10 +105,11 @@ class GenerateOutlineRequest(BaseModel):
 
 
 class OutlineChapterInfo(BaseModel):
-    """章节信息"""
+    """章节信息（场景级：每个章节包含多个场景）"""
     id: str
     name: str
-    sections: int
+    sections: int = 5  # 默认每章节5个场景
+    scenes: int = 5   # 场景数量，与 sections 含义相同
 
 
 class OutlineResponse(BaseModel):

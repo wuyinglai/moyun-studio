@@ -161,19 +161,13 @@ async def rename_file(
     fs: FileService = Depends(_get_file_service),
     settings: Settings = Depends(get_settings),
 ):
-    """重命名/移动文件"""
+    """重命名/移动文件（路径安全校验通过 FileService.rename_path）"""
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    old_full = project_dir / req.old_path
-    new_full = project_dir / req.new_path
-
-    if not old_full.exists():
-        raise ResourceNotFoundError(resource="file", identifier=req.old_path)
-
-    new_full.parent.mkdir(parents=True, exist_ok=True)
-    old_full.rename(new_full)
+    # 使用 FileService 的安全重命名方法
+    await fs.rename_path(req.project_id, req.old_path, req.new_path)
 
     logger.info("文件已重命名", extra={"from": req.old_path, "to": req.new_path})
 
@@ -191,15 +185,16 @@ async def rename_file(
 async def create_directory(
     req: CreateDirectoryRequest,
     request: Request,
+    fs: FileService = Depends(_get_file_service),
     settings: Settings = Depends(get_settings),
 ):
-    """创建新目录"""
+    """创建新目录（路径安全校验通过 FileService.create_directory）"""
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    dir_path = project_dir / req.path
-    dir_path.mkdir(parents=True, exist_ok=True)
+    # 使用 FileService 的安全创建目录方法
+    await fs.create_directory(req.project_id, req.path)
 
     logger.info("目录已创建", extra={"path": req.path})
 

@@ -1,7 +1,7 @@
 <template>
   <a-modal
     :open="visible"
-    title="批量生成章节"
+    title="批量生成场景"
     :width="640"
     :footer="null"
     :destroy-on-close="true"
@@ -52,27 +52,30 @@
           </a-space>
         </a-form-item>
 
-        <!-- 节选择 -->
-        <a-form-item label="节">
+        <!-- 场景选择 -->
+        <a-form-item label="场景">
           <a-checkbox-group v-model:value="sectionNumbers">
             <a-checkbox value="1">
-              第1节
+              第1场景
             </a-checkbox>
             <a-checkbox value="2">
-              第2节
+              第2场景
             </a-checkbox>
             <a-checkbox value="3">
-              第3节
+              第3场景
             </a-checkbox>
             <a-checkbox value="4">
-              第4节
+              第4场景
+            </a-checkbox>
+            <a-checkbox value="5">
+              第5场景
             </a-checkbox>
           </a-checkbox-group>
           <div
             class="range-hint"
             style="margin-top: 4px;"
           >
-            留空则全部节
+            留空则全部场景
           </div>
         </a-form-item>
       </a-form>
@@ -95,7 +98,7 @@
               （第{{ chapterNumber }}章）
             </template>
             <template v-if="sectionNumbers.length">
-              （{{ sectionNumbers.map(s => '第' + s + '节').join('、') }}）
+              （{{ sectionNumbers.map(s => '第' + s + '场景').join('、') }}）
             </template>
           </template>
         </a-alert>
@@ -231,10 +234,9 @@ const availableChapters = computed(() => {
   return chs.sort((a, b) => a - b)
 })
 
-// 估算目标数
+// 估算目标数（场景级：每章5场景）
 watch([volumeNumber, chapterNumber, sectionNumbers], () => {
-  // 简单估算
-  let n = 4 // 默认4节/章
+  let n = 5 // 默认5场景/章
   if (sectionNumbers.value.length > 0) n = sectionNumbers.value.length
   let chapters = 0
   if (chapterNumber.value) {
@@ -252,7 +254,7 @@ watch(visible, (v) => {
   if (v) {
     volumeNumber.value = undefined
     chapterNumber.value = undefined
-    sectionNumbers.value = []
+    sectionNumbers.value = ['1', '2', '3', '4', '5'] // 默认选择前5场景
     isGenerating.value = false
     progressDone.value = 0
     results.value = []

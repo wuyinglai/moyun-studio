@@ -307,3 +307,43 @@ class FileService:
 
         await _search_dir(project_path)
         return results
+
+    async def rename_path(self, project_id: str, old_path: str, new_path: str) -> None:
+        """安全地重命名/移动文件或目录
+        
+        Args:
+            project_id: 项目ID
+            old_path: 原路径（相对于项目根目录）
+            new_path: 新路径（相对于项目根目录）
+        
+        Raises:
+            ValidationError: 路径非法或越界
+            FileNotFoundError: 原路径不存在
+        """
+        from backend.core.exceptions import ResourceNotFoundError
+        
+        # 安全检查 old_path 和 new_path
+        old_full = self._resolve_path(f"{project_id}/{old_path}", check_write_suffix=True)
+        new_full = self._resolve_path(f"{project_id}/{new_path}", check_write_suffix=True)
+        
+        if not old_full.exists():
+            raise ResourceNotFoundError(resource="file", identifier=old_path)
+        
+        # 执行重命名
+        new_full.parent.mkdir(parents=True, exist_ok=True)
+        old_full.rename(new_full)
+
+    async def create_directory(self, project_id: str, dir_path: str) -> None:
+        """安全地创建目录
+        
+        Args:
+            project_id: 项目ID
+            dir_path: 目录路径（相对于项目根目录）
+        
+        Raises:
+            ValidationError: 路径非法或越界
+        """
+        # 安全检查 dir_path
+        full_path = self._resolve_path(f"{project_id}/{dir_path}", check_write_suffix=True)
+        
+        full_path.mkdir(parents=True, exist_ok=True)

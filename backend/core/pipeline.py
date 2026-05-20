@@ -436,34 +436,16 @@ class PipelineRunner:
                 # 如果步骤指定了 output 路径，将步骤输出写入对应文件
                 if step.output and step_output:
                     output_path = step.output
-                    if self._is_dangerous_output(output_path):
-                        logger.warning("跳过危险路径写入: %s (需要候选稿机制)", output_path)
-                        # 将输出保存为候选稿
-                        try:
-                            candidate_service = CandidateService(self.file_service)
-                            candidate = await candidate_service.create_candidate(
-                                project_id=project_id,
-                                source_path=output_path,
-                                action=CandidateAction.MODIFY,
-                                content=step_output,
-                            )
-                            logger.info("危险路径输出已保存为候选稿: %s -> %s", output_path, candidate.id)
-                            yield {"event": "candidate_created", "data": json.dumps({
-                                "task_id": task_id,
-                                "candidate_id": candidate.id,
-                                "source_path": output_path,
-                                "action": CandidateAction.MODIFY.value,
-                            })}
-                        except Exception as e:
-                            logger.warning("创建候选稿失败: %s", e)
-                    else:
-                        try:
-                            await self.file_service.write_file(
-                                f"{project_id}/{output_path}", step_output, None
-                            )
-                            logger.info("步骤输出已写入: %s", output_path)
-                        except Exception as e:
-                            logger.warning("步骤输出写入失败 %s: %s", output_path, e)
+                    candidate_id = await self._write_step_output_or_candidate(
+                        project_id, output_path, step_output, task_id, CandidateAction.MODIFY
+                    )
+                    if candidate_id:
+                        yield {"event": "candidate_created", "data": json.dumps({
+                            "task_id": task_id,
+                            "candidate_id": candidate_id,
+                            "source_path": output_path,
+                            "action": CandidateAction.MODIFY.value,
+                        })}
 
                 logger.info(
                     "管线步骤完成: %s/%s (output_len=%d)",
@@ -484,14 +466,18 @@ class PipelineRunner:
                 if step.fallback and step.fallback in step_outputs:
                     logger.info("回退到步骤 %s 的输出 (管线: %s)", step.fallback, pipeline_name)
                     step_outputs[step.id] = step_outputs[step.fallback]
-                    # 回退时也尝试写入步骤的 output 文件
+                    # 回退时也使用统一方法写入步骤的 output 文件
                     if step.output and step_outputs[step.id]:
-                        try:
-                            await self.file_service.write_file(
-                                f"{project_id}/{step.output}", step_outputs[step.id], None
-                            )
-                        except Exception as e:
-                            logger.warning("步骤输出写入失败 %s: %s", step.output, e)
+                        candidate_id = await self._write_step_output_or_candidate(
+                            project_id, step.output, step_outputs[step.id], task_id, CandidateAction.MODIFY
+                        )
+                        if candidate_id:
+                            yield {"event": "candidate_created", "data": json.dumps({
+                                "task_id": task_id,
+                                "candidate_id": candidate_id,
+                                "source_path": step.output,
+                                "action": CandidateAction.MODIFY.value,
+                            })}
                     yield {"event": "step_done", "data": json.dumps({
                         "step_id": step.id,
                         "label": step.label,
@@ -857,8 +843,56 @@ class PipelineRunner:
         for pattern in dangerous_patterns:
             if pattern in output_path_lower:
                 return True
-        
+
         return False
+
+    async def _write_step_output_or_candidate(
+        self,
+        project_id: str,
+        output_path: str,
+        content: str,
+        task_id: str | None = None,
+        action: CandidateAction = CandidateAction.MODIFY,
+    ) -> str | None:
+        """统一写入步骤输出的方法
+
+        如果输出路径是危险路径，创建候选稿；否则直接写入文件。
+
+        Args:
+            project_id: 项目ID
+            output_path: 相对路径
+            content: 要写入的内容
+            task_id: 任务ID（用于 SSE 事件）
+            action: 候选稿动作类型
+
+        Returns:
+            candidate_id 如果创建了候选稿，否则 None
+        """
+        if self._is_dangerous_output(output_path):
+            logger.warning("跳过危险路径写入: %s (需要候选稿机制)", output_path)
+            try:
+                candidate_service = CandidateService(self.file_service)
+                candidate = await candidate_service.create_candidate(
+                    project_id=project_id,
+                    source_path=output_path,
+                    action=action,
+                    content=content,
+                )
+                logger.info("危险路径输出已保存为候选稿: %s -> %s", output_path, candidate.id)
+                return candidate.id
+            except Exception as e:
+                logger.warning("创建候选稿失败: %s", e)
+                return None
+        else:
+            try:
+                await self.file_service.write_file(
+                    f"{project_id}/{output_path}", content, None
+                )
+                logger.info("步骤输出已写入: %s", output_path)
+                return None
+            except Exception as e:
+                logger.warning("步骤输出写入失败 %s: %s", output_path, e)
+                return None
 
     def _estimate_tokens(self, text: str) -> int:
         """估算文本的 token 数

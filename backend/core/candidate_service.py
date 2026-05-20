@@ -136,7 +136,9 @@ class CandidateService:
         return candidates
     
     async def adopt_candidate(self, project_id: str, candidate_id: str) -> bool:
-        """采用候选稿（覆盖源文件）"""
+        """采用候选稿（覆盖源文件前创建修改日志）"""
+        import re
+        
         candidate_info = await self.get_candidate(project_id, candidate_id)
         if not candidate_info:
             return False
@@ -149,8 +151,65 @@ class CandidateService:
         if content is None:
             return False
         
+        source_path = self._project_path(project_id, candidate_info.source_path)
+        
+        # 读取源文件原文（用于创建修改日志）
+        original_content = ""
+        try:
+            orig, _ = await self.file_service.read_file(source_path)
+            original_content = orig
+        except Exception:
+            pass
+        
+        # 计算字数
+        def _wc(text: str) -> int:
+            return len(re.findall(r'[一-鿿]', text)) + len(re.findall(r'[a-zA-Z]+', text))
+        
+        # 在覆盖前创建修改日志
+        revision_id = f"rev-{uuid.uuid4().hex[:8]}"
+        
+        # 推导 revision-log 目录路径
+        from pathlib import Path
+        source_parts = candidate_info.source_path.split("/")
+        revision_log_dir = "/".join(source_parts[:-1]) + "/revision-log"
+        
+        revision_entry = {
+            "id": revision_id,
+            "candidate_id": candidate_id,
+            "chapter_path": candidate_info.source_path,
+            "revision_type": "candidate_adopt",
+            "description": f"采用候选稿: {candidate_info.action.value}",
+            "word_count_before": _wc(original_content),
+            "word_count_after": _wc(content),
+            "adopted_at": datetime.now().isoformat(),
+        }
+        
+        # 如果有 diff 库，生成 unified diff
+        try:
+            import difflib
+            before_lines = original_content.splitlines(keepends=True)
+            after_lines = content.splitlines(keepends=True)
+            diff = "".join(difflib.unified_diff(
+                before_lines, after_lines,
+                fromfile="采用前", tofile="采用后", lineterm=""
+            ))
+            revision_entry["diff"] = diff
+        except Exception:
+            pass
+        
+        # 保存修改日志
+        try:
+            revision_log_path = f"{project_id}/{revision_log_dir}/{revision_id}.json"
+            await self.file_service.write_file(
+                revision_log_path,
+                json.dumps(revision_entry, ensure_ascii=False, indent=2)
+            )
+        except Exception as e:
+            # 修改日志创建失败不影响采用操作
+            pass
+        
         # 写入源文件
-        await self.file_service.write_file(self._project_path(project_id, candidate_info.source_path), content)
+        await self.file_service.write_file(source_path, content)
         
         # 更新状态
         candidate_info.status = CandidateStatus.ADOPTED
