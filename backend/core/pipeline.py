@@ -35,6 +35,7 @@ from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.prompt_versioning import archive_prompt
 from backend.schemas.pipeline import PipelineDef, PipelineStepDef
 from backend.schemas.candidate import CandidateAction
+from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -597,7 +598,10 @@ class PipelineRunner:
             try:
                 existing, _ = await self.file_service.read_file(f"{project_id}/recent-context.md")
                 blocks = [b for b in existing.split("\n## ") if b.strip()]
-                blocks = blocks[-4:]
+                # 使用配置的场景记忆数量限制（默认 15）
+                settings = get_settings()
+                max_scenes = settings.recent_context_scene_limit
+                blocks = blocks[-max_scenes:]
                 new_content = "\n## ".join(blocks).strip()
                 if not new_content.startswith("# "):
                     new_content = "# 近期上下文\n" + new_content

@@ -89,14 +89,14 @@ class FileService:
     async def read_file(
         self,
         relative_path: str
-    ) -> tuple[str, dict | None]:
+    ) -> tuple[str, dict | None, float | None]:
         """读取文件
 
         Args:
             relative_path: 相对于workspace的路径
 
         Returns:
-            (content, frontmatter) - 文件内容和元数据
+            (content, frontmatter, mtime) - 文件内容、元数据和修改时间
         """
         file_path = self._resolve_path(relative_path)
 
@@ -106,26 +106,60 @@ class FileService:
         async with aiofiles.open(file_path, mode="r", encoding="utf-8") as f:
             content = await f.read()
 
+        mtime = file_path.stat().st_mtime if file_path.exists() else None
+
         if file_path.suffix == ".md":
             post = frontmatter.loads(content)
-            return post.content, dict(post.metadata) if post.metadata else None
+            return post.content, dict(post.metadata) if post.metadata else None, mtime
 
-        return content, None
+        return content, None, mtime
 
     async def write_file(
         self,
         relative_path: str,
         content: str,
-        frontmatter_dict: dict | None = None
+        frontmatter_dict: dict | None = None,
+        expected_mtime: float | None = None,
+        expected_hash: str | None = None,
     ) -> None:
-        """写入文件
+        """写入文件（支持并发控制）
 
         Args:
             relative_path: 相对于workspace的路径
             content: 文件内容
             frontmatter_dict: frontmatter元数据
+            expected_mtime: 期望的文件修改时间（用于并发控制）
+            expected_hash: 期望的文件内容哈希（用于并发控制）
+
+        Raises:
+            FileConflictError: 文件已被其他操作修改
         """
         file_path = self._resolve_path(relative_path, check_write_suffix=True)
+
+        # 并发控制：检查文件是否已被修改
+        if file_path.exists():
+            if expected_mtime is not None:
+                current_mtime = file_path.stat().st_mtime
+                if abs(current_mtime - expected_mtime) > 0.001:  # 允许浮点数误差
+                    from backend.core.exceptions import FileConflictError
+                    raise FileConflictError(
+                        f"文件已被修改: {relative_path}",
+                        details={
+                            "current_mtime": current_mtime,
+                            "expected_mtime": expected_mtime,
+                        }
+                    )
+
+            if expected_hash is not None:
+                import hashlib
+                current_content, _, _ = await self.read_file(relative_path)
+                current_hash = hashlib.md5(current_content.encode()).hexdigest()
+                if current_hash != expected_hash:
+                    from backend.core.exceptions import FileConflictError
+                    raise FileConflictError(
+                        f"文件内容已变更: {relative_path}",
+                        details={"current_hash": current_hash, "expected_hash": expected_hash}
+                    )
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 

@@ -101,9 +101,34 @@ export const useLLMStore = defineStore('llm', () => {
     setGenerating,
   }
 }, {
+  // 安全：API Key 不持久化到 localStorage，只保留在内存中
+  // 持久化 provider/model/base_url，但不包含 apiKey
   persist: {
     storage: localStorage,
     pick: ['config'],
+    serializer: {
+      // 只持久化非敏感配置
+      deserialize: (value: string) => {
+        try {
+          const parsed = JSON.parse(value)
+          if (parsed.config) {
+            // 移除敏感信息
+            parsed.config.apiKey = ''
+          }
+          return parsed
+        } catch {
+          return { config: { apiKey: '' } }
+        }
+      },
+      serialize: (value: object) => {
+        // 序列化时移除敏感信息
+        const safe = JSON.parse(JSON.stringify(value))
+        if (safe.config) {
+          safe.config.apiKey = ''
+        }
+        return JSON.stringify(safe)
+      },
+    },
   },
 })
 

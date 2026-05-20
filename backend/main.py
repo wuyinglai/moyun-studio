@@ -274,6 +274,7 @@ def _moyun_to_http_status(error_code: str) -> int:
         "PROJECT_NOT_FOUND": 404,
         "FILE_ERROR": 400,
         "FILE_NOT_FOUND": 404,
+        "FILE_CONFLICT": 409,
         "RESOURCE_NOT_FOUND": 404,
         "FILE_ALREADY_EXISTS": 409,
         "TEMPLATE_ERROR": 400,

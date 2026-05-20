@@ -254,6 +254,12 @@ class GenerationService:
         if not targets:
             return BatchGenerateResponse(tasks=[], total=0, succeeded=0, failed=0)
 
+        # 批量生成限制
+        max_count = self.settings.batch_generate_max_count
+        if len(targets) > max_count:
+            logger.warning("批量生成数量 %d 超过限制 %d，截断", len(targets), max_count)
+            targets = targets[:max_count]
+
         llm_cfg = load_llm_config_from_workspace(self.settings)
         svc = LLMService.from_workspace_config(llm_cfg)
         runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service, system_prompts_path=self.settings.system_prompts_path)

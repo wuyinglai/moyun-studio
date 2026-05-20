@@ -112,12 +112,14 @@ async def write_file(
 
     logger.info("文件已保存", extra={"project_id": project_id, "path": req.path})
 
-    # 发布文件更新事件
+    # 发布文件更新事件（不包含完整内容，前端需要时再 read_file）
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
+        file_size = len(req.content.encode("utf-8")) if req.content else 0
         await event_bus.publish("file-updated", {
             "path": f"{project_id}/{req.path}",
-            "content": req.content,
+            "project_id": project_id,
+            "size": file_size,
         })
 
     return ApiResponse.ok(message="文件已保存")

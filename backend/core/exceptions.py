@@ -224,3 +224,11 @@ class RateLimitError(MoyunException):
             "RATE_LIMIT",
             {"retry_after": retry_after},
         )
+
+
+class FileConflictError(MoyunFileError):
+    """文件冲突错误（code: FILE_CONFLICT，对应 HTTP 409）"""
+
+    def __init__(self, message: str, details: Any | None = None):
+        super().__init__(message, details)
+        self.code = "FILE_CONFLICT"

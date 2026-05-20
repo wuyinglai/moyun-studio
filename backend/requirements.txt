@@ -1,3 +1,4 @@
+# Core dependencies
 fastapi==0.110.0
 uvicorn==0.29.0
 litellm==1.35.0
@@ -10,7 +11,7 @@ sse-starlette==0.10.3
 tenacity==8.2.0
 jinja2>=3.1.2
 
-# dev dependencies
+# Dev dependencies
 pytest==8.0.0
 pytest-asyncio==0.23.0
 ruff>=0.3.0
