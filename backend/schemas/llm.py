@@ -61,10 +61,11 @@ class ChatRequest(BaseModel):
 class BatchGenerateItem(BaseModel):
     """批量生成中的单个任务"""
     target_file: str
-    status: str = "pending"  # pending | success | error
+    status: str = "pending"  # pending | success | error | candidate | skipped
     word_count: int = 0
     error: str | None = None
     prompt: str = ""  # 渲染后的 prompt 文本（用于前端右侧面板展示）
+    candidate_id: str | None = None  # 如果状态为 candidate，存储候选稿 ID
 
 
 class BatchGenerateResponse(BaseModel):

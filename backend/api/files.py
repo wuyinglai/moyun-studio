@@ -190,13 +190,13 @@ async def create_directory(
     fs: FileService = Depends(_get_file_service),
     settings: Settings = Depends(get_settings),
 ):
-    """创建新目录（路径安全校验通过 FileService.create_directory）"""
+    """创建新目录（路径安全校验通过 FileService.create_project_directory）"""
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
     # 使用 FileService 的安全创建目录方法
-    await fs.create_directory(req.project_id, req.path)
+    await fs.create_project_directory(req.project_id, req.path)
 
     logger.info("目录已创建", extra={"path": req.path})
 

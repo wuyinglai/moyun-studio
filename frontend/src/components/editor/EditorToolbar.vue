@@ -604,7 +604,7 @@ function getNextSectionPath(currentPath: string): string | null {
   const secNum = Number(num)
 
   // 场景级参数（sec = 单场景）
-  const SCENE_TARGET_CHARS = 800
+  // SCENE_TARGET_CHARS = 800 (单场景目标字数，当前函数不直接使用)
   const SCENES_PER_CHAPTER = 5
   const CHAPTERS_PER_VOLUME = 12
 

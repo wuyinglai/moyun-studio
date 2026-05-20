@@ -168,11 +168,58 @@ class GenerationService:
                     await event_bus.publish("generation", {"delta": chunk, "task_id": task_id})
 
             if generated_text and not (stop_event and stop_event.is_set()):
+                # 安全策略：优先使用候选稿机制，避免直接覆盖
+                from backend.core.candidate_service import CandidateService, CandidateAction
+                
+                # 检查目标文件是否有内容
+                target_exists = content and len(content.strip()) > 0
+                
                 if mode == "rewrite":
-                    await self.file_service.write_file(f"{project_id}/{file_path}", generated_text, fm)
+                    # rewrite 模式：必须生成候选稿
+                    try:
+                        candidate_svc = CandidateService(self.file_service)
+                        candidate = await candidate_svc.create_candidate(
+                            project_id=project_id,
+                            source_path=file_path,
+                            action=CandidateAction.REWRITE,
+                            content=generated_text,
+                        )
+                        logger.info("Fallback rewrite 已保存为候选稿: %s -> %s", file_path, candidate.id)
+                        yield {"event": "candidate_created", "data": json.dumps({
+                            "task_id": task_id,
+                            "candidate_id": candidate.id,
+                            "source_path": file_path,
+                            "action": CandidateAction.REWRITE.value,
+                        })}
+                    except Exception as e:
+                        logger.warning("创建候选稿失败: %s", e)
+                        # 候选稿创建失败时跳过写入，避免覆盖原文件
                 elif mode == "append":
-                    new_content = content + "\n\n" + generated_text
-                    await self.file_service.write_file(f"{project_id}/{file_path}", new_content, fm)
+                    if target_exists:
+                        # 目标文件已有内容：生成候选稿
+                        try:
+                            new_content = content + "\n\n" + generated_text
+                            candidate_svc = CandidateService(self.file_service)
+                            candidate = await candidate_svc.create_candidate(
+                                project_id=project_id,
+                                source_path=file_path,
+                                action=CandidateAction.CONTINUE,
+                                content=new_content,
+                            )
+                            logger.info("Fallback append 已保存为候选稿: %s -> %s", file_path, candidate.id)
+                            yield {"event": "candidate_created", "data": json.dumps({
+                                "task_id": task_id,
+                                "candidate_id": candidate.id,
+                                "source_path": file_path,
+                                "action": CandidateAction.CONTINUE.value,
+                            })}
+                        except Exception as e:
+                            logger.warning("创建候选稿失败: %s", e)
+                    else:
+                        # 目标文件为空或不存在：直接写入
+                        new_content = content + "\n\n" + generated_text if content else generated_text
+                        await self.file_service.write_file(f"{project_id}/{file_path}", new_content, fm)
+                        logger.info("Fallback append 直接写入（目标文件为空）: %s", file_path)
 
             yield {"event": "done", "data": json.dumps({"task_id": task_id, "message": "生成完成"})}
             if event_bus:
@@ -308,17 +355,49 @@ class GenerationService:
                     messages, temperature=temperature, max_tokens=max_output_tokens, timeout=180
                 )
 
-                await self.file_service.write_file(tgt["target_file"], generated.strip())
+                # 安全策略：检查目标文件是否为空，空则直接写入，否则生成候选稿
+                target_exists = False
+                try:
+                    existing_content, _, _ = await self.file_service.read_file(tgt["target_file"])
+                    target_exists = existing_content and len(existing_content.strip()) > 0
+                except Exception:
+                    pass
+
+                if target_exists:
+                    # 目标文件已有内容：生成候选稿
+                    try:
+                        from backend.core.candidate_service import CandidateService, CandidateAction
+                        candidate_svc = CandidateService(self.file_service)
+                        candidate = await candidate_svc.create_candidate(
+                            project_id=project_id,
+                            source_path=tgt["target_file"],
+                            action=CandidateAction.CONTINUE,
+                            content=generated.strip(),
+                        )
+                        logger.info("批量场景生成已保存为候选稿: %s -> %s", tgt["target_file"], candidate.id)
+                        item.status = "candidate"
+                        item.candidate_id = candidate.id
+                    except Exception as e:
+                        logger.warning("创建候选稿失败，跳过: %s", e)
+                        item.status = "skipped"
+                        item.error = "目标文件已有内容，候选稿创建失败"
+                        failed += 1
+                        tasks.append(item)
+                        continue
+                else:
+                    # 目标文件为空：直接写入
+                    await self.file_service.write_file(tgt["target_file"], generated.strip())
+                    logger.info("批量场景生成直接写入: %s", tgt["target_file"])
 
                 word_count = len(generated.replace(" ", ""))
                 item.status = "success"
                 item.word_count = word_count
                 succeeded += 1
 
-                logger.info("章节生成完成", extra={"target": tgt["target_file"], "words": word_count})
+                logger.info("场景生成完成", extra={"target": tgt["target_file"], "words": word_count})
 
             except Exception as e:
-                logger.error("章节生成失败", extra={"target": tgt["target_file"], "error": str(e)[:200]})
+                logger.error("场景生成失败", extra={"target": tgt["target_file"], "error": str(e)[:200]})
                 item.status = "error"
                 item.error = str(e)[:200]
                 failed += 1

@@ -367,8 +367,8 @@ class FileService:
         new_full.parent.mkdir(parents=True, exist_ok=True)
         old_full.rename(new_full)
 
-    async def create_directory(self, project_id: str, dir_path: str) -> None:
-        """安全地创建目录
+    async def create_project_directory(self, project_id: str, dir_path: str) -> None:
+        """安全地在项目目录下创建目录
         
         Args:
             project_id: 项目ID
