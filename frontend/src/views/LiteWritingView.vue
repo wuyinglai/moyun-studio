@@ -16,10 +16,12 @@
         </div>
         <button
           class="ghost-btn"
+          :class="{ loading: loadingIdeas }"
           :disabled="loadingIdeas"
           @click="loadIdeas(true)"
         >
-          换一批
+          <span v-if="loadingIdeas" class="loading-spinner"></span>
+          {{ loadingIdeas ? 'AI正在生成...' : '换一批' }}
         </button>
       </div>
 
@@ -111,10 +113,33 @@
           @input="dirty = true"
           @scroll="handleTextareaScroll"
         />
+        <div
+          v-if="isViewingCandidate && candidateDraft"
+          class="candidate-bar"
+        >
+          <div>
+            <strong>候选稿：{{ candidateActionText(candidateDraft.action) }}</strong>
+            <span>原文不会被覆盖，满意后再采用。</span>
+          </div>
+          <button
+            class="primary-btn compact"
+            :disabled="saving || generating"
+            @click="acceptCandidate"
+          >
+            采用候选稿
+          </button>
+          <button
+            class="ghost-btn"
+            :disabled="saving || generating"
+            @click="discardCandidate"
+          >
+            放弃
+          </button>
+        </div>
         <div class="editor-actions">
           <button
             class="ghost-btn"
-            :disabled="!dirty || saving"
+            :disabled="!dirty || saving || isViewingCandidate"
             @click="saveCurrent"
           >
             保存
@@ -135,21 +160,21 @@
           </button>
           <button
             class="ghost-btn"
-            :disabled="!currentFilePath || generating"
+            :disabled="!currentFilePath || generating || !nextCards.length"
             @click="rewriteCurrent"
           >
             重写这一章
           </button>
           <button
             class="ghost-btn"
-            :disabled="!currentFilePath || generating"
+            :disabled="!currentFilePath || generating || !nextCards.length"
             @click="improveCurrent('more_exciting')"
           >
             更爽一点
           </button>
           <button
             class="ghost-btn"
-            :disabled="!currentFilePath || generating"
+            :disabled="!currentFilePath || generating || !nextCards.length"
             @click="improveCurrent('more_reasonable')"
           >
             更合理一点
@@ -162,10 +187,20 @@
           <span class="quality-line">{{ qualitySummary }}</span>
         </div>
         <div
+          v-if="activeWorkStatus"
+          class="work-status"
+        >
+          <div class="work-status-head">
+            <span class="loading-spinner"></span>
+            <strong>{{ activeWorkStatus.title }}</strong>
+          </div>
+          <p>{{ activeWorkStatus.detail }}</p>
+        </div>
+        <div
           v-if="generating"
           class="generating-mask"
         >
-          正在写{{ pendingTargetLabel }}，正文会实时出现在编辑器里...
+          {{ activeWorkStatus?.detail || `正在写${pendingTargetLabel}，正文会实时出现在编辑器里...` }}
         </div>
       </main>
 
@@ -196,7 +231,13 @@
             {{ nextTargetHint }}
           </p>
           <p
-            v-if="loadingOptions"
+            v-if="generating"
+            class="option-loading"
+          >
+            正在自动写{{ pendingTargetLabel }}，完成后会刷新下一节爽点卡。
+          </p>
+          <p
+            v-else-if="loadingOptions"
             class="option-loading"
           >
             正在根据前文生成爽点卡...
@@ -215,6 +256,7 @@
           </p>
           <button
             v-for="card in nextCards"
+            v-if="!generating"
             :key="card.id"
             class="option-card"
             :disabled="generating"
@@ -249,6 +291,34 @@
             </div>
             <em>{{ optionActionLabel }}</em>
           </button>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            <span>灵感改稿</span>
+          </div>
+          <div class="lite-chat-box">
+            <p
+              v-if="chatRevisionNote"
+              class="chat-revision-note"
+            >
+              {{ chatRevisionNote }}
+            </p>
+            <textarea
+              v-model="chatRevisionInput"
+              rows="4"
+              placeholder="比如：主角不够狠，改得更强势；结尾钩子再刺激一点。"
+              @keydown.ctrl.enter.prevent="runChatRevision"
+              @keydown.meta.enter.prevent="runChatRevision"
+            />
+            <button
+              class="primary-btn full"
+              :disabled="!canRunChatRevision"
+              @click="runChatRevision"
+            >
+              生成候选稿
+            </button>
+          </div>
         </section>
 
         <section class="panel">
@@ -333,6 +403,13 @@ const currentFilePath = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const streamingFilePath = ref('')
 const streamingBuffers = ref<Record<string, string>>({})
+const candidateDraft = ref<{
+  sourcePath: string
+  path: string
+  action: LiteWriteAction
+  title: string
+  content: string
+} | null>(null)
 const chapterStatus = ref<Record<string, 'done' | 'blank' | 'draft'>>({})
 const chapterMilestone = ref<{ vol: number; ch: number; summary: string; nextGoal: string } | null>(null)
 const qualitySummary = ref('')
@@ -341,6 +418,8 @@ const loadingIdeas = ref(false)
 const loadingOptions = ref(false)
 const optionError = ref('')
 const optionRequestId = ref(0)
+const workPhase = ref('')
+const workDetail = ref('')
 const creating = ref(false)
 const generating = ref(false)
 const generationAbortController = ref<AbortController | null>(null)
@@ -348,6 +427,8 @@ const lastGenerationCard = ref<LiteNextOptionCard | null>(null)
 const autoScrollDuringGeneration = ref(true)
 const saving = ref(false)
 const dirty = ref(false)
+const chatRevisionInput = ref('')
+const chatRevisionNote = ref('')
 const prefs = reactive(defaultLitePrefs())
 
 const styles = ['轻松', '热血', '细腻', '幽默', '电影感']
@@ -391,6 +472,9 @@ const currentChapterProgress = computed(() => {
 })
 
 const completionSummary = computed(() => {
+  if (candidateDraft.value && currentFilePath.value === candidateDraft.value.path) {
+    return `候选稿：${candidateActionText(candidateDraft.value.action)}，满意后再采用替换原文`
+  }
   if (generating.value && pendingTargetLabel.value) {
     return `正在写${pendingTargetLabel.value} · ${currentChapterProgress.value || '本章进度更新中'}`
   }
@@ -414,6 +498,41 @@ const canContinueDraft = computed(() => {
     && content.value.trim()
     && lastGenerationCard.value,
   )
+})
+
+const isViewingCandidate = computed(() => {
+  return Boolean(candidateDraft.value && currentFilePath.value === candidateDraft.value.path)
+})
+
+const canRunChatRevision = computed(() => {
+  return Boolean(
+    chatRevisionInput.value.trim()
+    && currentFilePath.value
+    && !generating.value
+    && !saving.value,
+  )
+})
+
+const activeWorkStatus = computed(() => {
+  if (workPhase.value) {
+    return {
+      title: workPhase.value,
+      detail: workDetail.value,
+    }
+  }
+  if (loadingOptions.value) {
+    return {
+      title: '正在生成爽点卡',
+      detail: '正在读取前文、故事引擎和近期上下文，给下一节准备 3 个方向。',
+    }
+  }
+  if (creating.value) {
+    return {
+      title: '正在创建作品',
+      detail: '正在建立章节目录、故事引擎和初始写作参数。',
+    }
+  }
+  return null
 })
 
 onMounted(async () => {
@@ -469,7 +588,7 @@ async function startProject(card: LiteIdeaCard) {
 
     await router.push(`/project/${created.project_id}/lite`)
 
-    await openChapter(created.first_file)
+    await openChapter(created.first_file, { skipOptions: true })
     engineSummary.value = {
       protagonist_goal: '主角：证明自己，摆脱羞辱，获得真正能改变命运的力量。',
       current_conflict: card.core_conflict,
@@ -488,7 +607,7 @@ async function startProject(card: LiteIdeaCard) {
       advancement: '完成开局压迫和第一次行动选择，为下一节留出明确冲突。',
     }
     nextTargetFile.value = created.first_file
-    nextCards.value = [openingCard]
+    nextCards.value = []
     await runGeneration(openingCard, 'write', created.first_file)
   } catch (e: any) {
     notification.error(e.message || '创建爽文项目失败')
@@ -507,6 +626,34 @@ function formatChapterLabel(path: string) {
   if (ch) parts.push(`第${Number(ch)}章`)
   if (sec) parts.push(`第${Number(sec)}节`)
   return parts.join(' ')
+}
+
+function candidateActionText(action: LiteWriteAction) {
+  if (candidateDraft.value?.path.endsWith('.chat.md')) return '聊天改稿'
+  if (action === 'rewrite') return '重写这一章'
+  if (action === 'more_exciting') return '更爽一点'
+  if (action === 'more_reasonable') return '更合理一点'
+  return '候选稿'
+}
+
+function buildCandidatePath(sourcePath: string, action: LiteWriteAction) {
+  const safeSource = sourcePath.replace(/\.md$/, '').replace(/[\\/]/g, '__')
+  return `.lite-candidates/${safeSource}.${action}.md`
+}
+
+function buildChatRevisionPath(sourcePath: string) {
+  const safeSource = sourcePath.replace(/\.md$/, '').replace(/[\\/]/g, '__')
+  return `.lite-candidates/${safeSource}.chat.md`
+}
+
+function setWorkStatus(title: string, detail: string) {
+  workPhase.value = title
+  workDetail.value = detail
+}
+
+function clearWorkStatus() {
+  workPhase.value = ''
+  workDetail.value = ''
 }
 
 function parseSectionPath(path: string) {
@@ -558,6 +705,10 @@ function appendDraftContent(base: string, addition: string) {
   if (!base.trim()) return addition
   if (!addition.trim()) return base
   return `${base.replace(/\s+$/, '')}\n\n${addition.replace(/^\s+/, '')}`
+}
+
+function stripLeadingMarkdownHeading(text: string) {
+  return text.replace(/^\s*#{1,6}\s+[^\n\r]*(\r?\n)+/, '')
 }
 
 function extractNextChapterGoal(plan: string | null | undefined) {
@@ -639,11 +790,11 @@ async function openProject(projectId: string) {
   await projectStore.openProject(projectId)
   await fileStore.loadTree(projectId)
   const { node: resume, hasWritten } = await findResumeChapter(projectId)
-  if (resume) await openChapter(resume.path)
+  if (resume) await openChapter(resume.path, { skipOptions: !hasWritten })
   if (resume && !hasWritten && !creating.value && isBlankChapter(content.value)) {
     const openingCard = buildOpeningCardFromProject()
     nextTargetFile.value = resume.path
-    nextCards.value = [openingCard]
+    nextCards.value = []
     await runGeneration(openingCard, 'write', resume.path)
   } else if (!resume) {
     await refreshOptions()
@@ -669,7 +820,7 @@ async function findResumeChapter(projectId: string) {
   return { node: lastWritten, hasWritten }
 }
 
-async function openChapter(path: string) {
+async function openChapter(path: string, options: { skipOptions?: boolean } = {}) {
   if (!generating.value && !(await confirmDirty())) return
   const projectId = projectStore.currentProject?.id
   if (!projectId) return
@@ -682,7 +833,7 @@ async function openChapter(path: string) {
   editorStore.loadContent(path, content.value)
   editorStore.setCurrentFile(path)
   dirty.value = false
-  if (!generating.value) {
+  if (!generating.value && !options.skipOptions) {
     await refreshOptions(path)
   }
 }
@@ -715,6 +866,50 @@ async function saveCurrent() {
   }
 }
 
+async function acceptCandidate() {
+  const draft = candidateDraft.value
+  const projectId = projectStore.currentProject?.id
+  if (!draft || !projectId) return
+  saving.value = true
+  setWorkStatus('正在采用候选稿', '正在覆盖原章节、清理候选文件，并刷新下一节方向。')
+  try {
+    await fileStore.saveFile(projectId, draft.sourcePath, content.value)
+    setWorkStatus('正在清理候选稿', '候选稿已经写入原章节，正在删除临时文件。')
+    await fileStore.deleteFile(projectId, draft.path)
+    candidateDraft.value = null
+    delete streamingBuffers.value[draft.path]
+    currentFilePath.value = draft.sourcePath
+    content.value = normalizeChapterHeading(draft.sourcePath, content.value)
+    chapterStatus.value[draft.sourcePath] = isBlankChapter(content.value) ? 'blank' : 'done'
+    dirty.value = false
+    fileStore.openFile({ name: draft.sourcePath.split('/').pop() || '', path: draft.sourcePath, type: 'file' })
+    editorStore.setCurrentFile(draft.sourcePath)
+    editorStore.loadContent(draft.sourcePath, content.value)
+    await fileStore.loadTree(projectId)
+    setWorkStatus('正在刷新下一节方向', '正在根据采用后的正文重新生成下一节爽点卡。')
+    await refreshOptions(draft.sourcePath)
+    notification.success('已采用候选稿并替换原文')
+  } finally {
+    saving.value = false
+    if (!loadingOptions.value) clearWorkStatus()
+  }
+}
+
+async function discardCandidate() {
+  const draft = candidateDraft.value
+  const projectId = projectStore.currentProject?.id
+  if (!draft || !projectId) return
+  try {
+    await fileStore.deleteFile(projectId, draft.path)
+  } catch {
+    // 候选稿已经不存在时也允许回到原文。
+  }
+  candidateDraft.value = null
+  delete streamingBuffers.value[draft.path]
+  await openChapter(draft.sourcePath, { skipOptions: true })
+  notification.success('已放弃候选稿')
+}
+
 async function refreshOptions(baseFile = currentFilePath.value || null) {
   const projectId = projectStore.currentProject?.id
   if (!projectId) return
@@ -722,9 +917,11 @@ async function refreshOptions(baseFile = currentFilePath.value || null) {
   loadingOptions.value = true
   optionError.value = ''
   nextCards.value = []
+  setWorkStatus('正在生成爽点卡', '正在读取前文、故事引擎和近期上下文，给下一节准备 3 个方向。')
   try {
     const data = await fetchLiteNextOptions(projectId, baseFile, prefs)
     if (requestId !== optionRequestId.value) return
+    setWorkStatus('爽点卡已生成', '下一节方向已经准备好，可以选择一张卡继续写。')
     nextCards.value = data.cards
     nextTargetFile.value = data.next_file
     if (!data.cards.length) {
@@ -738,6 +935,7 @@ async function refreshOptions(baseFile = currentFilePath.value || null) {
   } finally {
     if (requestId === optionRequestId.value) {
       loadingOptions.value = false
+      clearWorkStatus()
     }
   }
 }
@@ -750,13 +948,39 @@ async function generateWithCard(card: LiteNextOptionCard) {
 async function rewriteCurrent() {
   if (generating.value) return
   const card = nextCards.value[0]
-  if (card) await runGeneration(card, 'rewrite', currentFilePath.value)
+  if (card && currentFilePath.value) {
+    await runGeneration(card, 'rewrite', currentFilePath.value, buildCandidatePath(currentFilePath.value, 'rewrite'))
+  }
 }
 
 async function improveCurrent(action: 'more_exciting' | 'more_reasonable') {
   if (generating.value) return
   const card = nextCards.value[0]
-  if (card) await runGeneration(card, action, currentFilePath.value)
+  if (card && currentFilePath.value) {
+    await runGeneration(card, action, currentFilePath.value, buildCandidatePath(currentFilePath.value, action))
+  }
+}
+
+async function runChatRevision() {
+  const instruction = chatRevisionInput.value.trim()
+  if (!instruction || generating.value) return
+  const sourcePath = candidateDraft.value?.sourcePath || currentFilePath.value
+  if (!sourcePath) return
+  const label = formatChapterLabel(sourcePath)
+  const card: LiteNextOptionCard = {
+    id: `chat-revision-${Date.now()}`,
+    title: '聊天改稿',
+    beat: `根据用户聊天指令改写当前章节：${instruction}`,
+    scene: `保留${label}的主要剧情，只调整用户指出的问题。`,
+    protagonist_desire: '保持人物核心欲望不变，让行动更贴合用户修改方向。',
+    obstacle: '不能破坏前文逻辑、人物动机、章节钩子和既有设定。',
+    payoff: `完成用户要求：${instruction}`,
+    hook: '保留或加强本节结尾钩子。',
+    advancement: '生成一版可采用的候选稿，供用户确认后替换原文。',
+  }
+  chatRevisionNote.value = `正在根据“${instruction}”生成候选稿。`
+  await runGeneration(card, 'rewrite', sourcePath, buildChatRevisionPath(sourcePath))
+  chatRevisionNote.value = '候选稿已生成，可以在编辑器中查看并决定是否采用。'
 }
 
 function stopGeneration() {
@@ -769,45 +993,86 @@ async function continueDraft() {
   await runGeneration(lastGenerationCard.value, 'continue', currentFilePath.value)
 }
 
-async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, targetFile: string | null) {
+async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, targetFile: string | null, outputFile: string | null = null) {
   const projectId = projectStore.currentProject?.id
   if (!projectId || generating.value) return
+  const isCandidate = Boolean(outputFile && outputFile !== targetFile)
+  const candidateLabel = outputFile?.endsWith('.chat.md') ? '聊天改稿' : candidateActionText(action)
+  const sourcePath = targetFile || nextTargetFile.value || currentFilePath.value || ''
   generating.value = true
   const abortController = new AbortController()
   generationAbortController.value = abortController
   lastGenerationCard.value = card
   autoScrollDuringGeneration.value = true
-  let generatedFilePath = targetFile || nextTargetFile.value || currentFilePath.value || ''
+  let generatedFilePath = outputFile || sourcePath
+  let streamHeadingPrefix = ''
   const continueBaseContent = action === 'continue' && generatedFilePath ? (streamingBuffers.value[generatedFilePath] || content.value) : ''
-  pendingTargetLabel.value = formatChapterLabel(targetFile || nextTargetFile.value || currentFilePath.value || '')
-  qualitySummary.value = `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
+  pendingTargetLabel.value = formatChapterLabel(sourcePath)
+  setWorkStatus(
+    isCandidate ? `正在生成${candidateLabel}候选稿` : `正在写${pendingTargetLabel.value}`,
+    isCandidate ? '正在准备当前章节、用户要求和故事状态，候选稿不会覆盖原文。' : '正在准备前文、故事引擎、近期上下文和本节爽点卡。',
+  )
+  qualitySummary.value = isCandidate
+    ? `正在生成${candidateActionText(action)}候选稿，原文不会被覆盖。`
+    : `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
   try {
     await streamLiteNext(projectId, targetFile || nextTargetFile.value || currentFilePath.value || null, card, prefs, action, {
       onMeta: (meta) => {
         generatedFilePath = meta.file_path
         streamingFilePath.value = meta.file_path
-        streamingBuffers.value[meta.file_path] = action === 'continue' ? continueBaseContent : ''
+        const displayPath = meta.source_file || meta.file_path
+        setWorkStatus(
+          meta.is_candidate ? `正在生成${candidateLabel}候选稿` : `正在写${formatChapterLabel(displayPath)}`,
+          'AI 已开始响应，正文会流式出现在编辑器里。',
+        )
+        const headingPrefix = `# ${formatChapterLabel(displayPath)} ${card.title}\n\n`
+        streamHeadingPrefix = headingPrefix
+        const placeholder = action === 'continue'
+          ? continueBaseContent
+          : `${headingPrefix}AI 正在起笔，请稍等...`
+        streamingBuffers.value[meta.file_path] = action === 'continue' ? continueBaseContent : headingPrefix
         chapterStatus.value[meta.file_path] = 'blank'
         currentFilePath.value = meta.file_path
-        pendingTargetLabel.value = formatChapterLabel(meta.file_path)
-        content.value = action === 'continue' ? continueBaseContent : ''
+        pendingTargetLabel.value = formatChapterLabel(displayPath)
+        if (meta.is_candidate && meta.source_file) {
+          candidateDraft.value = {
+            sourcePath: meta.source_file,
+            path: meta.file_path,
+            action,
+            title: card.title,
+            content: placeholder,
+          }
+        }
+        content.value = placeholder
         dirty.value = false
         fileStore.openFile({ name: meta.file_path.split('/').pop() || '', path: meta.file_path, type: 'file' })
         editorStore.setCurrentFile(meta.file_path)
-        editorStore.loadContent(meta.file_path, content.value)
+        editorStore.loadContent(meta.file_path, placeholder)
         void scrollTextareaToBottom()
       },
       onStatus: (message) => {
+        if (message.includes('更新故事状态')) {
+          setWorkStatus('正在更新故事状态', '正在写入故事引擎、近期上下文和章节记忆，保证后续连续性。')
+        } else if (message.includes('审稿')) {
+          setWorkStatus('正在质量审稿', '正在检查逻辑、爽点兑现和连续性。')
+        }
         qualitySummary.value = message === 'AI 正在写正文...'
           ? `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
           : message
       },
       onDelta: (delta) => {
         if (!generatedFilePath) return
+        setWorkStatus(
+          isCandidate ? `正在生成${candidateLabel}候选稿` : `正在写${pendingTargetLabel.value}`,
+          'AI 正在输出正文，已生成内容会自动保留。',
+        )
         const currentBuffer = streamingBuffers.value[generatedFilePath] || ''
+        const safeDelta = action !== 'continue' && currentBuffer === streamHeadingPrefix
+          ? stripLeadingMarkdownHeading(delta)
+          : delta
         const nextContent = action === 'continue' && currentBuffer === continueBaseContent
-          ? appendDraftContent(currentBuffer, delta)
-          : currentBuffer + delta
+          ? appendDraftContent(currentBuffer, safeDelta)
+          : currentBuffer + safeDelta
         streamingBuffers.value[generatedFilePath] = nextContent
         editorStore.loadContent(generatedFilePath, nextContent)
         if (currentFilePath.value === generatedFilePath) {
@@ -821,6 +1086,9 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
       onReplace: (nextContent) => {
         if (!generatedFilePath) return
         streamingBuffers.value[generatedFilePath] = nextContent
+        if (candidateDraft.value?.path === generatedFilePath) {
+          candidateDraft.value.content = nextContent
+        }
         chapterStatus.value[generatedFilePath] = isBlankChapter(nextContent) ? 'blank' : 'done'
         editorStore.loadContent(generatedFilePath, nextContent)
         if (currentFilePath.value === generatedFilePath) {
@@ -829,8 +1097,15 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
         }
       },
       onDone: (result) => {
+        setWorkStatus(
+          isCandidate ? '候选稿已生成' : '章节已写入',
+          isCandidate ? '候选稿已保存，可以采用或放弃。' : '正文已经保存，正在准备后续爽点卡。',
+        )
         generatedFilePath = result.file_path
         streamingBuffers.value[result.file_path] = result.content
+        if (candidateDraft.value?.path === result.file_path) {
+          candidateDraft.value.content = result.content
+        }
         chapterStatus.value[result.file_path] = isBlankChapter(result.content) ? 'blank' : 'done'
         qualitySummary.value = result.quality_summary
         engineSummary.value = result.story_engine_summary
@@ -849,10 +1124,19 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
           void scrollTextareaToBottom()
         }
       },
-    }, { signal: abortController.signal })
+    }, { signal: abortController.signal }, outputFile)
+    generating.value = false
+    generationAbortController.value = null
+    streamingFilePath.value = ''
+    pendingTargetLabel.value = ''
     await fileStore.loadTree(projectId)
-    await refreshOptions(generatedFilePath || currentFilePath.value || null)
-    notification.success('章节已生成')
+    if (!isCandidate) {
+      setWorkStatus('正在刷新下一节方向', '正在根据最新正文生成下一节爽点卡。')
+      await refreshOptions(generatedFilePath || currentFilePath.value || null)
+      notification.success('章节已生成')
+    } else {
+      notification.success('候选稿已生成')
+    }
   } catch (e: any) {
     if (isAbortError(e)) {
       const draft = generatedFilePath ? (streamingBuffers.value[generatedFilePath] || '') : ''
@@ -872,6 +1156,7 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
     generationAbortController.value = null
     streamingFilePath.value = ''
     pendingTargetLabel.value = ''
+    if (!loadingOptions.value) clearWorkStatus()
   }
 }
 
@@ -943,6 +1228,60 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
   border: 1px solid rgba(201, 169, 110, .18);
   border-radius: 6px;
   background: rgba(201, 169, 110, .07);
+}
+
+.candidate-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 169, 110, .28);
+  border-radius: 7px;
+  background: rgba(201, 169, 110, .08);
+}
+
+.candidate-bar div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.candidate-bar strong {
+  color: var(--gold-primary);
+  font-size: 13px;
+}
+
+.candidate-bar span {
+  color: var(--text-muted-ink);
+  font-size: 12px;
+}
+
+.work-status {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(45, 138, 110, .24);
+  border-radius: 7px;
+  background: rgba(45, 138, 110, .08);
+}
+
+.work-status-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.work-status strong {
+  color: var(--jade-light);
+  font-size: 13px;
+}
+
+.work-status p {
+  margin: 0;
+  color: var(--text-muted-ink);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .sub,
@@ -1203,6 +1542,31 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
   line-height: 1.6;
 }
 
+.lite-chat-box {
+  display: grid;
+  gap: 10px;
+}
+
+.lite-chat-box textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 92px;
+  border: 1px solid var(--border-ink);
+  border-radius: 6px;
+  background: #111520;
+  color: var(--text-primary);
+  padding: 9px;
+  outline: none;
+  line-height: 1.6;
+}
+
+.chat-revision-note {
+  margin: 0;
+  color: var(--text-muted-ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -1259,9 +1623,41 @@ label textarea {
   border-color: var(--gold-primary);
 }
 
+.primary-btn.compact {
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
 .ghost-btn {
   background: transparent;
   color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ghost-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ghost-btn.loading {
+  color: var(--gold-primary);
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(201, 169, 110, 0.3);
+  border-top-color: var(--gold-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .danger-btn {

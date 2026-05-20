@@ -830,10 +830,10 @@ async def generate_next_options(
         raw = await _complete_with_deadline(
             svc,
             [{"role": "user", "content": prompt}],
-            deadline=18,
+            deadline=20,
             temperature=0.85,
             max_tokens=900,
-            timeout=15,
+            timeout=20,
         )
         parsed_cards = _parse_option_cards(raw, next_label)
         if len(parsed_cards) == 3:
@@ -1052,11 +1052,15 @@ async def write_lite_next_stream(
             target_file = req.target_file
         else:
             target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
+        output_file = req.output_file or target_file
+        is_candidate = output_file != target_file
 
         vol, ch, _sec = _path_parts(target_file)
         await _ensure_chapter(project_dir, vol, ch, req.selected_card.title)
         yield _lite_stream_event("meta", {
-            "file_path": target_file,
+            "file_path": output_file,
+            "source_file": target_file,
+            "is_candidate": is_candidate,
             "label": _section_label(target_file),
         })
 
@@ -1130,8 +1134,8 @@ async def write_lite_next_stream(
                 async for chunk in _stream_llm_content(
                     svc,
                     [{"role": "user", "content": prompt}],
-                    first_token_timeout=90,
-                    token_timeout=45,
+                    first_token_timeout=8,
+                    token_timeout=12,
                     temperature=0.75,
                     max_tokens=6000,
                     timeout=60,
@@ -1153,68 +1157,38 @@ async def write_lite_next_stream(
             yield _lite_stream_event("replace", {"content": content.strip()})
 
             content = _ensure_section_heading(target_file, req.selected_card.title, content.strip())
-            await file_service.write_file(f"{req.project_id}/{target_file}", content)
+            await file_service.write_file(f"{req.project_id}/{output_file}", content)
 
-            # 更新章节记忆和待回收伏笔
-            await _update_ch_meta(file_service, req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
+            if not is_candidate:
+                # 更新章节记忆和待回收伏笔
+                await _update_ch_meta(file_service, req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
 
-            quality_summary = "模型生成超时，已先写入临时草稿；可点“重写这一章”补成正式正文。" if used_fallback else ""
-            if not used_fallback:
-                yield _lite_stream_event("status", {"message": "正文已写入，正在审稿..."})
+            quality_summary = "候选稿已生成，确认满意后可采用替换原文。" if is_candidate else "模型生成超时，已先写入临时草稿；可点“重写这一章”补成正式正文。" if used_fallback else "正文已写入，审稿将在后台完成。"
+
+            async def _review_in_background() -> None:
                 try:
                     quality = QualityService(settings)
-                    review = await asyncio.wait_for(
-                        quality.perform_review(req.project_id, target_file, req.selected_card.title),
-                        timeout=75,
-                    )
+                    review = await quality.perform_review(req.project_id, target_file, req.selected_card.title)
                     quality.save_review_result(req.project_id, target_file, str(uuid.uuid4())[:8], review)
-                    quality_summary = _quality_one_line(review.summary, req.action)
-                    if _needs_quality_repair(review):
-                        yield _lite_stream_event("status", {"message": "审稿发现问题，正在自动补强..."})
-                        repair_goal = "\n".join([
-                            "请根据质量审查意见重写并补强当前章节，保留原本选卡方向。",
-                            f"质量摘要：{review.summary}",
-                            "主要建议：",
-                            "\n".join(f"- {item}" for item in review.suggestions[:5]) or "- 补强逻辑、动机和爽点兑现。",
-                            "原爽点卡：",
-                            goal,
-                        ])
-                        repair_prompt = await prompt_engine.render("generate/continuation", {
-                            "current_content": content,
-                            "chapter_memory": chapter_memory,
-                            "continuation_goal": repair_goal,
-                            "story_state": story_state,
-                            "style_guide": style_guide,
-                            "recent_context": recent_context,
-                            "pending_foreshadowing": pending_foreshadowing,
-                        })
-                        repaired = await _complete_with_deadline(
-                            svc,
-                            [{"role": "user", "content": repair_prompt}],
-                            deadline=75,
-                            temperature=0.65,
-                            max_tokens=6000,
-                            timeout=60,
-                        )
-                        if repaired:
-                            content = _ensure_section_heading(target_file, req.selected_card.title, repaired)
-                            await file_service.write_file(f"{req.project_id}/{target_file}", content)
-                            quality_summary = "已根据审稿意见自动补强逻辑、动机和爽点。"
-                            yield _lite_stream_event("replace", {"content": content})
                 except Exception as e:
-                    logger.warning("爽文模式流式质量审查失败: %s", e)
-                    quality_summary = _quality_one_line("", req.action)
+                    logger.warning("爽文模式后台质量审查失败: %s", e)
 
-            yield _lite_stream_event("status", {"message": "正在更新故事状态..."})
-            updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
-            await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
-            await file_service.write_file(
-                f"{req.project_id}/recent-context.md",
-                recent_context.rstrip() + f"\n\n- {Path(target_file).parent.name}：{req.selected_card.title}，{req.selected_card.payoff}",
-                )
+            if not used_fallback and not is_candidate:
+                asyncio.create_task(_review_in_background())
+
+            if is_candidate:
+                updated_engine = story_engine
+            else:
+                yield _lite_stream_event("status", {"message": "正在更新故事状态..."})
+                updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
+                await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
+                await file_service.write_file(
+                    f"{req.project_id}/recent-context.md",
+                    recent_context.rstrip() + f"\n\n- {Path(target_file).parent.name}：{req.selected_card.title}，{req.selected_card.payoff}",
+                    )
 
             chapter_plan_result = None
-            if _sec == SECTIONS_PER_CHAPTER:
+            if not is_candidate and _sec == SECTIONS_PER_CHAPTER:
                 chapter_plan_result = await _generate_chapter_plan(
                     file_service=file_service,
                     llm_svc=svc,
@@ -1229,7 +1203,7 @@ async def write_lite_next_stream(
                 )
 
             yield _lite_stream_event("done", {
-                "file_path": target_file,
+                "file_path": output_file,
                 "content": content,
                 "quality_summary": quality_summary,
                 "story_engine_summary": _summarize_story_engine(updated_engine),

@@ -1,5 +1,5 @@
 # 墨韵 (MoYun) Vue 3 + Vite 前端重构方案 v2.0
-# 严格对齐 D:/newmoyun/docs/原型生成说明.md 所有模块
+# 严格对齐 D:/newmoyun/docs/history/原型生成说明.md 所有模块
 
 > 日期: 2026-05-11
 > 版本: v2.0（完整覆盖原型生成说明.md）
@@ -886,7 +886,7 @@ export function renderMarkdown(content: string): string {
 | 文件 | 操作 | 原因 |
 |------|------|------|
 | `prototype.html` | 保留，不删除 | 作为备份参考 |
-| `docs/原型生成说明.md` | 无需修改 | 本文档即依据 |
+| `docs/history/原型生成说明.md` | 无需修改 | 本文档即依据 |
 | `docs/技术选型与依赖.md` | 无需修改 | 已遵循 |
 | `backend/main.py` | 可能需微调 | CORS 允许前端 dev server |
 

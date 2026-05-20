@@ -50,10 +50,11 @@ async def lifespan(app: FastAPI):
 
     # 初始化文件监听器（仅在项目目录存在时）
     watcher = None
-    if settings.projects_path.exists():
-        watcher = FileWatcher(settings.projects_path, event_bus)
-        await watcher.start()  # 异步启动
-        app.state.watcher = watcher
+    # if settings.projects_path.exists():
+    #     watcher = FileWatcher(settings.projects_path, event_bus)
+    #     await watcher.start()  # 异步启动
+    #     app.state.watcher = watcher
+    logger.info("文件监听器已禁用（测试模式）")
 
     # 初始化任务队列（带持久化）和工作线程
     persist_dir = settings.workspace_path / ".task-queue"

@@ -80,6 +80,7 @@ class LiteNextOptionsResponse(BaseModel):
 class LiteWriteNextRequest(BaseModel):
     project_id: str
     target_file: str | None = Field(default=None, description="目标章节文件")
+    output_file: str | None = Field(default=None, description="可选输出文件，用于候选稿")
     selected_card: LiteNextOptionCard
     prefs: LiteWritingPrefs = Field(default_factory=LiteWritingPrefs)
     action: Literal["write", "rewrite", "more_exciting", "more_reasonable", "continue"] = "write"

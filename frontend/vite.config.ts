@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig(({ mode }) => {
   // 从 .env 加载后端地址，默认 8000
   const env = loadEnv(mode, process.cwd(), 'VITE_')
-  const apiTarget = env.VITE_API_TARGET || 'http://127.0.0.1:8001'
+  const apiTarget = env.VITE_API_TARGET || 'http://127.0.0.1:8000'
 
   return {
     plugins: [vue()],
@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiTarget,
           changeOrigin: true,
+          logLevel: 'debug',
         }
       }
     },
