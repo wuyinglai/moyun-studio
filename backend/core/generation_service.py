@@ -401,7 +401,8 @@ class GenerationService:
                     logger.info("批量场景生成直接写入: %s", tgt["target_rel_path"])
 
                 word_count = len(generated.replace(" ", ""))
-                item.status = "success"
+                if item.status != "candidate":
+                    item.status = "success"
                 item.word_count = word_count
                 succeeded += 1
 

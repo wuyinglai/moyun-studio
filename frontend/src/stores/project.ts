@@ -162,9 +162,9 @@ function normalizeProject(p: Record<string, unknown>): Project {
     total_words: (p.total_words as number) || 0,
     created_at: (p.created_at as string) || '',
     updated_at: (p.updated_at as string) || '',
-    scene_target_chars: (p.scene_target_chars as number) || undefined,
-    scenes_per_chapter: (p.scenes_per_chapter as number) || undefined,
-    chapters_per_volume: (p.chapters_per_volume as number) || undefined,
-    unit_label: (p.unit_label as string) || undefined,
+    scene_target_chars: (p.scene_target_chars as number) || 800,
+    scenes_per_chapter: (p.scenes_per_chapter as number) || 5,
+    chapters_per_volume: (p.chapters_per_volume as number) || 12,
+    unit_label: (p.unit_label as string) || 'scene',
   }
 }

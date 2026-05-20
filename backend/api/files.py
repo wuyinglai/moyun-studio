@@ -62,6 +62,21 @@ def _get_file_service(settings: Settings = Depends(get_settings)) -> FileService
     return FileService(settings.projects_path)
 
 
+def _project_collection_root(settings: Settings, project_id: str):
+    legacy_project_dir = settings.workspace_path / project_id
+    if legacy_project_dir.exists():
+        return settings.workspace_path
+    return settings.projects_path
+
+
+def _project_dir(settings: Settings, project_id: str):
+    return _project_collection_root(settings, project_id) / project_id
+
+
+def _project_file_service(settings: Settings, project_id: str) -> FileService:
+    return FileService(_project_collection_root(settings, project_id))
+
+
 def _build_tree_nodes(raw: dict) -> list[TreeNode]:
     """递归把 FileService 返回的 dict 树转为 TreeNode 列表"""
     nodes = []
@@ -126,10 +141,16 @@ async def write_file(
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
         file_size = len(req.content.encode("utf-8")) if req.content else 0
+        # 读取写入后的 mtime
+        try:
+            _, _, mtime = await fs.read_file(full_path)
+        except Exception:
+            mtime = None
         await event_bus.publish("file-updated", {
             "path": f"{project_id}/{req.path}",
             "project_id": project_id,
             "size": file_size,
+            "mtime": mtime,
         })
 
     return ApiResponse.ok(message="文件已保存")
