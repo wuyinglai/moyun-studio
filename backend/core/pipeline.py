@@ -37,6 +37,7 @@ from backend.core.llm import LLMService
 from backend.core.prompt_versioning import archive_prompt
 from backend.schemas.candidate import CandidateAction
 from backend.schemas.pipeline import PipelineDef
+from backend.application.memory_service import MemoryService
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ class PipelineRunner:
         self.system_prompts_path = system_prompts_path
         self.llm_service = llm_service
         self.file_service = file_service
+        self.memory_service = MemoryService(file_service)
         self.source = source
         # 同一章内 context 步骤输出缓存，key=章目录路径 → context 文本
         self._context_cache: dict[str, str] = {}
@@ -620,35 +622,9 @@ class PipelineRunner:
         })}
 
     async def _update_after_generation(self, project_id: str, target_file: str, content: str, original_content: str = "") -> None:
-        # — 更新 recent-context.md —
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-            file_name = target_file.split("/")[-1]
-
-            # 生成结构化摘要
-            structured_summary = self._generate_structured_summary(target_file, content)
-
-            entry = f"\n## {timestamp} - {file_name}\n{structured_summary}\n"
-
-            try:
-                existing = _file_content(
-                    await self.file_service.read_file(f"{project_id}/recent-context.md")
-                )
-                blocks = [b for b in existing.split("\n## ") if b.strip()]
-                # 使用配置的场景记忆数量限制（默认 15）
-                settings = get_settings()
-                max_scenes = settings.recent_context_scene_limit
-                blocks = blocks[-max_scenes:]
-                new_content = "\n## ".join(blocks).strip()
-                if not new_content.startswith("# "):
-                    new_content = "# 近期上下文\n" + new_content
-                new_content += entry
-            except Exception:
-                new_content = f"# 近期上下文\n{entry}"
-
-            await self.file_service.write_file(f"{project_id}/recent-context.md", new_content, None)
-        except Exception as e:
-            logger.warning("更新 recent-context.md 失败: %s", e)
+        # — 更新 recent-context.md（委托 MemoryService）—
+        structured_summary = self.memory_service.build_scene_memory_prompt_output(target_file, content)
+        await self.memory_service.append_scene_memory(project_id, target_file, structured_summary)
 
         # — 创建修改日志（仅当内容有变化且目标文件是章节文件） —
         if original_content and content != original_content and "/sec-" in target_file:
@@ -685,76 +661,6 @@ class PipelineRunner:
                     await self.file_service.write_file(log_path, json.dumps(log_entry, ensure_ascii=False, indent=2), None)
             except Exception as e:
                 logger.warning("创建修改日志失败: %s", e)
-
-    def _generate_structured_summary(self, target_file: str, content: str) -> str:
-        """生成结构化的上下文摘要"""
-        lines = content.strip().split('\n')[:20]
-        text_preview = '\n'.join(lines)
-
-        # 提取关键信息
-        chars = self._extract_characters(content)
-        locations = self._extract_locations(content)
-
-        summary = []
-
-        # 场景摘要
-        summary.append("【场景摘要】")
-        summary.append(text_preview[:200].strip() + "..." if len(text_preview) > 200 else text_preview)
-
-        # 人物
-        if chars:
-            summary.append("\n【人物】")
-            summary.append(", ".join(chars[:5]))
-
-        # 地点
-        if locations:
-            summary.append("\n【地点】")
-            summary.append(", ".join(locations[:3]))
-
-        # 下一场承接点（取最后几句）
-        last_lines = content.strip().split('\n')[-3:]
-        last_text = '\n'.join(last_lines).strip()
-        if last_text:
-            summary.append("\n【承接点】")
-            summary.append(last_text[:100].strip())
-
-        return '\n'.join(summary)
-
-    def _extract_characters(self, content: str) -> list[str]:
-        """简单提取人物名称（基于中文姓名模式和常见角色特征）"""
-        import re
-        chars = []
-
-        # 匹配中文姓名（2-4个汉字）
-        name_pattern = re.compile(r'([\u4e00-\u9fa5]{2,4})(?=[：:，,。！!？?、])')
-        matches = name_pattern.findall(content)
-        chars.extend(matches)
-
-        # 匹配带称呼的人名
-        title_pattern = re.compile(r'(先生|小姐|夫人|公子|大侠|掌门|帮主|陛下|殿下|将军|丞相)\s*([\u4e00-\u9fa5]{1,4})')
-        for match in title_pattern.findall(content):
-            chars.append(f"{match[0]}{match[1]}")
-
-        # 去重并返回
-        return list(set(chars))
-
-    def _extract_locations(self, content: str) -> list[str]:
-        """简单提取地点名称"""
-        import re
-        locations = []
-
-        # 匹配常见地点后缀
-        loc_pattern = re.compile(r'([\u4e00-\u9fa5]{2,6})(城|镇|村|庄|府|殿|宫|楼|阁|山|谷|湖|河|海|路|街|巷|院|馆|寺|庙|庵|观)')
-        matches = loc_pattern.findall(content)
-        for match in matches:
-            locations.append(f"{match[0]}{match[1]}")
-
-        # 匹配方位词
-        dir_pattern = re.compile(r'(东|南|西|北|中|前|后|左|右|上|下)([\u4e00-\u9fa5]{1,4})(宫|殿|厅|房|室|门|院)')
-        for match in dir_pattern.findall(content):
-            locations.append(f"{match[0]}{match[1]}{match[2]}")
-
-        return list(set(locations))
 
     async def _build_context_cache_key(self, project_id: str, chapter_path: str) -> str:
         """构建 context 缓存键，包含相关文件的修改时间戳"""
