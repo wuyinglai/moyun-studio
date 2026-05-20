@@ -8,12 +8,12 @@
 5. 并发控制（running_count）
 """
 
-import asyncio
-import pytest
 from unittest.mock import AsyncMock
 
-from backend.core.task_queue import TaskQueue, TaskExecutor, run_task_worker
+import pytest
+
 from backend.core.exceptions import ContextLengthError
+from backend.core.task_queue import TaskExecutor, TaskQueue
 
 
 class TestTaskQueueBasic:

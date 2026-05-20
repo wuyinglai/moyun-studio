@@ -12,8 +12,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from backend.config import Settings, get_settings
-from backend.core.trash import TrashService
 from backend.core.exceptions import ResourceNotFoundError
+from backend.core.trash import TrashService
 from backend.schemas.common import ApiResponse
 
 logger = logging.getLogger(__name__)

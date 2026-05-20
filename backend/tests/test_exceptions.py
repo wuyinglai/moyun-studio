@@ -10,31 +10,29 @@
 import pytest
 
 from backend.core.exceptions import (
+    ConfigError,
+    ContextLengthError,
+    DirectoryNotFoundError,
+    LLMAPIError,
+    LLMConfigError,
+    LLMError,
     MoyunException,
-    ProjectError,
-    ProjectNotFoundError,
-    ProjectAlreadyExistsError,
     MoyunFileError,
     MoyunFileNotFoundError,
-    DirectoryNotFoundError,
+    ProjectAlreadyExistsError,
+    ProjectError,
+    ProjectNotFoundError,
+    RateLimitError,
+    ResourceNotFoundError,
+    TaskCancelledError,
+    TaskError,
+    TaskNotFoundError,
     TemplateError,
     TemplateNotFoundError,
     TemplateRenderError,
-    LLMError,
-    LLMConfigError,
-    LLMAPIError,
-    TaskError,
-    TaskNotFoundError,
-    TaskCancelledError,
     ValidationError,
-    ConfigError,
-    ContextLengthError,
-    ResourceNotFoundError,
-    RateLimitError,
 )
-
 from backend.main import _moyun_to_http_status
-
 
 # ─── 基类测试 ────────────────────────────────────────────
 

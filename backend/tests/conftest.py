@@ -8,20 +8,18 @@
 5. Mock LLMService / Mock EventBus
 """
 
-import json
 import asyncio
-import pytest
+import json
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
+import pytest
 
 from backend.config import Settings, get_settings
-from backend.core.file_ops import FileService
 from backend.core.event_bus import EventBus
+from backend.core.file_ops import FileService
 from backend.core.prompt_engine import PromptEngine
-
 
 # ─── 覆盖配置（避免依赖真实 .env）─────────────────────────
 

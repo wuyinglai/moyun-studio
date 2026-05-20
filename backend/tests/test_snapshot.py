@@ -10,11 +10,12 @@
 """
 
 import json
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
+import pytest
+
+from backend.core.exceptions import MoyunFileNotFoundError, ResourceNotFoundError
 from backend.core.snapshot import Snapshot, SnapshotManager
-from backend.core.exceptions import ResourceNotFoundError, MoyunFileNotFoundError
 
 
 class TestSnapshotData:

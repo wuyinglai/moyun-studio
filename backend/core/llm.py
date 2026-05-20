@@ -4,17 +4,18 @@
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
 import logging
-from typing import Any, AsyncGenerator, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import litellm
-import tiktoken
 from tenacity import retry, stop_after_attempt, wait_exponential
+import tiktoken
 
 from backend.core.exceptions import LLMError
 
 if TYPE_CHECKING:
-    from backend.core.exceptions import LLMConfigError
+    pass
 
 
 def load_llm_config_from_workspace(settings) -> dict:
@@ -192,12 +193,12 @@ class LLMConfig:
         """根据模型名称推断上下文窗口大小"""
         # 移除 provider 前缀
         model_name = model.split("/")[-1].lower()
-        
+
         # 精确匹配
         for key, window in self.MODEL_CONTEXT_WINDOW.items():
             if key.lower() in model_name or model_name in key.lower():
                 return window
-        
+
         # 按参数推断
         if "7b" in model_name:
             return 8192
@@ -207,7 +208,7 @@ class LLMConfig:
             return 32768
         elif "72b" in model_name or "70b" in model_name:
             return 64000
-        
+
         # 默认返回 GPT-4 级别
         return 8192
 
@@ -331,7 +332,7 @@ class LLMService:
                         yield response.choices[0].message.content
 
             except Exception as e:
-                raise LLMError(message=f"LLM调用失败: {str(e)}")
+                raise LLMError(message=f"LLM调用失败: {e!s}")
 
     async def _call_with_retry(self, **kwargs) -> Any:
         """带重试的调用"""

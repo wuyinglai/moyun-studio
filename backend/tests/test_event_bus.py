@@ -11,6 +11,7 @@
 """
 
 import asyncio
+
 import pytest
 
 from backend.core.event_bus import EventBus, EventTypes

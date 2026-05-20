@@ -6,14 +6,12 @@
 - 项目创建/删除
 """
 
-import asyncio
+from datetime import datetime, timezone
 import json
 import logging
+from pathlib import Path
 import re
 import shutil
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
 
 from backend.config import Settings
 from backend.core.exceptions import ProjectError, ProjectNotFoundError
@@ -187,7 +185,6 @@ class ProjectService:
     def create_project_meta(self, project_id: str, name: str, req) -> dict:
         """生成并写入项目元数据"""
         now = datetime.now(timezone.utc).isoformat()
-        project_dir = self._project_dir(project_id)
 
         # 场景级参数（sec = 单场景）
         scene_target_chars = getattr(req, 'scene_target_chars', 800)
@@ -238,4 +235,4 @@ class ProjectService:
         try:
             shutil.rmtree(project_dir)
         except Exception as e:
-            raise ProjectError(f"删除项目失败: {str(e)}")
+            raise ProjectError(f"删除项目失败: {e!s}")

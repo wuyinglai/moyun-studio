@@ -197,10 +197,10 @@ async def compare_texts_side_by_side(
 
     # 统计
     stats = {
-        "unchanged": sum(1 for l in side_by_side if l["change_type"] == "unchanged"),
-        "added": sum(1 for l in side_by_side if l["change_type"] == "added"),
-        "removed": sum(1 for l in side_by_side if l["change_type"] == "removed"),
-        "modified": sum(1 for l in side_by_side if l["change_type"] == "modified"),
+        "unchanged": sum(1 for item in side_by_side if item["change_type"] == "unchanged"),
+        "added": sum(1 for item in side_by_side if item["change_type"] == "added"),
+        "removed": sum(1 for item in side_by_side if item["change_type"] == "removed"),
+        "modified": sum(1 for item in side_by_side if item["change_type"] == "modified"),
     }
 
     logger.debug(

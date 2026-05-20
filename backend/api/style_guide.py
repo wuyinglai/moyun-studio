@@ -5,9 +5,9 @@
   POST /api/style-guide/{project_id}  保存文风指南内容
 """
 
+from datetime import datetime
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
@@ -15,7 +15,6 @@ from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError
-from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.schemas.common import ApiResponse
 

@@ -1,7 +1,6 @@
 """墨韵 - 项目相关 Schemas"""
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,18 +21,18 @@ class ProjectCreateRequest(BaseModel):
 
 
 class ProjectUpdateRequest(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=100, description="项目名称")
-    genre: Optional[str] = Field(default=None, description="题材")
-    theme: Optional[str] = Field(default=None, description="主题")
-    tone: Optional[str] = Field(default=None, description="基调")
-    background: Optional[str] = Field(default=None, description="故事背景")
-    writing_style: Optional[str] = Field(default=None, description="写作风格")
-    target_word_count: Optional[int] = Field(default=None, ge=10000, description="目标字数")
-    author: Optional[str] = Field(default=None, description="作者名")
+    name: str | None = Field(default=None, min_length=1, max_length=100, description="项目名称")
+    genre: str | None = Field(default=None, description="题材")
+    theme: str | None = Field(default=None, description="主题")
+    tone: str | None = Field(default=None, description="基调")
+    background: str | None = Field(default=None, description="故事背景")
+    writing_style: str | None = Field(default=None, description="写作风格")
+    target_word_count: int | None = Field(default=None, ge=10000, description="目标字数")
+    author: str | None = Field(default=None, description="作者名")
     # 场景级配置
-    scene_target_chars: Optional[int] = Field(default=None, description="单场景目标字数")
-    scenes_per_chapter: Optional[int] = Field(default=None, description="每章节场景数")
-    chapters_per_volume: Optional[int] = Field(default=None, description="每卷章节数")
+    scene_target_chars: int | None = Field(default=None, description="单场景目标字数")
+    scenes_per_chapter: int | None = Field(default=None, description="每章节场景数")
+    chapters_per_volume: int | None = Field(default=None, description="每卷章节数")
 
 
 class ProjectInfo(BaseModel):

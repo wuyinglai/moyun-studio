@@ -9,17 +9,21 @@
 """
 
 import asyncio
+from datetime import datetime, timezone
 import json
 import logging
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
+import uuid
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError, ValidationError
+from backend.core.exceptions import (
+    ProjectNotFoundError,
+    ResourceNotFoundError,
+    ValidationError,
+)
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.prompt_engine import PromptEngine
@@ -104,7 +108,6 @@ def _type_dir(project_dir: Path, material_type: str) -> Path:
 
 
 def _material_file(project_dir: Path, material_type: str, item_id: str) -> Path:
-    ext = "json" if material_type not in ["summaries", "worldbuilding"] else ("md" if material_type == "worldbuilding" else "json")
     if material_type == "summaries":
         return _materials_dir(project_dir) / material_type / f"{item_id}.md"
     elif material_type == "worldbuilding":

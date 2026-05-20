@@ -8,28 +8,26 @@
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
+from datetime import datetime
 import json
 import logging
-import os
-import re
-import uuid
-from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator
+import re
+from typing import Any
+import uuid
 
 import yaml
 
-from backend.core.pipeline import PipelineRunner, PipelineError
-from backend.core.trash import TrashService
 from backend.core.candidate_service import CandidateService
-from backend.core.node_types import build_node_info, node_type_label, executor_label
+from backend.core.node_types import build_node_info
+from backend.core.pipeline import PipelineError, PipelineRunner
+from backend.core.trash import TrashService
 from backend.schemas.candidate import CandidateAction
 from backend.schemas.workflow import (
     WorkflowDef,
-    WorkflowStepDef,
-    WorkflowRunStatus,
-    StepStatus,
     WorkflowSaveRequest,
+    WorkflowStepDef,
 )
 
 logger = logging.getLogger(__name__)

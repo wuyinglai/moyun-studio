@@ -1,7 +1,7 @@
 """墨韵 - 章节模型"""
 
 from datetime import datetime
-from typing import Optional
+
 from pydantic import BaseModel
 
 

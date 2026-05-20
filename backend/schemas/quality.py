@@ -1,6 +1,5 @@
 """墨韵 - 质量审查 Schema"""
 
-from typing import Any
 
 from pydantic import BaseModel, Field
 

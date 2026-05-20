@@ -11,9 +11,9 @@
 8. get_template_path
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock
+
+import pytest
 
 from backend.core.prompt_engine import PromptEngine
 

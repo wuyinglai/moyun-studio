@@ -4,8 +4,8 @@
 配置来源优先级：环境变量 > .env 文件 > 默认值
 """
 
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -120,11 +120,6 @@ class Settings(BaseSettings):
     @property
     def templates_path(self) -> Path:
         return self.workspace_path / self.templates_subdir
-
-    @field_validator("workspace_path", mode="before")
-    @classmethod
-    def resolve_workspace(cls, v: str | Path) -> Path:
-        return Path(v).resolve()
 
 
 @lru_cache(maxsize=1)

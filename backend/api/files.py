@@ -10,7 +10,6 @@
 """
 
 import logging
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
@@ -19,7 +18,12 @@ from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError
 from backend.core.file_ops import FileService
 from backend.schemas.common import ApiResponse
-from backend.schemas.file import FileReadResponse, FileTreeResponse, FileWriteRequest, TreeNode
+from backend.schemas.file import (
+    FileReadResponse,
+    FileTreeResponse,
+    FileWriteRequest,
+    TreeNode,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["files"])

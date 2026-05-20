@@ -11,7 +11,7 @@
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -41,16 +41,16 @@ class CandidateInfo(BaseModel):
     action: CandidateAction = Field(..., description="动作类型")
     status: CandidateStatus = Field(default=CandidateStatus.PENDING, description="状态")
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
-    adopted_at: Optional[datetime] = Field(None, description="采用时间")
+    adopted_at: datetime | None = Field(None, description="采用时间")
     word_count: int = Field(default=0, description="字数")
-    summary: Optional[str] = Field(None, description="摘要")
-    workflow_run_id: Optional[str] = Field(None, description="关联的工作流运行ID")
-    
+    summary: str | None = Field(None, description="摘要")
+    workflow_run_id: str | None = Field(None, description="关联的工作流运行ID")
+
     @property
     def filename(self) -> str:
         """获取候选稿文件名"""
         return Path(self.candidate_path).name
-    
+
     @property
     def source_filename(self) -> str:
         """获取源文件名"""
@@ -63,7 +63,7 @@ class CreateCandidateRequest(BaseModel):
     source_path: str = Field(..., description="源文件路径")
     action: CandidateAction = Field(..., description="动作类型")
     content: str = Field(..., description="候选稿内容")
-    workflow_run_id: Optional[str] = Field(None, description="关联的工作流运行ID")
+    workflow_run_id: str | None = Field(None, description="关联的工作流运行ID")
 
 
 class AdoptCandidateRequest(BaseModel):

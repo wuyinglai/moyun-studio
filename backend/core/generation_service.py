@@ -7,15 +7,15 @@
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
 import json
 import logging
 from pathlib import Path
-from typing import AsyncGenerator
 
 from backend.config import Settings
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
-from backend.core.pipeline import PipelineRunner, PipelineError
+from backend.core.pipeline import PipelineError, PipelineRunner
 from backend.schemas.llm import BatchGenerateItem, BatchGenerateResponse
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class GenerationService:
                 prompt_tokens = len(enc.encode(prompt_text))
                 max_prompt_tokens = svc.config.max_prompt_tokens
                 context_window = svc.config.context_window
-                
+
                 if prompt_tokens > max_prompt_tokens:
                     warning_msg = f"Prompt 过长（约 {prompt_tokens} tokens），超出模型建议限制 {max_prompt_tokens} tokens"
                     if prompt_tokens > context_window:
@@ -169,11 +169,14 @@ class GenerationService:
 
             if generated_text and not (stop_event and stop_event.is_set()):
                 # 安全策略：优先使用候选稿机制，避免直接覆盖
-                from backend.core.candidate_service import CandidateService, CandidateAction
-                
+                from backend.core.candidate_service import (
+                    CandidateAction,
+                    CandidateService,
+                )
+
                 # 检查目标文件是否有内容
                 target_exists = content and len(content.strip()) > 0
-                
+
                 if mode == "rewrite":
                     # rewrite 模式：必须生成候选稿
                     try:
@@ -366,7 +369,10 @@ class GenerationService:
                 if target_exists:
                     # 目标文件已有内容：生成候选稿
                     try:
-                        from backend.core.candidate_service import CandidateService, CandidateAction
+                        from backend.core.candidate_service import (
+                            CandidateAction,
+                            CandidateService,
+                        )
                         candidate_svc = CandidateService(self.file_service)
                         candidate = await candidate_svc.create_candidate(
                             project_id=project_id,

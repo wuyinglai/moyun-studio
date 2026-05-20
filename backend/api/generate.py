@@ -8,24 +8,24 @@
   GET  /api/tasks            获取任务队列状态
 """
 
+from collections.abc import AsyncGenerator
 import json
 import logging
-from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
 from backend.config import Settings, get_settings
+from backend.core.file_ops import FileService
 from backend.core.generation_service import GenerationService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
-from backend.core.file_ops import FileService
-from backend.core.pipeline import PipelineRunner, PipelineError
+from backend.core.pipeline import PipelineError, PipelineRunner
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
-    GenerateRequest,
-    ChatRequest,
     BatchGenerateRequest,
     BatchGenerateResponse,
+    ChatRequest,
+    GenerateRequest,
 )
 
 logger = logging.getLogger(__name__)

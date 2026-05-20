@@ -12,18 +12,18 @@
 """
 
 import json
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from backend.core.exceptions import LLMError
 from backend.core.llm import (
     LLMConfig,
     LLMService,
-    normalize_model_for_provider,
     build_litellm_kwargs,
     load_llm_config_from_workspace,
+    normalize_model_for_provider,
 )
-from backend.core.exceptions import LLMError
 
 
 class TestLLMConfig:

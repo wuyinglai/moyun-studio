@@ -11,10 +11,9 @@
 8. temperature 范围约束
 """
 
-import os
-import pytest
 from pathlib import Path
-from unittest.mock import patch
+
+import pytest
 
 from backend.config import Settings, get_settings
 

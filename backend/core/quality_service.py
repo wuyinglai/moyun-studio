@@ -5,10 +5,9 @@
 - 审查结果持久化
 """
 
+from datetime import datetime, timezone
 import json
 import logging
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
 from backend.config import Settings

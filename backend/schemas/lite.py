@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 Genre = Literal["玄幻", "武侠", "言情", "都市", "仙侠"]
 
 

@@ -1,9 +1,9 @@
 """墨韵 - FastAPI 应用入口"""
 
 import asyncio
+from contextlib import asynccontextmanager
 import logging
 import os
-from contextlib import asynccontextmanager
 
 # 仅当明确启用时禁用代理检测（解决 Windows 下 aiohttp/httpx 的 SSL 连接问题）
 if os.environ.get("MOYUN_DISABLE_PROXY_DETECTION", "").lower() in ("1", "true", "yes"):
@@ -14,14 +14,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.api.sse import sse_manager
 from backend.config import get_settings
 from backend.core.event_bus import EventBus
 from backend.core.exceptions import MoyunException
-from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.file_ops import FileService
+from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.task_queue import TaskQueue, run_task_worker
-from backend.api.sse import sse_manager
-from backend.core.watcher import FileWatcher
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +108,7 @@ async def lifespan(app: FastAPI):
 async def _bridge_events_to_sse(event_bus: EventBus, sse_manager) -> None:
     """将EventBus事件桥接到SSE"""
     _, queue = event_bus.subscribe()
-    
+
     try:
         while True:
             try:
@@ -185,32 +184,32 @@ def create_app() -> FastAPI:
 
     # ─── 注册路由 ─────────────────────────────────────────────────
     from backend.api import (
-        projects,
-        wizard,
-        files,
-        llm,
-        generate,
-        prompts,
-        style_guide,
-        story_state,
-        recent_context,
-        feedback,
-        revision_log,
-        tokens,
-        compare,
         backup,
-        characters,
-        materials,
-        sse,
-        tasks,
-        quality,
-        pipeline,
-        snapshots,
-        config,
-        workflows,
-        trash,
-        lite,
         candidates,
+        characters,
+        compare,
+        config,
+        feedback,
+        files,
+        generate,
+        lite,
+        llm,
+        materials,
+        pipeline,
+        projects,
+        prompts,
+        quality,
+        recent_context,
+        revision_log,
+        snapshots,
+        sse,
+        story_state,
+        style_guide,
+        tasks,
+        tokens,
+        trash,
+        wizard,
+        workflows,
     )
 
     app.include_router(projects.router, prefix="/api")

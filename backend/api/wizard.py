@@ -6,15 +6,15 @@
   POST /api/wizard/{project_id}/confirm-outline  确认大纲
 """
 
+from datetime import datetime, timezone
 import json
 import logging
 import math
 import re
 import shutil
-from pathlib import Path
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
+
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError
 from backend.core.llm import (
@@ -22,14 +22,13 @@ from backend.core.llm import (
     load_llm_config_from_workspace,
 )
 from backend.core.project_service import ProjectService
-from backend.core.prompt_engine import PromptEngine
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     BookIdeaRequest,
     BookIdeaResponse,
+    ConfirmOutlineRequest,
     GenerateOutlineRequest,
     OutlineResponse,
-    ConfirmOutlineRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -232,8 +231,6 @@ async def confirm_outline(
         for ch in vol_chapters:
             ch_dir = vol_dir / f"ch-{ch['number']:03d}"
             ch_dir.mkdir(parents=True, exist_ok=True)
-
-            safe_title = re.sub(r'[<>:"/\\|?*]', '', ch['title'])
 
             # ch-meta.json
             (ch_dir / "ch-meta.json").write_text(

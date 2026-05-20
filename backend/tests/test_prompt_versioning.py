@@ -1,12 +1,14 @@
 """墨韵 - Prompt 版本管理单元测试"""
 
 import json
-import time
 from pathlib import Path
+import time
 
-import pytest
-
-from backend.core.prompt_versioning import archive_prompt, list_archives, restore_archive
+from backend.core.prompt_versioning import (
+    archive_prompt,
+    list_archives,
+    restore_archive,
+)
 
 
 class TestArchivePrompt:

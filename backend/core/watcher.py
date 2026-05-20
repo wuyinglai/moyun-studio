@@ -57,8 +57,10 @@ class FileWatcher:
             loop = asyncio.get_event_loop()
             while True:
                 def _next():
-                    try: return next(gen)
-                    except StopIteration: return None
+                    try:
+                        return next(gen)
+                    except StopIteration:
+                        return None
                 changes = await loop.run_in_executor(None, _next)
                 if changes is None:
                     break

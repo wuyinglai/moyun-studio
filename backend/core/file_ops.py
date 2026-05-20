@@ -3,12 +3,10 @@
 异步文件读写，支持frontmatter。
 """
 
+import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
-import shutil
-import json
 
 import aiofiles
 import frontmatter
@@ -103,7 +101,7 @@ class FileService:
         if not file_path.exists():
             raise MoyunFileNotFoundError(str(file_path))
 
-        async with aiofiles.open(file_path, mode="r", encoding="utf-8") as f:
+        async with aiofiles.open(file_path, encoding="utf-8") as f:
             content = await f.read()
 
         mtime = file_path.stat().st_mtime if file_path.exists() else None
@@ -279,7 +277,7 @@ class FileService:
         """获取项目信息"""
         info_path = self._resolve_path(f"{project_path}/.project.json")
         if info_path.exists():
-            async with aiofiles.open(info_path, "r") as f:
+            async with aiofiles.open(info_path) as f:
                 return json.loads(await f.read())
         return None
 
@@ -327,7 +325,7 @@ class FileService:
                     await _search_dir(item, rel)
                 elif item.is_file() and item.suffix in (".md", ".txt", ".mdx"):
                     try:
-                        async with aiofiles.open(item, "r", encoding="utf-8") as f:
+                        async with aiofiles.open(item, encoding="utf-8") as f:
                             content = await f.read()
                         for line_no, line in enumerate(content.splitlines(), 1):
                             if pattern.search(line):
@@ -355,14 +353,14 @@ class FileService:
             FileNotFoundError: 原路径不存在
         """
         from backend.core.exceptions import ResourceNotFoundError
-        
+
         # 安全检查 old_path 和 new_path
         old_full = self._resolve_path(f"{project_id}/{old_path}", check_write_suffix=True)
         new_full = self._resolve_path(f"{project_id}/{new_path}", check_write_suffix=True)
-        
+
         if not old_full.exists():
             raise ResourceNotFoundError(resource="file", identifier=old_path)
-        
+
         # 执行重命名
         new_full.parent.mkdir(parents=True, exist_ok=True)
         old_full.rename(new_full)
@@ -379,5 +377,5 @@ class FileService:
         """
         # 安全检查 dir_path
         full_path = self._resolve_path(f"{project_id}/{dir_path}", check_write_suffix=True)
-        
+
         full_path.mkdir(parents=True, exist_ok=True)

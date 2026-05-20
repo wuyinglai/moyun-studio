@@ -11,31 +11,31 @@
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
+from datetime import datetime
 import difflib
 import json
 import logging
+from pathlib import Path
 import re
 import uuid
-from datetime import datetime
-from pathlib import Path
-from typing import AsyncGenerator
 
 try:
     import tiktoken
 except ImportError:
     tiktoken = None
 
-import yaml
 from jinja2 import Environment, FileSystemLoader
+import yaml
 
-from backend.core.llm import LLMService
-from backend.core.file_ops import FileService
+from backend.config import get_settings
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import MoyunFileNotFoundError
+from backend.core.file_ops import FileService
+from backend.core.llm import LLMService
 from backend.core.prompt_versioning import archive_prompt
-from backend.schemas.pipeline import PipelineDef, PipelineStepDef
 from backend.schemas.candidate import CandidateAction
-from backend.config import get_settings
+from backend.schemas.pipeline import PipelineDef
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class PipelineRunner:
         self.source = source
         # 同一章内 context 步骤输出缓存，key=章目录路径 → context 文本
         self._context_cache: dict[str, str] = {}
-        
+
         # 构建搜索路径：用户自定义路径优先，系统路径次之
         search_paths = [str(self.prompts_path)]
         if self.system_prompts_path:
@@ -189,13 +189,13 @@ class PipelineRunner:
         user_path = self._get_pipeline_yaml_path(name)
         if user_path.exists():
             return user_path
-        
+
         # 从系统路径查找
         if self.system_prompts_path:
             system_path = self.system_prompts_path / "pipeline" / f"{name}.yaml"
             if system_path.exists():
                 return system_path
-        
+
         return None
 
     def load_pipeline(self, name: str) -> PipelineDef:
@@ -360,7 +360,7 @@ class PipelineRunner:
                 # G0118: 自动 token 检查 — 估算 prompt token 数，超限时发出警告
                 prompt_tokens = self._estimate_tokens(prompt_text)
                 max_prompt_tokens = self.llm_service.config.max_prompt_tokens
-                
+
                 if prompt_tokens > max_prompt_tokens:
                     warning_msg = f"Prompt 过长（约 {prompt_tokens} tokens），超出模型限制 {max_prompt_tokens} tokens"
                     if prompt_tokens > self.llm_service.config.context_window:
@@ -513,7 +513,7 @@ class PipelineRunner:
         original_content = ""
         frontmatter = None
         candidate_id = None
-        
+
         if final_output and target_file:
             try:
                 orig, fm = await self.file_service.read_file(f"{project_id}/{target_file}")
@@ -524,7 +524,7 @@ class PipelineRunner:
 
             # 判断是否需要生成候选稿
             should_use_candidate = require_candidate or (output_mode == "rewrite" and original_content)
-            
+
             if should_use_candidate and original_content:
                 # 生成候选稿而不是直接覆盖
                 candidate_service = CandidateService(self.file_service)
@@ -589,10 +589,10 @@ class PipelineRunner:
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
             file_name = target_file.split("/")[-1]
-            
+
             # 生成结构化摘要
             structured_summary = self._generate_structured_summary(target_file, content)
-            
+
             entry = f"\n## {timestamp} - {file_name}\n{structured_summary}\n"
 
             try:
@@ -653,51 +653,51 @@ class PipelineRunner:
         """生成结构化的上下文摘要"""
         lines = content.strip().split('\n')[:20]
         text_preview = '\n'.join(lines)
-        
+
         # 提取关键信息
         chars = self._extract_characters(content)
         locations = self._extract_locations(content)
-        
+
         summary = []
-        
+
         # 场景摘要
         summary.append("【场景摘要】")
         summary.append(text_preview[:200].strip() + "..." if len(text_preview) > 200 else text_preview)
-        
+
         # 人物
         if chars:
             summary.append("\n【人物】")
             summary.append(", ".join(chars[:5]))
-        
+
         # 地点
         if locations:
             summary.append("\n【地点】")
             summary.append(", ".join(locations[:3]))
-        
+
         # 下一场承接点（取最后几句）
         last_lines = content.strip().split('\n')[-3:]
         last_text = '\n'.join(last_lines).strip()
         if last_text:
             summary.append("\n【承接点】")
             summary.append(last_text[:100].strip())
-        
+
         return '\n'.join(summary)
 
     def _extract_characters(self, content: str) -> list[str]:
         """简单提取人物名称（基于中文姓名模式和常见角色特征）"""
         import re
         chars = []
-        
+
         # 匹配中文姓名（2-4个汉字）
         name_pattern = re.compile(r'([\u4e00-\u9fa5]{2,4})(?=[：:，,。！!？?、])')
         matches = name_pattern.findall(content)
         chars.extend(matches)
-        
+
         # 匹配带称呼的人名
         title_pattern = re.compile(r'(先生|小姐|夫人|公子|大侠|掌门|帮主|陛下|殿下|将军|丞相)\s*([\u4e00-\u9fa5]{1,4})')
         for match in title_pattern.findall(content):
             chars.append(f"{match[0]}{match[1]}")
-        
+
         # 去重并返回
         return list(set(chars))
 
@@ -705,24 +705,24 @@ class PipelineRunner:
         """简单提取地点名称"""
         import re
         locations = []
-        
+
         # 匹配常见地点后缀
         loc_pattern = re.compile(r'([\u4e00-\u9fa5]{2,6})(城|镇|村|庄|府|殿|宫|楼|阁|山|谷|湖|河|海|路|街|巷|院|馆|寺|庙|庵|观)')
         matches = loc_pattern.findall(content)
         for match in matches:
             locations.append(f"{match[0]}{match[1]}")
-        
+
         # 匹配方位词
         dir_pattern = re.compile(r'(东|南|西|北|中|前|后|左|右|上|下)([\u4e00-\u9fa5]{1,4})(宫|殿|厅|房|室|门|院)')
         for match in dir_pattern.findall(content):
             locations.append(f"{match[0]}{match[1]}{match[2]}")
-        
+
         return list(set(locations))
 
     async def _build_context_cache_key(self, project_id: str, chapter_path: str) -> str:
         """构建 context 缓存键，包含相关文件的修改时间戳"""
         import hashlib
-        
+
         # 需要监控的文件列表
         watched_files = [
             f"{project_id}/style-guide.md",
@@ -731,7 +731,7 @@ class PipelineRunner:
             f"{project_id}/outline.md",
             f"{project_id}/meta.json",
         ]
-        
+
         # 添加章节目录下的文件（.md 和 ch-meta.json）
         try:
             chapter_dir = self.file_service._resolve_path(f"{project_id}/{chapter_path}")
@@ -744,7 +744,7 @@ class PipelineRunner:
                             watched_files.append(f"{project_id}/{chapter_path}/ch-meta.json")
         except Exception:
             pass
-        
+
         # 获取所有文件的修改时间
         mtimes = []
         for file_path in watched_files:
@@ -756,12 +756,12 @@ class PipelineRunner:
                     mtimes.append("0")
             except Exception:
                 mtimes.append("0")
-        
+
         # 构建缓存键（带项目哈希前缀，便于按项目清除）
         key_parts = [project_id, chapter_path] + mtimes
         key_string = "|".join(key_parts)
         content_hash = hashlib.md5(key_string.encode()).hexdigest()
-        
+
         # 添加项目哈希前缀
         project_hash = self._hash_project_id(project_id)
         return f"{project_hash}:{content_hash}"
@@ -789,7 +789,7 @@ class PipelineRunner:
     def _infer_candidate_action(self, pipeline_name: str, output_mode: str) -> CandidateAction:
         """根据管线名称和输出模式推断候选稿动作类型"""
         pipeline_name_lower = pipeline_name.lower()
-        
+
         if "polish" in pipeline_name_lower or "润色" in pipeline_name:
             return CandidateAction.POLISH
         elif "expand" in pipeline_name_lower or "扩写" in pipeline_name:
@@ -798,9 +798,7 @@ class PipelineRunner:
             return CandidateAction.SHRINK
         elif "chat" in pipeline_name_lower or "对话" in pipeline_name:
             return CandidateAction.CHAT
-        elif "continue" in pipeline_name_lower or "续写" in pipeline_name:
-            return CandidateAction.CONTINUE
-        elif output_mode == "append":
+        elif "continue" in pipeline_name_lower or "续写" in pipeline_name or output_mode == "append":
             return CandidateAction.CONTINUE
         elif "modify" in pipeline_name_lower or "修改" in pipeline_name:
             return CandidateAction.MODIFY
@@ -821,7 +819,7 @@ class PipelineRunner:
         - logs/ 目录
         """
         output_path_lower = output_path.lower()
-        
+
         # 安全路径白名单
         safe_prefixes = (
             "materials/extracted/",
@@ -833,7 +831,7 @@ class PipelineRunner:
         for prefix in safe_prefixes:
             if output_path_lower.startswith(prefix):
                 return False
-        
+
         # 危险路径检测
         dangerous_patterns = (
             "/sec-",           # 章节文件

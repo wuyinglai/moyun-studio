@@ -4,9 +4,9 @@
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
 import json
 import logging
-from typing import AsyncGenerator
 import time
 
 from fastapi import APIRouter, Request
@@ -42,7 +42,7 @@ class SSEManager:
     @staticmethod
     def _map_event_type(bus_event: str) -> str:
         return SSEManager._EVENT_MAP.get(bus_event, bus_event)
-    
+
     def __init__(self):
         self.connections: set[asyncio.Queue] = set()
 

@@ -1,13 +1,13 @@
 """墨韵 - 爽文模式 API"""
 
 import asyncio
+from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 import json
 import logging
+from pathlib import Path
 import re
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
@@ -324,7 +324,7 @@ def _fallback_section_content(
     return "\n\n".join([
         f"# {label} {selected_card.title}",
         f"{selected_card.scene}里，人声原本很稳。直到门口那道身影出现，所有目光才像被一只看不见的手拨动，同时转了过去。",
-        f"最先笑出声的人没有压低音量。他把手里的茶盏轻轻一放，慢条斯理地说：“你还真敢来。”旁边几个人跟着露出笑意，那种笑不是惊讶，而是早就等着看人出丑的轻慢。",
+        "最先笑出声的人没有压低音量。他把手里的茶盏轻轻一放，慢条斯理地说：“你还真敢来。”旁边几个人跟着露出笑意，那种笑不是惊讶，而是早就等着看人出丑的轻慢。",
         f"那道身影没有退。袖口沾着一路赶来的风尘，眼神却冷得很稳。{card_desire}这句话像一枚钉子，钉在心口，也钉住了脚下的位置。",
         f"真正的阻力不是几句冷嘲，而是{card_obstacle}。他明白，今天只要退半步，后面的每一步都会被人替他安排。",
         "对方把准备好的条件一条条抛出来：认错，低头，交出本该属于自己的东西。每一句都像是在给台阶，其实每一级都通向更深的泥里。",
@@ -385,8 +385,8 @@ def _fallback_next_cards(next_label: str, current_content: str, recent_context: 
     hint = (useful_lines[-1] if useful_lines else context)[:32] or "当前冲突"
     options = [
         ("当场反逼", f"对手借“{hint}”继续施压，把主角逼到众人面前。", "主角要当众守住尊严，并拿回被抢走的话语权。", "对手把旁观者和规矩都变成压力，逼主角低头认错。", "主角抓住对方话里的破绽，当众把主动权夺回来。", "幕后撑腰的人被迫露出一句关键口风。", "完成第一次正面反击，并把矛盾推向幕后人物。"),
-        ("旧账翻面", f"看似对主角不利的旧账，被对手拿来公开施压。", "主角要证明旧账另有隐情，洗掉眼前的污名。", "旧证据被对手抢先解释，旁观者暂时站在对面。", "主角顺势翻出被忽略的细节，让刚占上风的人反而失态。", "旧账牵出一个更大的交换条件。", "回收一条旧线索，同时制造新的利益交换。"),
-        ("战果藏钩", f"冲突暂时收束，但旁观者开始重新站队。", "主角要把胜势落成实物奖励，而不是只赢口舌。", "奖励被人暗中设限，拿到它反而会引来更高层注意。", "主角拿到实在奖励，同时让羞辱者付出可见代价。", "奖励里藏着下一节必须打开的新线索。", "把本节爽点变成下一节冲突的燃料。"),
+        ("旧账翻面", "看似对主角不利的旧账，被对手拿来公开施压。", "主角要证明旧账另有隐情，洗掉眼前的污名。", "旧证据被对手抢先解释，旁观者暂时站在对面。", "主角顺势翻出被忽略的细节，让刚占上风的人反而失态。", "旧账牵出一个更大的交换条件。", "回收一条旧线索，同时制造新的利益交换。"),
+        ("战果藏钩", "冲突暂时收束，但旁观者开始重新站队。", "主角要把胜势落成实物奖励，而不是只赢口舌。", "奖励被人暗中设限，拿到它反而会引来更高层注意。", "主角拿到实在奖励，同时让羞辱者付出可见代价。", "奖励里藏着下一节必须打开的新线索。", "把本节爽点变成下一节冲突的燃料。"),
     ]
     return [
         LiteNextOptionCard(
@@ -858,12 +858,9 @@ async def write_lite_next(
         raise ProjectNotFoundError(req.project_id)
 
     file_service = FileService(settings.projects_path)
-    current_no = _extract_chapter_number(req.target_file)
     requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
     is_blank_requested = _is_blank_chapter(requested_content)
-    if req.action != "write" and req.target_file:
-        target_file = req.target_file
-    elif req.target_file and is_blank_requested:
+    if (req.action != "write" and req.target_file) or (req.target_file and is_blank_requested):
         target_file = req.target_file
     else:
         target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
@@ -897,7 +894,7 @@ async def write_lite_next(
         f"故事推进：{req.selected_card.advancement}",
         "写作偏好：",
         _prefs_to_text(req.prefs),
-        f"{'章规划：\n' + chapter_plan if chapter_plan else ''}",
+        ("章规划：\n" + chapter_plan) if chapter_plan else "",
         "故事引擎：",
         story_engine,
     ])
@@ -1046,9 +1043,7 @@ async def write_lite_next_stream(
         file_service = FileService(settings.projects_path)
         requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
         is_blank_requested = _is_blank_chapter(requested_content)
-        if req.action in ("continue", "rewrite", "more_exciting", "more_reasonable") and req.target_file:
-            target_file = req.target_file
-        elif req.target_file and is_blank_requested:
+        if (req.action in ("continue", "rewrite", "more_exciting", "more_reasonable") and req.target_file) or (req.target_file and is_blank_requested):
             target_file = req.target_file
         else:
             target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
@@ -1108,7 +1103,7 @@ async def write_lite_next_stream(
                 "如果这是续写草稿：只能从当前草稿末尾自然接着写，不要重写开头，不要重复已经写过的句子。",
                 "写作偏好：",
                 prefs_text,
-                f"{'章规划：\n' + chapter_plan if chapter_plan else ''}",
+                ("章规划：\n" + chapter_plan) if chapter_plan else "",
                 "故事引擎：",
                 story_engine,
             ])
@@ -1211,6 +1206,6 @@ async def write_lite_next_stream(
             })
         except Exception as e:
             logger.exception("爽文流式生成异常: %s", e)
-            yield _lite_stream_event("error", {"message": f"生成失败：{str(e)}"})
+            yield _lite_stream_event("error", {"message": f"生成失败：{e!s}"})
 
     return EventSourceResponse(_stream())

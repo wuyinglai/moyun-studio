@@ -4,7 +4,6 @@
 与FileWatcher解耦，可被其他模块复用。
 """
 
-from typing import Any, AsyncGenerator
 import asyncio
 import uuid
 

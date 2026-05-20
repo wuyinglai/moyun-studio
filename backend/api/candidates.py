@@ -1,18 +1,18 @@
 """墨韵 - 候选稿 API 路由"""
 
+
 from fastapi import APIRouter, HTTPException
-from typing import Optional
 
 from backend.config import get_settings
-from backend.core.file_ops import FileService
 from backend.core.candidate_service import CandidateService
+from backend.core.file_ops import FileService
 from backend.schemas.candidate import (
+    AdoptCandidateResponse,
+    CandidateDetailResponse,
     CandidateInfo,
+    CandidateListResponse,
     CandidateStatus,
     CreateCandidateRequest,
-    CandidateListResponse,
-    CandidateDetailResponse,
-    AdoptCandidateResponse,
     DeleteCandidateResponse,
 )
 
@@ -22,13 +22,13 @@ router = APIRouter(prefix="/candidates", tags=["candidates"])
 @router.get("/{project_id}", response_model=CandidateListResponse)
 async def list_candidates(
     project_id: str,
-    status: Optional[CandidateStatus] = None,
+    status: CandidateStatus | None = None,
 ):
     """列出候选稿"""
     settings = get_settings()
     file_service = FileService(settings.projects_path)
     candidate_service = CandidateService(file_service)
-    
+
     candidates = await candidate_service.list_candidates(project_id, status)
     return CandidateListResponse(candidates=candidates)
 
@@ -42,15 +42,15 @@ async def get_candidate(
     settings = get_settings()
     file_service = FileService(settings.projects_path)
     candidate_service = CandidateService(file_service)
-    
+
     candidate = await candidate_service.get_candidate(project_id, candidate_id)
     if not candidate:
         raise HTTPException(status_code=404, detail="候选稿不存在")
-    
+
     content = await candidate_service.get_candidate_content(project_id, candidate_id)
     if content is None:
         raise HTTPException(status_code=404, detail="候选稿内容不存在")
-    
+
     return CandidateDetailResponse(candidate=candidate, content=content)
 
 
@@ -63,7 +63,7 @@ async def create_candidate(
     settings = get_settings()
     file_service = FileService(settings.projects_path)
     candidate_service = CandidateService(file_service)
-    
+
     candidate = await candidate_service.create_candidate(
         project_id=project_id,
         source_path=request.source_path,
@@ -83,18 +83,18 @@ async def adopt_candidate(
     settings = get_settings()
     file_service = FileService(settings.projects_path)
     candidate_service = CandidateService(file_service)
-    
+
     candidate = await candidate_service.get_candidate(project_id, candidate_id)
     if not candidate:
         raise HTTPException(status_code=404, detail="候选稿不存在")
-    
+
     if candidate.status != CandidateStatus.PENDING:
         raise HTTPException(status_code=400, detail="候选稿状态不允许采用")
-    
+
     success = await candidate_service.adopt_candidate(project_id, candidate_id)
     if not success:
         raise HTTPException(status_code=500, detail="采用候选稿失败")
-    
+
     return AdoptCandidateResponse(
         success=True,
         message="候选稿已成功采用",
@@ -111,15 +111,15 @@ async def delete_candidate(
     settings = get_settings()
     file_service = FileService(settings.projects_path)
     candidate_service = CandidateService(file_service)
-    
+
     candidate = await candidate_service.get_candidate(project_id, candidate_id)
     if not candidate:
         raise HTTPException(status_code=404, detail="候选稿不存在")
-    
+
     success = await candidate_service.delete_candidate(project_id, candidate_id)
     if not success:
         raise HTTPException(status_code=500, detail="删除候选稿失败")
-    
+
     return DeleteCandidateResponse(
         success=True,
         message="候选稿已成功删除",
@@ -135,6 +135,6 @@ async def get_candidates_for_file(
     settings = get_settings()
     file_service = FileService(settings.projects_path)
     candidate_service = CandidateService(file_service)
-    
+
     candidates = await candidate_service.get_candidates_for_file(project_id, source_path)
     return CandidateListResponse(candidates=candidates)

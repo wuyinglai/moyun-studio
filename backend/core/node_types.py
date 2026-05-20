@@ -5,20 +5,19 @@
 """
 
 from enum import Enum
-from typing import Literal
 
 
 class NodeType(str, Enum):
     """节点类型枚举"""
     # Prompt 节点
     PROMPT = "prompt"           # AI 执行的 Prompt 节点（原 pipeline）
-    
+
     # Human 节点
     HUMAN_REVIEW = "human_review"       # 用户审核
     HUMAN_EDIT = "human_edit"           # 用户编辑
     HUMAN_CHOICE = "human_choice"      # 用户选择
     HUMAN_CONFIRM = "human_confirm"     # 用户确认
-    
+
     # File 节点
     FILE_READ = "file_read"             # 读取文件
     FILE_WRITE = "file_write"           # 写入文件
@@ -29,22 +28,22 @@ class NodeType(str, Enum):
     FILE_SNAPSHOT = "file_snapshot"     # 快照
     FILE_CANDIDATE = "file_candidate"  # 创建候选稿
     FILE_ADOPT = "file_adopt"          # 采用候选稿
-    
+
     # Memory 节点
     MEMORY_UPDATE = "memory_update"     # 更新记忆
     MEMORY_REVIEW = "memory_review"    # 审核记忆更新
-    
+
     # Quality 节点
     QUALITY_REVIEW = "quality_review"  # 质量审稿
     QUALITY_JUDGE = "quality_judge"    # 质量判断
-    
+
     # Control 节点
     CONDITION = "condition"            # 条件分支
     LOOP = "loop"                      # 循环（原 loop）
-    
+
     # Retrieval 节点
     RETRIEVAL = "retrieval"            # 检索
-    
+
     # Unknown
     UNKNOWN = "unknown"
 
@@ -60,10 +59,10 @@ class ExecutorType(str, Enum):
 STEP_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
     # pipeline -> Prompt 节点
     "pipeline": NodeType.PROMPT,
-    
+
     # loop -> Control 循环节点
     "loop": NodeType.LOOP,
-    
+
     # file actions -> File 节点
     "file": NodeType.UNKNOWN,  # 需要根据 action 确定
 }
@@ -98,13 +97,13 @@ def get_executor(node_type: NodeType) -> ExecutorType:
         NodeType.HUMAN_CONFIRM,
     ):
         return ExecutorType.HUMAN
-    
+
     if node_type in (
         NodeType.MEMORY_REVIEW,
         NodeType.QUALITY_JUDGE,
     ):
         return ExecutorType.HUMAN  # 这些是 AI+Human 协作
-    
+
     if node_type in (
         NodeType.FILE_READ,
         NodeType.FILE_WRITE,
@@ -117,14 +116,14 @@ def get_executor(node_type: NodeType) -> ExecutorType:
         NodeType.FILE_ADOPT,
     ):
         return ExecutorType.SYSTEM
-    
+
     if node_type in (
         NodeType.CONDITION,
         NodeType.LOOP,
         NodeType.RETRIEVAL,
     ):
         return ExecutorType.SYSTEM
-    
+
     # 默认：AI 执行
     return ExecutorType.AI
 
@@ -176,17 +175,17 @@ def build_node_info(step_type: str, action: str | None = None, label: str = "") 
     """构建节点信息字典"""
     node_type = get_node_type(step_type, action)
     executor = get_executor(node_type)
-    
+
     info = {
         "node_type": node_type.value,
         "node_label": node_type_label(node_type),
         "executor": executor.value,
         "executor_label": executor_label(executor),
     }
-    
+
     # Human 节点添加等待动作
     if executor == ExecutorType.HUMAN:
         info["actions"] = HUMAN_ACTIONS
         info["waiting_reason"] = f"请{node_type_label(node_type)}"
-    
+
     return info

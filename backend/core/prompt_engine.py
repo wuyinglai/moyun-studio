@@ -4,12 +4,12 @@
 使用依赖注入来解耦FileService。
 """
 
-import re
-import tiktoken
 from pathlib import Path
+import re
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
+import tiktoken
 
 
 class PromptEngine:
@@ -78,7 +78,7 @@ class PromptEngine:
         else:
             category = "generate"
             template_type = prompt_type
-        
+
         resolved_variables = await self._resolve_references(variables)
         template = self.load_template(category, template_type)
         return template.render(**resolved_variables)

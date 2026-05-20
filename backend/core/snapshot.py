@@ -3,12 +3,12 @@
 创建、恢复快照，对比版本差异。
 """
 
+from datetime import datetime
 import difflib
 import json
-import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+import uuid
 
 import aiofiles
 
@@ -150,7 +150,7 @@ class SnapshotManager:
                 continue
 
             try:
-                async with aiofiles.open(index_file, "r", encoding="utf-8") as f:
+                async with aiofiles.open(index_file, encoding="utf-8") as f:
                     data = json.loads(await f.read())
 
                 if data.get("snapshot_id") == snapshot_id:

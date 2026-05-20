@@ -11,23 +11,21 @@
 
 import json
 import logging
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
 from backend.config import Settings, get_settings
-from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.file_ops import FileService
-from backend.core.pipeline import PipelineRunner, PipelineError
+from backend.core.llm import LLMService, load_llm_config_from_workspace
+from backend.core.pipeline import PipelineError, PipelineRunner
 from backend.core.trash import TrashService
 from backend.schemas.common import ApiResponse
 from backend.schemas.pipeline import (
+    CreatePipelineRequest,
     PipelineRunRequest,
     PipelineSaveRequest,
-    CreatePipelineRequest,
 )
-
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["pipeline"])
@@ -144,7 +142,7 @@ async def get_pipeline(
     try:
         detail = runner.get_pipeline_detail(name)
         return ApiResponse.ok({"pipeline": detail})
-    except PipelineError as e:
+    except PipelineError:
         from backend.core.exceptions import ResourceNotFoundError
         raise ResourceNotFoundError(resource="pipeline", identifier=name)
 

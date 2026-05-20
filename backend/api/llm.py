@@ -10,14 +10,17 @@
 
 import json
 import logging
-import time
 from pathlib import Path
+import time
 
 from fastapi import APIRouter, Depends, Request
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import RateLimitError
-from backend.core.llm import load_llm_config_from_workspace, normalize_model_for_provider
+from backend.core.llm import (
+    load_llm_config_from_workspace,
+    normalize_model_for_provider,
+)
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
     LLMConfigRequest,
@@ -140,7 +143,7 @@ async def test_connection(
         api_key = llm_cfg.get("apiKey") or settings.llm_api_key
         api_base = (llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or "").rstrip("/")
 
-        import json as _json, requests as _req
+        import requests as _req
         sess = _req.Session()
         sess.trust_env = False
         resp = sess.post(
@@ -151,12 +154,11 @@ async def test_connection(
         )
         sess.close()
         resp.raise_for_status()
-        data = resp.json()
         logger.info("LLM连接测试成功", extra={"model": model})
         return ApiResponse.ok(
             LLMStatusResponse(connected=True, model=model, message="连接成功")
         )
-    except TimeoutError as e:
+    except TimeoutError:
         logger.warning("LLM连接测试超时", extra={"model": model})
         return ApiResponse.ok(
             LLMStatusResponse(connected=False, model=model, message="连接超时")

@@ -9,8 +9,9 @@
   Branch   — 条件分支（根据上一步结果决定下一步）
 """
 
+from collections.abc import Callable
 import logging
-from typing import Callable, Dict, List, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class Step:
     fn 签名：fn(ctx: Ctx) -> dict
     返回值会 merge 进上下文。
     """
-    def __init__(self, name: str, fn: Callable[[Ctx], Dict]):
+    def __init__(self, name: str, fn: Callable[[Ctx], dict]):
         self.name = name
         self.fn = fn
 
@@ -55,7 +56,7 @@ class Step:
 
 class Pipeline:
     """线性执行一系列 Step。"""
-    def __init__(self, name: str, steps: List[Step]):
+    def __init__(self, name: str, steps: list[Step]):
         self.name = name
         self.steps = steps
 
@@ -76,7 +77,7 @@ class Branch:
     """
     def __init__(self, name: str,
                  condition: Callable[[Ctx], str],
-                 branches: Dict[str, Pipeline]):
+                 branches: dict[str, Pipeline]):
         self.name = name
         self.condition = condition
         self.branches = branches
@@ -97,7 +98,7 @@ def _llm_call(prompt: str) -> str:
     return f"[LLM返回] {prompt[:30]}..."
 
 
-def step_write(ctx: Ctx) -> Dict:
+def step_write(ctx: Ctx) -> dict:
     topic     = ctx.get("topic")
     outline   = ctx.get("outline", "")
     contract  = ctx.get("contract", "")
@@ -106,10 +107,7 @@ def step_write(ctx: Ctx) -> Dict:
     return {"draft": draft, "needs_review": True}
 
 
-def step_review(ctx: Ctx) -> Dict:
-    draft   = ctx.get("draft", "")
-    contract = ctx.get("contract", "")
-    prompt  = f"审查章节是否符合约束：{contract}\n内容：{draft[:200]}"
+def step_review(ctx: Ctx) -> dict:
     # 模拟返回结构化审查结果（对齐 Webnovel Writer 的 review JSON）
     review_result = {
         "passed": True,   # 实际由 LLM 判断
@@ -123,7 +121,7 @@ def step_review(ctx: Ctx) -> Dict:
     }
 
 
-def step_revise(ctx: Ctx) -> Dict:
+def step_revise(ctx: Ctx) -> dict:
     draft    = ctx.get("draft", "")
     issues   = ctx.get("review_result", {}).get("issues", [])
     prompt   = f"根据问题修订：{issues}\n原文：{draft[:200]}"

@@ -9,15 +9,14 @@
 6. Token 估算
 """
 
-import pytest
 import json
-import yaml
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from backend.core.pipeline import PipelineRunner, PipelineError, REFERENCE_PATTERN
 from jinja2 import Environment, FileSystemLoader
+import pytest
+import yaml
 
+from backend.core.pipeline import REFERENCE_PATTERN, PipelineError, PipelineRunner
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 

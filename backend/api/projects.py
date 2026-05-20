@@ -8,10 +8,9 @@
 """
 
 import asyncio
-import json
+from datetime import datetime, timezone
 import logging
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 
@@ -21,15 +20,10 @@ from backend.core.project_service import ProjectService
 from backend.schemas.common import ApiResponse
 from backend.schemas.project import (
     ProjectCreateRequest,
-    ProjectUpdateRequest,
     ProjectInfo,
     ProjectListResponse,
     ProjectStatsResponse,
-    BookIdeaRequest,
-    BookIdeaResponse,
-    GenerateOutlineRequest,
-    OutlineResponse,
-    ConfirmOutlineRequest,
+    ProjectUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
