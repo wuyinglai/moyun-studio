@@ -1,4 +1,4 @@
-import { ref, readonly } from 'vue'
+import { ref, readonly, shallowRef } from 'vue'
 import api from '@/services/api'
 
 export interface WorkflowStep {
@@ -14,6 +14,11 @@ export interface WorkflowStep {
   output?: string
   output_mode?: string
   steps?: WorkflowStep[]
+  // 节点元信息
+  node_type?: string
+  node_label?: string
+  executor?: string
+  executor_label?: string
 }
 
 export interface Workflow {
@@ -33,11 +38,44 @@ export interface WorkflowRunState {
   updated_at: string
 }
 
+// 节点状态
+export type NodeStatus = 'pending' | 'running' | 'waiting_for_user' | 'completed' | 'failed' | 'skipped'
+
+// 运行中的节点信息
+export interface RunningNode {
+  step_id: string
+  label: string
+  type: string
+  path: string
+  node_type: string
+  node_label: string
+  executor: string
+  executor_label: string
+  status: NodeStatus
+  waiting_for_user: boolean
+  waiting_reason: string
+  actions: string[]
+  output?: string
+}
+
+// 变量池条目
+export interface VariablePoolEntry {
+  key: string
+  value: string
+  source: 'user' | 'ai' | 'system' | 'approved'
+}
+
 const _workflows = ref<Workflow[]>([])
 const _isLoading = ref(false)
 const _isRunning = ref(false)
 const _currentRunId = ref<string | null>(null)
 const _runLogs = ref<string[]>([])
+
+// 节点状态
+const _currentNode = shallowRef<RunningNode | null>(null)
+const _nodeStates = ref<Record<string, NodeStatus>>({})
+const _variablePool = ref<VariablePoolEntry[]>([])
+const _stepsPreview = ref<WorkflowStep[]>([])
 
 export function useWorkflow() {
   async function fetchWorkflows() {
@@ -67,10 +105,16 @@ export function useWorkflow() {
     projectId: string,
     variables: Record<string, string> = {},
     onEvent?: (event: string, data: any) => void,
-  ): Promise<void> {
-    if (_isRunning.value) return
+  ): Promise<boolean> {
+    if (_isRunning.value) return false
     _isRunning.value = true
     _runLogs.value = []
+    _currentNode.value = null
+    _nodeStates.value = {}
+    _variablePool.value = []
+    _stepsPreview.value = []
+    let succeeded = false
+    let failed = false
 
     try {
       const response = await fetch('/api/workflows/run', {
@@ -112,19 +156,72 @@ export function useWorkflow() {
               if (runId) _currentRunId.value = runId
 
               if (currentEvent === 'workflow_error') {
+                failed = true
                 _runLogs.value.push(`[错误] ${parsed.message}`)
+                if (_currentNode.value?.step_id) {
+                  _nodeStates.value[_currentNode.value.step_id] = 'failed'
+                }
+                _currentNode.value = null
+              } else if (currentEvent === 'workflow_start') {
+                _runLogs.value.push(`[开始] 工作流: ${parsed.label}`)
+                // 保存步骤预览
+                _stepsPreview.value = parsed.steps_preview || []
+                // 初始化变量池
+                _variablePool.value = Object.entries(parsed.variables || {}).map(([key, value]) => ({
+                  key,
+                  value: String(value),
+                  source: 'user' as const,
+                }))
+                // 初始化节点状态
+                for (const step of _stepsPreview.value) {
+                  _nodeStates.value[step.id] = 'pending'
+                }
               } else if (currentEvent === 'step_start') {
-                _runLogs.value.push(`[步骤] 开始: ${parsed.label}`)
+                _runLogs.value.push(`[${parsed.executor_label || 'AI'}] 开始: ${parsed.label} (${parsed.node_label || parsed.type})`)
+                _nodeStates.value[parsed.step_id] = 'running'
+                _currentNode.value = {
+                  step_id: parsed.step_id,
+                  label: parsed.label,
+                  type: parsed.type,
+                  path: parsed.path,
+                  node_type: parsed.node_type || parsed.type,
+                  node_label: parsed.node_label || parsed.label,
+                  executor: parsed.executor || 'ai',
+                  executor_label: parsed.executor_label || 'AI',
+                  status: 'running',
+                  waiting_for_user: parsed.waiting_for_user || false,
+                  waiting_reason: parsed.waiting_reason || '',
+                  actions: parsed.actions || [],
+                  output: '',
+                }
               } else if (currentEvent === 'step_done') {
-                _runLogs.value.push(`[步骤] 完成: ${parsed.label}`)
+                const logMsg = `[${parsed.executor_label || 'AI'}] 完成: ${parsed.label}`
+                _runLogs.value.push(logMsg)
+                _nodeStates.value[parsed.step_id] = 'completed'
+                if (_currentNode.value?.step_id === parsed.step_id) {
+                  _currentNode.value = null
+                }
+                // 如果有输出，更新变量池
+                if (parsed.output) {
+                  _variablePool.value.push({
+                    key: `step_${parsed.step_id}_output`,
+                    value: parsed.output,
+                    source: 'ai' as const,
+                  })
+                }
               } else if (currentEvent === 'step_skip') {
-                _runLogs.value.push(`[步骤] 跳过: ${parsed.label}`)
+                _runLogs.value.push(`[跳过] ${parsed.label}`)
+                _nodeStates.value[parsed.step_id] = 'skipped'
               } else if (currentEvent === 'loop_iteration') {
                 _runLogs.value.push(`[循环] ${parsed.label}: ${parsed.current}/${parsed.total}`)
               } else if (currentEvent === 'workflow_done') {
+                succeeded = true
                 _runLogs.value.push('[完成] 工作流执行完成')
+                _currentNode.value = null
               } else if (currentEvent === 'workflow_stopped') {
+                failed = true
                 _runLogs.value.push('[停止] 用户已停止')
+                _currentNode.value = null
               }
 
               if (onEvent) onEvent(currentEvent, parsed)
@@ -135,10 +232,13 @@ export function useWorkflow() {
         }
       }
     } catch (e: any) {
+      failed = true
       _runLogs.value.push(`[错误] ${e.message}`)
+      _currentNode.value = null
     } finally {
       _isRunning.value = false
     }
+    return succeeded && !failed
   }
 
   async function stopWorkflow(runId: string): Promise<boolean> {
@@ -195,6 +295,11 @@ export function useWorkflow() {
     isRunning: readonly(_isRunning),
     currentRunId: readonly(_currentRunId),
     runLogs: readonly(_runLogs),
+    // 节点状态
+    currentNode: readonly(_currentNode),
+    nodeStates: readonly(_nodeStates),
+    stepsPreview: readonly(_stepsPreview),
+    variablePool: readonly(_variablePool),
     fetchWorkflows,
     fetchWorkflowDetail,
     runWorkflow,

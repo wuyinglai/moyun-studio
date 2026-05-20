@@ -88,7 +88,95 @@
           </div>
         </div>
 
-        <div class="step-overview">
+        <!-- ─── 节点状态面板 ─── -->
+        <div
+          v-if="hasRun"
+          class="node-status-panel"
+        >
+          <div class="section-label">
+            节点状态
+          </div>
+          <!-- 当前运行节点 -->
+          <div
+            v-if="currentNode"
+            class="current-node"
+            :class="{ 'waiting': currentNode.waiting_for_user }"
+          >
+            <div class="node-header">
+              <span class="node-badge" :class="`executor-${currentNode.executor}`">
+                {{ currentNode.executor_label }}
+              </span>
+              <span class="node-type">{{ currentNode.node_label }}</span>
+            </div>
+            <div class="node-name">
+              {{ currentNode.label }}
+            </div>
+            <div
+              v-if="currentNode.waiting_for_user"
+              class="waiting-actions"
+            >
+              <span class="waiting-reason">{{ currentNode.waiting_reason }}</span>
+              <div class="action-buttons">
+                <button
+                  v-for="action in currentNode.actions"
+                  :key="action"
+                  class="action-btn"
+                  :class="`action-${action}`"
+                  @click="handleNodeAction(action)"
+                >
+                  {{ actionLabel(action) }}
+                </button>
+              </div>
+            </div>
+            <div
+              v-else
+              class="node-progress"
+            >
+              <span class="progress-text">运行中...</span>
+            </div>
+          </div>
+          <!-- 步骤树预览 -->
+          <div class="step-tree">
+            <div
+              v-for="step in stepsPreview"
+              :key="step.id"
+              class="tree-step"
+              :class="`status-${nodeStates[step.id] || 'pending'}`"
+            >
+              <span class="step-status-icon">{{ nodeStatusIcon(nodeStates[step.id]) }}</span>
+              <span class="step-executor">{{ step.executor_label }}</span>
+              <span class="step-label">{{ step.label }}</span>
+              <span class="step-type-badge">{{ step.node_label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── 变量池面板 ─── -->
+        <div
+          v-if="hasRun && variablePool.length > 0"
+          class="variable-pool-panel"
+        >
+          <div class="section-label">
+            变量池
+          </div>
+          <div class="var-pool-list">
+            <div
+              v-for="entry in variablePool"
+              :key="entry.key"
+              class="var-pool-entry"
+              :class="`source-${entry.source}`"
+            >
+              <span class="var-key">{{ entry.key }}</span>
+              <span class="var-value">{{ truncateValue(entry.value) }}</span>
+              <span class="var-source">{{ entry.source }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="!hasRun"
+          class="step-overview"
+        >
           <div class="section-label">
             步骤预览
           </div>
@@ -333,6 +421,7 @@ const projectStore = useProjectStore()
 const notification = useNotificationStore()
 const {
   workflows, isLoading, isRunning, currentRunId, runLogs,
+  currentNode, nodeStates, stepsPreview, variablePool,
   fetchWorkflows, fetchWorkflowDetail, runWorkflow, stopWorkflow,
   saveWorkflow, deleteWorkflow,
 } = useWorkflow()
@@ -357,6 +446,40 @@ watch(runLogs, async () => {
   await nextTick()
   if (logRef.value) logRef.value.scrollTop = logRef.value.scrollHeight
 }, { deep: true })
+
+// ─── 节点状态辅助函数 ───
+
+function nodeStatusIcon(status: string | undefined): string {
+  switch (status) {
+    case 'pending': return '○'
+    case 'running': return '◐'
+    case 'waiting_for_user': return '◔'
+    case 'completed': return '●'
+    case 'failed': return '✕'
+    case 'skipped': return '⊘'
+    default: return '○'
+  }
+}
+
+function actionLabel(action: string): string {
+  const labels: Record<string, string> = {
+    approve: '通过',
+    edit_and_approve: '编辑后通过',
+    regenerate: '重新生成',
+    stop: '停止',
+  }
+  return labels[action] || action
+}
+
+function truncateValue(value: string, maxLen = 50): string {
+  if (value.length <= maxLen) return value
+  return value.slice(0, maxLen) + '...'
+}
+
+function handleNodeAction(action: string) {
+  // TODO: 实现 Human 节点动作处理
+  notification.info(`执行动作: ${actionLabel(action)}`)
+}
 
 // ─── SortableJS 拖拽排序 ───
 
@@ -547,8 +670,12 @@ async function handleRun() {
   hasRun.value = true
   const variables: Record<string, string> = {}
   if (detail.value?.variables) for (const [k, v] of Object.entries(detail.value.variables)) variables[k] = varOverrides.value[k] || String(v)
-  await runWorkflow(selectedName.value, projectId, variables)
-  notification.success('工作流执行完成')
+  const ok = await runWorkflow(selectedName.value, projectId, variables)
+  if (ok) {
+    notification.success('工作流执行完成')
+  } else {
+    notification.error('工作流执行失败')
+  }
 }
 
 async function handleStop() {
@@ -711,6 +838,75 @@ onMounted(() => { fetchWorkflows() })
   .step-icon { width: 20px; text-align: center; font-size: 14px; }
   .step-label { flex: 1; color: var(--text-primary); }
   .step-badge { font-size: 10px; padding: 1px 6px; border-radius: 6px; background: var(--bg-primary); color: var(--text-muted); }
+  // 节点状态样式
+  .step-status-icon { width: 16px; text-align: center; font-size: 11px; }
+  .step-executor { font-size: 10px; padding: 1px 4px; border-radius: 4px; background: var(--bg-primary); color: var(--text-muted); }
+  .step-type-badge { font-size: 10px; color: var(--text-muted); }
+  // 状态颜色
+  &.status-pending { opacity: 0.6; }
+  &.status-running { .step-status-icon { color: var(--accent-primary); } }
+  &.status-waiting_for_user { .step-status-icon { color: var(--accent-warning); } }
+  &.status-completed { .step-status-icon { color: var(--accent-success); } }
+  &.status-failed { .step-status-icon { color: var(--accent-danger); } }
+  &.status-skipped { opacity: 0.5; }
+}
+
+// ─── 节点状态面板 ───
+
+.node-status-panel {
+  background: var(--bg-card); border-radius: var(--radius-md); padding: 10px;
+
+  .current-node {
+    background: var(--bg-primary); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px;
+    border-left: 3px solid var(--accent-primary);
+    &.waiting {
+      border-left-color: var(--accent-warning);
+      background: rgba(251, 191, 36, 0.1);
+    }
+    .node-header {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+    }
+    .node-badge {
+      font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500;
+      &.executor-ai { background: var(--accent-primary); color: white; }
+      &.executor-human { background: var(--accent-warning); color: black; }
+      &.executor-system { background: var(--text-muted); color: white; }
+    }
+    .node-type { font-size: 11px; color: var(--text-secondary); }
+    .node-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    .waiting-actions {
+      .waiting-reason { font-size: 11px; color: var(--accent-warning); display: block; margin-bottom: 6px; }
+      .action-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+      .action-btn {
+        padding: 4px 8px; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s;
+        &.action-approve { background: var(--accent-success); color: white; &:hover { opacity: 0.9; } }
+        &.action-edit_and_approve { background: var(--accent-primary); color: white; &:hover { opacity: 0.9; } }
+        &.action-regenerate { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border-color); &:hover { border-color: var(--accent-primary); } }
+        &.action-stop { background: transparent; color: var(--accent-danger); border: 1px solid var(--accent-danger); &:hover { background: var(--accent-danger); color: white; } }
+      }
+    }
+    .node-progress {
+      .progress-text { font-size: 11px; color: var(--accent-primary); }
+    }
+  }
+}
+
+// ─── 变量池面板 ───
+
+.variable-pool-panel {
+  background: var(--bg-card); border-radius: var(--radius-md); padding: 10px;
+
+  .var-pool-list { display: flex; flex-direction: column; gap: 4px; }
+  .var-pool-entry {
+    display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--bg-primary); border-radius: 4px; font-size: 11px;
+    .var-key { font-family: monospace; color: var(--accent-primary); min-width: 80px; }
+    .var-value { flex: 1; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .var-source { font-size: 9px; padding: 1px 4px; border-radius: 3px; text-transform: uppercase; }
+    &.source-user .var-source { background: var(--bg-hover); color: var(--text-muted); }
+    &.source-ai .var-source { background: rgba(59, 130, 246, 0.2); color: var(--accent-primary); }
+    &.source-system .var-source { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+    &.source-approved .var-source { background: rgba(74, 222, 128, 0.2); color: var(--accent-success); }
+  }
 }
 
 .var-config, .run-logs { background: var(--bg-card); border-radius: var(--radius-md); padding: 10px; }

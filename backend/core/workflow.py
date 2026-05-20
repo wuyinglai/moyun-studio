@@ -21,6 +21,7 @@ import yaml
 
 from backend.core.pipeline import PipelineRunner, PipelineError
 from backend.core.trash import TrashService
+from backend.core.node_types import build_node_info, node_type_label, executor_label
 from backend.schemas.workflow import (
     WorkflowDef,
     WorkflowStepDef,
@@ -321,6 +322,20 @@ class WorkflowRunner:
         total_steps = self.count_steps(workflow.steps)
         is_restored = bool(saved_state and saved_state.get("status") in ("running", "paused"))
 
+        # 构建步骤树预览（带节点元信息）
+        steps_preview = []
+        for s in workflow.steps:
+            node_info = build_node_info(s.type, s.action, s.label)
+            steps_preview.append({
+                "id": s.id,
+                "label": s.label,
+                "type": s.type,
+                "node_type": node_info["node_type"],
+                "node_label": node_info["node_label"],
+                "executor": node_info["executor"],
+                "executor_label": node_info["executor_label"],
+            })
+
         yield {"event": "workflow_start", "data": json.dumps({
             "run_id": run_id,
             "workflow": workflow_name,
@@ -329,6 +344,8 @@ class WorkflowRunner:
             "total_steps": total_steps,
             "restored": is_restored,
             "completed_paths": list(completed_paths),
+            "steps_preview": steps_preview,  # 步骤树预览（带节点元信息）
+            "variables": context.variables,   # 当前变量池
         }, ensure_ascii=False)}
 
         try:
@@ -391,6 +408,7 @@ class WorkflowRunner:
 
             # 断点续跑：按完整路径跳过已完成的步骤
             if step_path in completed:
+                node_info = build_node_info(step.type, step.action, step.label)
                 yield {"event": "step_skip", "data": json.dumps({
                     "step_id": step.id,
                     "label": step.label,
@@ -398,6 +416,11 @@ class WorkflowRunner:
                     "path": step_path,
                     "status": "skipped",
                     "output": context.step_outputs.get(step.id, ""),
+                    # 节点元信息
+                    "node_type": node_info["node_type"],
+                    "node_label": node_info["node_label"],
+                    "executor": node_info["executor"],
+                    "executor_label": node_info["executor_label"],
                 }, ensure_ascii=False)}
                 continue
 
@@ -414,11 +437,24 @@ class WorkflowRunner:
     ) -> AsyncGenerator[dict, None]:
         step_path = f"{path_prefix}.{step.id}" if path_prefix else step.id
 
+        # 构建节点元信息
+        node_info = build_node_info(step.type, step.action, step.label)
+
         yield {"event": "step_start", "data": json.dumps({
             "step_id": step.id,
             "label": step.label,
             "type": step.type,
             "path": step_path,
+            # 节点元信息
+            "node_type": node_info["node_type"],
+            "node_label": node_info["node_label"],
+            "executor": node_info["executor"],
+            "executor_label": node_info["executor_label"],
+            "status": "running",
+            # Human 节点需要等待用户
+            "waiting_for_user": node_info["executor"] == "human",
+            "waiting_reason": node_info.get("waiting_reason", ""),
+            "actions": node_info.get("actions", []),
         }, ensure_ascii=False)}
 
         try:
@@ -446,6 +482,11 @@ class WorkflowRunner:
             "path": step_path,
             "status": "done",
             "output": context.step_outputs.get(step.id, ""),
+            # 节点元信息
+            "node_type": node_info["node_type"],
+            "node_label": node_info["node_label"],
+            "executor": node_info["executor"],
+            "executor_label": node_info["executor_label"],
         }, ensure_ascii=False)}
 
     # ─── Pipeline 步骤 ────────────────────────────────────────────
