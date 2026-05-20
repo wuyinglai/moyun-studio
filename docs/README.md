@@ -9,23 +9,27 @@
 ## Wiki 内容概览
 
 ### 快速开始
+
 - **[Home](https://github.com/wuyinglai/moyun-studio/wiki/Home)** - 项目介绍和核心概念
 - **[Getting Started](https://github.com/wuyinglai/moyun-studio/wiki/Getting-Started)** - 快速上手指南
 - **[Installation](https://github.com/wuyinglai/moyun-studio/wiki/Installation)** - 详细安装说明
 - **[Configuration](https://github.com/wuyinglai/moyun-studio/wiki/Configuration)** - 配置 AI 模型
 
 ### 核心功能
+
 - **[Project Structure](https://github.com/wuyinglai/moyun-studio/wiki/Project-Structure)** - 项目文件结构说明
 - **[Scene-Level Writing](https://github.com/wuyinglai/moyun-studio/wiki/Scene-Level-Writing)** - 场景级写作详解
 - **[Story Memory](https://github.com/wuyinglai/moyun-studio/wiki/Story-Memory)** - 故事记忆系统
 - **[Safe Revisions](https://github.com/wuyinglai/moyun-studio/wiki/Safe-Revisions)** - 安全候选稿机制
 
 ### AI 工作流
+
 - **[Prompt System](https://github.com/wuyinglai/moyun-studio/wiki/Prompt-System)** - Prompt 模板系统
 - **[Pipeline System](https://github.com/wuyinglai/moyun-studio/wiki/Pipeline-System)** - 管线工作流
 - **[SSE Events](https://github.com/wuyinglai/moyun-studio/wiki/SSE-Events)** - 实时事件系统
 
 ### 开发者资源
+
 - **[API Reference](https://github.com/wuyinglai/moyun-studio/wiki/API-Reference)** - API 接口文档
 - **[Developer Guide](https://github.com/wuyinglai/moyun-studio/wiki/Developer-Guide)** - 开发者指南
 - **[Roadmap](https://github.com/wuyinglai/moyun-studio/wiki/Roadmap)** - 开发路线图
@@ -48,13 +52,16 @@
 ## 重要更新
 
 ### 场景级写作
+
 墨韵现已采用场景级写作模式：
+
 - 每个 `sec-*.md` 文件 = 一个完整场景（约 800 字）
 - 每章默认 5 个场景
 - 移除了旧的「节内容文件」「最近 5 章摘要」等表述
 - 更新了相关的 Prompt 模板和文档
 
 ### 配置参数新增
+
 ```
 scene_target_chars = 800          # 单场景目标字数
 scenes_per_chapter = 5            # 每章场景数

@@ -91,6 +91,10 @@ Start with these files to quickly understand the project:
 - [docs/编码规范.md](docs/编码规范.md): Coding standards.
 - [docs/文件系统设计.md](docs/文件系统设计.md): Project file structure.
 
+For complete user documentation, visit the GitHub Wiki:
+
+https://github.com/wuyinglai/moyun-studio/wiki
+
 ## Development Commands
 
 ```bash
