@@ -100,8 +100,10 @@ async def read_file(
     project_id: str = Query(..., description="项目ID"),
     path: str = Query(..., description="相对于项目根目录的文件路径"),
     fs: FileService = Depends(_get_file_service),
+    settings: Settings = Depends(get_settings),
 ):
     """读取文件内容"""
+    fs = _project_file_service(settings, project_id)
     full_path = f"{project_id}/{path}"
     try:
         content, fm, mtime = await fs.read_file(full_path)
@@ -120,8 +122,10 @@ async def write_file(
     request: Request,
     project_id: str = Query(..., description="项目ID"),
     fs: FileService = Depends(_get_file_service),
+    settings: Settings = Depends(get_settings),
 ):
     """写入文件内容"""
+    fs = _project_file_service(settings, project_id)
     full_path = f"{project_id}/{req.path}"
     try:
         await fs.write_file(
@@ -164,7 +168,8 @@ async def create_file(
     settings: Settings = Depends(get_settings),
 ):
     """创建新文件"""
-    project_dir = settings.projects_path / req.project_id
+    fs = _project_file_service(settings, req.project_id)
+    project_dir = _project_dir(settings, req.project_id)
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
@@ -195,7 +200,8 @@ async def rename_file(
     settings: Settings = Depends(get_settings),
 ):
     """重命名/移动文件（路径安全校验通过 FileService.rename_path）"""
-    project_dir = settings.projects_path / req.project_id
+    fs = _project_file_service(settings, req.project_id)
+    project_dir = _project_dir(settings, req.project_id)
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
@@ -222,7 +228,8 @@ async def create_directory(
     settings: Settings = Depends(get_settings),
 ):
     """创建新目录（路径安全校验通过 FileService.create_project_directory）"""
-    project_dir = settings.projects_path / req.project_id
+    fs = _project_file_service(settings, req.project_id)
+    project_dir = _project_dir(settings, req.project_id)
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
@@ -249,7 +256,8 @@ async def delete_file(
     settings: Settings = Depends(get_settings),
 ):
     """将文件移入回收站"""
-    project_dir = settings.projects_path / req.project_id
+    fs = _project_file_service(settings, req.project_id)
+    project_dir = _project_dir(settings, req.project_id)
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
@@ -274,7 +282,8 @@ async def delete_directory(
     settings: Settings = Depends(get_settings),
 ):
     """将目录移入回收站"""
-    project_dir = settings.projects_path / req.project_id
+    fs = _project_file_service(settings, req.project_id)
+    project_dir = _project_dir(settings, req.project_id)
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
@@ -298,7 +307,8 @@ async def get_tree(
     settings: Settings = Depends(get_settings),
 ):
     """获取项目文件树"""
-    project_dir = settings.projects_path / project_id
+    fs = _project_file_service(settings, project_id)
+    project_dir = _project_dir(settings, project_id)
     if not project_dir.exists():
         raise ProjectNotFoundError(project_id)
 
@@ -320,8 +330,10 @@ class SearchResultItem(BaseModel):
 async def search_files(
     req: SearchRequest,
     fs: FileService = Depends(_get_file_service),
+    settings: Settings = Depends(get_settings),
 ):
     """在项目中搜索文件内容"""
+    fs = _project_file_service(settings, req.project_id)
     results = await fs.search_files(
         req.project_id,
         req.query,

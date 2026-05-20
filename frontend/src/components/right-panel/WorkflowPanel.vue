@@ -116,12 +116,25 @@
               class="waiting-actions"
             >
               <span class="waiting-reason">{{ currentNode.waiting_reason }}</span>
+
+              <!-- 输入内容展示和编辑 -->
+              <div v-if="currentNode.input" class="waiting-input-section">
+                <label class="input-label">输入内容:</label>
+                <textarea
+                  v-model="userEditedOutput"
+                  class="waiting-textarea"
+                  rows="6"
+                  placeholder="在此编辑内容..."
+                ></textarea>
+              </div>
+
               <div class="action-buttons">
                 <button
                   v-for="action in currentNode.actions"
                   :key="action"
                   class="action-btn"
                   :class="`action-${action}`"
+                  :disabled="isRunning"
                   @click="handleNodeAction(action)"
                 >
                   {{ actionLabel(action) }}
@@ -251,14 +264,14 @@
             <i class="fa-solid fa-play" /> 运行
           </button>
           <button
-            v-if="isRunning"
+            v-if="isRunning && !isPaused"
             class="btn-stop"
             @click="handleStop"
           >
             <i class="fa-solid fa-stop" /> 停止
           </button>
           <button
-            v-if="hasRun && !isRunning"
+            v-if="hasRun && !isRunning && !isPaused"
             class="btn-run"
             @click="handleRunAgain"
           >
@@ -420,9 +433,9 @@ import Sortable from 'sortablejs'
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
 const {
-  workflows, isLoading, isRunning, currentRunId, runLogs,
+  workflows, isLoading, isRunning, isPaused, currentRunId, runLogs,
   currentNode, nodeStates, stepsPreview, variablePool,
-  fetchWorkflows, fetchWorkflowDetail, runWorkflow, stopWorkflow,
+  fetchWorkflows, fetchWorkflowDetail, runWorkflow, resumeWorkflow, stopWorkflow,
   saveWorkflow, deleteWorkflow,
 } = useWorkflow()
 
@@ -433,6 +446,7 @@ const varOverrides = ref<Record<string, string>>({})
 const hasRun = ref(false)
 const logRef = ref<HTMLElement | null>(null)
 const stepEditorListRef = ref<HTMLElement | null>(null)
+const userEditedOutput = ref('')
 let sortableInstance: any = null
 
 // 编辑器数据
@@ -476,9 +490,23 @@ function truncateValue(value: string, maxLen = 50): string {
   return value.slice(0, maxLen) + '...'
 }
 
-function handleNodeAction(action: string) {
-  // TODO: 实现 Human 节点动作处理
-  notification.info(`执行动作: ${actionLabel(action)}`)
+async function handleNodeAction(action: string) {
+  if (!currentRunId.value) return
+
+  // 获取用户编辑后的输出
+  const output = userEditedOutput.value || currentNode.value?.input || ''
+
+  const ok = await resumeWorkflow(
+    currentRunId.value,
+    action,
+    output
+  )
+
+  if (ok) {
+    notification.success('工作流恢复执行')
+  } else {
+    notification.error('恢复工作流失败')
+  }
 }
 
 // ─── SortableJS 拖拽排序 ───
@@ -527,6 +555,12 @@ function stepIcon(type: string): string {
     case 'pipeline': return '⚡'
     case 'loop': return '🔄'
     case 'file': return '📁'
+    case 'human_review':
+    case 'human_edit':
+    case 'human_choice':
+    case 'human_score':
+    case 'human_instruction':
+      return '👤'
     default: return '⬜'
   }
 }
@@ -546,7 +580,7 @@ async function selectWorkflow(name: string) {
   selectedName.value = name
   detail.value = await fetchWorkflowDetail(name)
   const vars: Record<string, string> = {}
-  if (detail.value?.variables) for (const [k, v] of Object.entries(detail.value.variables)) vars[k] = String(v)
+  if (detail.value?.variables) for (const [key, val] of Object.entries(detail.value.variables)) vars[key] = String(val)
   varOverrides.value = vars
   hasRun.value = false
   mode.value = 'detail'
@@ -587,8 +621,8 @@ async function handleSave() {
   if (!editData.label.trim()) { notification.warning('请填写名称'); return }
 
   const vars: Record<string, string> = {}
-  for (const k of editVarKeys.value) {
-    if (k.trim()) vars[k.trim()] = editData.variables[k] || ''
+  for (const key of editVarKeys.value) {
+    if (key.trim()) vars[key.trim()] = editData.variables[key] || ''
   }
 
   const ok = await saveWorkflow({
@@ -668,8 +702,10 @@ async function handleRun() {
   if (!projectId) { notification.warning('请先打开一个项目'); return }
   if (!selectedName.value) return
   hasRun.value = true
+  // 重置用户编辑内容
+  userEditedOutput.value = ''
   const variables: Record<string, string> = {}
-  if (detail.value?.variables) for (const [k, v] of Object.entries(detail.value.variables)) variables[k] = varOverrides.value[k] || String(v)
+  if (detail.value?.variables) for (const [key, value] of Object.entries(detail.value.variables)) variables[key] = varOverrides.value[key] || String(value)
   const ok = await runWorkflow(selectedName.value, projectId, variables)
   if (ok) {
     notification.success('工作流执行完成')
@@ -687,6 +723,13 @@ async function handleRunAgain() {
   hasRun.value = false
   await handleRun()
 }
+
+// 监听 currentNode 变化，设置初始编辑内容
+watch(currentNode, (newNode) => {
+  if (newNode && newNode.input) {
+    userEditedOutput.value = newNode.input
+  }
+})
 
 onMounted(() => { fetchWorkflows() })
 </script>
@@ -876,13 +919,42 @@ onMounted(() => { fetchWorkflows() })
     .node-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
     .waiting-actions {
       .waiting-reason { font-size: 11px; color: var(--accent-warning); display: block; margin-bottom: 6px; }
+
+      .waiting-input-section {
+        margin-bottom: 8px;
+        .input-label {
+          display: block;
+          font-size: 11px;
+          color: var(--text-secondary);
+          margin-bottom: 4px;
+        }
+        .waiting-textarea {
+          width: 100%;
+          padding: 8px;
+          font-size: 12px;
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius-sm);
+          color: var(--text-primary);
+          resize: vertical;
+          min-height: 100px;
+          font-family: 'Consolas', 'Monaco', monospace;
+
+          &:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+          }
+        }
+      }
+
       .action-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
       .action-btn {
         padding: 4px 8px; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s;
-        &.action-approve { background: var(--accent-success); color: white; &:hover { opacity: 0.9; } }
-        &.action-edit_and_approve { background: var(--accent-primary); color: white; &:hover { opacity: 0.9; } }
-        &.action-regenerate { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border-color); &:hover { border-color: var(--accent-primary); } }
-        &.action-stop { background: transparent; color: var(--accent-danger); border: 1px solid var(--accent-danger); &:hover { background: var(--accent-danger); color: white; } }
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+        &.action-approve { background: var(--accent-success); color: white; &:hover:not(:disabled) { opacity: 0.9; } }
+        &.action-edit_and_approve { background: var(--accent-primary); color: white; &:hover:not(:disabled) { opacity: 0.9; } }
+        &.action-regenerate { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border-color); &:hover:not(:disabled) { border-color: var(--accent-primary); } }
+        &.action-stop { background: transparent; color: var(--accent-danger); border: 1px solid var(--accent-danger); &:hover:not(:disabled) { background: var(--accent-danger); color: white; } }
       }
     }
     .node-progress {

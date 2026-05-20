@@ -48,6 +48,18 @@ def _file_content(read_result: Any) -> str:
     return str(read_result)
 
 
+def _int_config(value: Any, default: int) -> int:
+    """Return an integer config value, ignoring mocks or missing settings."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 class PipelineError(Exception):
     pass
 
@@ -375,11 +387,18 @@ class PipelineRunner:
 
                 # G0118: 自动 token 检查 — 估算 prompt token 数，超限时发出警告
                 prompt_tokens = self._estimate_tokens(prompt_text)
-                max_prompt_tokens = self.llm_service.config.max_prompt_tokens
+                max_prompt_tokens = _int_config(
+                    getattr(self.llm_service.config, "max_prompt_tokens", None),
+                    120000,
+                )
+                context_window = _int_config(
+                    getattr(self.llm_service.config, "context_window", None),
+                    max_prompt_tokens,
+                )
 
                 if prompt_tokens > max_prompt_tokens:
                     warning_msg = f"Prompt 过长（约 {prompt_tokens} tokens），超出模型限制 {max_prompt_tokens} tokens"
-                    if prompt_tokens > self.llm_service.config.context_window:
+                    if prompt_tokens > context_window:
                         warning_msg += "，建议：减少 recent_context / 只引用当前章摘要 / 分段执行"
                     yield {"event": "error", "data": json.dumps({
                         "message": warning_msg,
@@ -387,7 +406,7 @@ class PipelineRunner:
                         "warning": True,
                         "prompt_tokens": prompt_tokens,
                         "max_prompt_tokens": max_prompt_tokens,
-                        "context_window": self.llm_service.config.context_window,
+                        "context_window": context_window,
                     })}
 
                 # context 步骤缓存：同一章内复用已生成的上下文分析
