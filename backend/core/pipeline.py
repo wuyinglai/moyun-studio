@@ -38,6 +38,8 @@ from backend.core.prompt_versioning import archive_prompt
 from backend.schemas.candidate import CandidateAction
 from backend.schemas.pipeline import PipelineDef
 from backend.application.memory_service import MemoryService
+from backend.application.pipeline.context import PipelineContext, NodeResult
+from backend.application.pipeline.registry import NodeExecutorRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +87,7 @@ class PipelineRunner:
         self.file_service = file_service
         self.memory_service = MemoryService(file_service)
         self.source = source
+        self.executor_registry = NodeExecutorRegistry()
         # 同一章内 context 步骤输出缓存，key=章目录路径 → context 文本
         self._context_cache: dict[str, str] = {}
 
@@ -436,30 +439,38 @@ class PipelineRunner:
                             })}
                             continue
 
-                # 调用 LLM
-                messages = [
-                    {"role": "system", "content": "你是一个文本处理工具。根据用户的指令处理文本，只输出处理结果本身，严禁输出任何解释、分析、问候、标题、编号或其他附加内容。"},
-                    {"role": "user", "content": prompt_text},
-                ]
-                step_output = ""
-                extra_kwargs = dict(llm_extra_kwargs or {})
+                # 构建执行上下文
+                pipeline_context = PipelineContext(
+                    project_id=project_id,
+                    pipeline_name=pipeline_name,
+                    target_file=target_file,
+                    task_id=task_id,
+                    output_mode=output_mode,
+                    user_input=user_input,
+                    step_outputs=dict(step_outputs),
+                    system_vars=system_vars,
+                    project_vars=project_vars,
+                    chapter_vars=chapter_vars,
+                    extra_vars=extra_vars,
+                )
 
-                async for chunk in self.llm_service.complete(
-                    messages,
+                # 通过 executor registry 执行步骤
+                executor = self.executor_registry.get_executor(step)
+                result = await executor.execute(
+                    step=step,
+                    context=pipeline_context,
+                    prompt_text=prompt_text,
+                    llm_service=self.llm_service,
+                    file_service=self.file_service,
                     stop_event=stop_event,
-                    timeout=180,
-                    **extra_kwargs,
-                ):
-                    step_output += chunk
-                    # update_story_state 的输出是结构化状态数据，不流式到编辑器
-                    if step.id == "update_story_state":
-                        continue
-                    # 其他步骤的 LLM 输出实时流式到前端
-                    yield {"event": "generation", "data": json.dumps({
-                        "delta": chunk,
-                        "task_id": task_id,
-                    })}
+                    llm_extra_kwargs=llm_extra_kwargs,
+                )
 
+                # 发送执行器产生的事件
+                for event in result.events:
+                    yield event
+
+                step_output = result.output
                 step_outputs[step.id] = step_output
 
                 # context 步骤完成后缓存到内存，同章后续 sec 复用
@@ -471,19 +482,23 @@ class PipelineRunner:
                         cache_key = await self._build_context_cache_key(project_id, ch_key)
                         self._context_cache[cache_key] = step_output
 
-                # 如果步骤指定了 output 路径，将步骤输出写入对应文件
-                if step.output and step_output:
-                    output_path = step.output
-                    candidate_id = await self._write_step_output_or_candidate(
-                        project_id, output_path, step_output, task_id, CandidateAction.MODIFY
-                    )
-                    if candidate_id:
-                        yield {"event": "candidate_created", "data": json.dumps({
-                            "task_id": task_id,
-                            "candidate_id": candidate_id,
-                            "source_path": output_path,
-                            "action": CandidateAction.MODIFY.value,
-                        })}
+                # 如果步骤指定了 output 路径且执行器未处理，使用 FileOutputExecutor
+                if step.output and step_output and not result.candidate_id:
+                    file_executor = self.executor_registry.get_executor_by_name("file_output")
+                    if file_executor:
+                        # 更新上下文中的 step_outputs
+                        pipeline_context.step_outputs[step.id] = step_output
+                        file_result = await file_executor.execute(
+                            step=step,
+                            context=pipeline_context,
+                            prompt_text=prompt_text,
+                            llm_service=self.llm_service,
+                            file_service=self.file_service,
+                        )
+                        for event in file_result.events:
+                            yield event
+                        if file_result.candidate_id:
+                            result.candidate_id = file_result.candidate_id
 
                 logger.info(
                     "管线步骤完成: %s/%s (output_len=%d)",
