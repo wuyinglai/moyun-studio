@@ -60,16 +60,18 @@
 - 移除了旧的「节内容文件」「最近 5 章摘要」等表述
 - 更新了相关的 Prompt 模板和文档
 
-### 配置参数新增
+### 配置参数
 
 ```
 scene_target_chars = 800          # 单场景目标字数
-scenes_per_chapter = 5            # 每章场景数
-chapters_per_volume = 12          # 每卷章节数
-recent_context_scene_limit = 15   # 近期上下文场景数
-batch_generate_max_count = 10     # 批量生成最大数
+scenes_per_chapter = 5            # 每章节场景数
+chapters_per_volume = 12           # 每卷章节数
+recent_context_scene_limit = 15    # 近期上下文场景数（短期记忆，约覆盖3章范围）
+batch_generate_max_count = 10      # 批量生成最大场景数量
 max_file_write_size = 5MB         # 最大文件写入大小
-allow_lan_access = false          # 允许局域网访问
+allow_lan_access = false           # 允许局域网访问
+unit_label = "scene"              # 单位标签
+max_candidate_size = 3            # 最大候选稿数量
 ```
 
 ## 联系与反馈
