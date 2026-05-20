@@ -4,12 +4,13 @@
 1. CandidateService create_candidate 时 source_path 不包含 project_id
 2. adopt_candidate 时 source_path 不会出现双重路径
 3. 候选稿元数据中 source_path 格式正确
+4. adopt_candidate 冲突检测（源文件已变化时返回 conflict）
 """
 
 import pytest
 
 from backend.core.file_ops import FileService
-from backend.core.candidate_service import CandidateService, CandidateAction, CandidateStatus
+from backend.core.candidate_service import CandidateService, CandidateAction, CandidateStatus, AdoptResult
 
 
 class TestCandidateServiceSourcePath:
@@ -73,11 +74,11 @@ class TestCandidateServiceSourcePath:
         )
 
         # 采用候选稿
-        success = await candidate_svc.adopt_candidate(
+        result = await candidate_svc.adopt_candidate(
             project_id="test-project",
             candidate_id=candidate.id,
         )
-        assert success
+        assert result == AdoptResult.SUCCESS
 
         # 验证采用后的文件内容
         adopted_content, _, _ = await fs.read_file(f"test-project/{source_path}")
@@ -227,3 +228,72 @@ class TestCandidateServiceBasic:
         )
 
         assert content == original_content
+
+    @pytest.mark.asyncio
+    async def test_adopt_candidate_conflict_detection(self, temp_workspace):
+        """源文件已变化时采用候选稿返回 conflict"""
+        fs = FileService(temp_workspace)
+
+        # 创建测试项目
+        project_dir = temp_workspace / "test-project"
+        project_dir.mkdir(parents=True, exist_ok=True)
+
+        # 创建原始文件
+        chapters_dir = project_dir / "chapters" / "vol-01" / "ch-001"
+        chapters_dir.mkdir(parents=True, exist_ok=True)
+        original_file = chapters_dir / "sec-001.md"
+        original_file.write_text("# 原始内容\n\n这是原始内容。", encoding="utf-8")
+
+        candidate_svc = CandidateService(fs)
+
+        # 创建候选稿（此时会记录 base_hash）
+        source_path = "chapters/vol-01/ch-001/sec-001.md"
+        candidate = await candidate_svc.create_candidate(
+            project_id="test-project",
+            source_path=source_path,
+            action=CandidateAction.REWRITE,
+            content="# 新内容\n\n这是新内容。",
+        )
+
+        # 修改源文件（模拟外部修改）
+        original_file.write_text("# 被外部修改的内容\n\n这是新修改的。", encoding="utf-8")
+
+        # 采用候选稿应返回 conflict
+        result = await candidate_svc.adopt_candidate(
+            project_id="test-project",
+            candidate_id=candidate.id,
+        )
+        assert result == AdoptResult.CONFLICT
+
+        # 验证候选稿状态变为 rejected
+        updated = await candidate_svc.get_candidate("test-project", candidate.id)
+        assert updated.status == CandidateStatus.REJECTED
+
+    @pytest.mark.asyncio
+    async def test_create_candidate_records_base_hash(self, temp_workspace):
+        """创建候选稿时记录 base_hash 和 base_mtime"""
+        fs = FileService(temp_workspace)
+
+        project_dir = temp_workspace / "test-project"
+        project_dir.mkdir(parents=True, exist_ok=True)
+
+        # 创建原始文件
+        chapters_dir = project_dir / "chapters" / "vol-01" / "ch-001"
+        chapters_dir.mkdir(parents=True, exist_ok=True)
+        original_file = chapters_dir / "sec-001.md"
+        original_file.write_text("# 原始内容", encoding="utf-8")
+
+        candidate_svc = CandidateService(fs)
+
+        source_path = "chapters/vol-01/ch-001/sec-001.md"
+        candidate = await candidate_svc.create_candidate(
+            project_id="test-project",
+            source_path=source_path,
+            action=CandidateAction.REWRITE,
+            content="# 新内容",
+        )
+
+        # 验证 base_hash 和 base_mtime 被记录
+        assert candidate.base_hash != ""
+        assert candidate.base_mtime is not None
+        assert candidate.project_id == "test-project"

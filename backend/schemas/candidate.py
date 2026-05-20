@@ -30,21 +30,28 @@ class CandidateStatus(str, Enum):
     """候选稿状态"""
     PENDING = "pending"           # 待处理
     ADOPTED = "adopted"           # 已采用
+    REJECTED = "rejected"         # 已拒绝（含冲突）
     DISCARDED = "discarded"       # 已放弃
 
 
 class CandidateInfo(BaseModel):
     """候选稿信息"""
     id: str = Field(..., description="候选稿唯一标识")
-    source_path: str = Field(..., description="源文件路径")
+    project_id: str = Field("", description="项目ID")
+    source_path: str = Field(..., description="源文件路径（项目内相对路径，不带 project_id）")
     candidate_path: str = Field(..., description="候选稿文件路径")
     action: CandidateAction = Field(..., description="动作类型")
+    base_hash: str = Field("", description="创建时源文件内容哈希")
+    base_mtime: float | None = Field(None, description="创建时源文件修改时间")
     status: CandidateStatus = Field(default=CandidateStatus.PENDING, description="状态")
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
     adopted_at: datetime | None = Field(None, description="采用时间")
     word_count: int = Field(default=0, description="字数")
     summary: str | None = Field(None, description="摘要")
     workflow_run_id: str | None = Field(None, description="关联的工作流运行ID")
+    model: str | None = Field(None, description="生成模型")
+    pipeline_id: str | None = Field(None, description="管线ID")
+    prompt_version: str | None = Field(None, description="Prompt 版本（可选）")
 
     @property
     def filename(self) -> str:
@@ -64,6 +71,9 @@ class CreateCandidateRequest(BaseModel):
     action: CandidateAction = Field(..., description="动作类型")
     content: str = Field(..., description="候选稿内容")
     workflow_run_id: str | None = Field(None, description="关联的工作流运行ID")
+    model: str | None = Field(None, description="生成模型")
+    pipeline_id: str | None = Field(None, description="管线ID")
+    prompt_version: str | None = Field(None, description="Prompt 版本")
 
 
 class AdoptCandidateRequest(BaseModel):
@@ -93,7 +103,8 @@ class AdoptCandidateResponse(BaseModel):
     """采用候选稿响应"""
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="结果消息")
-    file_path: str = Field(..., description="被更新的文件路径")
+    file_path: str = Field("", description="被更新的文件路径")
+    conflict: bool = Field(False, description="是否因源文件已变化而冲突")
 
 
 class DeleteCandidateResponse(BaseModel):

@@ -4,7 +4,7 @@
 from fastapi import APIRouter, HTTPException
 
 from backend.config import get_settings
-from backend.core.candidate_service import CandidateService
+from backend.core.candidate_service import CandidateService, AdoptResult
 from backend.core.file_ops import FileService
 from backend.schemas.candidate import (
     AdoptCandidateResponse,
@@ -91,9 +91,18 @@ async def adopt_candidate(
     if candidate.status != CandidateStatus.PENDING:
         raise HTTPException(status_code=400, detail="候选稿状态不允许采用")
 
-    success = await candidate_service.adopt_candidate(project_id, candidate_id)
-    if not success:
-        raise HTTPException(status_code=500, detail="采用候选稿失败")
+    result = await candidate_service.adopt_candidate(project_id, candidate_id)
+
+    if result == AdoptResult.CONFLICT:
+        return AdoptCandidateResponse(
+            success=False,
+            message="源文件已被修改，候选稿与当前文件不一致，请重新生成",
+            file_path=candidate.source_path,
+            conflict=True,
+        )
+
+    if result != AdoptResult.SUCCESS:
+        raise HTTPException(status_code=500, detail=f"采用候选稿失败: {result}")
 
     return AdoptCandidateResponse(
         success=True,

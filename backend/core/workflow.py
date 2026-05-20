@@ -954,16 +954,18 @@ class WorkflowRunner:
             return
 
         candidate_service = CandidateService(self.file_service)
-        success = await candidate_service.adopt_candidate(
+        result = await candidate_service.adopt_candidate(
             project_id=context.project_id,
             candidate_id=candidate_id,
         )
 
-        if success:
+        if result == "success":
             logger.info("采用候选稿: %s", candidate_id)
             context.step_outputs[step.id] = candidate_id
+        elif result == "conflict":
+            logger.warning("采用候选稿冲突（源文件已变化）: %s", candidate_id)
         else:
-            logger.warning("采用候选稿失败: %s", candidate_id)
+            logger.warning("采用候选稿失败: %s (result=%s)", candidate_id, result)
 
     # ─── Memory 节点 ───────────────────────────────────────────────
 
