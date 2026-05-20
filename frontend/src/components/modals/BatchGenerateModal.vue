@@ -174,6 +174,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
 import { useLLMStore } from '@/stores/llm'
 import type { BatchGenerateItem } from '@/types/chat'
+import { parseVolumeDir, parseChapterDir } from '@/modules/scene/scenePath'
 
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
@@ -215,8 +216,8 @@ const availableVolumes = computed(() => {
   const vols: number[] = []
   const tree = fileStore.tree || []
   for (const node of tree) {
-    const m = node.name.match(/^vol-0*(\d+)$/)
-    if (m) vols.push(parseInt(m[1]))
+    const volNum = parseVolumeDir(node.name)
+    if (volNum !== null) vols.push(volNum)
   }
   return vols.sort((a, b) => a - b)
 })
@@ -227,8 +228,8 @@ const availableChapters = computed(() => {
   const volDir = tree.find(n => n.name === `vol-${String(volumeNumber.value).padStart(2, '0')}`)
   if (volDir?.children) {
     for (const node of volDir.children) {
-      const m = node.name.match(/^ch-0*(\d+)$/)
-      if (m) chs.push(parseInt(m[1]))
+      const chNum = parseChapterDir(node.name)
+      if (chNum !== null) chs.push(chNum)
     }
   }
   return chs.sort((a, b) => a - b)

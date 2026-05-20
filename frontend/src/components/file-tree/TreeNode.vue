@@ -110,6 +110,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useFileStore } from '@/stores/file'
 import type { FileNode } from '@/stores/file'
+import { parseVolumeDir, parseChapterDir, parseSceneFileName } from '@/modules/scene/scenePath'
 
 const props = defineProps<{
   node: FileNode
@@ -149,13 +150,13 @@ const menuOpen = ref(false)
 const displayName = computed(() => {
   const name = props.node.name
   if (props.node.type === 'directory') {
-    const volMatch = name.match(/^vol-0*(\d+)$/)
-    if (volMatch) return `第${volMatch[1]}卷`
-    const chMatch = name.match(/^ch-0*(\d+)$/)
-    if (chMatch) return `第${chMatch[1]}章`
+    const volNum = parseVolumeDir(name)
+    if (volNum !== null) return `第${volNum}卷`
+    const chNum = parseChapterDir(name)
+    if (chNum !== null) return `第${chNum}章`
   } else {
-    const secMatch = name.match(/^sec-0*(\d+)\.md$/)
-    if (secMatch) return `第${secMatch[1]}节`
+    const secNum = parseSceneFileName(name)
+    if (secNum !== null) return `第${secNum}节`
   }
   return name
 })

@@ -175,6 +175,7 @@ import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
 import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { guessPromptType, getPipelineForFile } from '@/utils/promptTypes'
+import { isSceneFile as isSceneFilePath, getNextScenePath, buildScenePath } from '@/modules/scene/scenePath'
 
 const chatStore = useChatStore()
 const historyStore = useHistoryStore()
@@ -216,11 +217,10 @@ const PROJECT_CHAIN: Array<{ path: string; pipeline: string }> = [
 
 /** 根据当前文件路径推导下一个文件和 pipeline */
 function getNextInChain(currentPath: string): { path: string; pipeline: string } | null {
-  // 章节文件（sec-NNN.md）→ 用已有的 getNextSectionPath + generate pipeline
-  const secMatch = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
-  if (secMatch) {
+  // 章节文件（sec-NNN.md）→ 用已有的 getNextScenePath + generate pipeline
+  if (isSceneFilePath(currentPath)) {
     _chainIndex = -1
-    const nextPath = getNextSectionPath(currentPath)
+    const nextPath = getNextScenePath(currentPath)
     if (nextPath) return { path: nextPath, pipeline: 'generate' }
     return null
   }
@@ -235,11 +235,11 @@ function getNextInChain(currentPath: string): { path: string; pipeline: string }
   // 在链中且是最后一项 → 过渡到第一章
   if (idx === PROJECT_CHAIN.length - 1) {
     _chainIndex = -1
-    return { path: 'chapters/vol-01/ch-001/sec-001.md', pipeline: 'generate' }
+    return { path: buildScenePath(1, 1, 1), pipeline: 'generate' }
   }
 
   // 不在链中也不是章节 → 从链头开始
-  if (!secMatch && !PROJECT_CHAIN.some(i => currentPath.endsWith(i.path))) {
+  if (!isSceneFilePath(currentPath) && !PROJECT_CHAIN.some(i => currentPath.endsWith(i.path))) {
     _chainIndex = 0
     return PROJECT_CHAIN[0]
   }
@@ -268,7 +268,7 @@ const customPipelines = computed(() =>
 /** 当前文件是否为场景正文文件（sec-*.md），每个 sec = 一个完整场景 */
 const isSceneFile = computed(() => {
   const path = editorStore.currentFilePath || ''
-  return /\/sec-\d+\.md$/.test(path)
+  return isSceneFilePath(path)
 })
 
 // 兼容旧名称
@@ -540,7 +540,7 @@ const GUIDE_STEP_MAP: Record<string, number> = {
 
 function syncGuideStep(path: string, status: 'running' | 'done') {
   // 章节文件 → loop 步骤
-  if (path.match(/sec-\d+\.md$/)) {
+  if (isSceneFilePath(path)) {
     if (guide.steps.value[6]) guide.steps.value[6].status = status as any
     if (status === 'running') {
       for (let i = 0; i < 6; i++) {
@@ -593,45 +593,6 @@ async function loadFilePrompt(projectId: string, filePath: string) {
       })
       .catch(() => {})
   }
-}
-
-/** 从当前文件路径推导下一个场景文件路径 */
-function getNextSectionPath(currentPath: string): string | null {
-  // 匹配 chapters/vol-NN/ch-NNN/sec-NNN.md
-  const match = currentPath.match(/^(.*\/)(sec-)(\d+)(\.md)$/)
-  if (!match) return null
-  const [, prefix, base, num, ext] = match
-  const secNum = Number(num)
-
-  // 场景级参数（sec = 单场景）
-  // SCENE_TARGET_CHARS = 800 (单场景目标字数，当前函数不直接使用)
-  const SCENES_PER_CHAPTER = 5
-  const CHAPTERS_PER_VOLUME = 12
-
-  // 如果当前 scene < 每章上限，直接递增
-  if (secNum < SCENES_PER_CHAPTER) {
-    const nextNum = String(secNum + 1).padStart(num.length, '0')
-    return `${prefix}${base}${nextNum}${ext}`
-  }
-
-  // 已达到章节上限，尝试进入下一章
-  const chMatch = prefix.match(/^(.*\/ch-)(\d+)(\/)$/)
-  if (!chMatch) return null
-  const [, chPrefix, chNum, chSuffix] = chMatch
-  const ch = Number(chNum)
-
-  if (ch < CHAPTERS_PER_VOLUME) {
-    // 同一卷内下一章
-    const nextCh = String(ch + 1).padStart(chNum.length, '0')
-    return `${chPrefix}${nextCh}${chSuffix}sec-001.md`
-  }
-
-  // 已到卷末，进入下一卷
-  const volMatch = chPrefix.match(/^(.*\/vol-)(\d+)(\/)$/)
-  if (!volMatch) return null
-  const [, volPrefix, volNum, volSuffix] = volMatch
-  const nextVol = String(Number(volNum) + 1).padStart(volNum.length, '0')
-  return `${volPrefix}${nextVol}${volSuffix}ch-001/sec-001.md`
 }
 
 async function handleRegenerate() {

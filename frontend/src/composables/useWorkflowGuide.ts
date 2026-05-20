@@ -14,6 +14,7 @@ import { useTaskStore } from '@/stores/task'
 import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
+import { buildScenePath } from '@/modules/scene/scenePath'
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'waiting'
 
@@ -60,7 +61,7 @@ async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<G
       // 每章固定 4 节，逐节生成
       for (let sec = 1; sec <= 4; sec++) {
         const secPad = String(sec).padStart(3, '0')
-        const secOutput = resolvePath(genStep.output || '').replace('sec-001.md', `sec-${secPad}.md`)
+        const secOutput = buildScenePath(vol, ch, sec)
         expanded.push({
           id: `vol-${volPad}-ch-${chPad}-sec-${secPad}`,
           label: `正文 第${vol}卷第${ch}章第${sec}节`,

@@ -123,6 +123,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useGenerationStore } from '@/stores/generation'
 import { useNotificationStore } from '@/stores/notification'
 import { useRightPanelStore } from '@/stores/rightPanel'
+import { parseScenePath, buildChapterPlanPath } from '@/modules/scene/scenePath'
 
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
@@ -191,6 +192,9 @@ async function refreshEngine() {
 
 function currentChapterPlanPath() {
   const file = currentFilePath.value
+  const info = parseScenePath(file)
+  if (info) return buildChapterPlanPath(info.volume, info.chapter)
+  // fallback: 从路径中提取 vol/ch
   const vol = file.match(/vol-(\d+)/)?.[1] || '01'
   const ch = file.match(/ch-(\d+)/)?.[1] || '001'
   return `chapters/vol-${vol}/ch-${ch}/ch-plan.md`
