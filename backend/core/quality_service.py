@@ -51,7 +51,7 @@ class QualityService:
     async def _read_project_file(self, project_id: str, rel_path: str) -> str:
         """安全读取项目文件，不存在则返回空字符串"""
         try:
-            content, _ = await self.file_service.read_file(f"{project_id}/{rel_path}")
+            content, _, _ = await self.file_service.read_file(f"{project_id}/{rel_path}")
             return content
         except Exception:
             return ""

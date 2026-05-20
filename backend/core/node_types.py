@@ -17,6 +17,8 @@ class NodeType(str, Enum):
     HUMAN_EDIT = "human_edit"           # 用户编辑
     HUMAN_CHOICE = "human_choice"      # 用户选择
     HUMAN_CONFIRM = "human_confirm"     # 用户确认
+    HUMAN_SCORE = "human_score"        # 用户评分
+    HUMAN_INSTRUCTION = "human_instruction"  # 用户补充指令
 
     # File 节点
     FILE_READ = "file_read"             # 读取文件
@@ -55,13 +57,25 @@ class ExecutorType(str, Enum):
     SYSTEM = "system"   # 系统执行
 
 
-# 旧步骤类型到新节点类型的映射
+# 步骤类型到新节点类型的映射
 STEP_TYPE_TO_NODE_TYPE: dict[str, NodeType] = {
     # pipeline -> Prompt 节点
     "pipeline": NodeType.PROMPT,
 
     # loop -> Control 循环节点
     "loop": NodeType.LOOP,
+
+    # Human 节点
+    "human_review": NodeType.HUMAN_REVIEW,
+    "human_edit": NodeType.HUMAN_EDIT,
+    "human_choice": NodeType.HUMAN_CHOICE,
+    "human_confirm": NodeType.HUMAN_CONFIRM,
+    "human_score": NodeType.HUMAN_SCORE,
+    "human_instruction": NodeType.HUMAN_INSTRUCTION,
+
+    # Memory 节点
+    "memory_update": NodeType.MEMORY_UPDATE,
+    "memory_review": NodeType.MEMORY_REVIEW,
 
     # file actions -> File 节点
     "file": NodeType.UNKNOWN,  # 需要根据 action 确定
@@ -95,6 +109,8 @@ def get_executor(node_type: NodeType) -> ExecutorType:
         NodeType.HUMAN_EDIT,
         NodeType.HUMAN_CHOICE,
         NodeType.HUMAN_CONFIRM,
+        NodeType.HUMAN_SCORE,
+        NodeType.HUMAN_INSTRUCTION,
     ):
         return ExecutorType.HUMAN
 
@@ -136,6 +152,8 @@ def node_type_label(node_type: NodeType) -> str:
         NodeType.HUMAN_EDIT: "用户编辑",
         NodeType.HUMAN_CHOICE: "用户选择",
         NodeType.HUMAN_CONFIRM: "用户确认",
+        NodeType.HUMAN_SCORE: "用户评分",
+        NodeType.HUMAN_INSTRUCTION: "补充指令",
         NodeType.FILE_READ: "读取文件",
         NodeType.FILE_WRITE: "写入文件",
         NodeType.FILE_MKDIR: "创建目录",
@@ -188,4 +206,52 @@ def build_node_info(step_type: str, action: str | None = None, label: str = "") 
         info["actions"] = HUMAN_ACTIONS
         info["waiting_reason"] = f"请{node_type_label(node_type)}"
 
+    # Memory 节点添加审核动作
+    if node_type == NodeType.MEMORY_UPDATE:
+        info["risk_levels"] = ["low", "medium", "high"]
+        info["requires_review"] = True
+
     return info
+
+
+# Memory 节点风险评估
+MEMORY_RISK_RULES = {
+    "high": [
+        "伏笔回收",
+        "角色死亡/消失",
+        "重要设定揭示",
+        "不可逆情节变化",
+    ],
+    "medium": [
+        "势力关系重大变化",
+        "重要角色首次出场",
+        "支线完成",
+    ],
+    "low": [
+        "日常情节推进",
+        "主角能力小幅提升",
+        "不影响主线的细节",
+    ],
+}
+
+
+def assess_memory_risk(content: str, current_state: str) -> tuple[str, str]:
+    """评估记忆更新的风险等级"""
+    content_lower = content.lower()
+
+    # 检查高风险关键词
+    high_risk_keywords = ["死亡", "消失", "揭示", "回收伏笔", "重大转折"]
+    for keyword in high_risk_keywords:
+        if keyword in content_lower:
+            return "high", f"包含高风险内容：{keyword}"
+
+    # 检查中风险关键词
+    medium_risk_keywords = ["关系变化", "首次出场", "支线完成", "重要角色"]
+    for keyword in medium_risk_keywords:
+        if keyword in content_lower:
+            return "medium", f"包含中等风险内容：{keyword}"
+
+    # 检查是否与现有状态冲突
+    # TODO: 实现更复杂的冲突检测逻辑
+
+    return "low", "常规内容更新"

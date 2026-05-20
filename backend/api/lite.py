@@ -441,7 +441,7 @@ async def _stream_llm_content(
 
 async def _read_optional(file_service: FileService, project_id: str, rel_path: str) -> str:
     try:
-        content, _ = await file_service.read_file(f"{project_id}/{rel_path}")
+        content, _, _ = await file_service.read_file(f"{project_id}/{rel_path}")
         return content
     except Exception:
         return ""
@@ -591,14 +591,14 @@ async def _generate_chapter_plan(
     meta_path = f"chapters/vol-{vol:02d}/ch-{completed_ch:03d}/ch-meta.json"
     existing_plan_path = f"chapters/vol-{vol:02d}/ch-{next_ch:03d}/ch-plan.md"
     try:
-        existing_plan, _ = await file_service.read_file(f"{project_id}/{existing_plan_path}")
+        existing_plan, _, _ = await file_service.read_file(f"{project_id}/{existing_plan_path}")
         if not _is_blank_chapter(existing_plan):
             return existing_plan.strip()
     except Exception:
         pass
     ch_title = ""
     try:
-        meta_raw, _ = await file_service.read_file(f"{project_id}/{meta_path}")
+        meta_raw, _, _ = await file_service.read_file(f"{project_id}/{meta_path}")
         ch_meta = json.loads(meta_raw)
         ch_title = ch_meta.get("title", "")
     except Exception:

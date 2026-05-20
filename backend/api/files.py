@@ -89,13 +89,13 @@ async def read_file(
     """读取文件内容"""
     full_path = f"{project_id}/{path}"
     try:
-        content, fm = await fs.read_file(full_path)
+        content, fm, mtime = await fs.read_file(full_path)
     except Exception as e:
         logger.warning("读取文件失败", extra={"project_id": project_id, "path": path, "error": str(e)})
         raise ResourceNotFoundError(resource="file", identifier=f"{project_id}/{path}")
 
     return ApiResponse.ok(
-        FileReadResponse(path=path, content=content, frontmatter=fm)
+        FileReadResponse(path=path, content=content, frontmatter=fm, mtime=mtime)
     )
 
 
@@ -109,7 +109,13 @@ async def write_file(
     """写入文件内容"""
     full_path = f"{project_id}/{req.path}"
     try:
-        await fs.write_file(full_path, req.content, req.frontmatter)
+        await fs.write_file(
+            full_path,
+            req.content,
+            req.frontmatter,
+            expected_mtime=req.expected_mtime,
+            expected_hash=req.expected_hash,
+        )
     except Exception as e:
         logger.error("写入文件失败", extra={"project_id": project_id, "path": req.path, "error": str(e)})
         raise

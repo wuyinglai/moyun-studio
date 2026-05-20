@@ -33,17 +33,19 @@ class TestFileServiceRead:
         # 写一个纯文本文件
         file_path = temp_workspace / "test.txt"
         file_path.write_text("Hello World", encoding="utf-8")
-        content, fm = await fs.read_file("test.txt")
+        content, fm, mtime = await fs.read_file("test.txt")
         assert content == "Hello World"
         assert fm is None
+        assert mtime is not None  # 文件应该有修改时间
 
     @pytest.mark.asyncio
     async def test_read_markdown_with_frontmatter(self, fs):
-        content, fm = await fs.read_file("projects/test-project/chapters/chapter-01.md")
+        content, fm, mtime = await fs.read_file("projects/test-project/chapters/chapter-01.md")
         assert "第一章 开端" in content
         assert fm is not None
         assert fm["title"] == "第一章 - 开端"
         assert fm["word_count"] == 1200
+        assert mtime is not None
 
     @pytest.mark.asyncio
     async def test_read_file_not_found(self, fs):
@@ -52,9 +54,10 @@ class TestFileServiceRead:
 
     @pytest.mark.asyncio
     async def test_read_project_file(self, fs):
-        content, fm = await fs.read_file("projects/test-project/outline.md")
+        content, fm, mtime = await fs.read_file("projects/test-project/outline.md")
         assert "测试项目 - 大纲" in content
         assert fm is None or (isinstance(fm, dict) and len(fm) < 5)  # .md 无 frontmatter
+        assert mtime is not None
 
 
 class TestFileServiceWrite:
@@ -63,7 +66,7 @@ class TestFileServiceWrite:
     @pytest.mark.asyncio
     async def test_write_plain_file(self, fs, temp_workspace):
         await fs.write_file("new.txt", "新文件内容")
-        content, _ = await fs.read_file("new.txt")
+        content, _, _ = await fs.read_file("new.txt")
         assert content == "新文件内容"
 
     @pytest.mark.asyncio
@@ -73,7 +76,7 @@ class TestFileServiceWrite:
             "# 新章节\n\n内容",
             frontmatter_dict={"title": "新章节", "word_count": 500},
         )
-        content, fm = await fs.read_file("new_chapter.md")
+        content, fm, _ = await fs.read_file("new_chapter.md")
         assert "# 新章节" in content
         assert fm["title"] == "新章节"
         assert fm["word_count"] == 500
@@ -81,14 +84,14 @@ class TestFileServiceWrite:
     @pytest.mark.asyncio
     async def test_write_creates_parent_dir(self, fs, temp_workspace):
         await fs.write_file("deep/nested/file.md", "深层文件")
-        content, _ = await fs.read_file("deep/nested/file.md")
+        content, _, _ = await fs.read_file("deep/nested/file.md")
         assert content == "深层文件"
 
     @pytest.mark.asyncio
     async def test_write_overwrites_existing(self, fs, temp_workspace):
         await fs.write_file("overwrite.md", "原始内容")
         await fs.write_file("overwrite.md", "覆盖内容")
-        content, _ = await fs.read_file("overwrite.md")
+        content, _, _ = await fs.read_file("overwrite.md")
         assert content == "覆盖内容"
 
 
@@ -236,7 +239,7 @@ class TestFileServiceEdgeCases:
         """没有 frontmatter 的 .md 文件"""
         file_path = temp_workspace / "no_fm.md"
         file_path.write_text("# 无元数据\n\n内容", encoding="utf-8")
-        content, fm = await fs.read_file("no_fm.md")
+        content, fm, _ = await fs.read_file("no_fm.md")
         assert "无元数据" in content
         assert fm is None
 
@@ -244,6 +247,95 @@ class TestFileServiceEdgeCases:
     async def test_write_without_frontmatter_on_non_md(self, fs, temp_workspace):
         """非 .md 文件不会添加 frontmatter"""
         await fs.write_file("data.json", '{"key": "value"}', frontmatter_dict={"should": "ignore"})
-        content, fm = await fs.read_file("data.json")
+        content, fm, _ = await fs.read_file("data.json")
         assert content == '{"key": "value"}'
         assert fm is None
+
+
+class TestFileServiceConcurrency:
+    """并发控制测试"""
+
+    @pytest.mark.asyncio
+    async def test_write_with_expected_mtime_mismatch(self, fs, temp_workspace):
+        """写入时 expected_mtime 不匹配应抛出 FileConflictError"""
+        from backend.core.exceptions import FileConflictError
+
+        # 创建文件
+        await fs.write_file("test.txt", "原始内容")
+
+        # 读取文件获取 mtime
+        _, _, mtime = await fs.read_file("test.txt")
+        assert mtime is not None
+
+        # 模拟文件被其他进程修改（使用错误的 expected_mtime）
+        wrong_mtime = mtime - 100  # 使用一个完全不同的时间
+
+        # 尝试写入，应该抛出 FileConflictError
+        with pytest.raises(FileConflictError) as exc_info:
+            await fs.write_file(
+                "test.txt",
+                "新内容",
+                expected_mtime=wrong_mtime,
+            )
+
+        assert "已被修改" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_write_with_correct_expected_mtime(self, fs, temp_workspace):
+        """写入时 expected_mtime 正确应该成功"""
+        # 创建文件
+        await fs.write_file("test.txt", "原始内容")
+
+        # 读取文件获取 mtime
+        _, _, mtime = await fs.read_file("test.txt")
+        assert mtime is not None
+
+        # 使用正确的 expected_mtime 写入
+        await fs.write_file(
+            "test.txt",
+            "新内容",
+            expected_mtime=mtime,
+        )
+
+        # 验证文件内容已更新
+        content, _, _ = await fs.read_file("test.txt")
+        assert content == "新内容"
+
+    @pytest.mark.asyncio
+    async def test_write_without_expected_mtime_allows_overwrite(self, fs, temp_workspace):
+        """不提供 expected_mtime 时允许直接覆盖"""
+        # 创建文件
+        await fs.write_file("test.txt", "原始内容")
+
+        # 不提供 expected_mtime，直接写入
+        await fs.write_file("test.txt", "新内容")
+
+        # 验证文件内容已更新
+        content, _, _ = await fs.read_file("test.txt")
+        assert content == "新内容"
+
+    @pytest.mark.asyncio
+    async def test_read_file_returns_mtime(self, fs, temp_workspace):
+        """read_file 返回的 mtime 应该是文件修改时间"""
+        import time
+
+        # 创建文件
+        file_path = temp_workspace / "test.txt"
+        file_path.write_text("Hello World", encoding="utf-8")
+
+        # 等待一小段时间确保 mtime 不同
+        time.sleep(0.01)
+
+        # 读取文件
+        content, fm, mtime = await fs.read_file("test.txt")
+
+        assert content == "Hello World"
+        assert fm is None
+        assert mtime is not None
+        assert isinstance(mtime, float)
+        assert mtime > 0
+
+        # 验证 mtime 大约等于文件的实际修改时间
+        actual_mtime = file_path.stat().st_mtime
+        assert abs(mtime - actual_mtime) < 0.1  # 允许一些误差
+

@@ -5,6 +5,7 @@
 - loop 循环嵌套
 - 文件操作（创建目录等）
 - 变量解析与传递
+- Human 节点暂停与恢复
 """
 
 import asyncio
@@ -28,6 +29,7 @@ from backend.schemas.workflow import (
     WorkflowDef,
     WorkflowSaveRequest,
     WorkflowStepDef,
+    WorkflowRunState,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,6 +45,11 @@ class WorkflowError(Exception):
     pass
 
 
+class WorkflowPaused(Exception):
+    """工作流暂停异常（用于中断执行流）"""
+    pass
+
+
 class WorkflowContext:
     """工作流执行上下文"""
 
@@ -50,7 +57,7 @@ class WorkflowContext:
         self.project_id = project_id
         self.variables = variables or {}
         self.loop_vars: dict[str, str | int] = {}
-        self.step_outputs: dict[str, str] = {}  # step_id → output file path
+        self.step_outputs: dict[str, str] = {}  # step_id -> output file path
         self.current_path: list[str] = []
 
     def set_loop_var(self, name: str, value: int | str) -> None:
@@ -183,6 +190,8 @@ class WorkflowRunner:
             d["var"] = step.var
         if step.extra_vars:
             d["extra_vars"] = step.extra_vars
+        if step.output_key:
+            d["output_key"] = step.output_key
         if step.steps:
             d["steps"] = [self._step_to_yaml(s) for s in step.steps]
         return {k: v for k, v in d.items() if v is not None}
@@ -244,40 +253,53 @@ class WorkflowRunner:
     def _save_state(
         self,
         run_id: str,
-        workflow_name: str,
+        workflow: str,
         project_id: str,
         context: WorkflowContext,
         status: str = "running",
-        completed_paths: set[str] | None = None,
+        completed_paths: list[str] | None = None,
+        current_node: str | None = None,
+        current_step_path: str | None = None,
+        waiting_reason: str | None = None,
+        available_actions: list[str] | None = None,
+        waiting_input: str | None = None,
+        remaining_steps: list[dict] | None = None,
     ) -> None:
         """保存工作流执行状态到磁盘"""
-        state = {
-            "run_id": run_id,
-            "workflow": workflow_name,
-            "project_id": project_id,
-            "status": status,
-            "variables": context.variables,
-            "loop_vars": context.loop_vars.copy(),
-            "step_outputs": context.step_outputs.copy(),
-            "completed_paths": list(completed_paths or []),
-            "updated_at": datetime.now().isoformat(),
-        }
+        state = WorkflowRunState(
+            run_id=run_id,
+            workflow=workflow,
+            project_id=project_id,
+            status=status,
+            current_node=current_node,
+            current_step_path=current_step_path,
+            waiting_reason=waiting_reason,
+            available_actions=available_actions or [],
+            waiting_input=waiting_input,
+            variables=context.variables,
+            loop_vars=context.loop_vars,
+            step_outputs=context.step_outputs,
+            completed_paths=completed_paths or [],
+            remaining_steps=remaining_steps or [],
+            updated_at=datetime.now().isoformat(),
+        )
         self.state_dir.mkdir(parents=True, exist_ok=True)
         try:
             self._get_state_path(run_id).write_text(
-                json.dumps(state, ensure_ascii=False, indent=2),
+                state.model_dump_json(indent=2, ensure_ascii=False),
                 encoding="utf-8",
             )
         except Exception as e:
             logger.warning("保存工作流状态失败 %s: %s", run_id, e)
 
-    def _load_state(self, run_id: str) -> dict | None:
+    def _load_state(self, run_id: str) -> WorkflowRunState | None:
         """从磁盘加载工作流执行状态"""
         state_path = self._get_state_path(run_id)
         if not state_path.exists():
             return None
         try:
-            return json.loads(state_path.read_text(encoding="utf-8"))
+            data = json.loads(state_path.read_text(encoding="utf-8"))
+            return WorkflowRunState(**data)
         except Exception as e:
             logger.warning("加载工作流状态失败 %s: %s", run_id, e)
             return None
@@ -307,20 +329,31 @@ class WorkflowRunner:
         run_id = run_id or f"wf-{uuid.uuid4().hex[:8]}"
 
         # 尝试恢复已保存状态
-        saved_state = self._load_state(run_id) if run_id else None
+        saved_state = self._load_state(run_id)
         completed_paths: set[str] = set()
+        is_resume = False
+
         if saved_state:
-            context.variables.update(saved_state.get("variables", {}))
-            context.loop_vars.update(saved_state.get("loop_vars", {}))
-            context.step_outputs.update(saved_state.get("step_outputs", {}))
-            completed_paths = set(saved_state.get("completed_paths", []))
-            is_resume = saved_state.get("status") in ("running", "paused")
-            if is_resume:
-                logger.info("恢复工作流 %s (run_id=%s), 已完成步骤路径: %s",
-                           workflow_name, run_id, completed_paths)
+            context.variables.update(saved_state.variables)
+            context.loop_vars.update(saved_state.loop_vars)
+            context.step_outputs.update(saved_state.step_outputs)
+            completed_paths = set(saved_state.completed_paths)
+            is_resume = True
+
+            if saved_state.status == "waiting_for_user":
+                # 之前处于等待状态，发送等待状态事件
+                yield {"event": "workflow_paused", "data": json.dumps({
+                    "run_id": run_id,
+                    "status": "waiting_for_user",
+                    "current_node": saved_state.current_node,
+                    "waiting_reason": saved_state.waiting_reason,
+                    "available_actions": saved_state.available_actions,
+                    "waiting_input": saved_state.waiting_input,
+                    "variables": context.variables,
+                }, ensure_ascii=False)}
+                return
 
         total_steps = self.count_steps(workflow.steps)
-        is_restored = bool(saved_state and saved_state.get("status") in ("running", "paused"))
 
         # 构建步骤树预览（带节点元信息）
         steps_preview = []
@@ -342,7 +375,7 @@ class WorkflowRunner:
             "label": workflow.label,
             "description": workflow.description,
             "total_steps": total_steps,
-            "restored": is_restored,
+            "restored": is_resume,
             "completed_paths": list(completed_paths),
             "steps_preview": steps_preview,  # 步骤树预览（带节点元信息）
             "variables": context.variables,   # 当前变量池
@@ -352,24 +385,13 @@ class WorkflowRunner:
             async for event in self._run_steps(
                 workflow.steps, context, stop_event,
                 path_prefix=run_id, completed_paths=completed_paths,
+                workflow=workflow, run_id=run_id,
             ):
-                # 注入 run_id
-                ev_data = json.loads(event["data"])
-                ev_data["run_id"] = run_id
-                event["data"] = json.dumps(ev_data, ensure_ascii=False)
                 yield event
 
-                # step_done/step_skip → 保存状态（记录完整路径）
-                if event.get("event") in ("step_done", "step_skip"):
-                    step_path = ev_data.get("path", "")
-                    if step_path:
-                        completed_paths.add(step_path)
-                    self._save_state(
-                        run_id, workflow_name, project_id, context,
-                        status="running",
-                        completed_paths=completed_paths,
-                    )
-
+        except WorkflowPaused:
+            # 工作流被正常暂停
+            return
         except WorkflowError as e:
             logger.error("工作流执行失败: %s", e)
             yield {"event": "workflow_error", "data": json.dumps({
@@ -386,6 +408,132 @@ class WorkflowRunner:
         # 执行完毕，清理状态文件
         self._delete_state(run_id)
 
+    async def resume(
+        self,
+        run_id: str,
+        action: str,
+        output: str = "",
+        extra_vars: dict[str, str] | None = None,
+        stop_event: asyncio.Event | None = None,
+    ) -> AsyncGenerator[dict, None]:
+        """从暂停状态恢复工作流"""
+        saved_state = self._load_state(run_id)
+        if not saved_state:
+            raise WorkflowError(f"找不到工作流运行状态: {run_id}")
+
+        if saved_state.status != "waiting_for_user":
+            raise WorkflowError(f"工作流当前状态不是等待用户: {saved_state.status}")
+
+        workflow = self.load_workflow(saved_state.workflow)
+        context = WorkflowContext(saved_state.project_id, saved_state.variables)
+        context.loop_vars = saved_state.loop_vars
+        context.step_outputs = saved_state.step_outputs
+        completed_paths = set(saved_state.completed_paths)
+
+        # 处理用户动作
+        if action == "stop":
+            yield {"event": "workflow_stopped", "data": json.dumps({
+                "message": "用户停止工作流",
+            }, ensure_ascii=False)}
+            self._delete_state(run_id)
+            return
+
+        # 找到当前等待的节点
+        current_step = self._find_step_by_id(workflow.steps, saved_state.current_node)
+        if not current_step:
+            raise WorkflowError(f"找不到节点: {saved_state.current_node}")
+
+        node_info = build_node_info(current_step.type, current_step.action, current_step.label)
+
+        # 处理用户输出
+        final_output = output or saved_state.waiting_input or ""
+
+        # 将输出写入变量池
+        output_key = current_step.output_key or f"approved_{current_step.id}"
+        context.variables[output_key] = final_output
+        context.step_outputs[current_step.id] = final_output
+
+        # 合并额外变量
+        if extra_vars:
+            context.variables.update(extra_vars)
+
+        # 标记当前步骤为已完成
+        if saved_state.current_step_path:
+            completed_paths.add(saved_state.current_step_path)
+
+        # 发送节点完成事件
+        yield {"event": "step_done", "data": json.dumps({
+            "step_id": current_step.id,
+            "label": current_step.label,
+            "type": current_step.type,
+            "path": saved_state.current_step_path,
+            "status": "done",
+            "output": final_output,
+            "node_type": node_info["node_type"],
+            "node_label": node_info["node_label"],
+            "executor": node_info["executor"],
+            "executor_label": node_info["executor_label"],
+        }, ensure_ascii=False)}
+
+        # 更新变量池
+        yield {"event": "variable_update", "data": json.dumps({
+            "key": output_key,
+            "value": final_output,
+            "source": "approved",
+        }, ensure_ascii=False)}
+
+        # 保存当前状态为 running
+        self._save_state(
+            run_id, saved_state.workflow, saved_state.project_id, context,
+            status="running", completed_paths=list(completed_paths),
+        )
+
+        # 继续执行剩余步骤
+        try:
+            # 从当前位置之后继续执行
+            remaining_steps = self._get_remaining_steps(workflow.steps, current_step.id)
+
+            async for event in self._run_steps(
+                remaining_steps, context, stop_event,
+                path_prefix=run_id, completed_paths=completed_paths,
+                workflow=workflow, run_id=run_id,
+            ):
+                yield event
+
+        except WorkflowPaused:
+            return
+
+        yield {"event": "workflow_done", "data": json.dumps({
+            "run_id": run_id,
+            "message": "工作流执行完成",
+        }, ensure_ascii=False)}
+
+        self._delete_state(run_id)
+
+    # ─── 辅助方法 ─────────────────────────────────────────────────
+
+    def _find_step_by_id(self, steps: list[WorkflowStepDef], step_id: str) -> WorkflowStepDef | None:
+        """在步骤树中查找指定 ID 的步骤"""
+        for step in steps:
+            if step.id == step_id:
+                return step
+            if step.steps:
+                found = self._find_step_by_id(step.steps, step_id)
+                if found:
+                    return found
+        return None
+
+    def _get_remaining_steps(self, steps: list[WorkflowStepDef], after_step_id: str) -> list[WorkflowStepDef]:
+        """获取指定步骤之后的剩余步骤"""
+        found = False
+        remaining = []
+        for step in steps:
+            if found:
+                remaining.append(step)
+            elif step.id == after_step_id:
+                found = True
+        return remaining
+
     # ─── 步骤调度 ─────────────────────────────────────────────────
 
     async def _run_steps(
@@ -395,6 +543,8 @@ class WorkflowRunner:
         stop_event: asyncio.Event | None,
         path_prefix: str = "",
         completed_paths: set[str] | None = None,
+        workflow: WorkflowDef | None = None,
+        run_id: str = "",
     ) -> AsyncGenerator[dict, None]:
         completed = completed_paths or set()
         for step in steps:
@@ -424,7 +574,9 @@ class WorkflowRunner:
                 }, ensure_ascii=False)}
                 continue
 
-            async for event in self._run_step(step, context, stop_event, path_prefix, completed):
+            async for event in self._run_step(
+                step, context, stop_event, path_prefix, completed, workflow, run_id,
+            ):
                 yield event
 
     async def _run_step(
@@ -434,6 +586,8 @@ class WorkflowRunner:
         stop_event: asyncio.Event | None,
         path_prefix: str = "",
         completed_paths: set[str] | None = None,
+        workflow: WorkflowDef | None = None,
+        run_id: str = "",
     ) -> AsyncGenerator[dict, None]:
         step_path = f"{path_prefix}.{step.id}" if path_prefix else step.id
 
@@ -458,19 +612,33 @@ class WorkflowRunner:
         }, ensure_ascii=False)}
 
         try:
-            if step.type == "pipeline":
+            if step.type.startswith("human_"):
+                # Human 节点：暂停等待用户
+                async for event in self._run_human_step(
+                    step, context, step_path, workflow, run_id, node_info,
+                ):
+                    yield event
+                # 抛出异常中断执行流
+                raise WorkflowPaused()
+            elif step.type == "pipeline":
                 async for event in self._run_pipeline_step(step, context, stop_event):
                     yield event
             elif step.type == "loop":
                 async for event in self._run_loop_step(
                     step, context, stop_event, step_path, completed_paths,
+                    workflow, run_id,
                 ):
                     yield event
             elif step.type == "file":
                 await self._run_file_step(step, context)
+            elif step.type in ("memory_update", "memory_review"):
+                async for event in self._run_memory_step(
+                    step, context, stop_event, step_path, workflow, run_id, node_info,
+                ):
+                    yield event
             else:
                 logger.warning("未知步骤类型: %s", step.type)
-        except WorkflowError:
+        except WorkflowPaused:
             raise
         except Exception as e:
             raise WorkflowError(f"步骤 {step.label} 执行失败: {e}")
@@ -489,7 +657,81 @@ class WorkflowRunner:
             "executor_label": node_info["executor_label"],
         }, ensure_ascii=False)}
 
-    # ─── Pipeline 步骤 ────────────────────────────────────────────
+        # 保存状态
+        if workflow and run_id:
+            self._save_state(
+                run_id, workflow.name, context.project_id, context,
+                status="running", completed_paths=list(completed_paths or []),
+            )
+
+    # ─── Human 节点 ───────────────────────────────────────────────
+
+    async def _run_human_step(
+        self,
+        step: WorkflowStepDef,
+        context: WorkflowContext,
+        step_path: str,
+        workflow: WorkflowDef | None,
+        run_id: str,
+        node_info: dict,
+    ) -> AsyncGenerator[dict, None]:
+        """执行 Human 节点：暂停并保存状态"""
+        # 解析输入内容
+        waiting_input = ""
+        if step.input:
+            resolved_input = context.resolve(step.input)
+            try:
+                # 尝试读取文件
+                file_path = f"{context.project_id}/{resolved_input}"
+                content, _, _ = await self.file_service.read_file(file_path)
+                waiting_input = content
+            except Exception:
+                # 如果不是文件路径，直接使用值
+                waiting_input = resolved_input
+
+        # 保存暂停状态
+        if workflow and run_id:
+            remaining_steps = self._get_remaining_steps(workflow.steps, step.id)
+            remaining_steps_serialized = [self._step_to_yaml(s) for s in remaining_steps]
+
+            self._save_state(
+                run_id, workflow.name, context.project_id, context,
+                status="waiting_for_user",
+                current_node=step.id,
+                current_step_path=step_path,
+                waiting_reason=node_info.get("waiting_reason", ""),
+                available_actions=node_info.get("actions", []),
+                waiting_input=waiting_input,
+                remaining_steps=remaining_steps_serialized,
+            )
+
+        # 发送等待事件
+        yield {"event": "step_waiting", "data": json.dumps({
+            "step_id": step.id,
+            "label": step.label,
+            "type": step.type,
+            "path": step_path,
+            "node_type": node_info["node_type"],
+            "node_label": node_info["node_label"],
+            "executor": node_info["executor"],
+            "executor_label": node_info["executor_label"],
+            "waiting_reason": node_info.get("waiting_reason", ""),
+            "actions": node_info.get("actions", []),
+            "input": waiting_input,
+            "output_key": step.output_key or f"approved_{step.id}",
+        }, ensure_ascii=False)}
+
+        yield {"event": "workflow_paused", "data": json.dumps({
+            "run_id": run_id,
+            "status": "waiting_for_user",
+            "current_node": step.id,
+            "waiting_reason": node_info.get("waiting_reason", ""),
+            "available_actions": node_info.get("actions", []),
+            "waiting_input": waiting_input,
+            "variables": context.variables,
+        }, ensure_ascii=False)}
+
+    # ─── Pipeline 节点 ────────────────────────────────────────────
 
     async def _run_pipeline_step(
         self,
@@ -505,7 +747,7 @@ class WorkflowRunner:
         extra_vars = {}
         if input_file and input_file != target_file:
             try:
-                content, _ = await self.file_service.read_file(
+                content, _, _ = await self.file_service.read_file(
                     f"{context.project_id}/{input_file}"
                 )
                 extra_vars["file_content"] = content
@@ -545,7 +787,7 @@ class WorkflowRunner:
                 event["data"] = json.dumps(ev_data, ensure_ascii=False)
                 yield event
 
-                # pipeline done → 记录输出路径
+                # pipeline done -> 记录输出路径
                 if ev_type == "done":
                     if target_file:
                         context.step_outputs[step.id] = target_file
@@ -553,7 +795,7 @@ class WorkflowRunner:
         except PipelineError as e:
             raise WorkflowError(f"管线 {step.pipeline} 执行失败: {e}")
 
-    # ─── Loop 步骤 ────────────────────────────────────────────────
+    # ─── Loop 节点 ────────────────────────────────────────────────
 
     async def _run_loop_step(
         self,
@@ -562,6 +804,8 @@ class WorkflowRunner:
         stop_event: asyncio.Event | None,
         step_path: str,
         completed_paths: set[str] | None = None,
+        workflow: WorkflowDef | None = None,
+        run_id: str = "",
     ) -> AsyncGenerator[dict, None]:
         count = context.resolve_int(step.count)
         if count <= 0:
@@ -595,10 +839,11 @@ class WorkflowRunner:
             async for event in self._run_steps(
                 step.steps, context, stop_event,
                 path_prefix=iter_prefix, completed_paths=completed_paths,
+                workflow=workflow, run_id=run_id,
             ):
                 yield event
 
-    # ─── File 步骤 ────────────────────────────────────────────────
+    # ─── File 节点 ────────────────────────────────────────────────
 
     async def _run_file_step(
         self,
@@ -616,7 +861,7 @@ class WorkflowRunner:
         elif step.action == "copy":
             src = context.resolve(step.input)
             dst = context.resolve(step.output)
-            content, _ = await self.file_service.read_file(
+            content, _, _ = await self.file_service.read_file(
                 f"{context.project_id}/{src}"
             )
             await self.file_service.write_file(
@@ -647,7 +892,7 @@ class WorkflowRunner:
 
         content = ""
         if input_file:
-            content, _ = await self.file_service.read_file(
+            content, _, _ = await self.file_service.read_file(
                 f"{context.project_id}/{input_file}"
             )
 
@@ -688,3 +933,325 @@ class WorkflowRunner:
             context.step_outputs[step.id] = candidate_id
         else:
             logger.warning("采用候选稿失败: %s", candidate_id)
+
+    # ─── Memory 节点 ───────────────────────────────────────────────
+
+    async def _run_memory_step(
+        self,
+        step: WorkflowStepDef,
+        context: WorkflowContext,
+        stop_event: asyncio.Event | None,
+        step_path: str,
+        workflow: WorkflowDef | None,
+        run_id: str,
+        node_info: dict,
+    ) -> AsyncGenerator[dict, None]:
+        """执行 Memory 节点：生成/审核记忆更新"""
+        # 解析输入
+        changed_content = ""
+        if step.input:
+            resolved_input = context.resolve(step.input)
+            try:
+                # 尝试读取文件
+                file_path = f"{context.project_id}/{resolved_input}"
+                content, _, _ = await self.file_service.read_file(file_path)
+                changed_content = content
+            except Exception:
+                # 如果不是文件路径，直接使用值
+                changed_content = resolved_input
+
+        # 读取当前记忆状态
+        story_state_content = ""
+        recent_context_content = ""
+
+        try:
+            story_content, _, _ = await self.file_service.read_file(
+                f"{context.project_id}/story-state.md"
+            )
+            story_state_content = story_content
+        except Exception:
+            logger.warning("读取 story-state.md 失败")
+
+        try:
+            recent_content, _, _ = await self.file_service.read_file(
+                f"{context.project_id}/recent-context.md"
+            )
+            recent_context_content = recent_content
+        except Exception:
+            logger.warning("读取 recent-context.md 失败")
+
+        # 评估风险等级
+        risk_level = "low"
+        risk_reason = "常规内容更新"
+        if hasattr(self, 'assess_memory_risk'):
+            risk_level, risk_reason = self.assess_memory_risk(
+                changed_content, story_state_content
+            )
+        else:
+            # 简单的关键词检测
+            high_risk_keywords = ["死亡", "消失", "揭示", "回收伏笔", "重大转折"]
+            for keyword in high_risk_keywords:
+                if keyword in changed_content:
+                    risk_level = "high"
+                    risk_reason = f"包含高风险内容：{keyword}"
+                    break
+
+        yield {"event": "memory_risk_assessment", "data": json.dumps({
+            "step_id": step.id,
+            "label": step.label,
+            "risk_level": risk_level,
+            "risk_reason": risk_reason,
+            "changed_content_length": len(changed_content),
+        }, ensure_ascii=False)}
+
+        # 如果是高风险或 memory_review 类型，需要人工确认
+        if risk_level == "high" or step.type == "memory_review":
+            # 保存暂停状态，等待人工确认
+            if workflow and run_id:
+                remaining_steps = self._get_remaining_steps(workflow.steps, step.id)
+                remaining_steps_serialized = [self._step_to_yaml(s) for s in remaining_steps]
+
+                self._save_state(
+                    run_id, workflow.name, context.project_id, context,
+                    status="waiting_for_user",
+                    current_node=step.id,
+                    current_step_path=step_path,
+                    waiting_reason=f"记忆更新风险等级：{risk_level}，需要人工确认",
+                    available_actions=["approve", "edit_and_approve", "stop"],
+                    waiting_input=changed_content,
+                    remaining_steps=remaining_steps_serialized,
+                )
+
+            # 发送等待事件
+            yield {"event": "step_waiting", "data": json.dumps({
+                "step_id": step.id,
+                "label": step.label,
+                "type": step.type,
+                "path": step_path,
+                "node_type": node_info["node_type"],
+                "node_label": node_info["node_label"],
+                "executor": node_info["executor"],
+                "executor_label": node_info["executor_label"],
+                "waiting_reason": f"记忆更新风险等级：{risk_level}，需要人工确认",
+                "actions": ["approve", "edit_and_approve", "stop"],
+                "input": changed_content,
+                "output_key": step.output_key or "draft_memory_update",
+                "risk_level": risk_level,
+                "risk_reason": risk_reason,
+            }, ensure_ascii=False)}
+
+            yield {"event": "workflow_paused", "data": json.dumps({
+                "run_id": run_id,
+                "status": "waiting_for_user",
+                "current_node": step.id,
+                "waiting_reason": f"记忆更新风险等级：{risk_level}，需要人工确认",
+                "available_actions": ["approve", "edit_and_approve", "stop"],
+                "waiting_input": changed_content,
+                "variables": context.variables,
+                "risk_level": risk_level,
+            }, ensure_ascii=False)}
+
+            # 抛出异常中断执行流
+            raise WorkflowPaused()
+
+        # 低风险：自动执行记忆更新
+        # 1. 生成草稿
+        draft_update = await self._generate_memory_draft(
+            changed_content, story_state_content, recent_context_content,
+        )
+
+        # 2. 更新记忆文件
+        if step.output_key or "story-state" in step.label.lower():
+            updated_story_state = await self._apply_memory_update(
+                draft_update, story_state_content,
+            )
+            await self.file_service.write_file(
+                f"{context.project_id}/story-state.md",
+                updated_story_state,
+            )
+            logger.info("更新 story-state.md 成功")
+
+        if step.output_key or "recent-context" in step.label.lower():
+            updated_recent_context = await self._update_recent_context(
+                changed_content, recent_context_content, step.input or "未知场景",
+            )
+            await self.file_service.write_file(
+                f"{context.project_id}/recent-context.md",
+                updated_recent_context,
+            )
+            logger.info("更新 recent-context.md 成功")
+
+        # 记录输出
+        context.step_outputs[step.id] = draft_update
+
+        yield {"event": "memory_update_done", "data": json.dumps({
+            "step_id": step.id,
+            "label": step.label,
+            "draft_update": draft_update,
+            "risk_level": risk_level,
+            "updated_files": ["story-state.md", "recent-context.md"],
+        }, ensure_ascii=False)}
+
+        # 更新变量池
+        output_key = step.output_key or "draft_memory_update"
+        context.variables[output_key] = draft_update
+        yield {"event": "variable_update", "data": json.dumps({
+            "key": output_key,
+            "value": draft_update,
+            "source": "ai",
+        }, ensure_ascii=False)}
+
+    async def _generate_memory_draft(
+        self,
+        changed_content: str,
+        story_state: str,
+        recent_context: str,
+    ) -> str:
+        """使用 LLM 生成记忆更新草稿"""
+        # 准备 prompt
+        from jinja2 import Template
+
+        prompt_template_path = Path(self.prompts_path) / "pipeline" / "memory" / "draft_update.md"
+        if not prompt_template_path.exists():
+            # 如果模板不存在，生成简单摘要
+            return await self._simple_memory_summary(changed_content)
+
+        try:
+            template = Template(prompt_template_path.read_text(encoding="utf-8"))
+            prompt = template.render(
+                changed_content=changed_content,
+                story_state=story_state or "暂无",
+                recent_context=recent_context or "暂无",
+            )
+        except Exception as e:
+            logger.warning("加载记忆更新模板失败: %s", e)
+            return await self._simple_memory_summary(changed_content)
+
+        # 调用 LLM
+        try:
+            response = await self.llm_service.chat(
+                messages=[{"role": "user", "content": prompt}],
+                model="auto",
+            )
+            return response.content if hasattr(response, 'content') else str(response)
+        except Exception as e:
+            logger.error("LLM 生成记忆草稿失败: %s", e)
+            return await self._simple_memory_summary(changed_content)
+
+    async def _simple_memory_summary(self, content: str) -> str:
+        """简单的记忆摘要生成（当 LLM 不可用时）"""
+        # 简单的文本截取和摘要
+        lines = content.split('\n')
+        summary_lines = []
+        for line in lines[:20]:  # 取前20行
+            if line.strip() and not line.startswith('#'):
+                summary_lines.append(line.strip())
+
+        summary = '\n'.join(summary_lines[:5])  # 取前5行作为摘要
+
+        return f"""# 故事状态更新草案
+
+## 摘要
+{summary}
+
+## 风险评估
+- 风险等级：low
+- 风险说明：常规内容更新
+
+## 更新内容
+{content[:500]}...
+"""
+
+    async def _apply_memory_update(
+        self,
+        draft_update: str,
+        current_state: str,
+    ) -> str:
+        """应用记忆更新到现有状态"""
+        # 简单实现：追加更新内容到现有状态
+        # 实际应该使用 LLM 智能合并
+
+        if not current_state:
+            return draft_update
+
+        # 提取草案中的关键更新
+        # 实际实现应该解析草案结构
+        return current_state + "\n\n## 更新于 " + \
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S") + \
+            "\n\n" + draft_update
+
+    async def _update_recent_context(
+        self,
+        scene_content: str,
+        current_context: str,
+        scene_path: str,
+    ) -> str:
+        """更新近期上下文"""
+        # 生成场景摘要
+        summary = await self._generate_scene_summary(scene_content)
+
+        # 构建新的上下文条目
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        new_entry = f"""## {timestamp} - {scene_path}
+【场景摘要】
+{summary}
+
+【人物状态变化】
+暂无
+
+【新增线索/伏笔】
+暂无
+
+【下一场承接点】
+待续
+"""
+
+        # 在顶部添加新条目
+        if not current_context:
+            return f"""# 近期上下文摘要
+
+> 本文件存储最近5章的摘要，用于在生成章节时提供近期情节上下文。
+> **由系统在每次生成章节后自动生成/更新。**
+
+---
+
+## 章节范围
+
+- **起始章节**：第1章
+- **结束章节**：第1章
+- **总章节数**：1章
+
+---
+
+## 摘要列表
+
+{new_entry}
+"""
+        else:
+            # 在 ## 摘要列表 后添加新条目
+            if "## 摘要列表" in current_context:
+                parts = current_context.split("## 摘要列表")
+                return parts[0] + "## 摘要列表\n\n" + new_entry + "\n".join(parts[1:])
+            else:
+                return new_entry + "\n\n" + current_context
+
+    async def _generate_scene_summary(self, content: str) -> str:
+        """生成场景摘要"""
+        # 简单的摘要生成
+        # 实际应该使用 LLM
+
+        lines = [line.strip() for line in content.split('\n') if line.strip()]
+
+        # 提取前3个段落作为摘要
+        summary_lines = []
+        para_count = 0
+        for line in lines:
+            if len(line) > 10 and not line.startswith('#'):
+                summary_lines.append(line)
+                para_count += 1
+                if para_count >= 3:
+                    break
+
+        return ' '.join(summary_lines[:2]) if summary_lines else "场景内容待补充"
+

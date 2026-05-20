@@ -98,7 +98,7 @@ class PromptEngine:
                 if match:
                     file_path = match.group(1)
                     try:
-                        content, _ = await self.file_service.read_file(file_path)
+                        content, _, _ = await self.file_service.read_file(file_path)
                         resolved[key] = content
                     except Exception:
                         resolved[key] = value
@@ -114,7 +114,7 @@ class PromptEngine:
                         if match:
                             file_path = match.group(1)
                             try:
-                                content, _ = await self.file_service.read_file(file_path)
+                                content, _, _ = await self.file_service.read_file(file_path)
                                 resolved_list.append(content)
                             except Exception:
                                 resolved_list.append(v)

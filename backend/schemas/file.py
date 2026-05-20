@@ -1,5 +1,7 @@
 """墨韵 - 文件相关 Schemas"""
 
+from typing import ClassVar
+
 from pydantic import BaseModel, Field, field_validator
 
 from backend.core.exceptions import ValidationError
@@ -20,7 +22,7 @@ class FileWriteRequest(BaseModel):
     expected_hash: str | None = Field(default=None, description="期望的文件内容哈希（用于并发控制）")
 
     # 最大写入大小限制（5MB）
-    MAX_CONTENT_SIZE = 5 * 1024 * 1024
+    MAX_CONTENT_SIZE: ClassVar[int] = 5 * 1024 * 1024
 
     @field_validator("content")
     @classmethod

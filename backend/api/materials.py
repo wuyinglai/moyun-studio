@@ -307,12 +307,12 @@ async def submit_extract_task(
     try:
         # 读取源文件
         file_service = FileService(settings.projects_path)
-        source_content, _ = await file_service.read_file(f"{req.project_id}/{req.source_file}")
+        source_content, _, _ = await file_service.read_file(f"{req.project_id}/{req.source_file}")
 
         # 读取 style-guide
         style_guide = ""
         try:
-            content, _ = await file_service.read_file(f"{req.project_id}/style-guide.md")
+            content, _, _ = await file_service.read_file(f"{req.project_id}/style-guide.md")
             style_guide = content
         except Exception:
             pass

@@ -65,7 +65,7 @@ class SnapshotManager:
         label: str | None = None
     ) -> Snapshot:
         """创建快照"""
-        content, metadata = await self.file_service.read_file(file_path)
+        content, metadata, _ = await self.file_service.read_file(file_path)
 
         snapshot_id = str(uuid.uuid4())[:8]
         created_at = datetime.now().isoformat()
@@ -103,7 +103,7 @@ class SnapshotManager:
         index_file = f"{self.SNAPSHOT_DIR}/{file_path}/index.json"
 
         try:
-            content, _ = await self.file_service.read_file(index_file)
+            content, _, _ = await self.file_service.read_file(index_file)
             return json.loads(content).get("snapshots", [])
         except Exception:
             return []
@@ -165,7 +165,7 @@ class SnapshotManager:
         index_file = f"{self.SNAPSHOT_DIR}/{file_path}/index.json"
 
         try:
-            content, _ = await self.file_service.read_file(index_file)
+            content, _, _ = await self.file_service.read_file(index_file)
             index_data = json.loads(content)
         except Exception:
             index_data = {"file_path": file_path, "snapshots": []}

@@ -44,7 +44,7 @@ class CandidateService:
         """加载候选稿元数据"""
         metadata_path = self._get_metadata_path(project_id)
         try:
-            content, _ = await self.file_service.read_file(metadata_path)
+            content, _, _ = await self.file_service.read_file(metadata_path)
             return json.loads(content)
         except (MoyunFileNotFoundError, FileNotFoundError):
             return {}
@@ -116,7 +116,7 @@ class CandidateService:
         if not candidate_info:
             return None
         try:
-            content, _ = await self.file_service.read_file(candidate_info.candidate_path)
+            content, _, _ = await self.file_service.read_file(candidate_info.candidate_path)
             return content
         except (MoyunFileNotFoundError, FileNotFoundError):
             return None
@@ -155,7 +155,7 @@ class CandidateService:
         # 读取源文件原文（用于创建修改日志）
         original_content = ""
         try:
-            orig, _ = await self.file_service.read_file(source_path)
+            orig, _, _ = await self.file_service.read_file(source_path)
             original_content = orig
         except Exception:
             pass

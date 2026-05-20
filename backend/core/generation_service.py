@@ -114,7 +114,7 @@ class GenerationService:
             logger.info("开始生成任务", extra={"task_id": task_id, "project_id": project_id, "file_path": file_path})
 
             try:
-                content, fm = await self.file_service.read_file(f"{project_id}/{file_path}")
+                content, fm, _ = await self.file_service.read_file(f"{project_id}/{file_path}")
             except Exception:
                 content, fm = "", None
 
@@ -294,11 +294,14 @@ class GenerationService:
                 for sec_num in sec_nums:
                     sec_file = ch_dir / f"sec-{sec_num:03d}.md"
                     if sec_file.exists():
+                        # 保存项目内相对路径（不带 project_id）
+                        target_rel_path = f"chapters/{vol_dir.name}/{ch_dir.name}/sec-{sec_num:03d}.md"
                         targets.append({
                             "ch_dir": ch_dir,
                             "ch_num": ch_num,
                             "sec_num": sec_num,
-                            "target_file": f"{project_id}/chapters/{vol_dir.name}/{ch_dir.name}/sec-{sec_num:03d}.md",
+                            "target_rel_path": target_rel_path,  # 不带 project_id，用于 CandidateService
+                            "target_full_path": f"{project_id}/{target_rel_path}",  # 带 project_id，用于 FileService
                         })
 
         if not targets:
@@ -324,15 +327,16 @@ class GenerationService:
         template_path = f"{prompt_type}/main.md"
 
         for tgt in targets:
-            item = BatchGenerateItem(target_file=tgt["target_file"])
+            # 保持 target_file 字段名兼容，但使用新的 full_path
+            item = BatchGenerateItem(target_file=tgt["target_full_path"])
 
             try:
-                chapter_vars = await runner.load_chapter_vars(project_id, tgt["target_file"])
+                chapter_vars = await runner.load_chapter_vars(project_id, tgt["target_rel_path"])
                 chapter_title = ""
                 # 修复 ch_meta_path：使用正确的路径（vol-xx/ch-xx/ch-meta.json）
-                ch_meta_path = str(Path(tgt["target_file"]).parent / "ch-meta.json")
+                ch_meta_path = str(Path(tgt["target_rel_path"]).parent / "ch-meta.json")
                 try:
-                    meta_content, _ = await self.file_service.read_file(ch_meta_path)
+                    meta_content, _, _ = await self.file_service.read_file(ch_meta_path)
                     if meta_content:
                         ch_meta = json.loads(meta_content)
                         chapter_title = ch_meta.get("title", "")
@@ -361,13 +365,14 @@ class GenerationService:
                 # 安全策略：检查目标文件是否为空，空则直接写入，否则生成候选稿
                 target_exists = False
                 try:
-                    existing_content, _, _ = await self.file_service.read_file(tgt["target_file"])
+                    existing_content, _, _ = await self.file_service.read_file(tgt["target_full_path"])
                     target_exists = existing_content and len(existing_content.strip()) > 0
                 except Exception:
                     pass
 
                 if target_exists:
                     # 目标文件已有内容：生成候选稿
+                    # 注意：source_path 必须是项目内相对路径（不带 project_id）
                     try:
                         from backend.core.candidate_service import (
                             CandidateAction,
@@ -376,11 +381,11 @@ class GenerationService:
                         candidate_svc = CandidateService(self.file_service)
                         candidate = await candidate_svc.create_candidate(
                             project_id=project_id,
-                            source_path=tgt["target_file"],
+                            source_path=tgt["target_rel_path"],  # 使用相对路径，不带 project_id
                             action=CandidateAction.CONTINUE,
                             content=generated.strip(),
                         )
-                        logger.info("批量场景生成已保存为候选稿: %s -> %s", tgt["target_file"], candidate.id)
+                        logger.info("批量场景生成已保存为候选稿: %s -> %s", tgt["target_rel_path"], candidate.id)
                         item.status = "candidate"
                         item.candidate_id = candidate.id
                     except Exception as e:
@@ -392,18 +397,18 @@ class GenerationService:
                         continue
                 else:
                     # 目标文件为空：直接写入
-                    await self.file_service.write_file(tgt["target_file"], generated.strip())
-                    logger.info("批量场景生成直接写入: %s", tgt["target_file"])
+                    await self.file_service.write_file(tgt["target_full_path"], generated.strip())
+                    logger.info("批量场景生成直接写入: %s", tgt["target_rel_path"])
 
                 word_count = len(generated.replace(" ", ""))
                 item.status = "success"
                 item.word_count = word_count
                 succeeded += 1
 
-                logger.info("场景生成完成", extra={"target": tgt["target_file"], "words": word_count})
+                logger.info("场景生成完成", extra={"target": tgt["target_rel_path"], "words": word_count})
 
             except Exception as e:
-                logger.error("场景生成失败", extra={"target": tgt["target_file"], "error": str(e)[:200]})
+                logger.error("场景生成失败", extra={"target": tgt["target_rel_path"], "error": str(e)[:200]})
                 item.status = "error"
                 item.error = str(e)[:200]
                 failed += 1

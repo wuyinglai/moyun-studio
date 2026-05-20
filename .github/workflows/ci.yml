@@ -21,7 +21,7 @@ jobs:
       - name: Run tests (if available)
         run: |
           if [ -d "backend/tests" ]; then
-            python -m pytest backend/tests -q --tb=short || true
+            python -m pytest backend/tests -q --tb=short
           else
             echo "No tests directory found, skipping pytest"
           fi
@@ -41,6 +41,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Lint
-        run: npm run lint || true
+        run: npm run lint
       - name: Build
         run: npm run build

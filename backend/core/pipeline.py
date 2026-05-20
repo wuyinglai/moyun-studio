@@ -105,7 +105,7 @@ class PipelineRunner:
                 break
             file_path = match.group(1)
             try:
-                content, _ = await self.file_service.read_file(f"{project_id}/{file_path}")
+                content, _, _ = await self.file_service.read_file(f"{project_id}/{file_path}")
                 replacement = content if content else ""
             except (MoyunFileNotFoundError, OSError):
                 replacement = f"\n<!-- 文件 {file_path} 不存在 -->\n"
@@ -120,7 +120,7 @@ class PipelineRunner:
         映射关系：meta.json 的字段直接作为模板变量名（genre, theme, tone 等）。
         """
         try:
-            content, _ = await self.file_service.read_file(f"{project_id}/meta.json")
+            content, _, _ = await self.file_service.read_file(f"{project_id}/meta.json")
             if content:
                 meta = json.loads(content)
                 # 提取需要的字段，忽略内部字段（project_id, created_at 等）
@@ -147,7 +147,7 @@ class PipelineRunner:
         vars = {}
         for var_name, rel_path in system_file_map.items():
             try:
-                content, _ = await self.file_service.read_file(f"{project_id}/{rel_path}")
+                content, _, _ = await self.file_service.read_file(f"{project_id}/{rel_path}")
                 vars[var_name] = content
             except (MoyunFileNotFoundError, OSError):
                 vars[var_name] = ""
@@ -172,7 +172,7 @@ class PipelineRunner:
         chapter_dir = "/".join(parts[:-1])
         meta_path = f"{project_id}/{chapter_dir}/ch-meta.json"
         try:
-            content, _ = await self.file_service.read_file(meta_path)
+            content, _, _ = await self.file_service.read_file(meta_path)
             if content:
                 meta = json.loads(content)
                 foreshadowing = meta.get("pending_foreshadowing", [])
@@ -316,7 +316,7 @@ class PipelineRunner:
                 file_content = ""
                 if target_file:
                     try:
-                        content, _ = await self.file_service.read_file(f"{project_id}/{target_file}")
+                        content, _, _ = await self.file_service.read_file(f"{project_id}/{target_file}")
                         file_content = content
                     except Exception as e:
                         logger.warning("无法读取目标文件 %s/%s: %s", project_id, target_file, e)
@@ -516,7 +516,7 @@ class PipelineRunner:
 
         if final_output and target_file:
             try:
-                orig, fm = await self.file_service.read_file(f"{project_id}/{target_file}")
+                orig, fm, _ = await self.file_service.read_file(f"{project_id}/{target_file}")
                 original_content = orig
                 frontmatter = fm
             except Exception as e:
@@ -596,7 +596,7 @@ class PipelineRunner:
             entry = f"\n## {timestamp} - {file_name}\n{structured_summary}\n"
 
             try:
-                existing, _ = await self.file_service.read_file(f"{project_id}/recent-context.md")
+                existing, _, _ = await self.file_service.read_file(f"{project_id}/recent-context.md")
                 blocks = [b for b in existing.split("\n## ") if b.strip()]
                 # 使用配置的场景记忆数量限制（默认 15）
                 settings = get_settings()
