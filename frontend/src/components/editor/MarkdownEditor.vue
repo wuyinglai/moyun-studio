@@ -58,6 +58,7 @@
       v-show="fileStore.currentFile && !isPreviewMode"
       ref="codemirrorEl"
       class="codemirror-container"
+      data-testid="codemirror-container"
     />
     <div
       v-show="fileStore.currentFile && isPreviewMode"

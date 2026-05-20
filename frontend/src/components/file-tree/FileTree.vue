@@ -1,5 +1,8 @@
 <template>
-  <div class="file-tree">
+  <div
+    class="file-tree"
+    data-testid="file-tree"
+  >
     <div class="tree-header">
       <div class="tree-title-group">
         <span

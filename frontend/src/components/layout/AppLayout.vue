@@ -19,6 +19,7 @@
     <main
       class="panel-center"
       :style="{ width: centerWidth }"
+      data-testid="editor-panel"
     >
       <div
         class="center-top"

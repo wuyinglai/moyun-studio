@@ -8,7 +8,12 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:llm": "cross-env MOYUN_E2E_REAL_LLM=true playwright test"
   },
   "dependencies": {
     "@codemirror/commands": "^6.8.1",
@@ -35,6 +40,7 @@
     "@types/node": "^24.12.3",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/tsconfig": "^0.9.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.0.0",
     "eslint-plugin-vue": "^9.0.0",
     "typescript": "~6.0.2",

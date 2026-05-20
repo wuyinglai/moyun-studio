@@ -1,5 +1,8 @@
 <template>
-  <div class="candidate-panel">
+  <div
+    class="candidate-panel"
+    data-testid="candidate-panel"
+  >
     <div class="panel-header">
       <span class="panel-title">候选稿</span>
       <button
@@ -39,7 +42,10 @@
             {{ statusLabel(candidate.status) }}
           </span>
         </div>
-        <div class="card-body">
+        <div
+          class="card-body"
+          data-testid="candidate-content"
+        >
           <div class="candidate-filename">{{ candidate.source_filename }}</div>
           <div class="candidate-meta">
             <span class="meta-item">{{ formatTime(candidate.created_at) }}</span>
@@ -58,6 +64,7 @@
             v-if="candidate.status === 'pending'"
             class="action-btn action-adopt"
             title="采用"
+            data-testid="candidate-adopt-button"
             @click.stop="adoptCandidate(candidate)"
           >
             <i class="fa-solid fa-check" />
@@ -65,6 +72,7 @@
           <button
             class="action-btn action-delete"
             title="删除"
+            data-testid="candidate-reject-button"
             @click.stop="deleteCandidate(candidate)"
           >
             <i class="fa-solid fa-trash-can" />

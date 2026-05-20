@@ -24,6 +24,7 @@
               <a-select
                 v-model:value="config.apiType"
                 placeholder="选择 API 提供商"
+                data-testid="llm-provider-select"
               >
                 <a-select-option value="openai">
                   OpenAI
@@ -55,6 +56,7 @@
               <a-input
                 v-model:value="config.apiUrl"
                 placeholder="https://api.deepseek.com"
+                data-testid="llm-base-url-input"
               />
             </a-form-item>
 
@@ -65,6 +67,7 @@
               <a-input
                 v-model:value="config.apiUrl"
                 placeholder="http://localhost:11434"
+                data-testid="llm-base-url-input"
               />
             </a-form-item>
 
@@ -130,6 +133,7 @@
               <a-button
                 :loading="isTesting"
                 :disabled="isTesting"
+                data-testid="llm-test-button"
                 @click="testConnection"
               >
                 <i class="fa-solid fa-plug" />

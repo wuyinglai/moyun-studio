@@ -1,5 +1,8 @@
 <template>
-  <div class="execution-panel">
+  <div
+    class="execution-panel"
+    data-testid="task-status-panel"
+  >
     <!-- M0403-1 状态指示 -->
     <div class="panel-section">
       <div class="section-header">

@@ -75,6 +75,7 @@
           v-if="sseConnected"
           class="sse-indicator"
           title="SSE已连接"
+          data-testid="sse-status-indicator"
         >SSE</span>
       </button>
 
@@ -197,6 +198,7 @@
         <button
           class="btn btn-icon"
           title="设置"
+          data-testid="settings-button"
           @click="uiStore.openSettings()"
         >
           <svg

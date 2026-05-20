@@ -1,5 +1,8 @@
 <template>
-  <div class="editor-toolbar">
+  <div
+    class="editor-toolbar"
+    data-testid="editor-toolbar"
+  >
     <a-space>
       <a-button
         size="small"
@@ -50,6 +53,7 @@
         v-if="showNextButton"
         size="small"
         type="primary"
+        data-testid="write-next-button"
         @click="handleGenerateNext"
       >
         📄 写下一部分
@@ -69,6 +73,7 @@
           size="small"
           type="primary"
           ghost
+          data-testid="rewrite-button"
           @click="runPipeline('rewrite')"
         >
           📦 精修
@@ -141,7 +146,10 @@
               <a-menu-item @click="handleExtractModal">
                 <i class="fa-solid fa-brain" /> 智能提取
               </a-menu-item>
-              <a-menu-item @click="handleBatchGenerate">
+              <a-menu-item
+                data-testid="batch-generate-button"
+                @click="handleBatchGenerate"
+              >
                 <i class="fa-solid fa-wand-magic-sparkles" /> 批量生成
               </a-menu-item>
               <a-menu-item @click="handleQualityReview">

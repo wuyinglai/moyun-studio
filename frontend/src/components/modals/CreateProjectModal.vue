@@ -31,6 +31,7 @@
             v-model:value="wizard.params.value.name"
             placeholder="输入项目名称"
             size="large"
+            data-testid="create-project-name-input"
           />
         </a-form-item>
 
@@ -325,6 +326,7 @@
         type="primary"
         :disabled="!wizard.params.value.genre || wizard.isGenerating.value || creatingFile"
         :loading="wizard.isGenerating.value || creatingFile"
+        data-testid="create-project-submit"
         @click="handleCreate"
       >
         <template #icon>

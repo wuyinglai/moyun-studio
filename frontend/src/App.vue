@@ -152,7 +152,10 @@ function findFirstMarkdown(nodes: Array<{ name: string; path: string; type: stri
 </script>
 
 <template>
-  <div class="app-shell">
+  <div
+    class="app-shell"
+    data-testid="app-root"
+  >
     <!-- 后端连通性告警横幅 -->
     <div
       v-if="!checking && !backendReachable"
