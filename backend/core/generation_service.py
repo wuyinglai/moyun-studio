@@ -41,7 +41,10 @@ class GenerationService:
 
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.file_service = FileService(settings.projects_path)
+        self.file_service = FileService(
+            settings.projects_path,
+            max_file_write_size=settings.max_file_write_size,
+        )
         self.scene_service = SceneService(self.file_service)
         self._stop_signals: dict[str, asyncio.Event] = {}
 

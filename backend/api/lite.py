@@ -787,7 +787,7 @@ async def generate_next_options(
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     current_content = await _read_optional(file_service, req.project_id, req.current_file or "")
     current_no = max(1, _extract_chapter_number(req.current_file) or 1)
     if req.current_file and _is_blank_chapter(current_content):
@@ -857,7 +857,7 @@ async def write_lite_next(
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
     is_blank_requested = _is_blank_chapter(requested_content)
     if (req.action != "write" and req.target_file) or (req.target_file and is_blank_requested):
@@ -1040,7 +1040,7 @@ async def write_lite_next_stream(
             yield _lite_stream_event("error", {"message": f"项目不存在：{req.project_id}"})
             return
 
-        file_service = FileService(settings.projects_path)
+        file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
         requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
         is_blank_requested = _is_blank_chapter(requested_content)
         if (req.action in ("continue", "rewrite", "more_exciting", "more_reasonable") and req.target_file) or (req.target_file and is_blank_requested):

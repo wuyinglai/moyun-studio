@@ -66,7 +66,7 @@ test.describe('候选稿批量真实 LLM 测试', () => {
 
     while (Date.now() - startTime < maxWait) {
       // 检查候选稿面板
-      const candidatePanel = getByTestId(page, 'candidate-panel')
+      const _candidatePanel = getByTestId(page, 'candidate-panel')
       const candidateCard = page.locator('.candidate-card').first()
 
       if (await candidateCard.isVisible().catch(() => false)) {
@@ -406,7 +406,7 @@ test.describe('候选稿批量真实 LLM 测试', () => {
     // 等待批量生成完成（最长 300 秒，2 个场景）
     const maxWait = 300000
     const startTime = Date.now()
-    let batchComplete = false
+    let _batchComplete = false
 
     while (Date.now() - startTime < maxWait) {
       // 检查进度条是否消失
@@ -414,7 +414,7 @@ test.describe('候选稿批量真实 LLM 测试', () => {
       const resultTable = batchModal.locator('.ant-table').first()
 
       if (await resultTable.isVisible().catch(() => false)) {
-        batchComplete = true
+        _batchComplete = true
         break
       }
 
@@ -422,7 +422,7 @@ test.describe('候选稿批量真实 LLM 测试', () => {
         // 进度条消失，检查结果
         const retryTable = batchModal.locator('.ant-table').first()
         if (await retryTable.isVisible().catch(() => false)) {
-          batchComplete = true
+          _batchComplete = true
           break
         }
       }
@@ -492,7 +492,7 @@ test.describe('候选稿批量真实 LLM 测试', () => {
     if (batchResults.length >= 2) {
       // 简单检查：如果两个场景分数相同且 issues 相同，可能是相同内容
       // 更可靠的方式是直接比较内容，但这里用分数差异做近似
-      const scoresDiffer = batchResults[0].score !== batchResults[1].score ||
+      const _scoresDiffer = batchResults[0].score !== batchResults[1].score ||
         batchResults[0].issues.length !== batchResults[1].issues.length
       // 不强制要求分数不同，但至少内容应非空
       expect(batchResults.every((r) => r.passed)).toBe(true)

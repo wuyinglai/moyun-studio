@@ -2,6 +2,9 @@
 
 Local-first AI fiction studio with story memory, safe revisions, and customizable workflows.
 
+Full documentation:
+https://github.com/wuyinglai/moyun-studio/wiki
+
 Moyun Studio is an AI-native long-form fiction writing studio for storytellers. It combines story memory, safe AI revisions, customizable workflows, and human-in-the-loop creation.
 
 墨韵是一个本地优先的 AI 小说创作工作台，面向长篇小说创作，支持故事记忆、安全候选稿、可配置工作流与人机协同创作。

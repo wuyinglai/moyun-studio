@@ -306,7 +306,10 @@ async def submit_extract_task(
 
     try:
         # 读取源文件
-        file_service = FileService(settings.projects_path)
+        file_service = FileService(
+            settings.projects_path,
+            max_file_write_size=settings.max_file_write_size,
+        )
         source_content, _, _ = await file_service.read_file(f"{req.project_id}/{req.source_file}")
 
         # 读取 style-guide

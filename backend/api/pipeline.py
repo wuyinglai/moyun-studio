@@ -48,7 +48,7 @@ async def run_pipeline(
         raise ProjectNotFoundError(req.project_id)
 
     # 初始化服务
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
@@ -93,7 +93,7 @@ async def list_pipelines(
     settings: Settings = Depends(get_settings),
 ):
     """获取所有可用管线"""
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
@@ -130,7 +130,7 @@ async def get_pipeline(
     settings: Settings = Depends(get_settings),
 ):
     """获取管线详情"""
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
 
@@ -157,7 +157,7 @@ async def save_pipeline(
     settings: Settings = Depends(get_settings),
 ):
     """保存管线定义或步骤 prompt"""
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
 
@@ -191,7 +191,7 @@ async def create_custom_pipeline(
     custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
     custom_dir.mkdir(parents=True, exist_ok=True)
 
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     runner = PipelineRunner(custom_dir, llm_service, file_service)

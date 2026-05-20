@@ -11,11 +11,17 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError
+from backend.core.exceptions import (
+    FileConflictError,
+    MoyunFileNotFoundError,
+    ProjectNotFoundError,
+    ResourceNotFoundError,
+    ValidationError,
+)
 from backend.core.file_ops import FileService
 from backend.domain.events import (
     make_file_created_event,
@@ -64,7 +70,7 @@ class SearchRequest(BaseModel):
 
 
 def _get_file_service(settings: Settings = Depends(get_settings)) -> FileService:
-    return FileService(settings.projects_path)
+    return FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
 
 
 def _project_collection_root(settings: Settings, project_id: str):
@@ -79,7 +85,10 @@ def _project_dir(settings: Settings, project_id: str):
 
 
 def _project_file_service(settings: Settings, project_id: str) -> FileService:
-    return FileService(_project_collection_root(settings, project_id))
+    return FileService(
+        _project_collection_root(settings, project_id),
+        max_file_write_size=settings.max_file_write_size,
+    )
 
 
 def _build_tree_nodes(raw: dict) -> list[TreeNode]:
@@ -112,9 +121,14 @@ async def read_file(
     full_path = f"{project_id}/{path}"
     try:
         content, fm, mtime = await fs.read_file(full_path)
+    except MoyunFileNotFoundError:
+        raise ResourceNotFoundError(resource="file", identifier=f"{project_id}/{path}")
+    except ValidationError as e:
+        logger.warning("读取文件路径校验失败", extra={"project_id": project_id, "path": path, "error": str(e)})
+        raise HTTPException(status_code=400, detail=e.message)
     except Exception as e:
         logger.warning("读取文件失败", extra={"project_id": project_id, "path": path, "error": str(e)})
-        raise ResourceNotFoundError(resource="file", identifier=f"{project_id}/{path}")
+        raise HTTPException(status_code=500, detail="读取文件失败")
 
     return ApiResponse.ok(
         FileReadResponse(path=path, content=content, frontmatter=fm, mtime=mtime)
@@ -140,9 +154,11 @@ async def write_file(
             expected_mtime=req.expected_mtime,
             expected_hash=req.expected_hash,
         )
+    except (FileConflictError, ValidationError):
+        raise
     except Exception as e:
         logger.error("写入文件失败", extra={"project_id": project_id, "path": req.path, "error": str(e)})
-        raise
+        raise HTTPException(status_code=500, detail="写入文件失败")
 
     logger.info("文件已保存", extra={"project_id": project_id, "path": req.path})
 

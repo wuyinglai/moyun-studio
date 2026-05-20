@@ -256,9 +256,9 @@
           >
             打开一个章节后生成下一节方向。
           </p>
+          <template v-if="!generating">
           <button
             v-for="card in nextCards"
-            v-if="!generating"
             :key="card.id"
             class="option-card"
             :disabled="generating"
@@ -293,6 +293,7 @@
             </div>
             <em>{{ optionActionLabel }}</em>
           </button>
+          </template>
         </section>
 
         <section class="panel">

@@ -1,11 +1,12 @@
 """墨韵 - 候选稿 API 路由"""
 
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from backend.config import get_settings
 from backend.core.candidate_service import CandidateService, AdoptResult
 from backend.core.file_ops import FileService
+from backend.domain.events import make_candidate_adopted_event, make_candidate_created_event
 from backend.schemas.candidate import (
     AdoptCandidateResponse,
     CandidateDetailResponse,
@@ -26,7 +27,7 @@ async def list_candidates(
 ):
     """列出候选稿"""
     settings = get_settings()
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     candidate_service = CandidateService(file_service)
 
     candidates = await candidate_service.list_candidates(project_id, status)
@@ -40,7 +41,7 @@ async def get_candidate(
 ):
     """获取候选稿详情"""
     settings = get_settings()
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     candidate_service = CandidateService(file_service)
 
     candidate = await candidate_service.get_candidate(project_id, candidate_id)
@@ -58,10 +59,11 @@ async def get_candidate(
 async def create_candidate(
     project_id: str,
     request: CreateCandidateRequest,
+    http_request: Request,
 ):
     """创建候选稿"""
     settings = get_settings()
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     candidate_service = CandidateService(file_service)
 
     candidate = await candidate_service.create_candidate(
@@ -71,6 +73,16 @@ async def create_candidate(
         content=request.content,
         workflow_run_id=request.workflow_run_id,
     )
+    event_bus = getattr(http_request.app.state, "event_bus", None)
+    if event_bus:
+        evt = make_candidate_created_event(
+            project_id=project_id,
+            candidate_id=candidate.id,
+            source_path=candidate.source_path,
+            action=candidate.action,
+            source="api/candidates",
+        )
+        await event_bus.publish(evt.type, evt.to_sse_dict())
     return candidate
 
 
@@ -78,10 +90,11 @@ async def create_candidate(
 async def adopt_candidate(
     project_id: str,
     candidate_id: str,
+    request: Request,
 ):
     """采用候选稿"""
     settings = get_settings()
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     candidate_service = CandidateService(file_service)
 
     candidate = await candidate_service.get_candidate(project_id, candidate_id)
@@ -104,6 +117,16 @@ async def adopt_candidate(
     if result != AdoptResult.SUCCESS:
         raise HTTPException(status_code=500, detail=f"采用候选稿失败: {result}")
 
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        evt = make_candidate_adopted_event(
+            project_id=project_id,
+            candidate_id=candidate_id,
+            source_path=candidate.source_path,
+            source="api/candidates",
+        )
+        await event_bus.publish(evt.type, evt.to_sse_dict())
+
     return AdoptCandidateResponse(
         success=True,
         message="候选稿已成功采用",
@@ -118,7 +141,7 @@ async def delete_candidate(
 ):
     """删除候选稿"""
     settings = get_settings()
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     candidate_service = CandidateService(file_service)
 
     candidate = await candidate_service.get_candidate(project_id, candidate_id)
@@ -142,7 +165,7 @@ async def get_candidates_for_file(
 ):
     """获取指定文件的候选稿"""
     settings = get_settings()
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     candidate_service = CandidateService(file_service)
 
     candidates = await candidate_service.get_candidates_for_file(project_id, source_path)

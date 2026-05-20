@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
 
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
 
     worker_task = asyncio.create_task(
         run_task_worker(task_queue, llm_service, file_service, event_bus)

@@ -6,7 +6,7 @@
 import json
 import logging
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import aiofiles
 import frontmatter
@@ -32,9 +32,14 @@ class FileService:
     FORBIDDEN_PREFIXES = ('..', '/', '\\')
     FORBIDDEN_SUFFIXES = ('.py', '.pyc', '.sh', '.bat', '.exe')
 
-    def __init__(self, workspace_path: Path | str, max_content_size: int = 5 * 1024 * 1024):
+    def __init__(
+        self,
+        workspace_path: Path | str,
+        max_content_size: int | None = None,
+        max_file_write_size: int | None = None,
+    ):
         self.workspace = Path(workspace_path).resolve()
-        self._max_content_size = max_content_size
+        self._max_content_size = max_file_write_size or max_content_size or 5 * 1024 * 1024
 
     def _resolve_path(
         self,
@@ -54,6 +59,13 @@ class FileService:
             raise ValidationError("路径不能为空")
 
         # 检查绝对路径或越界路径
+        if (
+            Path(relative_path).is_absolute()
+            or PureWindowsPath(relative_path).is_absolute()
+            or PurePosixPath(relative_path).is_absolute()
+        ):
+            raise ValidationError(f"闈炴硶璺緞: {relative_path}")
+
         for prefix in self.FORBIDDEN_PREFIXES:
             if relative_path.startswith(prefix):
                 raise ValidationError(f"非法路径: {relative_path}")
@@ -66,6 +78,8 @@ class FileService:
 
         # 检查路径中任何段是否包含禁止的名称
         path_parts = Path(relative_path).parts
+        path_parts += PureWindowsPath(relative_path).parts
+        path_parts += PurePosixPath(relative_path).parts
         for part in path_parts:
             if part in self.FORBIDDEN_SEGMENTS:
                 raise ValidationError(f"禁止操作: 路径包含 '{part}'")

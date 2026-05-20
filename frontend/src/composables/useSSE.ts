@@ -272,6 +272,7 @@ class SSEService {
       case 'task-completed':
       case 'task-waiting-for-user':
         // 任务状态变化（兼容旧 taskId 和新 task_id）
+      {
         const taskId = data.task_id || data.taskId
         if (taskId) {
           taskStore.updateTask(taskId, data)
@@ -289,6 +290,7 @@ class SSEService {
           }
         }
         break
+      }
 
       case 'pipeline-step-failed':
         // 管线步骤失败

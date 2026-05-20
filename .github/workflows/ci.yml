@@ -17,7 +17,16 @@ jobs:
       - name: Lint with ruff
         run: pip install ruff>=0.3.0 && ruff check backend/ --ignore=RUF001,RUF002,RUF003,E501 --select=E,F
       - name: Check syntax
-        run: pip install -r backend/requirements.txt && python -m py_compile backend/main.py backend/config.py backend/core/file_ops.py backend/core/pipeline.py
+        run: |
+          pip install -r backend/requirements.txt
+          python -m py_compile \
+            backend/main.py \
+            backend/api/files.py \
+            backend/core/file_ops.py \
+            backend/core/generation_service.py \
+            backend/core/pipeline.py \
+            backend/core/candidate_service.py \
+            backend/schemas/file.py
       - name: Run tests (if available)
         run: |
           if [ -d "backend/tests" ]; then

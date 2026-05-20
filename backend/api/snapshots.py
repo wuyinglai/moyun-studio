@@ -47,7 +47,7 @@ async def list_snapshots(
     if not project_dir.exists():
         raise ProjectNotFoundError(project_id)
 
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     manager = SnapshotManager(file_service)
     full_path = f"{project_id}/{file_path}"
     snapshots = await manager.list_snapshots(full_path)
@@ -66,7 +66,7 @@ async def create_snapshot(
     if not project_dir.exists():
         raise ProjectNotFoundError(project_id)
 
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     manager = SnapshotManager(file_service)
     full_path = f"{project_id}/{req.file_path}"
 
@@ -95,7 +95,7 @@ async def restore_snapshot(
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     manager = SnapshotManager(file_service)
 
     await manager.restore_snapshot(req.snapshot_id)
@@ -122,7 +122,7 @@ async def compare_snapshots(
     if not project_dir.exists():
         raise ProjectNotFoundError(project_id)
 
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     manager = SnapshotManager(file_service)
     diff = await manager.compare_versions(req.snapshot_id1, req.snapshot_id2)
     added = sum(1 for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++"))

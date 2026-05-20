@@ -205,7 +205,7 @@ async function fetchCandidates() {
       source_filename: c.source_path.split('/').pop() || c.source_path,
       filename: c.candidate_path.split('/').pop() || c.candidate_path,
     }))
-  } catch (e) {
+  } catch {
     notification.error('获取候选稿列表失败')
   } finally {
     loading.value = false
@@ -228,7 +228,7 @@ async function previewCandidate(candidate: CandidateInfo) {
   try {
     const data = await api.get<{ content: string }>(`/candidates/${projectStore.currentProject?.id}/${candidate.id}`)
     previewContent.value = data.content || ''
-  } catch (e) {
+  } catch {
     notification.error('获取候选稿内容失败')
     closePreview()
   }
@@ -249,7 +249,7 @@ async function adoptCandidate(candidate: CandidateInfo) {
     await api.post(`/candidates/${projectStore.currentProject?.id}/${candidate.id}/adopt`)
     notification.success('候选稿已成功采用')
     await fetchCandidates()
-  } catch (e) {
+  } catch {
     notification.error('采用候选稿失败')
   }
 }
@@ -269,7 +269,7 @@ async function deleteCandidate(candidate: CandidateInfo) {
     await api.delete(`/candidates/${projectStore.currentProject?.id}/${candidate.id}`)
     notification.success('候选稿已成功删除')
     await fetchCandidates()
-  } catch (e) {
+  } catch {
     notification.error('删除候选稿失败')
   }
 }

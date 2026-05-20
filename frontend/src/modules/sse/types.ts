@@ -118,7 +118,7 @@ export interface PipelineStepEvent extends BaseEvent {
   error?: string
 }
 
-export interface MemoryUpdatedEvent extends BaseEvent {}
+export type MemoryUpdatedEvent = BaseEvent
 
 export type SSEEventType =
   | 'generation'

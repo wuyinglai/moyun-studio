@@ -35,7 +35,10 @@ _active_stop_events: dict[str, asyncio.Event] = {}
 def _build_runner(settings: Settings) -> WorkflowRunner:
     """构建 WorkflowRunner 实例"""
     workflows_path = settings.workspace_path / "workflows"
-    file_service = FileService(settings.projects_path)
+    file_service = FileService(
+        settings.projects_path,
+        max_file_write_size=settings.max_file_write_size,
+    )
     llm_cfg = load_llm_config_from_workspace(settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     return WorkflowRunner(workflows_path, settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
@@ -442,4 +445,3 @@ async def get_memory_status(
         "recent_context_length": len(recent_context),
         "last_updated": last_updated,
     })
-

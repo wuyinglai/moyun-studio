@@ -9,7 +9,6 @@
 
 import { test, expect } from '@playwright/test'
 import * as fs from 'fs'
-import * as path from 'path'
 import { evaluateFictionScene, quickQualityCheck } from './helpers/qualityRubric'
 import { generateQualityReport } from './helpers/qualityReport'
 import { getLLMEnv, shouldSkipLLMTests } from './helpers/llmEnv'

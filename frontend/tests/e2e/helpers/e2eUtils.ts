@@ -2,7 +2,7 @@
  * E2E 测试工具函数
  */
 
-import { Page, expect } from '@playwright/test'
+import { Page } from '@playwright/test'
 import { SELECTORS } from './selectors'
 
 /** 等待页面加载完成（非白屏） */

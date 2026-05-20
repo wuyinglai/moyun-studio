@@ -100,7 +100,10 @@ async def chat(
         logger.info("开始聊天任务", extra={"project_id": req.project_id, "message_length": len(req.message)})
 
         try:
-            file_service = FileService(settings.projects_path)
+            file_service = FileService(
+                settings.projects_path,
+                max_file_write_size=settings.max_file_write_size,
+            )
             llm_cfg = load_llm_config_from_workspace(settings)
             svc = LLMService.from_workspace_config(llm_cfg)
             runner = PipelineRunner(settings.prompts_path, svc, file_service, system_prompts_path=settings.system_prompts_path)

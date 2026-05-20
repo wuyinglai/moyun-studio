@@ -292,6 +292,8 @@ class TestSceneWritingSmoke:
 
         sse_dict = evt.to_sse_dict()
         assert "content" not in sse_dict, "file.updated 事件不应包含 content"
+        assert sse_dict["payload"]["path"] == "chapters/vol-01/ch-001/sec-001.md"
+        assert "content" not in sse_dict["payload"], "file.updated payload 不应包含 content"
         assert "path" in sse_dict
         assert "size" in sse_dict
         assert "mtime" in sse_dict

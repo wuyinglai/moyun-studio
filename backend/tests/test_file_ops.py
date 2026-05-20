@@ -364,6 +364,20 @@ class TestFileServiceSecurity:
         with pytest.raises(ValidationError):
             fs._resolve_path("/etc/passwd")
 
+    def test_resolve_path_rejects_windows_absolute_path(self, fs, temp_workspace):
+        """_resolve_path 必须拒绝 Windows 绝对路径"""
+        from backend.core.exceptions import ValidationError
+
+        with pytest.raises(ValidationError):
+            fs._resolve_path("C:\\Users\\alice\\secret.txt")
+
+    def test_resolve_path_rejects_unc_path(self, fs, temp_workspace):
+        """_resolve_path 必须拒绝 UNC 路径"""
+        from backend.core.exceptions import ValidationError
+
+        with pytest.raises(ValidationError):
+            fs._resolve_path("\\\\server\\share\\secret.txt")
+
     @pytest.mark.asyncio
     async def test_write_file_content_size_limit(self, fs, temp_workspace):
         """write_file 必须拒绝超过大小限制的内容"""

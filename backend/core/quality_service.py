@@ -25,7 +25,10 @@ class QualityService:
 
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.file_service = FileService(settings.projects_path)
+        self.file_service = FileService(
+            settings.projects_path,
+            max_file_write_size=settings.max_file_write_size,
+        )
 
     # ─── 路径辅助 ────────────────────────────────────────
 

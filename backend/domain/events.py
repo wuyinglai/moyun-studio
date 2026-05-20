@@ -110,6 +110,7 @@ class AppEvent(BaseModel):
             "run_id": self.run_id,
             "source": self.source,
             "timestamp": self.timestamp,
+            "payload": self.payload,
             **self.payload,
         }
         return result
