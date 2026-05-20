@@ -65,6 +65,7 @@
         <PromptPanel v-show="activeTab === 'prompt'" />
         <PipelineEditor v-show="activeTab === 'pipeline'" />
         <WorkflowPanel v-show="activeTab === 'workflow'" />
+        <CandidatePanel v-show="activeTab === 'candidate'" />
         <StoryStatePanel
           v-show="activeTab === 'story'"
           ref="storyPanelRef"
@@ -91,6 +92,7 @@ import ProfessionalQuickPanel from './ProfessionalQuickPanel.vue'
 import PromptPanel from './PromptPanel.vue'
 import PipelineEditor from './PipelineEditor.vue'
 import WorkflowPanel from './WorkflowPanel.vue'
+import CandidatePanel from './CandidatePanel.vue'
 import ExecutionPanel from './ExecutionPanel.vue'
 import StoryStatePanel from '../global/StoryStatePanel.vue'
 import StyleGuidePanel from '../global/StyleGuidePanel.vue'
@@ -110,6 +112,7 @@ const tabs = [
   { id: 'prompt', label: 'Prompt', icon: '✍' },
   { id: 'pipeline', label: '管线', icon: '🔧' },
   { id: 'workflow', label: '工作流', icon: '📋' },
+  { id: 'candidate', label: '候选稿', icon: '📝' },
   { id: 'story', label: '故事', icon: '📖' },
   { id: 'style', label: '文风', icon: '🎨' },
   { id: 'recent', label: '上下文', icon: '🧭' },

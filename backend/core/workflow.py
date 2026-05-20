@@ -21,7 +21,9 @@ import yaml
 
 from backend.core.pipeline import PipelineRunner, PipelineError
 from backend.core.trash import TrashService
+from backend.core.candidate_service import CandidateService
 from backend.core.node_types import build_node_info, node_type_label, executor_label
+from backend.schemas.candidate import CandidateAction
 from backend.schemas.workflow import (
     WorkflowDef,
     WorkflowStepDef,
@@ -626,5 +628,65 @@ class WorkflowRunner:
                 context.step_outputs[step.id] = dst
         elif step.action == "delete":
             await self.file_service.delete_file(full_path)
+        elif step.action == "create_candidate":
+            await self._run_file_create_candidate(step, context)
+        elif step.action == "adopt_candidate":
+            await self._run_file_adopt_candidate(step, context)
         else:
             logger.warning("未知 file action: %s", step.action)
+
+    async def _run_file_create_candidate(
+        self,
+        step: WorkflowStepDef,
+        context: WorkflowContext,
+    ) -> None:
+        resolved_path = context.resolve(step.path)
+        input_file = context.resolve(step.input)
+
+        if not resolved_path:
+            logger.warning("create_candidate 需要指定 path")
+            return
+
+        content = ""
+        if input_file:
+            content, _ = await self.file_service.read_file(
+                f"{context.project_id}/{input_file}"
+            )
+
+        candidate_action = CandidateAction(step.extra_vars.get("action", "rewrite"))
+        workflow_run_id = context.variables.get("run_id")
+
+        candidate_service = CandidateService(self.file_service)
+        candidate = await candidate_service.create_candidate(
+            project_id=context.project_id,
+            source_path=resolved_path,
+            action=candidate_action,
+            content=content,
+            workflow_run_id=workflow_run_id,
+        )
+
+        logger.info("创建候选稿: %s -> %s", resolved_path, candidate.id)
+        context.step_outputs[step.id] = candidate.id
+
+    async def _run_file_adopt_candidate(
+        self,
+        step: WorkflowStepDef,
+        context: WorkflowContext,
+    ) -> None:
+        candidate_id = context.resolve(step.input)
+
+        if not candidate_id:
+            logger.warning("adopt_candidate 需要指定 input (candidate_id)")
+            return
+
+        candidate_service = CandidateService(self.file_service)
+        success = await candidate_service.adopt_candidate(
+            project_id=context.project_id,
+            candidate_id=candidate_id,
+        )
+
+        if success:
+            logger.info("采用候选稿: %s", candidate_id)
+            context.step_outputs[step.id] = candidate_id
+        else:
+            logger.warning("采用候选稿失败: %s", candidate_id)
