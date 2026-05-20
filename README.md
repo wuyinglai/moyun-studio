@@ -1,15 +1,10 @@
 # Moyun Studio / 墨韵
 
-![Moyun Studio Screenshot](test_result.png)
+Local-first AI fiction studio with story memory, safe revisions, and customizable workflows.
 
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Vue](https://img.shields.io/badge/Vue-3-42b883)
-![Local-first](https://img.shields.io/badge/Local--first-AI%20Writing-purple)
+Moyun Studio is an AI-native long-form fiction writing studio for storytellers. It combines story memory, safe AI revisions, customizable workflows, and human-in-the-loop creation.
 
-Moyun Studio is a local-first AI fiction writing studio for long-form storytelling. It combines story memory, safe AI revisions, customizable workflows, and human-in-the-loop creation.
-
-墨韵是一个本地优先的 AI 小说创作工作台，面向中文长篇小说创作，支持故事记忆、安全候选稿、可配置工作流与人机协同创作。
+墨韵是一个本地优先的 AI 小说创作工作台，面向长篇小说创作，支持故事记忆、安全候选稿、可配置工作流与人机协同创作。
 
 ## Features
 
@@ -22,15 +17,12 @@ The current product direction is **human-AI collaborative creation**: AI handles
 
 ### Backend
 
-```bash
+```bat
 cd backend
 python -m venv venv
-# Windows
 .\venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
 pip install -r requirements.txt
-cp ..\.env.example ..\.env  # copy on Windows
+copy ..\.env.example ..\.env
 uvicorn backend.main:app --reload
 ```
 
