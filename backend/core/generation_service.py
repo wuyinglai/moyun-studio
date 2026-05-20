@@ -333,8 +333,8 @@ class GenerationService:
             try:
                 chapter_vars = await runner.load_chapter_vars(project_id, tgt["target_rel_path"])
                 chapter_title = ""
-                # 修复 ch_meta_path：使用正确的路径（vol-xx/ch-xx/ch-meta.json）
-                ch_meta_path = str(Path(tgt["target_rel_path"]).parent / "ch-meta.json")
+                # 修复 ch_meta_path：使用带 project_id 的完整路径
+                ch_meta_path = str(Path(tgt["target_full_path"]).parent / "ch-meta.json")
                 try:
                     meta_content, _, _ = await self.file_service.read_file(ch_meta_path)
                     if meta_content:

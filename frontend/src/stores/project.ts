@@ -17,6 +17,11 @@ export interface Project {
   total_words: number
   created_at: string
   updated_at: string
+  // 场景级配置
+  scene_target_chars?: number
+  scenes_per_chapter?: number
+  chapters_per_volume?: number
+  unit_label?: string
 }
 
 export interface CreateProjectParams {
@@ -31,6 +36,11 @@ export interface CreateProjectParams {
   target_word_count?: number
   // 高级选项
   outline?: string // 大纲内容
+  // 场景级配置
+  scene_target_chars?: number
+  scenes_per_chapter?: number
+  chapters_per_volume?: number
+  unit_label?: string
 }
 
 export const useProjectStore = defineStore('project', () => {
@@ -152,5 +162,9 @@ function normalizeProject(p: Record<string, unknown>): Project {
     total_words: (p.total_words as number) || 0,
     created_at: (p.created_at as string) || '',
     updated_at: (p.updated_at as string) || '',
+    scene_target_chars: (p.scene_target_chars as number) || undefined,
+    scenes_per_chapter: (p.scenes_per_chapter as number) || undefined,
+    chapters_per_volume: (p.chapters_per_volume as number) || undefined,
+    unit_label: (p.unit_label as string) || undefined,
   }
 }

@@ -39,7 +39,7 @@ class TreeNode(BaseModel):
     name: str
     path: str
     type: str  # "file" | "directory"
-    children: list["TreeNode"] = []
+    children: list["TreeNode"] = Field(default_factory=list)
     size: int | None = None
 
 

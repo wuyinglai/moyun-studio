@@ -369,9 +369,9 @@ class TestWorkflowRunnerRun:
         run_id = "test-resume"
         ctx = WorkflowContext("test-project", variables={"count": "0"})
         runner._save_state(
-            run_id=run_id, workflow_name="test-wf", project_id="test-project",
+            run_id=run_id, workflow="test-wf", project_id="test-project",
             context=ctx, status="running",
-            completed_paths={"test-resume.gen"},
+            completed_paths=["test-resume.gen"],
         )
 
         events = []

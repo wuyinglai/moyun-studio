@@ -50,6 +50,13 @@ class WorkflowPaused(Exception):
     pass
 
 
+def _file_content(read_result: Any) -> str:
+    """Return content from a FileService.read_file result."""
+    if isinstance(read_result, tuple):
+        return read_result[0]
+    return str(read_result)
+
+
 class WorkflowContext:
     """工作流执行上下文"""
 
@@ -253,9 +260,9 @@ class WorkflowRunner:
     def _save_state(
         self,
         run_id: str,
-        workflow: str,
-        project_id: str,
-        context: WorkflowContext,
+        workflow: str | None = None,
+        project_id: str | None = None,
+        context: WorkflowContext | None = None,
         status: str = "running",
         completed_paths: list[str] | None = None,
         current_node: str | None = None,
@@ -264,8 +271,13 @@ class WorkflowRunner:
         available_actions: list[str] | None = None,
         waiting_input: str | None = None,
         remaining_steps: list[dict] | None = None,
+        **legacy_kwargs: Any,
     ) -> None:
         """保存工作流执行状态到磁盘"""
+        workflow = workflow or legacy_kwargs.pop("workflow_name", None)
+        if workflow is None or project_id is None or context is None:
+            raise WorkflowError("Missing workflow state fields")
+
         state = WorkflowRunState(
             run_id=run_id,
             workflow=workflow,
@@ -346,9 +358,13 @@ class WorkflowRunner:
                     "run_id": run_id,
                     "status": "waiting_for_user",
                     "current_node": saved_state.current_node,
+                    "step_id": saved_state.current_node,
+                    "path": saved_state.current_step_path,
                     "waiting_reason": saved_state.waiting_reason,
                     "available_actions": saved_state.available_actions,
+                    "actions": saved_state.available_actions,
                     "waiting_input": saved_state.waiting_input,
+                    "input": saved_state.waiting_input,
                     "variables": context.variables,
                 }, ensure_ascii=False)}
                 return
@@ -462,6 +478,9 @@ class WorkflowRunner:
             completed_paths.add(saved_state.current_step_path)
 
         # 发送节点完成事件
+        if completed_paths is not None:
+            completed_paths.add(step_path)
+
         yield {"event": "step_done", "data": json.dumps({
             "step_id": current_step.id,
             "label": current_step.label,
@@ -494,7 +513,7 @@ class WorkflowRunner:
             remaining_steps = self._get_remaining_steps(workflow.steps, current_step.id)
 
             async for event in self._run_steps(
-                remaining_steps, context, stop_event,
+                workflow.steps, context, stop_event,
                 path_prefix=run_id, completed_paths=completed_paths,
                 workflow=workflow, run_id=run_id,
             ):
@@ -683,8 +702,9 @@ class WorkflowRunner:
             try:
                 # 尝试读取文件
                 file_path = f"{context.project_id}/{resolved_input}"
-                content, _, _ = await self.file_service.read_file(file_path)
-                waiting_input = content
+                waiting_input = _file_content(
+                    await self.file_service.read_file(file_path)
+                )
             except Exception:
                 # 如果不是文件路径，直接使用值
                 waiting_input = resolved_input
@@ -725,9 +745,20 @@ class WorkflowRunner:
             "run_id": run_id,
             "status": "waiting_for_user",
             "current_node": step.id,
+            "step_id": step.id,
+            "label": step.label,
+            "type": step.type,
+            "path": step_path,
+            "node_type": node_info["node_type"],
+            "node_label": node_info["node_label"],
+            "executor": node_info["executor"],
+            "executor_label": node_info["executor_label"],
             "waiting_reason": node_info.get("waiting_reason", ""),
             "available_actions": node_info.get("actions", []),
+            "actions": node_info.get("actions", []),
             "waiting_input": waiting_input,
+            "input": waiting_input,
+            "output_key": step.output_key or f"approved_{step.id}",
             "variables": context.variables,
         }, ensure_ascii=False)}
 
@@ -747,9 +778,9 @@ class WorkflowRunner:
         extra_vars = {}
         if input_file and input_file != target_file:
             try:
-                content, _, _ = await self.file_service.read_file(
+                content = _file_content(await self.file_service.read_file(
                     f"{context.project_id}/{input_file}"
-                )
+                ))
                 extra_vars["file_content"] = content
             except Exception:
                 logger.warning("读取 input 文件失败: %s", input_file)
@@ -861,9 +892,9 @@ class WorkflowRunner:
         elif step.action == "copy":
             src = context.resolve(step.input)
             dst = context.resolve(step.output)
-            content, _, _ = await self.file_service.read_file(
+            content = _file_content(await self.file_service.read_file(
                 f"{context.project_id}/{src}"
-            )
+            ))
             await self.file_service.write_file(
                 f"{context.project_id}/{dst}", content
             )
@@ -892,9 +923,9 @@ class WorkflowRunner:
 
         content = ""
         if input_file:
-            content, _, _ = await self.file_service.read_file(
+            content = _file_content(await self.file_service.read_file(
                 f"{context.project_id}/{input_file}"
-            )
+            ))
 
         candidate_action = CandidateAction(step.extra_vars.get("action", "rewrite"))
         workflow_run_id = context.variables.get("run_id")
@@ -954,8 +985,9 @@ class WorkflowRunner:
             try:
                 # 尝试读取文件
                 file_path = f"{context.project_id}/{resolved_input}"
-                content, _, _ = await self.file_service.read_file(file_path)
-                changed_content = content
+                changed_content = _file_content(
+                    await self.file_service.read_file(file_path)
+                )
             except Exception:
                 # 如果不是文件路径，直接使用值
                 changed_content = resolved_input
@@ -965,17 +997,17 @@ class WorkflowRunner:
         recent_context_content = ""
 
         try:
-            story_content, _, _ = await self.file_service.read_file(
+            story_content = _file_content(await self.file_service.read_file(
                 f"{context.project_id}/story-state.md"
-            )
+            ))
             story_state_content = story_content
         except Exception:
             logger.warning("读取 story-state.md 失败")
 
         try:
-            recent_content, _, _ = await self.file_service.read_file(
+            recent_content = _file_content(await self.file_service.read_file(
                 f"{context.project_id}/recent-context.md"
-            )
+            ))
             recent_context_content = recent_content
         except Exception:
             logger.warning("读取 recent-context.md 失败")
@@ -1254,4 +1286,3 @@ class WorkflowRunner:
                     break
 
         return ' '.join(summary_lines[:2]) if summary_lines else "场景内容待补充"
-

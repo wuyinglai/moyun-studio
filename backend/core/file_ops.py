@@ -32,10 +32,16 @@ class FileService:
     FORBIDDEN_PREFIXES = ('..', '/', '\\')
     FORBIDDEN_SUFFIXES = ('.py', '.pyc', '.sh', '.bat', '.exe')
 
-    def __init__(self, workspace_path: Path | str):
+    def __init__(self, workspace_path: Path | str, max_content_size: int = 5 * 1024 * 1024):
         self.workspace = Path(workspace_path).resolve()
+        self._max_content_size = max_content_size
 
-    def _resolve_path(self, relative_path: str, check_write_suffix: bool = False) -> Path:
+    def _resolve_path(
+        self,
+        relative_path: str,
+        check_write_suffix: bool = False,
+        allow_empty: bool = False,
+    ) -> Path:
         """解析相对路径为绝对路径，包含安全检查
 
         Args:
@@ -43,6 +49,8 @@ class FileService:
             check_write_suffix: 是否检查写入文件的后缀（用于写操作）
         """
         if not relative_path:
+            if allow_empty:
+                return self.workspace
             raise ValidationError("路径不能为空")
 
         # 检查绝对路径或越界路径
@@ -134,6 +142,14 @@ class FileService:
         """
         file_path = self._resolve_path(relative_path, check_write_suffix=True)
 
+        # 内容大小限制
+        content_size = len(content.encode("utf-8")) if content else 0
+        if content_size > self._max_content_size:
+            from backend.core.exceptions import ValidationError
+            raise ValidationError(
+                f"文件内容过大: {content_size / (1024*1024):.1f}MB > {self._max_content_size / (1024*1024):.0f}MB"
+            )
+
         # 并发控制：检查文件是否已被修改
         if file_path.exists():
             if expected_mtime is not None:
@@ -170,7 +186,7 @@ class FileService:
 
     async def create_directory(self, relative_path: str) -> None:
         """创建目录"""
-        dir_path = self._resolve_path(relative_path)
+        dir_path = self._resolve_path(relative_path, allow_empty=True)
         dir_path.mkdir(parents=True, exist_ok=True)
 
     async def delete_file(self, relative_path: str) -> dict | None:
@@ -190,7 +206,7 @@ class FileService:
         Returns:
             回收站记录，若目录不存在返回 None
         """
-        dir_path = self._resolve_path(relative_path)
+        dir_path = self._resolve_path(relative_path, allow_empty=True)
         if not dir_path.exists() or not dir_path.is_dir():
             return None
         return self._trash.move_to_trash(dir_path)
@@ -235,7 +251,36 @@ class FileService:
         Returns:
             树形结构
         """
+        # 空路径表示根目录
+        if not relative_path:
+            return await self._build_tree_root(0, max_depth)
         return await self._build_tree(relative_path, 0, max_depth)
+
+    async def _build_tree_root(self, current_depth: int, max_depth: int) -> dict:
+        """构建根目录的文件树"""
+        children = []
+        try:
+            for entry in sorted(self.workspace.iterdir()):
+                if entry.name.startswith('.') or entry.name == '__pycache__':
+                    continue
+                if entry.is_dir():
+                    children.append(await self._build_tree(entry.relative_to(self.workspace).as_posix(), current_depth + 1, max_depth))
+                else:
+                    children.append({
+                        "name": entry.name,
+                        "path": entry.relative_to(self.workspace).as_posix(),
+                        "type": "file",
+                        "children": [],
+                        "size": entry.stat().st_size,
+                    })
+        except PermissionError:
+            pass
+        return {
+            "name": self.workspace.name,
+            "path": "",
+            "type": "directory",
+            "children": children,
+        }
 
     async def _build_tree(
         self,

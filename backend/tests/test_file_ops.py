@@ -339,3 +339,50 @@ class TestFileServiceConcurrency:
         actual_mtime = file_path.stat().st_mtime
         assert abs(mtime - actual_mtime) < 0.1  # 允许一些误差
 
+
+class TestFileServiceSecurity:
+    """安全检查测试"""
+
+    def test_resolve_path_rejects_dotdot(self, fs, temp_workspace):
+        """_resolve_path 必须拒绝 ../ 路径"""
+        from backend.core.exceptions import ValidationError
+
+        with pytest.raises(ValidationError):
+            fs._resolve_path("../etc/passwd")
+
+    def test_resolve_path_rejects_dotdot_in_middle(self, fs, temp_workspace):
+        """_resolve_path 必须拒绝路径中间的 .."""
+        from backend.core.exceptions import ValidationError
+
+        with pytest.raises(ValidationError):
+            fs._resolve_path("projects/../../../etc/passwd")
+
+    def test_resolve_path_rejects_absolute_path(self, fs, temp_workspace):
+        """_resolve_path 必须拒绝绝对路径"""
+        from backend.core.exceptions import ValidationError
+
+        with pytest.raises(ValidationError):
+            fs._resolve_path("/etc/passwd")
+
+    @pytest.mark.asyncio
+    async def test_write_file_content_size_limit(self, fs, temp_workspace):
+        """write_file 必须拒绝超过大小限制的内容"""
+        from backend.core.exceptions import ValidationError
+
+        # 创建一个小限制的 FileService
+        small_fs = FileService(temp_workspace, max_content_size=100)
+
+        # 尝试写入超过 100 字节的内容
+        with pytest.raises(ValidationError) as exc_info:
+            await small_fs.write_file("big.txt", "x" * 200)
+
+        assert "过大" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_write_file_within_size_limit(self, fs, temp_workspace):
+        """write_file 在大小限制内应该成功"""
+        # 默认 5MB 限制，写入小内容应该成功
+        await fs.write_file("small.txt", "小内容")
+        content, _, _ = await fs.read_file("small.txt")
+        assert content == "小内容"
+

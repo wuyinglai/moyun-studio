@@ -54,7 +54,7 @@ class TestSnapshotManagerCreate:
     @pytest.mark.asyncio
     async def test_create_snapshot(self, mock_file_service):
         mock_file_service.read_file = AsyncMock(
-            return_value=("# 测试章节\n\n内容", {"title": "第一章", "word_count": 100})
+            return_value=("# 测试章节\n\n内容", {"title": "第一章", "word_count": 100}, 1700000000.0)
         )
         mock_file_service.write_file = AsyncMock()
 
@@ -70,7 +70,7 @@ class TestSnapshotManagerCreate:
     @pytest.mark.asyncio
     async def test_create_snapshot_without_label(self, mock_file_service):
         mock_file_service.read_file = AsyncMock(
-            return_value=("内容", None)
+            return_value=("内容", None, 1700000000.0)
         )
         mock_file_service.write_file = AsyncMock()
 
@@ -81,7 +81,7 @@ class TestSnapshotManagerCreate:
     @pytest.mark.asyncio
     async def test_create_snapshot_writes_files(self, mock_file_service):
         mock_file_service.read_file = AsyncMock(
-            return_value=("内容", None)
+            return_value=("内容", None, 1700000000.0)
         )
         mock_file_service.write_file = AsyncMock()
 
@@ -112,7 +112,7 @@ class TestSnapshotManagerList:
                 {"snapshot_id": "s2", "file_path": "chapters/test.md", "label": "v2", "created_at": "2026-01-02", "word_count": 150},
             ],
         }
-        mock_file_service.read_file = AsyncMock(return_value=(json.dumps(index_data, ensure_ascii=False), None))
+        mock_file_service.read_file = AsyncMock(return_value=(json.dumps(index_data, ensure_ascii=False), None, 1700000000.0))
 
         mgr = SnapshotManager(mock_file_service)
         snapshots = await mgr.list_snapshots("chapters/test.md")
@@ -132,7 +132,7 @@ class TestSnapshotManagerRestore:
 
     @pytest.mark.asyncio
     async def test_restore_not_found(self, mock_file_service):
-        mock_file_service.read_file = AsyncMock(return_value=(json.dumps({"snapshots": []}), None))
+        mock_file_service.read_file = AsyncMock(return_value=(json.dumps({"snapshots": []}), None, 1700000000.0))
 
         mgr = SnapshotManager(mock_file_service)
         with pytest.raises(ResourceNotFoundError):
@@ -170,7 +170,7 @@ class TestSnapshotManagerCompare:
 
     @pytest.mark.asyncio
     async def test_compare_not_found(self, mock_file_service):
-        mock_file_service.read_file = AsyncMock(return_value=(json.dumps({"snapshots": []}), None))
+        mock_file_service.read_file = AsyncMock(return_value=(json.dumps({"snapshots": []}), None, 1700000000.0))
 
         mgr = SnapshotManager(mock_file_service)
         with pytest.raises(ResourceNotFoundError):
@@ -189,7 +189,7 @@ class TestSnapshotManagerIndexClip:
 
         old_index = json.dumps({"file_path": "chapters/test.md", "snapshots": snapshots}, ensure_ascii=False)
 
-        mock_file_service.read_file = AsyncMock(return_value=(old_index, None))
+        mock_file_service.read_file = AsyncMock(return_value=(old_index, None, 1700000000.0))
         mock_file_service.write_file = AsyncMock()
 
         mgr = SnapshotManager(mock_file_service)

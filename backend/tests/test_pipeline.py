@@ -228,6 +228,9 @@ class TestPipelineRun:
             loader=FileSystemLoader(str(sample_pipeline_files)),
             autoescape=False,
         )
+        # 确保 mock config 属性正确
+        pipeline_runner.llm_service.config.max_prompt_tokens = 120000
+        pipeline_runner.llm_service.config.context_window = 128000
 
         events = []
         async for event in pipeline_runner.run(
@@ -310,6 +313,9 @@ class TestPipelineRun:
             yield "第一步输出"
 
         pipeline_runner.llm_service.complete = mock_complete_fail
+        # 确保 mock config 属性正确
+        pipeline_runner.llm_service.config.max_prompt_tokens = 120000
+        pipeline_runner.llm_service.config.context_window = 128000
 
         events = []
         async for event in pipeline_runner.run("fallback-test", "test-project"):

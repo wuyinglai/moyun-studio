@@ -210,6 +210,12 @@ def mock_llm_service():
     svc.complete = _complete
     svc.complete_sync = AsyncMock(return_value="测试内容")
     svc.count_tokens = AsyncMock(return_value=100)
+
+    # Mock LLMConfig 属性
+    svc.config.max_prompt_tokens = 120000
+    svc.config.context_window = 128000
+    svc.config.reserved_output_tokens = 8000
+
     return svc
 
 
@@ -227,7 +233,7 @@ def mock_event_bus():
 def mock_file_service(tmp_path):
     """Mock FileService（用于纯逻辑测试，不写文件系统）"""
     svc = MagicMock()
-    svc.read_file = AsyncMock(return_value=("# 测试章节\n\n内容", None))
+    svc.read_file = AsyncMock(return_value=("# 测试章节\n\n内容", None, 1700000000.0))
     svc.write_file = AsyncMock()
     svc.list_directory = AsyncMock(return_value=[])
     svc.delete_file = AsyncMock()
