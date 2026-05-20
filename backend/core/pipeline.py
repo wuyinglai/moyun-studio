@@ -30,9 +30,11 @@ from jinja2 import Environment, FileSystemLoader
 
 from backend.core.llm import LLMService
 from backend.core.file_ops import FileService
+from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.prompt_versioning import archive_prompt
 from backend.schemas.pipeline import PipelineDef, PipelineStepDef
+from backend.schemas.candidate import CandidateAction
 
 logger = logging.getLogger(__name__)
 
@@ -252,6 +254,7 @@ class PipelineRunner:
         extra_vars: dict | None = None,
         stop_event: asyncio.Event | None = None,
         llm_extra_kwargs: dict | None = None,
+        require_candidate: bool = False,
     ) -> AsyncGenerator[dict, None]:
         """执行管线
 
@@ -355,11 +358,19 @@ class PipelineRunner:
 
                 # G0118: 自动 token 检查 — 估算 prompt token 数，超限时发出警告
                 prompt_tokens = self._estimate_tokens(prompt_text)
-                if prompt_tokens > 120000:
+                max_prompt_tokens = self.llm_service.config.max_prompt_tokens
+                
+                if prompt_tokens > max_prompt_tokens:
+                    warning_msg = f"Prompt 过长（约 {prompt_tokens} tokens），超出模型限制 {max_prompt_tokens} tokens"
+                    if prompt_tokens > self.llm_service.config.context_window:
+                        warning_msg += "，建议：减少 recent_context / 只引用当前章摘要 / 分段执行"
                     yield {"event": "error", "data": json.dumps({
-                        "message": f"Prompt 过长（约 {prompt_tokens} tokens），可能超出模型上下文限制",
+                        "message": warning_msg,
                         "task_id": task_id,
                         "warning": True,
+                        "prompt_tokens": prompt_tokens,
+                        "max_prompt_tokens": max_prompt_tokens,
+                        "context_window": self.llm_service.config.context_window,
                     })}
 
                 # context 步骤缓存：同一章内复用已生成的上下文分析
@@ -368,7 +379,8 @@ class PipelineRunner:
                     ch_match = _re.match(r"^(.*?ch-\d+)/", target_file)
                     if ch_match:
                         ch_key = ch_match.group(1)
-                        cached = self._context_cache.get(ch_key)
+                        cache_key = await self._build_context_cache_key(project_id, ch_key)
+                        cached = self._context_cache.get(cache_key)
                         if cached is not None:
                             logger.info("复用 context 缓存: %s", ch_key)
                             step_output = cached
@@ -417,7 +429,9 @@ class PipelineRunner:
                     import re as _re
                     ch_match = _re.match(r"^(.*?ch-\d+)/", target_file)
                     if ch_match:
-                        self._context_cache[ch_match.group(1)] = step_output
+                        ch_key = ch_match.group(1)
+                        cache_key = await self._build_context_cache_key(project_id, ch_key)
+                        self._context_cache[cache_key] = step_output
 
                 # 如果步骤指定了 output 路径，将步骤输出写入对应文件
                 if step.output and step_output:
@@ -489,6 +503,8 @@ class PipelineRunner:
             final_output = step_outputs.get(last_step.id, "")
         original_content = ""
         frontmatter = None
+        candidate_id = None
+        
         if final_output and target_file:
             try:
                 orig, fm = await self.file_service.read_file(f"{project_id}/{target_file}")
@@ -497,7 +513,28 @@ class PipelineRunner:
             except Exception as e:
                 logger.warning("重新读取文件 %s/%s 失败: %s", project_id, target_file, e)
 
-            if output_mode in ("rewrite", "overwrite"):
+            # 判断是否需要生成候选稿
+            should_use_candidate = require_candidate or (output_mode == "rewrite" and original_content)
+            
+            if should_use_candidate and original_content:
+                # 生成候选稿而不是直接覆盖
+                candidate_service = CandidateService(self.file_service)
+                action = self._infer_candidate_action(pipeline_name, output_mode)
+                candidate = await candidate_service.create_candidate(
+                    project_id=project_id,
+                    source_path=target_file,
+                    action=action,
+                    content=final_output,
+                )
+                candidate_id = candidate.id
+                logger.info("已生成候选稿: %s -> %s", target_file, candidate_id)
+                yield {"event": "candidate_created", "data": json.dumps({
+                    "task_id": task_id,
+                    "candidate_id": candidate_id,
+                    "source_path": target_file,
+                    "action": action.value,
+                })}
+            elif output_mode in ("rewrite", "overwrite"):
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
             elif output_mode == "append":
                 new_content = (original_content + "\n\n" + final_output).strip()
@@ -543,8 +580,11 @@ class PipelineRunner:
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
             file_name = target_file.split("/")[-1]
-            summary = content[:300].strip()
-            entry = f"\n## {timestamp} - {file_name}\n{summary}\n"
+            
+            # 生成结构化摘要
+            structured_summary = self._generate_structured_summary(target_file, content)
+            
+            entry = f"\n## {timestamp} - {file_name}\n{structured_summary}\n"
 
             try:
                 existing, _ = await self.file_service.read_file(f"{project_id}/recent-context.md")
@@ -596,6 +636,159 @@ class PipelineRunner:
                     await self.file_service.write_file(log_path, json.dumps(log_entry, ensure_ascii=False, indent=2), None)
             except Exception as e:
                 logger.warning("创建修改日志失败: %s", e)
+
+    def _generate_structured_summary(self, target_file: str, content: str) -> str:
+        """生成结构化的上下文摘要"""
+        lines = content.strip().split('\n')[:20]
+        text_preview = '\n'.join(lines)
+        
+        # 提取关键信息
+        chars = self._extract_characters(content)
+        locations = self._extract_locations(content)
+        
+        summary = []
+        
+        # 场景摘要
+        summary.append("【场景摘要】")
+        summary.append(text_preview[:200].strip() + "..." if len(text_preview) > 200 else text_preview)
+        
+        # 人物
+        if chars:
+            summary.append("\n【人物】")
+            summary.append(", ".join(chars[:5]))
+        
+        # 地点
+        if locations:
+            summary.append("\n【地点】")
+            summary.append(", ".join(locations[:3]))
+        
+        # 下一场承接点（取最后几句）
+        last_lines = content.strip().split('\n')[-3:]
+        last_text = '\n'.join(last_lines).strip()
+        if last_text:
+            summary.append("\n【承接点】")
+            summary.append(last_text[:100].strip())
+        
+        return '\n'.join(summary)
+
+    def _extract_characters(self, content: str) -> list[str]:
+        """简单提取人物名称（基于中文姓名模式和常见角色特征）"""
+        import re
+        chars = []
+        
+        # 匹配中文姓名（2-4个汉字）
+        name_pattern = re.compile(r'([\u4e00-\u9fa5]{2,4})(?=[：:，,。！!？?、])')
+        matches = name_pattern.findall(content)
+        chars.extend(matches)
+        
+        # 匹配带称呼的人名
+        title_pattern = re.compile(r'(先生|小姐|夫人|公子|大侠|掌门|帮主|陛下|殿下|将军|丞相)\s*([\u4e00-\u9fa5]{1,4})')
+        for match in title_pattern.findall(content):
+            chars.append(f"{match[0]}{match[1]}")
+        
+        # 去重并返回
+        return list(set(chars))
+
+    def _extract_locations(self, content: str) -> list[str]:
+        """简单提取地点名称"""
+        import re
+        locations = []
+        
+        # 匹配常见地点后缀
+        loc_pattern = re.compile(r'([\u4e00-\u9fa5]{2,6})(城|镇|村|庄|府|殿|宫|楼|阁|山|谷|湖|河|海|路|街|巷|院|馆|寺|庙|庵|观)')
+        matches = loc_pattern.findall(content)
+        for match in matches:
+            locations.append(f"{match[0]}{match[1]}")
+        
+        # 匹配方位词
+        dir_pattern = re.compile(r'(东|南|西|北|中|前|后|左|右|上|下)([\u4e00-\u9fa5]{1,4})(宫|殿|厅|房|室|门|院)')
+        for match in dir_pattern.findall(content):
+            locations.append(f"{match[0]}{match[1]}{match[2]}")
+        
+        return list(set(locations))
+
+    async def _build_context_cache_key(self, project_id: str, chapter_path: str) -> str:
+        """构建 context 缓存键，包含相关文件的修改时间戳"""
+        import hashlib
+        
+        # 需要监控的文件列表
+        watched_files = [
+            f"{project_id}/style-guide.md",
+            f"{project_id}/story-state.md",
+            f"{project_id}/recent-context.md",
+            f"{project_id}/outline.md",
+            f"{project_id}/meta.json",
+        ]
+        
+        # 添加章节目录下的所有 .md 文件
+        try:
+            chapter_dir = self.file_service._resolve_path(f"{project_id}/{chapter_path}")
+            if chapter_dir.exists() and chapter_dir.is_dir():
+                for item in chapter_dir.iterdir():
+                    if item.is_file() and item.suffix == ".md":
+                        watched_files.append(f"{project_id}/{chapter_path}/{item.name}")
+        except Exception:
+            pass
+        
+        # 获取所有文件的修改时间
+        mtimes = []
+        for file_path in watched_files:
+            try:
+                full_path = self.file_service._resolve_path(file_path)
+                if full_path.exists():
+                    mtimes.append(str(full_path.stat().st_mtime))
+                else:
+                    mtimes.append("0")
+            except Exception:
+                mtimes.append("0")
+        
+        # 构建缓存键
+        key_parts = [project_id, chapter_path] + mtimes
+        key_string = "|".join(key_parts)
+        
+        # 使用 hash 压缩长度
+        return hashlib.md5(key_string.encode()).hexdigest()
+
+    def clear_context_cache(self, project_id: str | None = None) -> None:
+        """清除 context 缓存
+        
+        Args:
+            project_id: 可选，只清除指定项目的缓存；不传则清除全部
+        """
+        if project_id:
+            self._context_cache = {
+                key: val for key, val in self._context_cache.items()
+                if not key.startswith(self._hash_project_id(project_id))
+            }
+        else:
+            self._context_cache.clear()
+        logger.info("Context 缓存已清除 (project_id=%s)", project_id)
+
+    def _hash_project_id(self, project_id: str) -> str:
+        """生成项目ID的哈希值用于缓存键前缀"""
+        import hashlib
+        return hashlib.md5(project_id.encode()).hexdigest()[:8]
+
+    def _infer_candidate_action(self, pipeline_name: str, output_mode: str) -> CandidateAction:
+        """根据管线名称和输出模式推断候选稿动作类型"""
+        pipeline_name_lower = pipeline_name.lower()
+        
+        if "polish" in pipeline_name_lower or "润色" in pipeline_name:
+            return CandidateAction.POLISH
+        elif "expand" in pipeline_name_lower or "扩写" in pipeline_name:
+            return CandidateAction.EXPAND
+        elif "shrink" in pipeline_name_lower or "缩写" in pipeline_name:
+            return CandidateAction.SHRINK
+        elif "chat" in pipeline_name_lower or "对话" in pipeline_name:
+            return CandidateAction.CHAT
+        elif "continue" in pipeline_name_lower or "续写" in pipeline_name:
+            return CandidateAction.CONTINUE
+        elif output_mode == "append":
+            return CandidateAction.CONTINUE
+        elif "modify" in pipeline_name_lower or "修改" in pipeline_name:
+            return CandidateAction.MODIFY
+        else:
+            return CandidateAction.REWRITE
 
     def _estimate_tokens(self, text: str) -> int:
         """估算文本的 token 数

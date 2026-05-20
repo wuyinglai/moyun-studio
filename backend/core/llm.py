@@ -128,6 +128,45 @@ def build_litellm_kwargs(llm_cfg: dict, model: str, messages: list, **kwargs) ->
 class LLMConfig:
     """LLM配置"""
 
+    # 常见模型的上下文窗口映射
+    MODEL_CONTEXT_WINDOW = {
+        # OpenAI
+        "gpt-4": 8192,
+        "gpt-4-0613": 8192,
+        "gpt-4-32k": 32768,
+        "gpt-4-turbo": 128000,
+        "gpt-4o": 128000,
+        "gpt-3.5-turbo": 4096,
+        "gpt-3.5-turbo-16k": 16384,
+        "gpt-3.5-turbo-1106": 16384,
+        # DeepSeek
+        "deepseek-chat": 8192,
+        "deepseek-r1-chat": 128000,
+        # Qwen
+        "qwen-7b-chat": 8192,
+        "qwen-14b-chat": 16384,
+        "qwen-72b-chat": 32768,
+        "qwen-1.5-7b-chat": 32768,
+        "qwen-1.5-14b-chat": 32768,
+        "qwen-1.5-32b-chat": 64000,
+        "qwen-2-7b-instruct": 32768,
+        "qwen-2-14b-instruct": 64000,
+        "qwen-2-72b-instruct": 128000,
+        # Llama 3
+        "llama3-8b": 8192,
+        "llama3-70b": 8192,
+        "llama3-1-8b": 128000,
+        "llama3-1-70b": 128000,
+        # Mixtral
+        "mixtral-8x7b": 32768,
+        "mixtral-8x22b": 64000,
+        # Claude
+        "claude-3-sonnet": 200000,
+        "claude-3-opus": 200000,
+        "claude-3-5-sonnet": 200000,
+        "claude-2": 100000,
+    }
+
     def __init__(
         self,
         provider: str = "openai",
@@ -136,6 +175,8 @@ class LLMConfig:
         model: str = "gpt-4",
         max_tokens: int = 16000,
         temperature: float = 0.7,
+        context_window: int | None = None,
+        reserved_output_tokens: int = 3000,
     ):
         self.provider = provider
         self.api_key = api_key
@@ -143,6 +184,37 @@ class LLMConfig:
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.reserved_output_tokens = reserved_output_tokens
+        # 根据模型名推断上下文窗口
+        self.context_window = context_window or self._infer_context_window(model)
+
+    def _infer_context_window(self, model: str) -> int:
+        """根据模型名称推断上下文窗口大小"""
+        # 移除 provider 前缀
+        model_name = model.split("/")[-1].lower()
+        
+        # 精确匹配
+        for key, window in self.MODEL_CONTEXT_WINDOW.items():
+            if key.lower() in model_name or model_name in key.lower():
+                return window
+        
+        # 按参数推断
+        if "7b" in model_name:
+            return 8192
+        elif "14b" in model_name:
+            return 16384
+        elif "32b" in model_name:
+            return 32768
+        elif "72b" in model_name or "70b" in model_name:
+            return 64000
+        
+        # 默认返回 GPT-4 级别
+        return 8192
+
+    @property
+    def max_prompt_tokens(self) -> int:
+        """计算最大提示词token数"""
+        return max(0, self.context_window - self.reserved_output_tokens)
 
 
 class LLMService:

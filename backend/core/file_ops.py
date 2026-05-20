@@ -4,6 +4,7 @@
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 import shutil
@@ -12,7 +13,7 @@ import json
 import aiofiles
 import frontmatter
 
-from backend.core.exceptions import MoyunFileNotFoundError
+from backend.core.exceptions import MoyunFileNotFoundError, ValidationError
 from backend.core.trash import TrashService
 
 
@@ -24,15 +25,47 @@ class FileService:
     - frontmatter解析和写入
     - 目录管理
     - 文件树构建
+    - 路径安全验证
     """
     logger = logging.getLogger(__name__)
 
+    # 禁止写入的文件路径模式
+    FORBIDDEN_PATHS = {'.env', '.config.json', '.git'}
+    FORBIDDEN_PREFIXES = ('..', '/', '\\')
+    FORBIDDEN_SUFFIXES = ('.py', '.pyc', '.sh', '.bat', '.exe')
+
     def __init__(self, workspace_path: Path | str):
-        self.workspace = Path(workspace_path)
+        self.workspace = Path(workspace_path).resolve()
 
     def _resolve_path(self, relative_path: str) -> Path:
-        """解析相对路径为绝对路径"""
-        return self.workspace / relative_path
+        """解析相对路径为绝对路径，包含安全检查"""
+        if not relative_path:
+            raise ValidationError("路径不能为空")
+
+        # 检查绝对路径或越界路径
+        for prefix in self.FORBIDDEN_PREFIXES:
+            if relative_path.startswith(prefix):
+                raise ValidationError(f"非法路径: {relative_path}")
+
+        # 检查路径中的 ..
+        parts = relative_path.split('/')
+        parts += relative_path.split('\\')
+        if '..' in parts:
+            raise ValidationError(f"路径不能包含 '..': {relative_path}")
+
+        # 检查禁止的文件名
+        filename = Path(relative_path).name
+        if filename in self.FORBIDDEN_PATHS:
+            raise ValidationError(f"禁止操作: {filename}")
+
+        # 解析并规范化路径
+        target = (self.workspace / relative_path).resolve()
+
+        # 检查是否在workspace内
+        if not str(target).startswith(str(self.workspace) + os.sep) and target != self.workspace:
+            raise ValidationError(f"路径越界: {relative_path}")
+
+        return target
 
     @property
     def _trash(self) -> TrashService:
