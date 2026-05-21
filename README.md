@@ -61,6 +61,7 @@ A complete demo novel project is available at [`examples/demo-novel/`](examples/
 
 - [Document Index](docs/document-index.md) — Complete documentation navigation
 - [AGENTS.md](AGENTS.md) — AI collaboration rules and code map
+- [v0.1.0 Release Notes](docs/releases/v0.1.0.md) — Release scope, safety fixes, known limitations
 - [GitHub Wiki](https://github.com/wuyinglai/moyun-studio/wiki) — User-facing documentation
 
 ## Release Check

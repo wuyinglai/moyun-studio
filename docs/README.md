@@ -9,6 +9,7 @@
 | **AI 必读** | [document-index.md → AI Must Read](document-index.md#ai-must-read) |
 | **契约文档** | [contracts/](contracts/) |
 | **开发者文档** | [document-index.md → Developer Docs](document-index.md#developer-docs) |
+| **发布说明** | [releases/](releases/) |
 | **归档文档** | [archive/](archive/) |
 
 ## 契约文档
