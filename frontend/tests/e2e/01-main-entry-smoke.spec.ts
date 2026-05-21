@@ -12,8 +12,13 @@
 import { test, expect } from '@playwright/test'
 import { openMainEntry } from './helpers/entryHelpers'
 import { getByTestId, dismissViteOverlay, createErrorCollector, filterSevereErrors } from './helpers/e2eUtils'
+import { installMockApi } from './helpers/mockApi'
 
 test.describe('主入口 Smoke 测试', () => {
+  test.beforeEach(async ({ page }) => {
+    await installMockApi(page)
+  })
+
   test('打开主入口，页面不白屏', async ({ page }) => {
     const errors = createErrorCollector(page)
     await openMainEntry(page)

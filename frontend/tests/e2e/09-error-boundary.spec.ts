@@ -11,8 +11,13 @@
 import { test, expect } from '@playwright/test'
 import { getByTestId, createErrorCollector, filterSevereErrors, dismissViteOverlay } from './helpers/e2eUtils'
 import { openMainEntry } from './helpers/entryHelpers'
+import { installMockApi } from './helpers/mockApi'
 
 test.describe('ErrorBoundary 回归测试', () => {
+  test.beforeEach(async ({ page }) => {
+    await installMockApi(page)
+  })
+
   test('主工作台加载后页面不白屏', async ({ page }) => {
     const errors = createErrorCollector(page)
     await openMainEntry(page)
@@ -75,16 +80,6 @@ test.describe('ErrorBoundary 回归测试', () => {
   })
 
   test('ErrorBoundary 重试按钮可点击', async ({ page }) => {
-    // 注入一个会抛错的测试组件，然后验证 ErrorBoundary 的重试按钮
-    await page.route('**/api/sse', (route) => {
-      // 模拟 SSE 连接
-      route.fulfill({
-        status: 200,
-        contentType: 'text/event-stream',
-        body: 'event: connected\ndata: {"timestamp": 0}\n\n',
-      })
-    })
-
     await openMainEntry(page)
     await dismissViteOverlay(page)
     await page.waitForTimeout(2000)

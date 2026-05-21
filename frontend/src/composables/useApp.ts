@@ -15,7 +15,11 @@ export function useAppInit() {
     await llmStore.loadConfig()
     await llmStore.loadStatus()
     sseService.connect()
-    await projectStore.loadProjects()
+    try {
+      await projectStore.loadProjects()
+    } catch {
+      // 后端不可用时 loadProjects 会失败，不应阻塞应用启动
+    }
     // 后台预取爽文模式开局卡，不阻塞初始化
     prefetchIdeas()
   }
