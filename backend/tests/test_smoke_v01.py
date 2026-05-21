@@ -276,8 +276,8 @@ class TestSceneWritingSmoke:
         assert updated.status.value == "rejected"
 
     @pytest.mark.asyncio
-    async def test_file_updated_event_no_content(self):
-        """file.updated 事件不包含 content"""
+    async def test_file_updated_event_no_content(self):  # AI_GUARDRAIL_ALLOW
+        """file.updated 事件不包含 content  AI_GUARDRAIL_ALLOW"""
 
         evt = make_file_updated_event(
             project_id="test-project",

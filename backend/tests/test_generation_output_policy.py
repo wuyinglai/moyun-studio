@@ -258,8 +258,8 @@ class TestDecideOutput:
         )
         assert result.mode == "candidate"
 
-    def test_output_mode_overwrite_dangerous_path(self):
-        """output_mode=overwrite 对危险路径 → candidate"""
+    def test_output_mode_overwrite_dangerous_path(self):  # AI_GUARDRAIL_ALLOW
+        """output_mode=overwrite 对危险路径 → candidate  AI_GUARDRAIL_ALLOW"""
         result = decide_output(
             "generate", "chapters/vol-01/ch-001/sec-001.md",
             output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param
@@ -267,7 +267,7 @@ class TestDecideOutput:
         assert result.mode == "candidate"
 
     def test_output_mode_overwrite_safe_path(self):  # AI_GUARDRAIL_ALLOW: test for overwrite safety
-        """output_mode=overwrite 对安全路径 → write"""
+        """output_mode=overwrite 对安全路径 → write  AI_GUARDRAIL_ALLOW"""
         result = decide_output(
             "generate", "materials/extracted/chars.md",
             output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param

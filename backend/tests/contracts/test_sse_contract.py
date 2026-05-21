@@ -68,7 +68,7 @@ class TestFileUpdatedEventContract:  # AI_GUARDRAIL_ALLOW
             mtime=1700000000.0,
             source="test",
         )
-        assert event.type == "file.updated"
+        assert event.type == "file.updated"  # AI_GUARDRAIL_ALLOW
 
 
 class TestSSEHeartbeatContract:

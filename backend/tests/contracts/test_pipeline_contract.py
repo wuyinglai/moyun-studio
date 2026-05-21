@@ -61,11 +61,11 @@ class TestPipelineOutputPolicyContract:
         assert result.mode == "write"
 
     def test_overwrite_existing_sec_must_candidate(self):  # AI_GUARDRAIL_ALLOW: contract test
-        """output_mode=overwrite 且目标 sec 已有内容 → candidate"""
+        """output_mode=overwrite 且目标 sec 已有内容 → candidate  AI_GUARDRAIL_ALLOW"""
         result = decide_output(
             action="generate",
             target_path="chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite",
+            output_mode="overwrite",  # AI_GUARDRAIL_ALLOW
             file_has_content=True,
         )
         assert result.mode == "candidate"
@@ -75,7 +75,7 @@ class TestPipelineOutputPolicyContract:
         result = decide_output(
             action="generate",
             target_path="story-state.md",
-            output_mode="overwrite",
+            output_mode="overwrite",  # AI_GUARDRAIL_ALLOW
             file_has_content=True,
         )
         assert result.mode == "candidate"
