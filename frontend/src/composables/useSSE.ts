@@ -58,7 +58,7 @@ class SSEService {
   private _lastHeartbeatAt = ref<number | null>(null)
 
   // 事件监听器
-  private listeners = new Map<SSEEventType, Set<(data: any) => void>>()
+  private listeners = new Map<SSEEventType, Set<(data: unknown) => void>>()
 
   // 只读状态
   public isConnected = readonly(this._isConnected)
@@ -172,28 +172,30 @@ class SSEService {
    * 这样 generation 事件只通过一条通路（fetch+ReadableStream → generationEmitter → handleEvent）
    */
   private setupGenerationEmitterListener() {
-    const handler = (event: CustomEvent) => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail
       // generationEmitter 发出的事件格式: { delta, task_id, ... }
       // 通过 handleEvent 统一处理，但标记为 'generation' 类型
-      this.handleEvent('generation', event.detail)
+      this.handleEvent('generation', detail)
     }
-    generationEmitter.addEventListener('generation', handler as EventListener)
+    generationEmitter.addEventListener('generation', handler)
     // 存储 handler 以便后续移除
-    ;(this as any)._generationHandler = handler
+    ;(this as { _generationHandler?: EventListener })._generationHandler = handler
 
     // 监听 fetch stream 中的非 generation 事件，确保候选稿和完成状态能驱动 UI。
     const streamEventTypes = ['step_done', 'candidate_created', 'candidate-created', 'diff_summary', 'done', 'error']
-    const streamHandler = (event: CustomEvent) => {
-      const rawType = event.type
+    const streamHandler = (event: Event) => {
+      const ce = event as CustomEvent
+      const rawType = ce.type
       const normalized = rawType === 'candidate_created' ? 'candidate-created' : rawType
-      this.handleEvent(normalized as SSEEventType, event.detail)
-      this.emit(normalized as SSEEventType, event.detail)
+      this.handleEvent(normalized as SSEEventType, ce.detail)
+      this.emit(normalized as SSEEventType, ce.detail)
     }
     streamEventTypes.forEach((type) => {
-      generationEmitter.addEventListener(type, streamHandler as EventListener)
+      generationEmitter.addEventListener(type, streamHandler)
     })
-    ;(this as any)._streamHandler = streamHandler
-    ;(this as any)._streamEventTypes = streamEventTypes
+    ;(this as { _streamHandler?: EventListener })._streamHandler = streamHandler
+    ;(this as { _streamEventTypes?: string[] })._streamEventTypes = streamEventTypes
   }
 
   /**
@@ -258,7 +260,8 @@ class SSEService {
    * 处理各类事件
    * 按 project_id 过滤：只处理当前项目的事件
    */
-  private async handleEvent(type: SSEEventType, data: any) {
+  private async handleEvent(type: SSEEventType, data: unknown) {
+    const d = data as Record<string, unknown>
     const editorStore = useEditorStore()
     const fileStore = useFileStore()
     const taskStore = useTaskStore()
@@ -274,32 +277,32 @@ class SSEService {
 
     // 按 project_id 过滤：只处理当前项目的事件
     const currentProjectId = projectStore.currentProject?.id
-    if (data.project_id && currentProjectId && data.project_id !== currentProjectId) {
+    if (d.project_id && currentProjectId && d.project_id !== currentProjectId) {
       return
     }
 
     switch (type) {
       case 'generation':
         // AI 生成内容 - 更新编辑器和聊天
-        if (data.delta) {
-          chatStore.appendAIMessage(data.delta)
-          if (data._candidateOnly) {
+        if (d.delta) {
+          chatStore.appendAIMessage(d.delta as string)
+          if (d._candidateOnly) {
             break
-          } else if (data._targetFilePath) {
-            editorStore.appendContentToFile(data._targetFilePath, data.delta)
+          } else if (d._targetFilePath) {
+            editorStore.appendContentToFile(d._targetFilePath as string, d.delta as string)
           } else {
-            editorStore.appendContent(data.delta)
+            editorStore.appendContent(d.delta as string)
           }
-        } else if (data.content) {
-          if (data._candidateOnly) {
-            chatStore.appendAIMessage(data.content)
+        } else if (d.content) {
+          if (d._candidateOnly) {
+            chatStore.appendAIMessage(d.content as string)
             break
-          } else if (data._targetFilePath) {
-            editorStore.appendContentToFile(data._targetFilePath, data.content)
+          } else if (d._targetFilePath) {
+            editorStore.appendContentToFile(d._targetFilePath as string, d.content as string)
           } else {
-            editorStore.appendContent(data.content)
+            editorStore.appendContent(d.content as string)
           }
-          chatStore.appendAIMessage(data.content)
+          chatStore.appendAIMessage(d.content as string)
         }
         break
 
@@ -307,12 +310,12 @@ class SSEService {
       case 'candidate-created':
         // 新文件创建 - 刷新文件树
       {
-        const path = data.path || data.candidate_path || data.source_path
+        const path = (d.path || d.candidate_path || d.source_path) as string | undefined
         if (path) {
-          fileStore.handleFileCreated(path, data.name)
+          fileStore.handleFileCreated(path, d.name as string | undefined)
           if (!path.startsWith('backup/snapshots/')) {
-            taskStore.addLog('success', `已创建文件: ${data.name || path}`)
-            notification.success(type === 'candidate-created' ? '候选稿已生成' : `已创建文件: ${data.name || path}`)
+            taskStore.addLog('success', `已创建文件: ${(d.name as string) || path}`)
+            notification.success(type === 'candidate-created' ? '候选稿已生成' : `已创建文件: ${(d.name as string) || path}`)
           }
         }
       }
@@ -322,15 +325,15 @@ class SSEService {
       case 'candidate-adopted':
       case 'memory-updated':
         // 文件更新 - 更新编辑器内容（不包含完整正文 content）
-        if (data.path) {
+        if (d.path) {
           const projectId = currentProjectId
-          const cleanPath = projectId && data.path.startsWith(projectId + '/')
-            ? data.path.slice(projectId.length + 1)
-            : data.path
+          const cleanPath = projectId && (d.path as string).startsWith(projectId + '/')
+            ? (d.path as string).slice(projectId.length + 1)
+            : (d.path as string)
           // file.updated 事件不发送完整正文，前端需要时再 read_file
           // 只在有 content 时更新编辑器
-          if (data.content) {
-            editorStore.updateContent(cleanPath, data.content)
+          if (d.content) {
+            editorStore.updateContent(cleanPath, d.content as string)
           }
           taskStore.addLog('info', `文件已更新: ${cleanPath}`)
         }
@@ -338,24 +341,24 @@ class SSEService {
 
       case 'file-renamed':
         // 文件重命名 - 本地更新文件树
-        if (data.oldPath && data.newPath) {
-          fileStore.handleFileRenamed(data.oldPath, data.newPath)
-          taskStore.addLog('info', `文件重命名: ${data.oldPath} → ${data.newPath}`)
+        if (d.oldPath && d.newPath) {
+          fileStore.handleFileRenamed(d.oldPath as string, d.newPath as string)
+          taskStore.addLog('info', `文件重命名: ${d.oldPath as string} → ${d.newPath as string}`)
         }
         break
 
       case 'file-deleted':
         // 文件删除
-        if (data.path) {
-          taskStore.addLog('info', `文件已删除: ${data.path}`)
+        if (d.path) {
+          taskStore.addLog('info', `文件已删除: ${d.path as string}`)
         }
         break
 
       case 'directory-created':
         // 目录创建 - 刷新文件树
-        if (data.path) {
-          fileStore.handleDirectoryCreated(data.path, data.name)
-          taskStore.addLog('success', `已创建目录: ${data.name || data.path}`)
+        if (d.path) {
+          fileStore.handleDirectoryCreated(d.path as string, d.name as string | undefined)
+          taskStore.addLog('success', `已创建目录: ${(d.name as string) || (d.path as string)}`)
         }
         break
 
@@ -367,20 +370,20 @@ class SSEService {
       case 'task-waiting-for-user':
         // 任务状态变化（兼容旧 taskId 和新 task_id）
       {
-        const taskId = data.task_id || data.taskId
+        const taskId = (d.task_id || d.taskId) as string | undefined
         if (taskId) {
-          taskStore.updateTask(taskId, data)
-          llmStore.setGenerating(data.status === 'running')
+          taskStore.updateTask(taskId, d)
+          llmStore.setGenerating(d.status === 'running')
 
-          if (data.status === 'running') {
-            taskStore.addLog('info', `任务开始: ${data.name || taskId}`)
+          if (d.status === 'running') {
+            taskStore.addLog('info', `任务开始: ${(d.name as string) || taskId}`)
             chatStore.startAIMessage(taskId)
-          } else if (data.status === 'done' || data.status === 'completed') {
-            taskStore.addLog('success', `任务完成: ${data.name || taskId}`)
-          } else if (data.status === 'failed') {
-            taskStore.addLog('error', `任务失败: ${data.name || taskId}`)
-          } else if (data.status === 'waiting' || type === 'task-waiting-for-user') {
-            taskStore.addLog('info', `任务等待用户确认: ${data.name || taskId}`)
+          } else if (d.status === 'done' || d.status === 'completed') {
+            taskStore.addLog('success', `任务完成: ${(d.name as string) || taskId}`)
+          } else if (d.status === 'failed') {
+            taskStore.addLog('error', `任务失败: ${(d.name as string) || taskId}`)
+          } else if (d.status === 'waiting' || type === 'task-waiting-for-user') {
+            taskStore.addLog('info', `任务等待用户确认: ${(d.name as string) || taskId}`)
           }
         }
         break
@@ -388,24 +391,24 @@ class SSEService {
 
       case 'pipeline-step-failed':
         // 管线步骤失败
-        if (data.error) {
-          taskStore.addLog('error', data.error)
-          notification.error(data.error)
+        if (d.error) {
+          taskStore.addLog('error', d.error as string)
+          notification.error(d.error as string)
         }
         break
 
       case 'queue':
         // 队列变化
-        if (data.queue) {
-          taskStore.updateQueue(data.queue)
+        if (d.queue) {
+          taskStore.updateQueue(d.queue as string[])
         }
         break
 
       case 'llm-status':
         // LLM 状态变化
-        if (typeof data.connected === 'boolean') {
-          llmStore.isConnected = data.connected
-          if (data.connected) {
+        if (typeof d.connected === 'boolean') {
+          llmStore.isConnected = d.connected
+          if (d.connected) {
             taskStore.addLog('success', 'LLM 连接已建立')
           } else {
             taskStore.addLog('warning', 'LLM 连接断开')
@@ -415,28 +418,28 @@ class SSEService {
 
       case 'thinking':
         // AI 思考中 — 更新当前步骤进度
-        llmStore.setThinking(data.thinking ?? true)
-        if (data.label) {
-          llmStore.currentStepLabel = data.label
+        llmStore.setThinking(typeof d.thinking === 'boolean' ? d.thinking : true)
+        if (d.label) {
+          llmStore.currentStepLabel = d.label as string
         }
-        if (data.content) {
-          chatStore.updateThinking(data.content)
+        if (d.content) {
+          chatStore.updateThinking(d.content as string)
         }
         break
 
       case 'error':
         // 错误
-        if (data.message) {
-          taskStore.addLog('error', data.message)
-          notification.error(data.message)
+        if (d.message) {
+          taskStore.addLog('error', d.message as string)
+          notification.error(d.message as string)
         }
         break
 
       case 'diff_summary':
         // AI 修改摘要
-        if (data.summary) {
+        if (d.summary) {
           const ds = useDiffSummary()
-          ds.setSummary(data.summary, data.target_file || '')
+          ds.setSummary(d.summary as string, (d.target_file as string) || '')
           taskStore.addLog('info', 'AI 修改摘要已生成')
           notification.info('AI 修改摘要已生成，可查看修改分析')
         }
@@ -448,9 +451,9 @@ class SSEService {
         llmStore.setGenerating(false)
         llmStore.setThinking(false)
         llmStore.currentStepLabel = ''
-        if (data.message) {
-          taskStore.addLog('success', data.message)
-          notification.success(data.message)
+        if (d.message) {
+          taskStore.addLog('success', d.message as string)
+          notification.success(d.message as string)
         }
         break
     }
@@ -498,19 +501,19 @@ class SSEService {
       this.eventSource = null
     }
     // 移除 generationEmitter 监听器
-    const handler = (this as any)._generationHandler
+    const handler = (this as { _generationHandler?: EventListener })._generationHandler
     if (handler) {
-      generationEmitter.removeEventListener('generation', handler as EventListener)
-      delete (this as any)._generationHandler
+      generationEmitter.removeEventListener('generation', handler)
+      delete (this as { _generationHandler?: EventListener })._generationHandler
     }
-    const streamHandler = (this as any)._streamHandler
-    const streamEventTypes = (this as any)._streamEventTypes || []
+    const streamHandler = (this as { _streamHandler?: EventListener })._streamHandler
+    const streamEventTypes = (this as { _streamEventTypes?: string[] })._streamEventTypes || []
     if (streamHandler) {
       streamEventTypes.forEach((type: string) => {
-        generationEmitter.removeEventListener(type, streamHandler as EventListener)
+        generationEmitter.removeEventListener(type, streamHandler)
       })
-      delete (this as any)._streamHandler
-      delete (this as any)._streamEventTypes
+      delete (this as { _streamHandler?: EventListener })._streamHandler
+      delete (this as { _streamEventTypes?: string[] })._streamEventTypes
     }
     this._isConnected.value = false
     this._isReconnecting.value = false
@@ -520,7 +523,7 @@ class SSEService {
   /**
    * 订阅事件
    */
-  on(type: SSEEventType, callback: (data: any) => void): () => void {
+  on(type: SSEEventType, callback: (data: unknown) => void): () => void {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set())
     }
@@ -535,7 +538,7 @@ class SSEService {
   /**
    * 发送事件（内部使用）
    */
-  private emit(type: SSEEventType, data: any) {
+  private emit(type: SSEEventType, data: unknown) {
     const callbacks = this.listeners.get(type)
     if (callbacks) {
       callbacks.forEach((cb) => cb(data))
@@ -563,6 +566,6 @@ export function useSSE() {
     lastHeartbeatAt: sseService.lastHeartbeatAt,
     connect: () => sseService.connect(),
     disconnect: () => sseService.disconnect(),
-    on: (type: SSEEventType, callback: (data: any) => void) => sseService.on(type, callback),
+    on: (type: SSEEventType, callback: (data: unknown) => void) => sseService.on(type, callback),
   }
 }

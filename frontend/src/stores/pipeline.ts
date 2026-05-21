@@ -2,31 +2,22 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
+import type { PipelineDef, PipelineStepDetail, PipelineDetail as ApiPipelineDetail } from '@/shared/api/types'
 
+/** UI-only: 管线步骤精简信息 */
 export interface PipelineStepInfo {
   id: string
   label: string
 }
 
-export interface PipelineInfo {
-  name: string
-  label: string
-  steps: PipelineStepInfo[]
+/** UI-only: 管线列表项（含 source 字段） */
+export interface PipelineInfo extends PipelineDef {
   source: 'system' | 'custom'
 }
 
-export interface StepDetail {
-  id: string
-  label: string
-  prompt_content: string
-  fallback: string | null
-}
+export type StepDetail = PipelineStepDetail
 
-export interface PipelineDetail {
-  name: string
-  label: string
-  steps: StepDetail[]
-}
+export type PipelineDetail = ApiPipelineDetail
 
 export const usePipelineStore = defineStore('pipeline', () => {
   const pipelines = ref<PipelineInfo[]>([])

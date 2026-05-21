@@ -1,43 +1,8 @@
-/** 项目模块 - 类型定义 */
+/** 项目模块 - 类型定义 — 核心类型已迁移到 @/shared/api/types */
 
-export interface Project {
-  id: string
-  project_id: string
-  name: string
-  author?: string
-  genre?: string
-  tone?: string
-  background?: string
-  theme?: string
-  writing_style?: string
-  target_word_count?: number
-  completion_rate?: number
-  total_words?: number
-  created_at?: string
-  updated_at?: string
-  scene_target_chars?: number
-  scenes_per_chapter?: number
-  chapters_per_volume?: number
-  unit_label?: string
-}
+export type { ProjectInfo as Project, ProjectCreateRequest as CreateProjectParams } from '@/shared/api/types'
 
-export interface CreateProjectParams {
-  name: string
-  genre?: string
-  tone?: string
-  background?: string
-  theme?: string
-  writing_style?: string
-  target_word_count?: number
-  outline?: string
-  book_name?: string
-  book_description?: string
-  scene_target_chars?: number
-  scenes_per_chapter?: number
-  chapters_per_volume?: number
-  unit_label?: string
-}
-
+/** UI-only: 项目列表项（精简字段） */
 export interface ProjectListItem {
   id: string
   name: string

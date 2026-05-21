@@ -325,8 +325,8 @@ async function handleReview() {
     result.value = res.result
     notification.success('审查完成')
     await loadHistory()
-  } catch (e: any) {
-    error.value = e?.message || '审查失败'
+  } catch (e: unknown) {
+    error.value = (e instanceof Error ? e.message : '') || '审查失败'
     notification.error('审查失败')
   } finally {
     isReviewing.value = false
@@ -352,8 +352,8 @@ async function handleBatchReview() {
     batchSummary.value = `批量审查完成：成功 ${res.succeeded}，失败 ${res.failed}，共 ${res.total} 个章节。`
     notification.success('批量审查完成')
     await loadHistory()
-  } catch (e: any) {
-    error.value = e?.message || '批量审查失败'
+  } catch (e: unknown) {
+    error.value = (e instanceof Error ? e.message : '') || '批量审查失败'
     notification.error('批量审查失败')
   } finally {
     isBatchReviewing.value = false

@@ -131,6 +131,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Button as AButton, Select as ASelect, SelectOption as ASelectOption } from 'ant-design-vue'
 import { usePipelineStore } from '@/stores/pipeline'
+import type { PipelineStepDetail } from '@/shared/api/types'
 import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
 import Sortable from 'sortablejs'
@@ -141,7 +142,7 @@ const notification = useNotificationStore()
 
 const selectedPipelineName = ref('polish')
 const editingStepIndex = ref(0)
-const localSteps = ref<{ id: string; label: string; prompt_content: string; fallback: string | null }[]>([])
+const localSteps = ref<PipelineStepDetail[]>([])
 const editingPrompt = ref('')
 const lastSnapshotContent = ref('')
 const stepListRef = ref<HTMLElement | null>(null)

@@ -369,9 +369,9 @@ async function testConnection() {
         testResult.value = { status: 'error', message: '连接失败，请检查配置' }
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (!testAbortController?.signal.aborted) {
-      testResult.value = { status: 'error', message: e.message || '连接失败' }
+      testResult.value = { status: 'error', message: (e instanceof Error ? e.message : '') || '连接失败' }
     }
   } finally {
     if (testAbortController) {

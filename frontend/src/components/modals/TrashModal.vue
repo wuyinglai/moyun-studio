@@ -100,9 +100,9 @@ async function loadTrash() {
   try {
     const res = await api.get<{ items: TrashItem[] }>('/trash/list')
     items.value = res.items || []
-  } catch (e: any) {
+  } catch (e: unknown) {
     items.value = []
-    notification.error(e?.message || '加载回收站失败')
+    notification.error((e instanceof Error ? e.message : '') || '加载回收站失败')
   } finally {
     loading.value = false
   }
@@ -114,8 +114,8 @@ async function restore(trashName: string) {
     notification.success('已恢复')
     if (projectStore.currentProject) await fileStore.loadTree(projectStore.currentProject.id)
     await loadTrash()
-  } catch (e: any) {
-    notification.error(e?.message || '恢复失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '恢复失败')
   }
 }
 
@@ -124,8 +124,8 @@ async function emptyTrash() {
     const res = await api.post<{ count: number }>('/trash/empty', {})
     notification.success(`已清空 ${res.count || 0} 项`)
     await loadTrash()
-  } catch (e: any) {
-    notification.error(e?.message || '清空失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '清空失败')
   }
 }
 

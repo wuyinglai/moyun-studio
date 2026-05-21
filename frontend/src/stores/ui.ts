@@ -95,7 +95,7 @@ export const useUIStore = defineStore('ui', () => {
   function _closeAllModals() {
     for (const key of Object.keys(modals.value)) {
       if (key !== 'editingProject') {
-        (modals.value as any)[key] = false
+        (modals.value as Record<string, unknown>)[key] = false
       }
     }
   }

@@ -109,7 +109,7 @@ export function useWorkflow() {
     workflowName: string,
     projectId: string,
     variables: Record<string, string> = {},
-    onEvent?: (event: string, data: any) => void,
+    onEvent?: (event: string, data: unknown) => void,
   ): Promise<boolean> {
     if (_isRunning.value) return false
     _isRunning.value = true
@@ -290,9 +290,9 @@ export function useWorkflow() {
           }
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       failed = true
-      _runLogs.value.push(`[错误] ${e.message}`)
+      _runLogs.value.push(`[错误] ${e instanceof Error ? e.message : String(e)}`)
       _currentNode.value = null
     } finally {
       _isRunning.value = false
@@ -305,7 +305,7 @@ export function useWorkflow() {
     action: string,
     output: string = '',
     extraVars: Record<string, string> = {},
-    onEvent?: (event: string, data: any) => void,
+    onEvent?: (event: string, data: unknown) => void,
   ): Promise<boolean> {
     if (_isRunning.value) return false
     _isRunning.value = true
@@ -464,9 +464,9 @@ export function useWorkflow() {
           }
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       failed = true
-      _runLogs.value.push(`[错误] ${e.message}`)
+      _runLogs.value.push(`[错误] ${e instanceof Error ? e.message : String(e)}`)
       _currentNode.value = null
     } finally {
       _isRunning.value = false

@@ -1,50 +1,32 @@
 import api from '@/services/api'
 import { API_BASE, API_ROUTES } from '@/shared/api/routes'
+import type {
+  LiteIdeaCard as ApiLiteIdeaCard,
+  LiteWritingPrefs as ApiLiteWritingPrefs,
+  LiteWriteAction as ApiLiteWriteAction,
+  LiteNextOptionCard as ApiLiteNextOptionCard,
+} from '@/shared/api/types'
 
-export interface LiteWritingPrefs {
-  style: string
-  intensity: string
-  pace: string
-  protagonist: string
-  likes: string
-  dislikes: string
-  genre_params: Record<string, string>
-}
+export type LiteWritingPrefs = ApiLiteWritingPrefs
+export type LiteIdeaCard = ApiLiteIdeaCard
+export type LiteNextOptionCard = ApiLiteNextOptionCard
+export type LiteWriteAction = ApiLiteWriteAction
 
-export interface LiteIdeaCard {
-  id: string
-  title: string
-  genre: '玄幻' | '武侠' | '言情' | '都市' | '仙侠'
-  one_liner: string
-  protagonist_hook: string
-  core_conflict: string
-  selling_point: string
-}
-
-export interface LiteNextOptionCard {
-  id: string
-  title: string
-  beat: string
-  scene: string
-  protagonist_desire: string
-  obstacle: string
-  payoff: string
-  hook: string
-  advancement: string
-}
-
+/** UI-only: 创建项目响应（story_engine 后端实际返回 string） */
 export interface LiteProjectCreateResponse {
   project_id: string
   first_file: string
-  story_engine: string
+  story_engine: string | Record<string, unknown>
 }
 
+/** UI-only: 下一选项响应 */
 export interface LiteNextOptionsResponse {
   cards: LiteNextOptionCard[]
   current_file: string
   next_file: string
 }
 
+/** UI-only: 写入下一部分响应 */
 export interface LiteWriteNextResponse {
   file_path: string
   content: string
@@ -53,8 +35,7 @@ export interface LiteWriteNextResponse {
   chapter_plan?: string | null
 }
 
-export type LiteWriteAction = 'write' | 'rewrite' | 'more_exciting' | 'more_reasonable' | 'continue'
-
+/** UI-only: 流式回调 */
 export interface LiteWriteStreamCallbacks {
   onMeta?: (data: { file_path: string; label: string; source_file?: string; is_candidate?: boolean }) => void
   onDelta?: (delta: string) => void
@@ -63,6 +44,7 @@ export interface LiteWriteStreamCallbacks {
   onDone?: (data: LiteWriteNextResponse) => void
 }
 
+/** UI-only: 流式选项 */
 export interface LiteWriteStreamOptions {
   signal?: AbortSignal
 }

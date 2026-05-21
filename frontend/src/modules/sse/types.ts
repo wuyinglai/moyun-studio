@@ -1,4 +1,4 @@
-/** SSE 模块 - 事件类型定义 */
+/** SSE 模块 - 事件类型定义 — payload 类型参考 @/shared/api/types */
 
 export type TaskStatus = 'pending' | 'running' | 'done' | 'failed'
 

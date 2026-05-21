@@ -114,8 +114,8 @@ export function useFileGeneration() {
       })
 
       _isGenerating.value = false
-    } catch (e: any) {
-      if (e.name === 'AbortError') {
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
         // 用户取消，不报错
       } else {
         throw e
@@ -208,8 +208,8 @@ export function useFileGeneration() {
         // 文件可能不存在或读取失败，静默忽略
       }
 
-    } catch (e: any) {
-      if (e.name !== 'AbortError') throw e
+    } catch (e: unknown) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) throw e
     } finally {
       _isGenerating.value = false
       _abortController = null

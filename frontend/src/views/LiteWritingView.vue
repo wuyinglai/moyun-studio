@@ -620,8 +620,8 @@ async function startProject(card: LiteIdeaCard) {
     nextTargetFile.value = created.first_file
     nextCards.value = []
     await runGeneration(openingCard, 'write', created.first_file)
-  } catch (e: any) {
-    notification.error(e.message || '创建爽文项目失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '创建爽文项目失败')
   } finally {
     creating.value = false
   }
@@ -1149,7 +1149,7 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
     } else {
       notification.success('候选稿已生成')
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (isAbortError(e)) {
       const draft = generatedFilePath ? (streamingBuffers.value[generatedFilePath] || '') : ''
       if (generatedFilePath) {
@@ -1161,7 +1161,7 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
         : `已停止生成${pendingTargetLabel.value}。`
       notification.success('已停止生成')
     } else {
-      notification.error(e.message || '生成失败')
+      notification.error((e instanceof Error ? e.message : '') || '生成失败')
     }
   } finally {
     generating.value = false

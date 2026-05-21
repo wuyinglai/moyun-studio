@@ -443,8 +443,8 @@ async function handleCreate() {
 
     // 跳转到编辑器
     router.push(`/project/${project.id}`)
-  } catch (e: any) {
-    notification.error(e.message || '创建项目失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '创建项目失败')
   } finally {
     creatingFile.value = false
   }

@@ -2,9 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
+import type { ProjectInfo, ProjectCreateRequest } from '@/shared/api/types'
 
-export interface Project {
-  id: string   // computed alias for project_id
+/** Store-level project type — ProjectInfo with defaults applied (required fields) */
+export interface Project extends ProjectInfo {
   project_id: string
   name: string
   author: string
@@ -18,31 +19,9 @@ export interface Project {
   total_words: number
   created_at: string
   updated_at: string
-  // 场景级配置
-  scene_target_chars?: number
-  scenes_per_chapter?: number
-  chapters_per_volume?: number
-  unit_label?: string
 }
 
-export interface CreateProjectParams {
-  // 创作参数
-  name?: string
-  genre?: string
-  tone?: string
-  background?: string
-  theme?: string
-  writing_style?: string
-  author?: string
-  target_word_count?: number
-  // 高级选项
-  outline?: string // 大纲内容
-  // 场景级配置
-  scene_target_chars?: number
-  scenes_per_chapter?: number
-  chapters_per_volume?: number
-  unit_label?: string
-}
+export type CreateProjectParams = ProjectCreateRequest
 
 export const useProjectStore = defineStore('project', () => {
   const projects = ref<Project[]>([])

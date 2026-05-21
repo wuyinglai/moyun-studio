@@ -26,6 +26,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
 import { useUIStore } from '@/stores/ui'
+import type { FileTreeNode } from '@/shared/api/types'
 
 const { initApp, cleanupApp } = useAppInit()
 useKeyboardShortcuts()
@@ -97,7 +98,7 @@ async function openDefaultProjectFile(projectId: string) {
   }
 }
 
-function findFile(nodes: Array<{ name: string; path: string; type: string; children?: any[] }>, name: string): any | null {
+function findFile(nodes: FileTreeNode[], name: string): FileTreeNode | null {
   for (const node of nodes) {
     if (node.type === 'file' && node.name === name) return node
     if (node.children) {
@@ -108,7 +109,7 @@ function findFile(nodes: Array<{ name: string; path: string; type: string; child
   return null
 }
 
-function findFirstMarkdown(nodes: Array<{ name: string; path: string; type: string; children?: any[] }>): any | null {
+function findFirstMarkdown(nodes: FileTreeNode[]): FileTreeNode | null {
   for (const node of nodes) {
     if (node.type === 'file' && node.name.endsWith('.md')) return node
     if (node.children) {

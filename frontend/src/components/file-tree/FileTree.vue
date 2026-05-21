@@ -224,8 +224,8 @@ async function handleCreateFile(node: FileNode) {
     await fileStore.createFile(projectStore.currentProject.id, path, '')
     await fileStore.loadTree(projectStore.currentProject.id)
     notification.success('文件已创建')
-  } catch (e: any) {
-    notification.error(e?.message || '创建文件失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '创建文件失败')
   }
 }
 
@@ -238,8 +238,8 @@ async function handleCreateDirectory(node: FileNode) {
     await fileStore.createDirectory(projectStore.currentProject.id, path)
     await fileStore.loadTree(projectStore.currentProject.id)
     notification.success('目录已创建')
-  } catch (e: any) {
-    notification.error(e?.message || '创建目录失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '创建目录失败')
   }
 }
 
@@ -253,8 +253,8 @@ async function handleRename(node: FileNode) {
     await fileStore.renameFile(projectStore.currentProject.id, node.path, newPath)
     await fileStore.loadTree(projectStore.currentProject.id)
     notification.success('已重命名')
-  } catch (e: any) {
-    notification.error(e?.message || '重命名失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '重命名失败')
   }
 }
 
@@ -272,8 +272,8 @@ async function handleDelete(node: FileNode) {
     }
     await fileStore.loadTree(projectStore.currentProject.id)
     notification.success('已移入回收站')
-  } catch (e: any) {
-    notification.error(e?.message || '删除失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '删除失败')
   }
 }
 </script>

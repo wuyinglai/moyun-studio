@@ -260,8 +260,8 @@ async function runAction(label: string, runner: () => Promise<void>) {
   try {
     await runner()
     notification.success(statusText.value)
-  } catch (e: any) {
-    statusText.value = e?.message || `${label}失败`
+  } catch (e: unknown) {
+    statusText.value = (e instanceof Error ? e.message : '') || `${label}失败`
     notification.error(statusText.value)
   } finally {
     running.value = false

@@ -161,8 +161,8 @@ export function useWorkflowGuide() {
         status: 'pending' as StepStatus,
       }))
       _error.value = null
-    } catch (e: any) {
-      _error.value = e.message || '加载工作流失败'
+    } catch (e: unknown) {
+      _error.value = (e instanceof Error ? e.message : '') || '加载工作流失败'
       _steps.value = []
     }
   }
@@ -257,11 +257,11 @@ export function useWorkflowGuide() {
       } else {
         advanceAndRun(projectId, filePath)
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (!_isRunning.value) return
       step.status = 'done'
       taskStore.failTask(wfTaskId)
-      taskStore.addLog('error', `失败: ${step.label} — ${e.message}`)
+      taskStore.addLog('error', `失败: ${step.label} — ${e instanceof Error ? e.message : String(e)}`)
       advanceAndRun(projectId, filePath)
     }
   }

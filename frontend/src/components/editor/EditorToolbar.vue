@@ -396,8 +396,8 @@ async function runPipeline(name: string) {
   )
 }
 
-function handleCustomPipeline(info: any) {
-  runPipeline(info.key as string)
+function handleCustomPipeline(info: { key: string | number }) {
+  runPipeline(String(info.key))
 }
 
 async function handleGenerateNext() {
@@ -454,7 +454,7 @@ async function handleGenerateNext() {
 
   // 检查管线的 confirm 标记（第一步是否需用户确认）
   await pipelineStore.fetchPipelineDetail(next.pipeline)
-  const needConfirm = (pipelineStore.currentDetail?.steps?.[0] as any)?.confirm !== false
+  const needConfirm = pipelineStore.currentDetail?.steps?.[0]?.confirm !== false
   console.log('[handleGenerateNext] needConfirm:', needConfirm)
 
   if (needConfirm) {
@@ -528,7 +528,7 @@ async function handleGenerateNext() {
       setTimeout(() => handleGenerateNext(), 800)
     }
   }
-  } catch (e: any) {
+  } catch (e: unknown) {
     // L2 取消时不弹错误
     if (getAutoMode() === 'L2' && _l2StopRequested.value) {
       _l2StopRequested.value = false
@@ -536,7 +536,7 @@ async function handleGenerateNext() {
       notification.info('已停止自动生成')
       return
     }
-    console.error('[ERR] handleGenerateNext:', e.message || e)
+    console.error('[ERR] handleGenerateNext:', e instanceof Error ? e.message : String(e))
   }
 }
 
@@ -550,6 +550,7 @@ const GUIDE_STEP_MAP: Record<string, number> = {
 }
 
 function syncGuideStep(path: string, status: 'running' | 'done') {
+  // TODO: type guide step status properly to avoid `as any`
   // 章节文件 → loop 步骤
   if (isSceneFilePath(path)) {
     if (guide.steps.value[6]) guide.steps.value[6].status = status as any
@@ -667,8 +668,8 @@ async function handleRegenerate() {
   try {
     await fileGen.generateToFile(projectId, filePath, userPrompt, extraVars, promptType)
     notification.success('已重新生成')
-  } catch (e: any) {
-    notification.error(e.message || '重新生成失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '重新生成失败')
   }
 }
 

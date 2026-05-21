@@ -189,9 +189,9 @@ async function loadSnapshots() {
   try {
     snapshots.value = await fileStore.loadSnapshots(projectId, currentPath.value) as SnapshotItem[]
     if (snapshots.value.length > 0 && !oldSnapshotId.value) oldSnapshotId.value = snapshots.value[0].snapshot_id
-  } catch (e: any) {
+  } catch (e: unknown) {
     snapshots.value = []
-    notification.error(e?.message || '加载历史版本失败')
+    notification.error((e instanceof Error ? e.message : '') || '加载历史版本失败')
   } finally {
     isLoadingSnapshots.value = false
   }
@@ -223,8 +223,8 @@ async function compare() {
       old_text: oldText.value,
       new_text: newText.value,
     })
-  } catch (e: any) {
-    notification.error(e?.message || '对比失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '对比失败')
   } finally {
     isComparing.value = false
   }
@@ -238,8 +238,8 @@ async function compareSnapshots(projectId: string) {
       snapshot_id1: oldSnapshotId.value,
       snapshot_id2: newSnapshotId.value,
     })
-  } catch (e: any) {
-    notification.error(e?.message || '快照对比失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '快照对比失败')
   } finally {
     isComparing.value = false
   }
@@ -256,8 +256,8 @@ async function restoreSelectedSnapshot() {
     const fileData = await fileStore.readFile(projectId, currentPath.value)
     editorStore.loadContent(currentPath.value, fileData.content || '', fileData.frontmatter)
     notification.success('已恢复快照')
-  } catch (e: any) {
-    notification.error(e?.message || '恢复失败')
+  } catch (e: unknown) {
+    notification.error((e instanceof Error ? e.message : '') || '恢复失败')
   }
 }
 

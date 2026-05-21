@@ -133,21 +133,7 @@ import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
-
-export interface CandidateInfo {
-  id: string
-  source_path: string
-  candidate_path: string
-  action: string
-  status: string
-  created_at: string
-  adopted_at?: string
-  word_count: number
-  summary?: string
-  workflow_run_id?: string
-  source_filename?: string
-  filename?: string
-}
+import type { CandidateInfo } from '@/shared/api/types'
 
 const projectStore = useProjectStore()
 const notification = useNotificationStore()

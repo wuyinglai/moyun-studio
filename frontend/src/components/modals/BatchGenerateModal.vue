@@ -303,8 +303,8 @@ async function handleGenerate() {
     if (response.failed > 0) {
       notification.warning(`失败 ${response.failed} 个文件`)
     }
-  } catch (e: any) {
-    notification.error(`批量生成失败: ${e?.message || e || '未知错误'}`)
+  } catch (e: unknown) {
+    notification.error(`批量生成失败: ${e instanceof Error ? e.message : '未知错误'}`)
   } finally {
     isGenerating.value = false
   }

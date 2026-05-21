@@ -92,9 +92,10 @@ export const useFileStore = defineStore('file', () => {
         mtime: result?.mtime ?? known.mtime,
         hash: result?.hash ?? known.hash,
       }
-    } catch (error: any) {
-      const code = error?.response?.data?.error?.code
-      if (error?.response?.status === 409 || code === 'FILE_CONFLICT') {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { error?: { code?: string } } } }
+      const code = err?.response?.data?.error?.code
+      if (err?.response?.status === 409 || code === 'FILE_CONFLICT') {
         await showFileConflict(projectId, path)
       }
       throw error

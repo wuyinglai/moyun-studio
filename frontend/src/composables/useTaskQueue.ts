@@ -79,9 +79,9 @@ async function processQueue() {
 
       _queue.value.shift()
       _saveQueueMeta()
-    } catch (e: any) {
+    } catch (e: unknown) {
       taskStore.failTask(task.id)
-      taskStore.addLog('error', `失败: ${task.name} — ${e.message || e}`)
+      taskStore.addLog('error', `失败: ${task.name} — ${e instanceof Error ? e.message : String(e)}`)
       _queue.value.shift()
       _saveQueueMeta()
     }
