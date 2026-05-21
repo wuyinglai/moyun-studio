@@ -68,3 +68,15 @@ Fields:
 1. API layer must not construct file paths with `project_dir / req.path`. All file operations go through `FileService`, which validates and resolves paths safely.
 2. Frontend saves must send `expected_mtime` and `expected_hash`, then handle `FILE_CONFLICT` (409) responses.
 3. `file.updated` SSE events must not carry full content. They send metadata only: `path`, `size`, and `mtime`.
+
+## output_mode
+
+The `output_mode` parameter controls how generated content is written. Recommended values:
+
+| Value | Use when | Behavior |
+|-------|----------|----------|
+| `write_scene` | Writing to a new or empty scene | Directly writes the sec file |
+| `candidate` | Modifying an existing scene | Creates a candidate file, never overwrites the source |
+| `append` | Continuing/adding to an existing scene | Appends content to the end of the file |
+
+> **Deprecation notice**: `output_mode=overwrite` is a legacy compatibility value. The backend still accepts it but will automatically convert it to a safe mode: if the target sec file already has content, `overwrite` is treated as `candidate`; if the target is empty, it is treated as `write_scene`. Frontend code must not send `overwrite`.

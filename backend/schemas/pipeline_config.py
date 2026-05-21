@@ -22,7 +22,8 @@ ALLOWED_OUTPUT_MODES = {
 }
 
 # output_mode 中需要给出 warning 的旧值（兼容但不推荐）
-DEPRECATED_OUTPUT_MODES = {"overwrite", "rewrite"}  # AI_GUARDRAIL_ALLOW: deprecation warning
+# LEGACY_COMPAT: overwrite/rewrite are accepted for old callers but normalized to safe modes.
+DEPRECATED_OUTPUT_MODES = {"overwrite", "rewrite"}
 
 # 危险 output 目标路径模式（需要候选稿保护）
 DANGEROUS_OUTPUT_PATTERNS = (

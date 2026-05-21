@@ -40,8 +40,18 @@ def mock_llm_service():
 
 @pytest.fixture
 def mock_file_service():
+    from backend.core.exceptions import MoyunFileNotFoundError
+
     svc = MagicMock()
-    svc.read_file = AsyncMock(return_value=("# 文件内容\n\n正文", None))
+    default_content = ("# 文件内容\n\n正文", None, 1000.0)
+
+    async def _read_file(path):
+        # candidate metadata files don't exist in test → raise not found
+        if ".candidates" in str(path) or str(path).endswith(".json"):
+            raise MoyunFileNotFoundError(str(path))
+        return default_content
+
+    svc.read_file = AsyncMock(side_effect=_read_file)
     svc.write_file = AsyncMock()
     svc.create_directory = AsyncMock()
     svc.delete_file = AsyncMock()

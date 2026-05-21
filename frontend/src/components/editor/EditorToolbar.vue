@@ -54,9 +54,9 @@
         size="small"
         type="primary"
         data-testid="write-next-button"
-        @click="handleGenerateNext"
+        @click="writeNextScene"
       >
-        📄 写下一部分
+        📄 写下一场景
       </a-button>
       <template v-if="!isGenerating">
         <a-button
@@ -184,7 +184,7 @@ const {
   isGenerating,
   showStopButton,
   showNextButton,
-  handleGenerateNext,
+  writeNextScene,
   runPipeline,
   handleCustomPipeline,
   handleRegenerate,

@@ -242,7 +242,7 @@ export function useSceneGenerationActions() {
           if (getAutoMode() === 'L1') {
             // L1: 打开文件但不运行 pipeline，标记为排队等待用户确认
             _nextConfirmQueued = nextNext.path
-            notification.info(`已打开 ${nextNext.path}，点击「写下一部分」开始生成`)
+            notification.info(`已打开 ${nextNext.path}，点击「写下一场景」开始生成`)
             return
           }
 
@@ -327,7 +327,7 @@ export function useSceneGenerationActions() {
           targetFile,
           name,
           undefined,
-          candidateOnly ? 'candidate' : name === 'extract' ? 'overwrite' : 'write_scene',
+          candidateOnly ? 'candidate' : name === 'extract' ? 'write_scene' : 'write_scene',
         )
         if (candidateOnly) {
           notification.success('已生成候选稿，采用后才会覆盖当前场景。')
@@ -429,15 +429,179 @@ export function useSceneGenerationActions() {
     if (running) {
       cancelQueuedTask(running.id)
     }
-    // 工作流模式：停止当前步骤，等待"写下一部分"继续
+    // 工作流模式：停止当前步骤，等待"写下一场景"继续
     if (guide.isRunning.value) {
       guide.stopAfterCurrent()
-      notification.info('已停止当前步骤，点"写下一部分"继续')
+      notification.info('已停止当前步骤，点"写下一场景"继续')
       return
     }
     // 强制重置任务队列处理状态（防止 pipeline 异常断开后卡死）
     taskQueue.isProcessing.value = false
     notification.info('已停止当前任务')
+  }
+
+  /**
+   * 统一场景动作入口：所有场景生成/修改操作都经过此函数。
+   * action 决定语义和策略：
+   *   write_next_scene    → 写入下一个场景（目标不存在或为空时直接写入，已有内容时生成候选稿）
+   *   write_current_scene → 生成当前场景（目标为空时直接写入，已有内容时生成候选稿）
+   *   rewrite_current_scene → 重写当前场景（必须候选稿）
+   *   polish_current_scene  → 润色当前场景（必须候选稿）
+   */
+  async function runSceneAction(params: {
+    action: 'write_next_scene' | 'write_current_scene' | 'rewrite_current_scene' | 'polish_current_scene'
+    sourcePath: string
+    targetPath: string
+    projectId: string
+    extraVars?: Record<string, unknown>
+  }) {
+    const { action, targetPath, projectId, extraVars = {} } = params
+
+    // 根据动作类型决定 pipeline 和 outputMode
+    const isHighRisk = action === 'rewrite_current_scene' || action === 'polish_current_scene'
+    const pipelineName = isHighRisk
+      ? (action === 'polish_current_scene' ? 'polish' : 'rewrite')
+      : 'generate'
+    const outputMode = isHighRisk ? 'candidate' : 'write_scene'
+
+    // 高风险操作自动切换到候选稿面板
+    if (isHighRisk) {
+      rightPanelStore.setActiveTab('candidate')
+    }
+
+    // 打开目标文件到编辑器
+    const node = { name: targetPath.split('/').pop() || '', path: targetPath, type: 'file' as const }
+    fileStore.openFile(node)
+    editorStore.setCurrentFile(targetPath)
+
+    // 加载 prompt
+    loadFilePrompt(projectId, targetPath)
+
+    // 同步 guide 步骤
+    syncGuideStep(targetPath, 'running')
+
+    // 执行 pipeline，传入 action 供后端识别
+    await fileGen.runPipeline(
+      projectId,
+      targetPath,
+      pipelineName,
+      { ...extraVars, _action: action },
+      outputMode,
+    )
+
+    syncGuideStep(targetPath, 'done')
+
+    if (isHighRisk) {
+      notification.success('已生成候选稿，采用后才会覆盖当前场景。')
+    }
+  }
+
+  /** 写下一场景：推导下一个 sec 文件并生成 */
+  async function writeNextScene() {
+    if (!llmStore.isConnected) {
+      notification.warning('请先配置 LLM 连接')
+      uiStore.openSettings()
+      return
+    }
+    const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
+    const filePath = editorStore.currentFilePath
+    if (!projectId || !filePath) {
+      notification.warning('请先打开一个文件')
+      return
+    }
+
+    const customPrompt = rightPanelStore.promptContent
+    const extraVars: Record<string, unknown> = {}
+    if (customPrompt && customPrompt.length > 50) {
+      extraVars.user_prompt = customPrompt
+    }
+
+    const next = getNextInChain(filePath)
+    if (!next) {
+      notification.warning('已无下一个可生成的文件')
+      return
+    }
+
+    await runSceneAction({
+      action: 'write_next_scene',
+      sourcePath: filePath,
+      targetPath: next.path,
+      projectId,
+      extraVars,
+    })
+  }
+
+  /** 生成当前场景：当前 sec 为空时直接写入，已有内容时生成候选稿 */
+  async function writeCurrentScene() {
+    if (!llmStore.isConnected) {
+      notification.warning('请先配置 LLM 连接')
+      uiStore.openSettings()
+      return
+    }
+    const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
+    const filePath = editorStore.currentFilePath
+    if (!projectId || !filePath) {
+      notification.warning('请先打开一个文件')
+      return
+    }
+
+    const customPrompt = rightPanelStore.promptContent
+    const extraVars: Record<string, unknown> = {}
+    if (customPrompt && customPrompt.length > 50) {
+      extraVars.user_prompt = customPrompt
+    }
+
+    await runSceneAction({
+      action: 'write_current_scene',
+      sourcePath: filePath,
+      targetPath: filePath,
+      projectId,
+      extraVars,
+    })
+  }
+
+  /** 重写当前场景：必须生成候选稿，不直接覆盖 */
+  async function rewriteCurrentScene() {
+    if (!llmStore.isConnected) {
+      notification.warning('请先配置 LLM 连接')
+      uiStore.openSettings()
+      return
+    }
+    const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
+    const filePath = editorStore.currentFilePath
+    if (!projectId || !filePath) {
+      notification.warning('请先打开一个文件')
+      return
+    }
+
+    await runSceneAction({
+      action: 'rewrite_current_scene',
+      sourcePath: filePath,
+      targetPath: filePath,
+      projectId,
+    })
+  }
+
+  /** 润色当前场景：必须生成候选稿，不直接覆盖 */
+  async function polishCurrentScene() {
+    if (!llmStore.isConnected) {
+      notification.warning('请先配置 LLM 连接')
+      uiStore.openSettings()
+      return
+    }
+    const projectId = projectStore.currentProject?.id || projectStore.currentProject?.project_id
+    const filePath = editorStore.currentFilePath
+    if (!projectId || !filePath) {
+      notification.warning('请先打开一个文件')
+      return
+    }
+
+    await runSceneAction({
+      action: 'polish_current_scene',
+      sourcePath: filePath,
+      targetPath: filePath,
+      projectId,
+    })
   }
 
   return {
@@ -449,5 +613,11 @@ export function useSceneGenerationActions() {
     handleCustomPipeline,
     handleRegenerate,
     handleStop,
+    // 统一动作入口
+    runSceneAction,
+    writeNextScene,
+    writeCurrentScene,
+    rewriteCurrentScene,
+    polishCurrentScene,
   }
 }

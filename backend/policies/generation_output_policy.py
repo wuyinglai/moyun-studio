@@ -106,7 +106,7 @@ def decide_output(
     Args:
         action: 操作类型（rewrite, polish, write_new_scene, extract 等）
         target_path: 目标文件相对路径
-        output_mode: 显式指定的输出模式（overwrite, write_scene, candidate, append, rewrite, none）  # AI_GUARDRAIL_ALLOW: docstring
+        output_mode: 显式指定的输出模式（write_scene, candidate, append, none; LEGACY_COMPAT: overwrite/rewrite accepted but deprecated）
         file_exists: 目标文件是否存在
         file_has_content: 目标文件是否有实质内容
         require_candidate: 是否强制生成候选稿
@@ -132,12 +132,24 @@ def decide_output(
             )
 
     # 规则 2：高风险操作 → candidate
-    high_risk_actions = {"rewrite", "polish", "chat_edit", "chat", "more_exciting", "more_reasonable", "modify"}
+    high_risk_actions = {
+        "rewrite", "polish", "chat_edit", "chat", "more_exciting", "more_reasonable", "modify",
+        "rewrite_current_scene", "polish_current_scene", "chat_edit_current_scene",
+    }
     if action_lower in high_risk_actions:
         return OutputDecision(
             mode="candidate",
             reason=f"高风险操作 {action} 默认生成候选稿",
         )
+
+    # 规则 2.5：write_next_scene / write_current_scene → 视目标内容决定
+    if action_lower in ("write_next_scene", "write_current_scene"):
+        if file_has_content:
+            return OutputDecision(
+                mode="candidate",
+                reason=f"{action} 目标 {target_path} 已有内容，转为候选稿",
+            )
+        return OutputDecision(mode="write", reason=f"{action} 目标为空，直接写入")
 
     # 规则 3：显式 output_mode 处理
     if output_mode:
@@ -161,18 +173,22 @@ def decide_output(
             return OutputDecision(mode="write", reason="write_scene 且目标为空，直接写入")
 
         if mode_lower in ("overwrite", "rewrite"):
-            # overwrite/rewrite 对危险路径 → candidate
-            if is_dangerous_output(target_path):
+            # LEGACY_COMPAT: overwrite is accepted for old callers but normalized to safe modes.
+            # overwrite + scene file with content → candidate (no silent overwrite)
+            # overwrite + scene file empty → write (treated as write_scene)
+            # overwrite + dangerous path → candidate
+            # overwrite + safe path → write
+            if is_dangerous_output(target_path) and file_has_content:
                 return OutputDecision(
                     mode="candidate",
                     reason=f"overwrite/rewrite 对危险路径 {target_path}，转为候选稿",
                 )
-            if is_scene_file(target_path):
+            if is_scene_file(target_path) and file_has_content:
                 return OutputDecision(
                     mode="candidate",
-                    reason=f"overwrite/rewrite 对场景文件 {target_path}，转为候选稿",
+                    reason=f"overwrite/rewrite 对场景文件 {target_path} 已有内容，转为候选稿",
                 )
-            return OutputDecision(mode="write", reason=f"output_mode={output_mode} 且路径安全，直接写入")
+            return OutputDecision(mode="write", reason=f"output_mode={output_mode} 且目标为空或路径安全，直接写入")
 
     # 规则 4：场景文件已有内容 → candidate
     if is_scene_file(target_path) and file_has_content:

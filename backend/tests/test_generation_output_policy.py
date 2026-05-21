@@ -63,6 +63,36 @@ class TestShouldCreateCandidate:
         """write 空 sec → 直接写入"""
         assert should_create_candidate("write", "chapters/vol-01/ch-001/sec-001.md", False, False) is False
 
+    # ── write_next_scene / write_current_scene ──────────
+
+    def test_write_next_scene_empty(self):
+        """write_next_scene 空 sec → 直接写入"""
+        assert should_create_candidate("write_next_scene", "chapters/vol-01/ch-001/sec-001.md", False, False) is False
+
+    def test_write_next_scene_with_content(self):
+        """write_next_scene 已有内容 → candidate"""
+        assert should_create_candidate("write_next_scene", "chapters/vol-01/ch-001/sec-001.md", True, True) is True
+
+    def test_write_current_scene_empty(self):
+        """write_current_scene 空 sec → 直接写入"""
+        assert should_create_candidate("write_current_scene", "chapters/vol-01/ch-001/sec-001.md", False, False) is False
+
+    def test_write_current_scene_with_content(self):
+        """write_current_scene 已有内容 → candidate"""
+        assert should_create_candidate("write_current_scene", "chapters/vol-01/ch-001/sec-001.md", True, True) is True
+
+    # ── rewrite_current_scene / polish_current_scene ────
+
+    def test_rewrite_current_scene_always_candidate(self):
+        """rewrite_current_scene → candidate（即使目标为空）"""
+        assert should_create_candidate("rewrite_current_scene", "chapters/vol-01/ch-001/sec-001.md", True, True) is True
+        assert should_create_candidate("rewrite_current_scene", "chapters/vol-01/ch-001/sec-001.md", False, False) is True
+
+    def test_polish_current_scene_always_candidate(self):
+        """polish_current_scene → candidate（即使目标为空）"""
+        assert should_create_candidate("polish_current_scene", "chapters/vol-01/ch-001/sec-001.md", True, True) is True
+        assert should_create_candidate("polish_current_scene", "chapters/vol-01/ch-001/sec-001.md", False, False) is True
+
     def test_extract_materials(self):
         """extract → 直接写入"""
         assert should_create_candidate("extract", "materials/extracted/characters.md", True, True) is False
@@ -218,6 +248,52 @@ class TestDecideOutput:
         result = decide_output("write_new_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=True)
         assert result.mode == "candidate"
 
+    # ── write_next_scene / write_current_scene ──────────
+
+    def test_write_next_scene_empty(self):
+        """write_next_scene 空 sec → write"""
+        result = decide_output("write_next_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=False)
+        assert result.mode == "write"
+
+    def test_write_next_scene_with_content(self):
+        """write_next_scene 已有内容 → candidate"""
+        result = decide_output("write_next_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=True)
+        assert result.mode == "candidate"
+        assert "已有内容" in result.reason
+
+    def test_write_current_scene_empty(self):
+        """write_current_scene 空 sec → write"""
+        result = decide_output("write_current_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=False)
+        assert result.mode == "write"
+
+    def test_write_current_scene_with_content(self):
+        """write_current_scene 已有内容 → candidate"""
+        result = decide_output("write_current_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=True)
+        assert result.mode == "candidate"
+        assert "已有内容" in result.reason
+
+    # ── rewrite_current_scene / polish_current_scene ────
+
+    def test_rewrite_current_scene_always_candidate(self):
+        """rewrite_current_scene → candidate（即使目标为空）"""
+        result = decide_output("rewrite_current_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=False)
+        assert result.mode == "candidate"
+
+    def test_rewrite_current_scene_with_content(self):
+        """rewrite_current_scene 有内容 → candidate"""
+        result = decide_output("rewrite_current_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=True)
+        assert result.mode == "candidate"
+
+    def test_polish_current_scene_always_candidate(self):
+        """polish_current_scene → candidate（即使目标为空）"""
+        result = decide_output("polish_current_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=False)
+        assert result.mode == "candidate"
+
+    def test_polish_current_scene_with_content(self):
+        """polish_current_scene 有内容 → candidate"""
+        result = decide_output("polish_current_scene", "chapters/vol-01/ch-001/sec-001.md", file_has_content=True)
+        assert result.mode == "candidate"
+
     # ── extract → write ────────────────────────────────
 
     def test_extract_materials(self):
@@ -364,3 +440,87 @@ class TestIsSceneFileGenerationPolicy:
 
     def test_random_file(self):
         assert is_scene_file("story-state.md") is False
+
+
+class TestOverwriteLegacyCompat:
+    """LEGACY_COMPAT: overwrite is accepted but normalized to safe modes."""
+
+    def test_overwrite_empty_scene_becomes_write(self):
+        """overwrite + 空 sec → write (treated as write_scene)"""
+        result = decide_output(
+            "generate", "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="overwrite", file_has_content=False,
+        )
+        assert result.mode == "write"
+
+    def test_overwrite_existing_scene_becomes_candidate(self):
+        """overwrite + 已有 sec → candidate (no silent overwrite)"""
+        result = decide_output(
+            "generate", "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="overwrite", file_has_content=True,
+        )
+        assert result.mode == "candidate"
+
+    def test_overwrite_rewrite_action_always_candidate(self):
+        """rewrite + overwrite → candidate (high-risk action overrides)"""
+        result = decide_output(
+            "rewrite", "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="overwrite", file_has_content=False,
+        )
+        assert result.mode == "candidate"
+
+    def test_overwrite_polish_action_always_candidate(self):
+        """polish + overwrite → candidate (high-risk action overrides)"""
+        result = decide_output(
+            "polish", "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="overwrite", file_has_content=False,
+        )
+        assert result.mode == "candidate"
+
+    def test_overwrite_safe_path_empty(self):
+        """overwrite + safe path + empty → write"""
+        result = decide_output(
+            "generate", "materials/extracted/chars.md",
+            output_mode="overwrite", file_has_content=False,
+        )
+        assert result.mode == "write"
+
+    def test_overwrite_safe_path_with_content(self):
+        """overwrite + safe path + content → write (safe path allows overwrite)"""
+        result = decide_output(
+            "generate", "materials/extracted/chars.md",
+            output_mode="overwrite", file_has_content=True,
+        )
+        assert result.mode == "write"
+
+    def test_write_scene_empty(self):
+        """write_scene + empty → write"""
+        result = decide_output(
+            "generate", "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="write_scene", file_has_content=False,
+        )
+        assert result.mode == "write"
+
+    def test_write_scene_with_content(self):
+        """write_scene + content → candidate (no silent overwrite)"""
+        result = decide_output(
+            "generate", "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="write_scene", file_has_content=True,
+        )
+        assert result.mode == "candidate"
+
+    def test_candidate_always_candidate(self):
+        """candidate mode → candidate regardless of content"""
+        result = decide_output(
+            "generate", "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="candidate", file_has_content=False,
+        )
+        assert result.mode == "candidate"
+
+    def test_overwrite_dangerous_path(self):
+        """overwrite + dangerous path → candidate"""
+        result = decide_output(
+            "generate", "story-state.md",
+            output_mode="overwrite", file_has_content=True,
+        )
+        assert result.mode == "candidate"

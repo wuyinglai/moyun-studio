@@ -115,3 +115,10 @@ chapters/vol-{VV}/ch-{CCC}/ch-plan.md
 |----|------|
 | Frontend | `frontend/src/modules/scene/__tests__/scenePath.spec.ts` |
 | Backend | `backend/tests/test_scene_path_contract.py` |
+
+## 动作语义
+
+- `write_next_scene`：sourcePath = 当前 sec，targetPath = getNextScenePath(sourcePath)
+- `write_current_scene`：sourcePath = 当前 sec，targetPath = 当前 sec
+- `rewrite_current_scene`：sourcePath = 当前 sec，targetPath = 当前 sec，必须 candidate
+- `polish_current_scene`：sourcePath = 当前 sec，targetPath = 当前 sec，必须 candidate |

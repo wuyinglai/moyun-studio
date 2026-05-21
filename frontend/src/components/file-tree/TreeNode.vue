@@ -156,7 +156,7 @@ const displayName = computed(() => {
     if (chNum !== null) return `第${chNum}章`
   } else {
     const secNum = parseSceneFileName(name)
-    if (secNum !== null) return `第${secNum}节`
+    if (secNum !== null) return `第${secNum}场景`
   }
   return name
 })

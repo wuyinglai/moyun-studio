@@ -26,7 +26,7 @@ export interface LiteNextOptionsResponse {
   next_file: string
 }
 
-/** UI-only: 写入下一部分响应 */
+/** UI-only: 写入下一场景响应 */
 export interface LiteWriteNextResponse {
   file_path: string
   content: string

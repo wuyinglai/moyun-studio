@@ -139,7 +139,7 @@ export function useFileGeneration() {
     filePath: string,
     pipelineName: string,
     extraVars?: Record<string, unknown>,
-    outputMode?: 'write_scene' | 'candidate' | 'append' | 'overwrite',
+    outputMode?: 'write_scene' | 'candidate' | 'append',
   ) {
     if (_isGenerating.value) return
 

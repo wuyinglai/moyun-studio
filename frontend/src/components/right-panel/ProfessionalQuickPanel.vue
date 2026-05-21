@@ -125,6 +125,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { parseScenePath, buildChapterPlanPath } from '@/modules/scene/scenePath'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useSceneGenerationActions } from '@/composables/useSceneGenerationActions'
 
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
@@ -133,6 +134,7 @@ const generationStore = useGenerationStore()
 const notification = useNotificationStore()
 const rightPanelStore = useRightPanelStore()
 const fileGen = useFileGeneration()
+const sceneActions = useSceneGenerationActions()
 
 const running = ref(false)
 const statusText = ref('')
@@ -148,7 +150,7 @@ const currentFilePath = computed(() => fileStore.currentFile?.path || editorStor
 const currentFileLabel = computed(() => currentFilePath.value || '尚未打开文件')
 const canGenerate = computed(() => Boolean(projectId.value && currentFilePath.value))
 const isChapterFile = computed(() => /chapters\/.*\/sec-\d+\.md$/.test(currentFilePath.value))
-const continueLabel = computed(() => isChapterFile.value ? '续写当前场景' : '续写当前文件')
+const continueLabel = computed(() => isChapterFile.value ? '生成当前场景' : '续写当前文件')
 const rewriteLabel = computed(() => isChapterFile.value ? '重写当前场景' : '重写当前文件')
 const currentFileHint = computed(() => {
   if (!projectId.value) return '打开项目后可使用专业快捷操作。'
@@ -269,24 +271,36 @@ async function runAction(label: string, runner: () => Promise<void>) {
 }
 
 async function handleContinue() {
-  await runAction('续写当前场景', () => generationStore.continueWriting(
-    projectId.value,
-    currentFilePath.value,
-    '请基于故事引擎和前文记忆，继续写当前场景；优先推进人物欲望、冲突和读者期待，不需要依赖大纲。',
-  ))
+  if (isChapterFile.value) {
+    // 场景文件：使用统一的 writeCurrentScene 动作
+    await runAction('生成当前场景', () => sceneActions.writeCurrentScene())
+  } else {
+    // 非场景文件：使用原有的续写逻辑
+    await runAction('续写当前文件', () => generationStore.continueWriting(
+      projectId.value,
+      currentFilePath.value,
+      '请基于故事引擎和前文记忆，继续写当前文件；优先推进人物欲望、冲突和读者期待，不需要依赖大纲。',
+    ))
+  }
 }
 
 async function handleRewrite() {
-  await runAction('重写当前场景', async () => {
-    rightPanelStore.setActiveTab('candidate')
-    await fileGen.runPipeline(
-      projectId.value,
-      currentFilePath.value,
-      'rewrite',
-      { user_prompt: '请在保留核心事件的基础上重写当前文件，增强人物动机、场景行动和场景钩子。' },
-      'candidate',
-    )
-  })
+  if (isChapterFile.value) {
+    // 场景文件：使用统一的 rewriteCurrentScene 动作
+    await runAction('重写当前场景', () => sceneActions.rewriteCurrentScene())
+  } else {
+    // 非场景文件：使用原有的重写逻辑
+    await runAction('重写当前文件', async () => {
+      rightPanelStore.setActiveTab('candidate')
+      await fileGen.runPipeline(
+        projectId.value,
+        currentFilePath.value,
+        'rewrite',
+        { user_prompt: '请在保留核心事件的基础上重写当前文件，增强人物动机、场景行动和场景钩子。' },
+        'candidate',
+      )
+    })
+  }
 }
 
 async function handleBoost() {

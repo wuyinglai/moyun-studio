@@ -48,7 +48,7 @@ class GenerateRequest(BaseModel):
     file_path: str
     prompt_type: str = Field(..., description="Prompt 类型，如 generate/chapter")
     extra_vars: dict = Field(default_factory=dict, description="额外模板变量")
-    mode: Literal["rewrite", "append", "chat"] = "rewrite"
+    mode: Literal["rewrite", "append", "chat", "write_next_scene", "write_current_scene", "rewrite_current_scene", "polish_current_scene", "chat_edit_current_scene", "more_exciting", "more_reasonable"] = "rewrite"
     stream: bool = True
 
 

@@ -23,6 +23,9 @@ HIGH_RISK_ACTIONS = frozenset({
     "expand",
     "shrink",
     "modify",
+    "rewrite_current_scene",
+    "polish_current_scene",
+    "chat_edit_current_scene",
 })
 
 # 安全操作：默认直接写入
@@ -89,8 +92,8 @@ def should_create_candidate(
     if is_core_state_file(target_path) and file_has_content:
         return True
 
-    # 规则 4：write_new_scene 且目标为空 → 直接写入
-    if action_lower in ("write_new_scene", "write") and not file_has_content:
+    # 规则 4：write_new_scene / write_next_scene / write_current_scene 且目标为空 → 直接写入
+    if action_lower in ("write_new_scene", "write", "write_next_scene", "write_current_scene") and not file_has_content:
         return False
 
     # 规则 5：extract → 直接写入

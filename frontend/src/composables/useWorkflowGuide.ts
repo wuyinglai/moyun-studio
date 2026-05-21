@@ -2,8 +2,8 @@
  *
  * 模块级单例状态，useWorkflowGuide() 在所有组件中返回同一实例。
  *
- * L1: 每步完成后暂停，paused=true，用户点"写下一部分"恢复。
- * L2: 自动连续执行，用户可停止，停止后 paused=true，"写下一部分"恢复。
+ * L1: 每步完成后暂停，paused=true，用户点"写下一场景"恢复。
+ * L2: 自动连续执行，用户可停止，停止后 paused=true，"写下一场景"恢复。
  */
 
 import { ref, computed, watch } from 'vue'
@@ -64,7 +64,7 @@ async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<G
         const secOutput = buildScenePath(vol, ch, sec)
         expanded.push({
           id: `vol-${volPad}-ch-${chPad}-sec-${secPad}`,
-          label: `正文 第${vol}卷第${ch}章第${sec}节`,
+          label: `正文 第${vol}卷第${ch}章第${sec}场景`,
           type: 'pipeline',
           pipeline: genStep.pipeline,
           output: secOutput,
@@ -249,11 +249,11 @@ export function useWorkflowGuide() {
       step.status = 'done'
       taskStore.addLog('success', `完成: ${step.label}`)
 
-      // L1: 每步完成后暂停，等待"写下一部分"
+      // L1: 每步完成后暂停，等待"写下一场景"
       if (getAutoMode() === 'L1' && _currentStepIndex.value < _steps.value.length - 1) {
         step.status = 'waiting'
         _paused.value = true
-        taskStore.addLog('info', `⏸${step.label} 完成，点"写下一部分"继续`)
+        taskStore.addLog('info', `⏸${step.label} 完成，点"写下一场景"继续`)
       } else {
         advanceAndRun(projectId, filePath)
       }
@@ -271,7 +271,7 @@ export function useWorkflowGuide() {
     if (_shouldStop.value) {
       _shouldStop.value = false
       _paused.value = true
-      taskStore.addLog('info', `⏹ 已停止，点"写下一部分"继续`)
+      taskStore.addLog('info', `⏹ 已停止，点"写下一场景"继续`)
       return
     }
     _currentStepIndex.value++

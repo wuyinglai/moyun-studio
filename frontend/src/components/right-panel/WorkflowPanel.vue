@@ -327,7 +327,7 @@
             <label>名称</label>
             <input
               v-model="editData.label"
-              placeholder="批量写章节"
+              placeholder="批量写场景"
             >
           </div>
           <div class="form-field">
@@ -675,7 +675,7 @@ function addStep() {
     type: 'pipeline',
     pipeline: '',
     output: '',
-    output_mode: 'overwrite',
+    output_mode: 'write_scene',
   })
 }
 

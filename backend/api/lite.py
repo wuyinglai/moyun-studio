@@ -100,7 +100,15 @@ GENRES = ["玄幻", "武侠", "言情", "都市", "仙侠"]
 
 SECTIONS_PER_CHAPTER = 4
 CHAPTERS_PER_VOLUME = 10
-HIGH_RISK_LITE_ACTIONS = {"rewrite", "more_exciting", "more_reasonable"}
+HIGH_RISK_LITE_ACTIONS = {"rewrite", "more_exciting", "more_reasonable", "rewrite_current_scene", "polish_current_scene", "chat_edit_current_scene"}
+
+# Map new action names to existing behavior
+LITE_ACTION_ALIAS = {
+    "write_next_scene": "write",
+    "write_current_scene": "write",
+    "rewrite_current_scene": "rewrite",
+    "polish_current_scene": "rewrite",  # polish uses same flow as rewrite in lite
+}
 
 
 def _lite_candidate_path(source_path: str, action: str) -> str:
@@ -116,11 +124,12 @@ def _resolve_lite_output_file(
 ) -> str:
     if req.output_file:
         return req.output_file
+    effective_action = LITE_ACTION_ALIAS.get(req.action, req.action)
     target_has_content = bool(requested_content and not is_blank_requested)
     if (
-        req.action in HIGH_RISK_LITE_ACTIONS
+        effective_action in HIGH_RISK_LITE_ACTIONS
         and req.target_file
-        and should_create_candidate(req.action, target_file, bool(requested_content), target_has_content)
+        and should_create_candidate(effective_action, target_file, bool(requested_content), target_has_content)
     ):
         return _lite_candidate_path(target_file, req.action)
     return target_file
@@ -885,7 +894,8 @@ async def write_lite_next(
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
     is_blank_requested = _is_blank_chapter(requested_content)
-    if (req.action != "write" and req.target_file) or (req.target_file and is_blank_requested):
+    effective_action = LITE_ACTION_ALIAS.get(req.action, req.action)
+    if (effective_action != "write" and req.target_file) or (req.target_file and is_blank_requested):
         target_file = req.target_file
     else:
         target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
@@ -1076,7 +1086,8 @@ async def write_lite_next_stream(
         file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
         requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
         is_blank_requested = _is_blank_chapter(requested_content)
-        if (req.action in ("continue", "rewrite", "more_exciting", "more_reasonable") and req.target_file) or (req.target_file and is_blank_requested):
+        effective_action = LITE_ACTION_ALIAS.get(req.action, req.action)
+        if (effective_action in ("continue", "rewrite", "more_exciting", "more_reasonable") and req.target_file) or (req.target_file and is_blank_requested):
             target_file = req.target_file
         else:
             target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
@@ -1180,7 +1191,7 @@ async def write_lite_next_stream(
                 content_parts = [fallback]
                 used_fallback = True
             generated_text = "".join(content_parts).strip()
-            if req.action == "continue" and target_content.strip():
+            if effective_action == "continue" and target_content.strip():
                 content = target_content.rstrip() + "\n\n" + generated_text
             else:
                 content = generated_text

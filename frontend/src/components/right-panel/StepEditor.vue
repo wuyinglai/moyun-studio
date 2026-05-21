@@ -83,8 +83,11 @@
             v-model="local.output_mode"
             @change="emitUpdate"
           >
-            <option value="overwrite">
-              覆盖
+            <option value="write_scene">
+              写入场景
+            </option>
+            <option value="candidate">
+              候选稿
             </option>
             <option value="append">
               追加
@@ -241,7 +244,7 @@ function changeType(e: Event) {
   const s = local.value
   s.type = type
   if (type === 'pipeline') {
-    s.pipeline = s.pipeline || ''; s.output = s.output || ''; s.output_mode = 'overwrite'
+    s.pipeline = s.pipeline || ''; s.output = s.output || ''; s.output_mode = 'write_scene'
     s.action = undefined; s.path = undefined; s.count = undefined; s.var = undefined; s.steps = []
   } else if (type === 'loop') {
     s.count = '10'; s.var = 'i'; s.steps = []
@@ -259,7 +262,7 @@ function genId(): string {
 
 function addSubStep() {
   if (!local.value.steps) local.value.steps = []
-  local.value.steps.push({ id: genId(), label: '子步骤', type: 'pipeline', pipeline: '', output: '', output_mode: 'overwrite' })
+  local.value.steps.push({ id: genId(), label: '子步骤', type: 'pipeline', pipeline: '', output: '', output_mode: 'write_scene' })
   emitUpdate()
 }
 

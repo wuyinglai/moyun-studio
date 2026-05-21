@@ -64,3 +64,20 @@ Reject a candidate.
 - Adopting a candidate whose source file has changed must fail with a conflict error.
 - Candidate content must never be saved directly to the source file without the adopt flow.
 - The frontend must prevent direct editing of candidate files in the main editor.
+
+## 必须生成候选稿的动作
+
+以下动作默认必须生成候选稿，不直接覆盖正式正文：
+
+- `rewrite_current_scene` — 重写当前场景
+- `polish_current_scene` — 润色当前场景
+- `chat_edit_current_scene` — 对话编辑当前场景
+- `more_exciting` — 让当前场景更爽
+- `more_reasonable` — 让当前场景更合理
+
+以下动作由 GenerationOutputPolicy 判断：
+
+- `write_next_scene` — 目标为空时直接写入，目标已有内容时生成候选稿
+- `write_current_scene` — 目标为空时直接写入，目标已有内容时生成候选稿
+
+> **output_mode=overwrite 兼容**：后端收到 `overwrite` 时，如果目标是已有 sec 文件，自动转为 `candidate`；如果目标为空，转为 `write_scene`。前端不再主动发送 `overwrite`。

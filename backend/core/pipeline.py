@@ -283,11 +283,12 @@ class PipelineRunner:
         project_id: str,
         target_file: str | None = None,
         user_input: str | None = None,
-        output_mode: str = "overwrite",  # AI_GUARDRAIL_ALLOW: default param, policy enforces safety
+        output_mode: str = "write_scene",
         extra_vars: dict | None = None,
         stop_event: asyncio.Event | None = None,
         llm_extra_kwargs: dict | None = None,
         require_candidate: bool = False,
+        action: str | None = None,
     ) -> AsyncGenerator[dict, None]:
         """执行管线
 
@@ -590,7 +591,7 @@ class PipelineRunner:
             if should_use_candidate:
                 # 生成候选稿而不是直接覆盖
                 candidate_service = CandidateService(self.file_service)
-                action = self._infer_candidate_action(pipeline_name, output_mode)
+                action = self._infer_candidate_action(pipeline_name, output_mode, action=action)
                 candidate = await candidate_service.create_candidate(
                     project_id=project_id,
                     source_path=target_file,
@@ -605,7 +606,8 @@ class PipelineRunner:
                     "source_path": target_file,
                     "action": action.value,
                 })}
-            elif output_mode in ("rewrite", "overwrite", "write_scene"):  # AI_GUARDRAIL_ALLOW: policy-gated branch
+            elif output_mode in ("rewrite", "overwrite", "write_scene"):
+                # LEGACY_COMPAT: overwrite is still handled here for old callers
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
             elif output_mode == "append":
                 new_content = (original_content + "\n\n" + final_output).strip()
@@ -679,9 +681,11 @@ class PipelineRunner:
             pipeline_name=pipeline_name,
         )
 
-        # Map OutputDecision.mode back to legacy output_mode strings
+        # Map OutputDecision.mode back to output_mode strings
+        # LEGACY_COMPAT: overwrite is accepted for old callers but normalized to safe modes.
+        # New code should use write_scene / candidate / append.
         mode_map = {
-            "write": "write_scene" if self._is_scene_file(target_file or "") else "overwrite",
+            "write": "write_scene",
             "candidate": "candidate",
             "append": "append",
             "reject": "none",
@@ -801,8 +805,22 @@ class PipelineRunner:
         import hashlib
         return hashlib.md5(project_id.encode()).hexdigest()[:8]
 
-    def _infer_candidate_action(self, pipeline_name: str, output_mode: str) -> CandidateAction:
+    def _infer_candidate_action(self, pipeline_name: str, output_mode: str, action: str | None = None) -> CandidateAction:
         """根据管线名称和输出模式推断候选稿动作类型"""
+        # New action names take priority
+        if action:
+            action_lower = action.lower()
+            if action_lower == "write_next_scene":
+                return CandidateAction.CONTINUE
+            elif action_lower == "write_current_scene":
+                return CandidateAction.CONTINUE
+            elif action_lower == "rewrite_current_scene":
+                return CandidateAction.REWRITE
+            elif action_lower == "polish_current_scene":
+                return CandidateAction.POLISH
+            elif action_lower == "chat_edit_current_scene":
+                return CandidateAction.CHAT
+
         pipeline_name_lower = pipeline_name.lower()
 
         if "polish" in pipeline_name_lower or "润色" in pipeline_name:

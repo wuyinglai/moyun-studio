@@ -92,7 +92,7 @@ Project creation, opening, switching, and deletion.
 - `backend/application/pipeline/`
 
 **Important notes:**
-- "Write next part" is not a simple direct generation.
+- "Write next scene" is not a simple direct generation.
 - It derives the next scene path, then calls pipeline for streaming execution.
 - After pipeline completes, it re-reads the file to refresh the editor.
 - Polish / rewrite on current scene must default to candidate, not directly overwrite the live text.

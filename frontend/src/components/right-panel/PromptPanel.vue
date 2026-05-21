@@ -89,7 +89,7 @@
       class="generation-status generation-paused"
     >
       <i class="fa-solid fa-pause" />
-      <span>已完成，点「写下一部分」继续</span>
+      <span>已完成，点「写下一场景」继续</span>
     </div>
     <div
       v-else-if="fileGen.currentPrompt.value"

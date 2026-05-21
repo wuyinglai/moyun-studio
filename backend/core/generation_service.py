@@ -32,8 +32,17 @@ logger = logging.getLogger(__name__)
 # prompt_type → pipeline 映射
 GENERATE_PIPELINE_MAP = {
     "generate/continuation": ("generate", "append"),
-    "generate/rewrite": ("rewrite", "overwrite"),
-    "generate/title": ("title", "overwrite"),
+    "generate/rewrite": ("rewrite", "candidate"),
+    "generate/title": ("title", "write_scene"),
+}
+
+# Action name compatibility mapping
+ACTION_ALIAS = {
+    "write_next_scene": "generate",
+    "write_current_scene": "generate",
+    "rewrite_current_scene": "rewrite",
+    "polish_current_scene": "polish",
+    "chat_edit_current_scene": "chat",
 }
 
 
@@ -83,6 +92,9 @@ class GenerationService:
         Yields:
             SSE 事件字典: {"event": ..., "data": ...}
         """
+        # Resolve action aliases for backward compatibility
+        resolved_mode = ACTION_ALIAS.get(mode, mode)
+
         llm_cfg = load_llm_config_from_workspace(self.settings)
         svc = LLMService.from_workspace_config(llm_cfg)
         runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service, system_prompts_path=self.settings.system_prompts_path)
@@ -106,6 +118,7 @@ class GenerationService:
                     extra_vars=extra_vars,
                     stop_event=self._stop_signals.get(task_id),
                     llm_extra_kwargs=llm_extra_kwargs,
+                    action=mode,
                 ):
                     yield event
                     if event_bus and event.get("event") in ("generation", "done", "error"):
@@ -197,19 +210,19 @@ class GenerationService:
 
                 target_exists = content and len(content.strip()) > 0
 
-                if should_create_candidate(mode, file_path, target_exists, target_exists):
+                if should_create_candidate(resolved_mode, file_path, target_exists, target_exists):
                     # Generate candidate
-                    action = CandidateAction.REWRITE if mode == "rewrite" else CandidateAction.CONTINUE
+                    action = CandidateAction.REWRITE if resolved_mode == "rewrite" else CandidateAction.CONTINUE
                     try:
                         candidate_svc = CandidateService(self.file_service)
-                        new_content = (content + "\n\n" + generated_text) if mode == "append" and target_exists else generated_text
+                        new_content = (content + "\n\n" + generated_text) if resolved_mode == "append" and target_exists else generated_text
                         candidate = await candidate_svc.create_candidate(
                             project_id=project_id,
                             source_path=file_path,
                             action=action,
                             content=new_content,
                         )
-                        logger.info("Fallback %s 已保存为候选稿: %s -> %s", mode, file_path, candidate.id)
+                        logger.info("Fallback %s 已保存为候选稿: %s -> %s", resolved_mode, file_path, candidate.id)
                         yield {"event": "candidate_created", "data": json.dumps({
                             "task_id": task_id,
                             "candidate_id": candidate.id,
@@ -218,7 +231,7 @@ class GenerationService:
                         })}
                     except Exception as e:
                         logger.warning("创建候选稿失败: %s", e)
-                elif mode == "append":
+                elif resolved_mode == "append":
                     new_content = content + "\n\n" + generated_text if content else generated_text
                     await self.file_service.write_file(f"{project_id}/{file_path}", new_content, fm)
                     logger.info("Fallback append 直接写入（目标文件为空）: %s", file_path)

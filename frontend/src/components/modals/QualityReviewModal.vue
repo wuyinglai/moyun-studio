@@ -39,7 +39,7 @@
           :disabled="chapterFiles.length === 0"
           @click="handleBatchReview"
         >
-          批量审查章节
+          批量审查场景
         </a-button>
         <a-button
           type="primary"
@@ -349,7 +349,7 @@ async function handleBatchReview() {
       project_id: projectStore.currentProject.id,
       target_files: chapterFiles.value,
     })
-    batchSummary.value = `批量审查完成：成功 ${res.succeeded}，失败 ${res.failed}，共 ${res.total} 个章节。`
+    batchSummary.value = `批量审查完成：成功 ${res.succeeded}，失败 ${res.failed}，共 ${res.total} 个场景。`
     notification.success('批量审查完成')
     await loadHistory()
   } catch (e: unknown) {

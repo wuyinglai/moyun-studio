@@ -115,7 +115,7 @@
         <button
           class="mode-btn"
           :class="{ 'mode-btn--active': autoMode === 'L1' }"
-          title="L1 半自动：每完成一个文件后暂停，需手动点「写下一部分」继续"
+          title="L1 半自动：每完成一个文件后暂停，需手动点「写下一场景」继续"
           @click="setAutoMode('L1')"
         >
           L1
@@ -276,8 +276,8 @@ function cancelNameEdit() {
 const generatingLabel = computed(() => {
   if (!llmStore.isGenerating) return ''
   const mode = chatStore.generationMode
-  if (mode === 'continue') return '续写章节中'
-  if (mode === 'rewrite') return '重写章节中'
+  if (mode === 'continue') return '续写场景中'
+  if (mode === 'rewrite') return '重写场景中'
   return 'AI 创作中'
 })
 

@@ -1,4 +1,4 @@
-# Frontend User Flow / 前端真实用户流程
+﻿# Frontend User Flow / 前端真实用户流程
 
 本文档基于当前 `frontend/src` 代码梳理真实用户流程，用于后续重新设计 E2E 测试。当前产品不是“点击按钮直接生成正文”的单一链路，而是由项目、文件树、编辑器、管线、候选稿、SSE、Lite 流式写作共同组成。
 
@@ -26,7 +26,7 @@
 - 路由守卫会执行 `projectStore.openProject(projectId)` 和 `fileStore.loadTree(projectId)`。
 - `App.vue` mounted 时也会从 URL 恢复项目，并默认打开 `outline.md` 或第一个 Markdown 文件。
 - 文件树可打开任意文件，编辑器通过 `fileStore.readFile` 读取内容。
-- 工具栏可保存、预览、写下一部分、运行 pipeline、批量生成、质量审查等。
+- 工具栏可保存、预览、写下一场景、运行 pipeline、批量生成、质量审查等。
 
 ### `/project/:projectId/file/*`
 
@@ -126,7 +126,7 @@
 - API 是 `POST /api/file?project_id=...`，body 包含 `path`、`content`、`expected_mtime`、`expected_hash`。
 - 如果后端返回 `FILE_CONFLICT`，前端提示用户重新加载服务器版本或取消保存，不静默覆盖。
 
-### 2.6 “写下一部分”实际做什么
+### 2.6 “写下一场景”实际做什么
 
 按钮位置：`EditorToolbar`，`data-testid="write-next-button"`。
 
@@ -335,7 +335,7 @@ Lite 流式完成后 `onDone` 会接收：
 
 ## 4. Mermaid 流程图
 
-### 4.1 主工作台：创建项目 → 打开 sec → 保存 → 写下一部分
+### 4.1 主工作台：创建项目 → 打开 sec → 保存 → 写下一场景
 
 ```mermaid
 flowchart TD
@@ -352,7 +352,7 @@ flowchart TD
   K --> L["用户编辑正文"]
   L --> M["editorStore.updateContent + markDirty"]
   M --> N["保存: POST /api/file + expected_mtime/hash"]
-  N --> O["点击 写下一部分"]
+  N --> O["点击 写下一场景"]
   O --> P["推导 next scene/path + pipeline"]
   P --> Q["POST /api/pipeline/run"]
   Q --> R["fetch stream -> generationEmitter -> editor append"]
@@ -425,7 +425,7 @@ flowchart TD
 | 新建项目进入工作台 | `/` | 打开新建 modal，填写题材，提交 | 跳转 `/project/:id`，文件树出现 | `POST /api/projects`、`POST /api/file/create` | 可 mock | 否 | 是，初始文件 | 否 | 可不查 |
 | URL 打开指定 sec | `/project/:id/file/chapters/.../sec-001.md` | 直接访问 | CodeMirror 显示该文件内容 | `GET /api/file` | 否 | 否 | 否 | 否 | 否 |
 | 主工作台保存正文 | `/project/:id/file/...sec-001.md` | 编辑 CodeMirror，保存 | 脏标记消失/通知成功 | `POST /api/file` | 否 | 否 | 是 | 否 | 否 |
-| 写下一部分 pipeline smoke | `/project/:id/file/...sec-001.md` | 点“写下一部分” | 打开/切换到下一 sec，生成中状态出现 | `GET /api/pipeline/{name}`、`POST /api/pipeline/run` | 可 mock；真实 LLM 单独测 | 否或轻量检查 | 是 | 不强制 | 可检查后端产物 |
+| 写下一场景 pipeline smoke | `/project/:id/file/...sec-001.md` | 点“写下一场景” | 打开/切换到下一 sec，生成中状态出现 | `GET /api/pipeline/{name}`、`POST /api/pipeline/run` | 可 mock；真实 LLM 单独测 | 否或轻量检查 | 是 | 不强制 | 可检查后端产物 |
 | 主工作台 pipeline 输出刷新 | `/project/:id/file/...sec-001.md` | 让 mock pipeline 返回内容 | editor 流式追加，完成后 readFile 刷新 | fetch stream + `GET /api/file` | 否 | 否 | 是 | 否 | 可不查 |
 | 主工作台 candidate 面板 | `/project/:id` | 打开 Candidate tab | candidate 列表显示 | `GET /api/candidates/:projectId` | 否 | 否 | 否 | 是 | 否 |
 | 采用候选稿 | `/project/:id` | 预览 candidate，点击采用 | 状态更新/通知成功 | `GET /api/candidates/:id`、`POST /api/candidates/:id/adopt` | 否 | 否 | 是，覆盖 source | 是 | 否 |
@@ -440,13 +440,13 @@ flowchart TD
 建议分层：
 
 - CI smoke：mock 或本地后端，不要求真实 LLM。
-- 真实 LLM E2E：少量、明确标记、可跳过；只覆盖 Lite 首节、主工作台下一场景、候选稿采用。
+- 真实 LLM E2E：少量、明确标记、可跳过；只覆盖 Lite 首场景、主工作台下一场景、候选稿采用。
 - 质量评估：不要混在普通 smoke 中；只对真实 LLM 生成文本检查“非提示词泄露、非大纲格式、字数/连续性大致达标”。
 
 ## 6. 之前测试计划中的错误假设
 
 1. “点击按钮直接生成正文”不准确。
-   - 主工作台“写下一部分”会先推导目标文件和 pipeline，再通过 `/api/pipeline/run` 流式运行。
+   - 主工作台“写下一场景”会先推导目标文件和 pipeline，再通过 `/api/pipeline/run` 流式运行。
    - Lite 的爽点卡是“选卡即写”，但也会经过 `/api/lite/write-next-stream` 的 meta/delta/status/done 流程。
 
 2. “所有生成都直接写正文”不准确。
@@ -475,7 +475,22 @@ flowchart TD
    - 前端主要读取和展示 story/recent。
    - 生成后的记忆更新主要在后端 pipeline 或 lite stream 中发生，前端通过结果、事件和刷新读取。
 
-## 7. 后续测试编写注意事项
+## 7. 场景生成动作语义
+
+用户语义上有三个动作：
+
+1. **写下一场景**：生成下一个 sec 文件。目标不存在或为空时直接写入；目标已有内容时生成候选稿。
+2. **生成当前场景**：生成当前 sec 文件。当前文件为空时直接写入；当前文件已有内容时生成候选稿。
+3. **重写当前场景**：修改当前 sec 文件，必须生成候选稿，不直接覆盖正式正文。
+
+工程策略上归为两类：
+
+1. **写入场景**：`write_next_scene` / `write_current_scene` — 由 GenerationOutputPolicy 判断 write 或 candidate。
+2. **修改场景**：`rewrite_current_scene` / `polish_current_scene` / `chat_edit_current_scene` / `more_exciting` / `more_reasonable` — 必须走 candidate。
+
+> **output_mode 说明**：前端不再发送 `overwrite`。写入场景用 `write_scene`，修改场景用 `candidate`，追加用 `append`。后端保留 `overwrite` 兼容但会自动转换为安全模式。
+
+## 8. 后续测试编写注意事项
 
 - E2E 应先明确入口和状态：无项目、已有项目、已打开文件、已连接 LLM 是四种不同前置条件。
 - 不要跳过文件选择：很多按钮只有当前文件存在才有意义。
