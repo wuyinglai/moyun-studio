@@ -44,6 +44,21 @@ def _build_runner(settings: Settings) -> WorkflowRunner:
     return WorkflowRunner(workflows_path, settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
 
+def _make_file_service(settings: Settings) -> FileService:
+    """创建 FileService 实例"""
+    return FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
+
+
+def _story_state_rel_path(project_id: str) -> str:
+    """获取 story-state.md 的 FileService 相对路径"""
+    return f"{project_id}/story-state.md"
+
+
+def _recent_context_rel_path(project_id: str) -> str:
+    """获取 recent-context.md 的 FileService 相对路径"""
+    return f"{project_id}/recent-context.md"
+
+
 @router.get("/workflows")
 async def list_workflows(
     settings: Settings = Depends(get_settings),
@@ -147,8 +162,8 @@ async def run_workflow(
     event_bus = getattr(request.app.state, "event_bus", None)
 
     # 验证项目
-    project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(req.project_id):
         from backend.core.exceptions import ProjectNotFoundError
         raise ProjectNotFoundError(req.project_id)
 
@@ -307,23 +322,23 @@ async def update_memory(
     高风险更新会自动暂停等待人工确认。
     """
     # 验证项目
-    project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(req.project_id):
         from backend.core.exceptions import ProjectNotFoundError
         raise ProjectNotFoundError(req.project_id)
 
     # 读取现有记忆
-    story_state_path = project_dir / "story-state.md"
-    recent_context_path = project_dir / "recent-context.md"
+    story_state_rel = _story_state_rel_path(req.project_id)
+    recent_context_rel = _recent_context_rel_path(req.project_id)
 
     story_state = ""
     recent_context = ""
 
-    if story_state_path.exists():
-        story_state = story_state_path.read_text(encoding="utf-8")
+    if await fs.exists(story_state_rel):
+        story_state, _, _ = await fs.read_file(story_state_rel)
 
-    if recent_context_path.exists():
-        recent_context = recent_context_path.read_text(encoding="utf-8")
+    if await fs.exists(recent_context_rel):
+        recent_context, _, _ = await fs.read_file(recent_context_rel)
 
     # 评估风险
     from backend.core.node_types import assess_memory_risk
@@ -370,7 +385,7 @@ async def update_memory(
         datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n\n" + draft_content
 
     try:
-        story_state_path.write_text(updated_story_state, encoding="utf-8")
+        await fs.write_file(story_state_rel, updated_story_state)
         updated_files.append("story-state.md")
     except Exception as e:
         logger.error("更新 story-state.md 失败: %s", e)
@@ -394,7 +409,7 @@ async def update_memory(
         updated_recent = recent_context + summary_entry
 
         try:
-            recent_context_path.write_text(updated_recent, encoding="utf-8")
+            await fs.write_file(recent_context_rel, updated_recent)
             updated_files.append("recent-context.md")
         except Exception as e:
             logger.error("更新 recent-context.md 失败: %s", e)
@@ -414,32 +429,38 @@ async def get_memory_status(
     settings: Settings = Depends(get_settings),
 ):
     """查询项目的记忆状态"""
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(project_id):
         from backend.core.exceptions import ProjectNotFoundError
         raise ProjectNotFoundError(project_id)
 
-    story_state_path = project_dir / "story-state.md"
-    recent_context_path = project_dir / "recent-context.md"
+    story_state_rel = _story_state_rel_path(project_id)
+    recent_context_rel = _recent_context_rel_path(project_id)
 
     story_state = ""
     recent_context = ""
     last_updated = None
+    story_state_exists = False
+    recent_context_exists = False
 
-    if story_state_path.exists():
-        story_state = story_state_path.read_text(encoding="utf-8")
-        last_updated = story_state_path.stat().st_mtime
+    if await fs.exists(story_state_rel):
+        story_state_exists = True
+        content, _, mtime = await fs.read_file(story_state_rel)
+        story_state = content
+        last_updated = mtime
 
-    if recent_context_path.exists():
-        recent_context = recent_context_path.read_text(encoding="utf-8")
+    if await fs.exists(recent_context_rel):
+        recent_context_exists = True
+        content, _, _ = await fs.read_file(recent_context_rel)
+        recent_context = content
 
     # 统计近期上下文中最近的条目数
     recent_entries = recent_context.count("## ") if recent_context else 0
 
     return ApiResponse.ok({
         "project_id": project_id,
-        "story_state_exists": story_state_path.exists(),
-        "recent_context_exists": recent_context_path.exists(),
+        "story_state_exists": story_state_exists,
+        "recent_context_exists": recent_context_exists,
         "recent_entries_count": recent_entries,
         "story_state_length": len(story_state),
         "recent_context_length": len(recent_context),
