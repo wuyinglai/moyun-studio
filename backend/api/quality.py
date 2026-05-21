@@ -11,7 +11,7 @@ import uuid
 from fastapi import APIRouter, Depends
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError
+from backend.core.exceptions import ProjectNotFoundError
 from backend.core.quality_service import QualityService
 from backend.schemas.common import ApiResponse
 from backend.schemas.quality import (
@@ -50,9 +50,7 @@ async def review_chapter(
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
 
-    target_path = project_dir / req.target_file
-    if not target_path.exists():
-        raise ResourceNotFoundError(resource="file", identifier=req.target_file)
+    # 文件存在性由 QualityService.perform_review 内部通过 FileService 校验
 
     svc = QualityService(settings)
     review_id = str(uuid.uuid4())[:8]
@@ -86,16 +84,7 @@ async def review_chapters_batch(
 
     for target_file in req.target_files:
         try:
-            target_path = project_dir / target_file
-            if not target_path.exists():
-                reviews.append(ReviewItem(
-                    target_file=target_file,
-                    status="error",
-                    error=f"文件不存在: {target_file}",
-                ))
-                failed += 1
-                continue
-
+            # 文件存在性由 perform_review 内部通过 FileService 校验
             result = await svc.perform_review(req.project_id, target_file, None)
 
             review_id = str(uuid.uuid4())[:8]

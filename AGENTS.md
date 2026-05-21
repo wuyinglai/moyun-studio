@@ -29,7 +29,7 @@ These rules are enforced at the product level. Violating any of them will break 
 3. **默认每章 5 个场景，每卷 12 章。**
 4. **`chapters/vol-01/ch-001/sec-001.md` 是标准场景路径。**
 5. **polish / rewrite / chat edit / more exciting / more reasonable 等高风险修改默认必须生成 candidate，不直接覆盖正式正文。**
-6. **写下一部分只应写入新场景或空场景；如果目标场景已有内容，应生成 candidate 或要求确认。**
+6. **写下一场景只应写入新场景或空场景；如果目标场景已有内容，应生成 candidate 或要求确认。**
 7. **Candidate adopt 前必须检查 `base_hash` / `base_mtime`，采用前必须写 revision-log。**
 8. **`candidate.source_path` 必须是项目内相对路径，不能带重复 project_id。**
 9. **`file.updated` / SSE 事件不得携带完整正文 content。**
@@ -38,6 +38,7 @@ These rules are enforced at the product level. Violating any of them will break 
 12. **API Key 不得写入 localStorage、日志、截图、测试报告、E2E 质量报告。**
 13. **Lite 入口和 Professional 主工作台入口都必须同时考虑，不要只改其中一个。**
 14. **修改用户流程时必须同步 `docs/frontend-user-flow.md` 和 Wiki。**
+15. **`output_mode=overwrite` 是旧兼容值，新代码不再使用。新代码使用 `write_scene` / `candidate` / `append`。已有 sec 文件不能被静默覆盖。**
 
 ---
 
@@ -223,6 +224,63 @@ npm run dev
 ```
 
 API 文档：启动后端后访问 `/docs`（Swagger）或 `/redoc`
+
+---
+
+## Solo Final Response Format
+
+当完成任何任务后，Solo 必须在最终回复中使用以下格式，方便 AutoHotkey 复制给 ChatGPT 验收：
+
+```
+# Solo Result
+
+## Task Title
+
+本次任务标题。
+
+## Branch
+
+当前分支。
+
+## Commit
+
+commit id。如果没有提交，请写：Not committed，并说明原因。
+
+## Summary
+
+用 3-8 条 bullet 总结本次完成内容。
+
+## Modified Files
+
+列出主要修改文件。
+
+## Commands Run
+
+列出运行过的命令和结果。
+
+## Test Results
+
+说明测试结果。
+
+## Remaining Issues
+
+列出来完成问题。如果没有，写：None.
+
+## Risks / Notes for ChatGPT Review
+
+指出希望 ChatGPT 重点检查的地方。
+
+## Git Status
+
+粘贴 git status --short 的结果。如果工作区干净，写：clean.
+```
+
+要求：
+- 最终回复必须包含以上全部小节。
+- 不要只说"已完成"。
+- 不要省略 commit id。
+- 如果测试没跑，必须写 not run 并说明原因。
+- 不要包含 API Key、Cookie、浏览器登录信息、用户隐私。
 
 ---
 
