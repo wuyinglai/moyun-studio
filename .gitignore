@@ -65,4 +65,7 @@ _misc/scripts/
 # 测试产物
 .pytest_cache/
 test-results/
+playwright-report/
+frontend/playwright-report/
+frontend/test-results/
 .worktrees/
