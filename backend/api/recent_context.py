@@ -8,7 +8,6 @@
 from datetime import datetime
 import json
 import logging
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -16,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError
+from backend.core.file_ops import FileService
 from backend.schemas.common import ApiResponse
 
 logger = logging.getLogger(__name__)
@@ -90,38 +90,43 @@ DEFAULT_RECENT_CONTEXT = """# 近期上下文摘要
 
 # ─── 工具函数 ────────────────────────────────────────────────────────
 
-def _get_recent_context_path(project_id: str, settings: Settings) -> Path:
-    """获取近期上下文文件路径"""
-    return settings.projects_path / project_id / "recent-context.md"
+def _make_file_service(settings: Settings) -> FileService:
+    """创建 FileService 实例"""
+    return FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
 
 
-def _get_chapters_meta_path(project_id: str, settings: Settings) -> Path:
-    """获取章节元数据存储路径"""
-    return settings.projects_path / project_id / ".chapters-meta.json"
+def _recent_context_rel_path(project_id: str) -> str:
+    """获取 recent-context.md 的 FileService 相对路径"""
+    return f"{project_id}/recent-context.md"
 
 
-def _load_chapters_meta(project_id: str, settings: Settings) -> dict[str, Any]:
+def _chapters_meta_rel_path(project_id: str) -> str:
+    """获取 .chapters-meta.json 的 FileService 相对路径"""
+    return f"{project_id}/.chapters-meta.json"
+
+
+async def _load_chapters_meta(fs: FileService, project_id: str) -> dict[str, Any]:
     """加载章节元数据"""
-    meta_path = _get_chapters_meta_path(project_id, settings)
-    if meta_path.exists():
-        return json.loads(meta_path.read_text(encoding="utf-8"))
+    meta_rel_path = _chapters_meta_rel_path(project_id)
+    if await fs.exists(meta_rel_path):
+        content, _, _ = await fs.read_file(meta_rel_path)
+        return json.loads(content)
     return {"chapters": [], "total_words": 0}
 
 
-def _save_chapters_meta(project_id: str, settings: Settings, data: dict[str, Any]) -> None:
+async def _save_chapters_meta(fs: FileService, project_id: str, data: dict[str, Any]) -> None:
     """保存章节元数据"""
-    meta_path = _get_chapters_meta_path(project_id, settings)
-    meta_path.parent.mkdir(parents=True, exist_ok=True)
-    meta_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    meta_rel_path = _chapters_meta_rel_path(project_id)
+    await fs.write_file(meta_rel_path, json.dumps(data, ensure_ascii=False, indent=2))
 
 
-def _update_recent_context_file(
+async def _update_recent_context_file(
+    fs: FileService,
     project_id: str,
-    settings: Settings,
     chapters: list[ChapterSummary]
 ) -> None:
     """更新近期上下文Markdown文件"""
-    file_path = _get_recent_context_path(project_id, settings)
+    rel_path = _recent_context_rel_path(project_id)
 
     # 构建Markdown内容
     if not chapters:
@@ -155,7 +160,7 @@ def _update_recent_context_file(
 - 章节数：{len(chapters)}
 """
 
-    file_path.write_text(content, encoding="utf-8")
+    await fs.write_file(rel_path, content)
 
 
 # ─── 路由 ────────────────────────────────────────────────────────────
@@ -176,13 +181,14 @@ async def get_recent_context(
     Raises:
         ProjectNotFoundError: 项目不存在时抛出
     """
+    fs = _make_file_service(settings)
+
     # 检查项目是否存在
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     # 加载章节元数据
-    meta = _load_chapters_meta(project_id, settings)
+    meta = await _load_chapters_meta(fs, project_id)
     chapters_data = meta.get("chapters", [])
 
     # 如果没有数据，返回默认结构
@@ -237,13 +243,14 @@ async def append_chapter_summary(
     Raises:
         ProjectNotFoundError: 项目不存在时抛出
     """
+    fs = _make_file_service(settings)
+
     # 检查项目是否存在
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     # 加载现有章节元数据
-    meta = _load_chapters_meta(project_id, settings)
+    meta = await _load_chapters_meta(fs, project_id)
     chapters_data = meta.get("chapters", [])
 
     # 创建新章节摘要
@@ -267,11 +274,11 @@ async def append_chapter_summary(
     meta["total_words"] = sum(ch.get("word_count", 0) for ch in chapters_data)
     meta["last_updated"] = datetime.now().isoformat()
 
-    _save_chapters_meta(project_id, settings, meta)
+    await _save_chapters_meta(fs, project_id, meta)
 
     # 更新近期上下文Markdown文件
     chapters = [ChapterSummary(**ch) for ch in chapters_data]
-    _update_recent_context_file(project_id, settings, chapters)
+    await _update_recent_context_file(fs, project_id, chapters)
 
     logger.info(
         "章节摘要已追加: %s, 章节: %s, 当前摘要数: %d",
@@ -293,20 +300,21 @@ async def clear_recent_context(
     Returns:
         清空成功响应
     """
+    fs = _make_file_service(settings)
+
     # 检查项目是否存在
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     # 清空章节元数据
-    _save_chapters_meta(project_id, settings, {
+    await _save_chapters_meta(fs, project_id, {
         "chapters": [],
         "total_words": 0,
         "last_updated": datetime.now().isoformat()
     })
 
     # 更新Markdown文件
-    _update_recent_context_file(project_id, settings, [])
+    await _update_recent_context_file(fs, project_id, [])
 
     logger.info("近期上下文已清空: %s", project_id)
     return ApiResponse.ok(message="近期上下文已清空")
