@@ -85,12 +85,16 @@
       </aside>
 
       <main class="lite-editor">
+        <ErrorBoundary
+          title="编辑器出错"
+          description="写作区域发生了意外错误，你可以重试或刷新页面。"
+        >
         <div class="editor-top">
           <div>
             <p class="eyebrow">
-              当前章节
+              当前场景
             </p>
-            <h1>{{ currentFilePath ? formatChapterLabel(currentFilePath) : '尚未打开章节' }}</h1>
+            <h1>{{ currentFilePath ? formatChapterLabel(currentFilePath) : '尚未打开场景' }}</h1>
             <p
               v-if="completionSummary"
               class="completion-summary"
@@ -165,21 +169,21 @@
             :disabled="!currentFilePath || generating || !nextCards.length"
             @click="rewriteCurrent"
           >
-            重写这一章
+            重写当前场景
           </button>
           <button
             class="ghost-btn"
             :disabled="!currentFilePath || generating || !nextCards.length"
             @click="improveCurrent('more_exciting')"
           >
-            更爽一点
+            让当前场景更爽
           </button>
           <button
             class="ghost-btn"
             :disabled="!currentFilePath || generating || !nextCards.length"
             @click="improveCurrent('more_reasonable')"
           >
-            更合理一点
+            让当前场景更合理
           </button>
         </div>
         <div
@@ -204,6 +208,7 @@
         >
           {{ activeWorkStatus?.detail || `正在写${pendingTargetLabel}，正文会实时出现在编辑器里...` }}
         </div>
+        </ErrorBoundary>
       </main>
 
       <aside class="lite-assistant">
@@ -217,7 +222,7 @@
             <p>{{ chapterMilestone.nextGoal }}</p>
           </div>
           <div class="panel-title">
-            <span>下一节爽点卡</span>
+            <span>下一场景爽点卡</span>
             <button
               class="link-btn"
               :disabled="loadingOptions"
@@ -236,7 +241,7 @@
             v-if="generating"
             class="option-loading"
           >
-            正在自动写{{ pendingTargetLabel }}，完成后会刷新下一节爽点卡。
+            正在自动写{{ pendingTargetLabel }}，完成后会刷新下一场景爽点卡。
           </p>
           <p
             v-else-if="loadingOptions"
@@ -254,7 +259,7 @@
             v-else-if="!nextCards.length"
             class="option-loading"
           >
-            打开一个章节后生成下一节方向。
+            打开一个场景后生成下一场景方向。
           </p>
           <template v-if="!generating">
           <button
@@ -376,6 +381,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Modal } from 'ant-design-vue'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore, type FileNode } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
@@ -462,7 +468,7 @@ const optionActionLabel = computed(() => {
     const verb = isChapterStart(nextTargetFile.value) && chapterMilestone.value ? '开启' : '自动写'
     return `选这个，${verb}${formatChapterLabel(nextTargetFile.value)}`
   }
-  return '选这个，自动写下一节'
+  return '选这个，自动写下一场景'
 })
 
 const currentChapterProgress = computed(() => {
@@ -528,7 +534,7 @@ const activeWorkStatus = computed(() => {
   if (loadingOptions.value) {
     return {
       title: '正在生成爽点卡',
-      detail: '正在读取前文、故事引擎和近期上下文，给下一节准备 3 个方向。',
+      detail: '正在读取前文、故事引擎和近期上下文，给下一场景准备 3 个方向。',
     }
   }
   if (creating.value) {
@@ -609,7 +615,7 @@ async function startProject(card: LiteIdeaCard) {
       obstacle: card.core_conflict,
       payoff: card.selling_point,
       hook: '让更大的冲突在结尾露出苗头',
-      advancement: '完成开局压迫和第一次行动选择，为下一节留出明确冲突。',
+      advancement: '完成开局压迫和第一次行动选择，为下一场景留出明确冲突。',
     }
     nextTargetFile.value = created.first_file
     nextCards.value = []
@@ -629,15 +635,15 @@ function formatChapterLabel(path: string) {
   const parts = []
   if (vol) parts.push(`第${Number(vol)}卷`)
   if (ch) parts.push(`第${Number(ch)}章`)
-  if (sec) parts.push(`第${Number(sec)}节`)
+  if (sec) parts.push(`第${Number(sec)}场景`)
   return parts.join(' ')
 }
 
 function candidateActionText(action: LiteWriteAction) {
   if (candidateDraft.value?.path.endsWith('.chat.md')) return '聊天改稿'
-  if (action === 'rewrite') return '重写这一章'
-  if (action === 'more_exciting') return '更爽一点'
-  if (action === 'more_reasonable') return '更合理一点'
+  if (action === 'rewrite') return '重写当前场景'
+  if (action === 'more_exciting') return '让当前场景更爽'
+  if (action === 'more_reasonable') return '让当前场景更合理'
   return '候选稿'
 }
 
@@ -681,7 +687,7 @@ function chapterProgressText(path: string) {
   })
   const total = Math.max(sameChapter.length, 4)
   const done = sameChapter.filter((node) => chapterStatus.value[node.path] === 'done').length
-  return `第${ch}章 ${Math.min(done, total)}/${total} 节`
+  return `第${ch}章 ${Math.min(done, total)}/${total} 场景`
 }
 
 function isAbortError(e: unknown) {
@@ -769,6 +775,7 @@ function normalizeChapterHeading(path: string, text: string) {
     .replace(/^#+\s*/, '')
     .replace(/第\d+卷/g, '')
     .replace(/第\d+章/g, '')
+    .replace(/第\d+场景/g, '')
     .replace(/第\d+节/g, '')
     .replace(/\s*-\s*/g, ' ')
     .trim() || projectStore.currentProject?.name || ''
@@ -787,7 +794,7 @@ function buildOpeningCardFromProject(): LiteNextOptionCard {
     obstacle: project?.background || '旧秩序和当面施压的人挡在前面。',
     payoff: project?.theme || '完成开局爽点兑现',
     hook: '让更大的冲突在结尾露出苗头',
-    advancement: '把主角目标、压迫来源和下一节冲突接力点建立起来。',
+    advancement: '把主角目标、压迫来源和下一场景冲突接力点建立起来。',
   }
 }
 
@@ -848,7 +855,7 @@ async function confirmDirty() {
   return await new Promise<boolean>((resolve) => {
     Modal.confirm({
       title: '有未保存内容',
-      content: '当前章节还没有保存，确定继续切换吗？',
+      content: '当前场景还没有保存，确定继续切换吗？',
       okText: '继续',
       cancelText: '取消',
       onOk: () => resolve(true),
@@ -876,10 +883,10 @@ async function acceptCandidate() {
   const projectId = projectStore.currentProject?.id
   if (!draft || !projectId) return
   saving.value = true
-  setWorkStatus('正在采用候选稿', '正在覆盖原章节、清理候选文件，并刷新下一节方向。')
+  setWorkStatus('正在采用候选稿', '正在覆盖原场景、清理候选文件，并刷新下一场景方向。')
   try {
     await fileStore.saveFile(projectId, draft.sourcePath, content.value)
-    setWorkStatus('正在清理候选稿', '候选稿已经写入原章节，正在删除临时文件。')
+    setWorkStatus('正在清理候选稿', '候选稿已经写入原场景，正在删除临时文件。')
     await fileStore.deleteFile(projectId, draft.path)
     candidateDraft.value = null
     delete streamingBuffers.value[draft.path]
@@ -891,7 +898,7 @@ async function acceptCandidate() {
     editorStore.setCurrentFile(draft.sourcePath)
     editorStore.loadContent(draft.sourcePath, content.value)
     await fileStore.loadTree(projectId)
-    setWorkStatus('正在刷新下一节方向', '正在根据采用后的正文重新生成下一节爽点卡。')
+    setWorkStatus('正在刷新下一场景方向', '正在根据采用后的正文重新生成下一场景爽点卡。')
     await refreshOptions(draft.sourcePath)
     notification.success('已采用候选稿并替换原文')
   } finally {
@@ -922,11 +929,11 @@ async function refreshOptions(baseFile = currentFilePath.value || null) {
   loadingOptions.value = true
   optionError.value = ''
   nextCards.value = []
-  setWorkStatus('正在生成爽点卡', '正在读取前文、故事引擎和近期上下文，给下一节准备 3 个方向。')
+  setWorkStatus('正在生成爽点卡', '正在读取前文、故事引擎和近期上下文，给下一场景准备 3 个方向。')
   try {
     const data = await fetchLiteNextOptions(projectId, baseFile, prefs)
     if (requestId !== optionRequestId.value) return
-    setWorkStatus('爽点卡已生成', '下一节方向已经准备好，可以选择一张卡继续写。')
+    setWorkStatus('爽点卡已生成', '下一场景方向已经准备好，可以选择一张卡继续写。')
     nextCards.value = data.cards
     nextTargetFile.value = data.next_file
     if (!data.cards.length) {
@@ -975,12 +982,12 @@ async function runChatRevision() {
   const card: LiteNextOptionCard = {
     id: `chat-revision-${Date.now()}`,
     title: '聊天改稿',
-    beat: `根据用户聊天指令改写当前章节：${instruction}`,
+    beat: `根据用户聊天指令改写当前场景：${instruction}`,
     scene: `保留${label}的主要剧情，只调整用户指出的问题。`,
     protagonist_desire: '保持人物核心欲望不变，让行动更贴合用户修改方向。',
-    obstacle: '不能破坏前文逻辑、人物动机、章节钩子和既有设定。',
+    obstacle: '不能破坏前文逻辑、人物动机、场景钩子和既有设定。',
     payoff: `完成用户要求：${instruction}`,
-    hook: '保留或加强本节结尾钩子。',
+    hook: '保留或加强本场景结尾钩子。',
     advancement: '生成一版可采用的候选稿，供用户确认后替换原文。',
   }
   chatRevisionNote.value = `正在根据“${instruction}”生成候选稿。`
@@ -1015,7 +1022,7 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
   pendingTargetLabel.value = formatChapterLabel(sourcePath)
   setWorkStatus(
     isCandidate ? `正在生成${candidateLabel}候选稿` : `正在写${pendingTargetLabel.value}`,
-    isCandidate ? '正在准备当前章节、用户要求和故事状态，候选稿不会覆盖原文。' : '正在准备前文、故事引擎、近期上下文和本节爽点卡。',
+    isCandidate ? '正在准备当前场景、用户要求和故事状态，候选稿不会覆盖原文。' : '正在准备前文、故事引擎、近期上下文和本场景爽点卡。',
   )
   qualitySummary.value = isCandidate
     ? `正在生成${candidateActionText(action)}候选稿，原文不会被覆盖。`
@@ -1057,7 +1064,7 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
       },
       onStatus: (message) => {
         if (message.includes('更新故事状态')) {
-          setWorkStatus('正在更新故事状态', '正在写入故事引擎、近期上下文和章节记忆，保证后续连续性。')
+          setWorkStatus('正在更新故事状态', '正在写入故事引擎、近期上下文和场景记忆，保证后续连续性。')
         } else if (message.includes('审稿')) {
           setWorkStatus('正在质量审稿', '正在检查逻辑、爽点兑现和连续性。')
         }
@@ -1103,7 +1110,7 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
       },
       onDone: (result) => {
         setWorkStatus(
-          isCandidate ? '候选稿已生成' : '章节已写入',
+          isCandidate ? '候选稿已生成' : '场景已写入',
           isCandidate ? '候选稿已保存，可以采用或放弃。' : '正文已经保存，正在准备后续爽点卡。',
         )
         generatedFilePath = result.file_path
@@ -1136,9 +1143,9 @@ async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, 
     pendingTargetLabel.value = ''
     await fileStore.loadTree(projectId)
     if (!isCandidate) {
-      setWorkStatus('正在刷新下一节方向', '正在根据最新正文生成下一节爽点卡。')
+      setWorkStatus('正在刷新下一场景方向', '正在根据最新正文生成下一场景爽点卡。')
       await refreshOptions(generatedFilePath || currentFilePath.value || null)
-      notification.success('章节已生成')
+      notification.success('场景已生成')
     } else {
       notification.success('候选稿已生成')
     }

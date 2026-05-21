@@ -17,7 +17,6 @@ import SearchModal from '@/components/modals/SearchModal.vue'
 import QuickOpenModal from '@/components/modals/QuickOpenModal.vue'
 import TrashModal from '@/components/modals/TrashModal.vue'
 import BackupModal from '@/components/modals/BackupModal.vue'
-import { useNotificationStore } from '@/stores/notification'
 import { useAppInit } from '@/composables/useApp'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useBackendCheck } from '@/composables/useBackendCheck'
@@ -65,45 +64,18 @@ onMounted(async () => {
   }
 
   // beforeunload：刷新/关闭页面时拦截
-  window.addEventListener('beforeunload', handleBeforeUnload)
-  // G0114 全局错误捕获
-  window.addEventListener('error', handleGlobalError)
-  window.addEventListener('unhandledrejection', handlePromiseRejection)
+window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 onUnmounted(() => {
   cleanupApp()
   window.removeEventListener('beforeunload', handleBeforeUnload)
-  window.removeEventListener('error', handleGlobalError)
-  window.removeEventListener('unhandledrejection', handlePromiseRejection)
 })
 
 function handleBeforeUnload(e: BeforeUnloadEvent) {
   if (editorStore.isDirty) {
     e.preventDefault()
     e.returnValue = '有未保存的内容，确定要离开吗？'
-  }
-}
-
-// G0114 全局错误处理
-function handleGlobalError(event: ErrorEvent) {
-  console.error('未捕获的错误:', event.error || event.message)
-  // 避免通知过多，只对非调试错误进行提示
-  if (event.error && !event.message.includes('ResizeObserver')) {
-    try {
-      useNotificationStore().error(`发生错误: ${event.message}`)
-    } catch {
-      // 通知失败时忽略
-    }
-  }
-}
-
-function handlePromiseRejection(event: PromiseRejectionEvent) {
-  console.error('未捕获的 Promise 错误:', event.reason)
-  try {
-    useNotificationStore().error(`异步错误: ${(event.reason as any)?.message || '未知错误'}`)
-  } catch {
-    // 通知失败时忽略
   }
 }
 

@@ -25,11 +25,16 @@
         class="center-top"
         :style="{ height: topHeight }"
       >
-        <div class="area-editor">
-          <EditorTabs />
-          <EditorToolbar />
-          <MarkdownEditor />
-        </div>
+        <ErrorBoundary
+          title="编辑器加载出错"
+          description="编辑器发生了意外错误，你可以重试或刷新页面。"
+        >
+          <div class="area-editor">
+            <EditorTabs />
+            <EditorToolbar />
+            <MarkdownEditor />
+          </div>
+        </ErrorBoundary>
       </div>
       <div
         class="divider divider-h"
@@ -39,9 +44,14 @@
         class="center-bottom"
         :style="{ height: bottomHeight }"
       >
-        <div class="area-chat">
-          <ChatPanel />
-        </div>
+        <ErrorBoundary
+          title="对话面板出错"
+          description="对话面板发生了意外错误，你可以重试或刷新页面。"
+        >
+          <div class="area-chat">
+            <ChatPanel />
+          </div>
+        </ErrorBoundary>
       </div>
     </main>
 
@@ -57,7 +67,12 @@
       :style="{ width: rightWidth }"
       aria-label="辅助面板"
     >
-      <RightPanel />
+      <ErrorBoundary
+        title="辅助面板出错"
+        description="辅助面板发生了意外错误，你可以重试或刷新页面。"
+      >
+        <RightPanel />
+      </ErrorBoundary>
     </aside>
   </div>
 </template>
@@ -70,6 +85,7 @@ import EditorToolbar from '@/components/editor/EditorToolbar.vue'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import RightPanel from '@/components/right-panel/RightPanel.vue'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import { getStorage, setStorage, STORAGE_KEYS } from '@/utils/storage'
 import { saveConfig as saveRemoteConfig } from '@/services/configService'
 
