@@ -142,6 +142,17 @@ class LLMAPIError(LLMError):
         )
 
 
+class LLMCircuitOpenError(LLMError):
+    """LLM 熔断器开启 — 模型连续失败，已临时熔断"""
+
+    def __init__(self, model: str, remaining_timeout: float = 0):
+        super().__init__(
+            f"模型连续失败，已临时熔断，请稍后重试或检查模型服务: {model}",
+            {"model": model, "remaining_timeout": remaining_timeout},
+        )
+        self.code = "LLM_CIRCUIT_OPEN"
+
+
 class TaskError(MoyunException):
     """任务相关错误（默认 code: TASK_ERROR）"""
 

@@ -20,6 +20,7 @@ from backend.core.event_bus import EventBus
 from backend.core.exceptions import MoyunException
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
+from backend.core.llm_circuit_breaker import CircuitBreakerConfig, init_circuit_breaker
 from backend.core.pipeline_validator import validate_all_pipelines
 from backend.core.task_queue import TaskQueue, run_task_worker
 
@@ -37,6 +38,14 @@ async def lifespan(app: FastAPI):
     settings.workspace_path.mkdir(parents=True, exist_ok=True)
     settings.projects_path.mkdir(parents=True, exist_ok=True)
     settings.prompts_path.mkdir(parents=True, exist_ok=True)
+
+    # ── LLM 熔断器初始化 ────────────────────────────────────────
+    breaker_config = CircuitBreakerConfig(
+        failure_threshold=settings.llm_circuit_failure_threshold,
+        reset_timeout_seconds=settings.llm_circuit_reset_timeout_seconds,
+        enabled=settings.llm_circuit_breaker_enabled,
+    )
+    init_circuit_breaker(breaker_config)
 
     # ── Pipeline YAML 校验 ──────────────────────────────────────
     if settings.validate_pipelines_on_start:
@@ -331,6 +340,7 @@ def _moyun_to_http_status(error_code: str) -> int:
         "VALIDATION_ERROR": 422,
         "LLM_ERROR": 503,
         "LLM_TIMEOUT": 504,
+        "LLM_CIRCUIT_OPEN": 503,
         "TASK_ERROR": 400,
         "TASK_NOT_FOUND": 404,
         "RATE_LIMIT": 429,

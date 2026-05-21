@@ -103,6 +103,20 @@ class Settings(BaseSettings):
         description="启动时是否校验 pipeline YAML 配置（默认 True）",
     )
 
+    # ─── LLM 熔断器配置 ────────────────────────────────────────
+    llm_circuit_breaker_enabled: bool = Field(
+        default=True,
+        description="是否启用 LLM 熔断器（默认 True）",
+    )
+    llm_circuit_failure_threshold: int = Field(
+        default=3,
+        description="连续失败次数阈值，达到后熔断（默认 3）",
+    )
+    llm_circuit_reset_timeout_seconds: int = Field(
+        default=60,
+        description="熔断后等待恢复的超时秒数（默认 60）",
+    )
+
     @field_validator("workspace_path", mode="before")
     @classmethod
     def resolve_workspace(cls, v: str | Path) -> Path:

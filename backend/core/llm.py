@@ -16,7 +16,8 @@ try:
 except ImportError:
     tiktoken = None
 
-from backend.core.exceptions import LLMError
+from backend.core.exceptions import LLMError, LLMCircuitOpenError
+from backend.core.llm_circuit_breaker import get_circuit_breaker, LLMCircuitBreaker
 
 if TYPE_CHECKING:
     pass
@@ -303,6 +304,17 @@ class LLMService:
         """
         model = model or self.config.model
 
+        # ── 熔断器检查 ──────────────────────────────────────────
+        breaker = get_circuit_breaker()
+        breaker_key = LLMCircuitBreaker.make_key(
+            self.config.provider,
+            self.config.api_base or "",
+            model,
+        )
+        if not breaker.allow_request(breaker_key):
+            remaining = breaker.get_remaining_timeout(breaker_key)
+            raise LLMCircuitOpenError(model=model, remaining_timeout=remaining)
+
         call_kwargs = {
             "model": model,
             "messages": messages,
@@ -335,7 +347,15 @@ class LLMService:
                     if response.choices:
                         yield response.choices[0].message.content
 
+                # 调用成功，记录到熔断器
+                breaker.record_success(breaker_key)
+
+            except LLMCircuitOpenError:
+                raise
             except Exception as e:
+                # 调用失败，记录到熔断器
+                error_type = type(e).__name__
+                breaker.record_failure(breaker_key, error_type)
                 raise LLMError(message=f"LLM调用失败: {e!s}")
 
     async def _call_with_retry(self, **kwargs) -> Any:
