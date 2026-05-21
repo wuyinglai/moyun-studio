@@ -390,7 +390,7 @@ flowchart TD
   H --> I["meta: 打开目标 sec"]
   I --> J["delta: textarea 流式显示"]
   J --> K["done: 写盘完成 + quality/story summary"]
-  K --> L["刷新文件树和下一节爽点卡"]
+  K --> L["刷新文件树和下一场景爽点卡"]
   L --> M{"用户选择修改动作?"}
   M -->|手动编辑| N["保存: POST /api/file"]
   M -->|重写/更爽/聊天改稿| O["生成 candidate 文件"]

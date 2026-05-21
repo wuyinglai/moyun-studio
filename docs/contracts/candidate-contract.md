@@ -1,0 +1,66 @@
+# Candidate Contract
+
+## Core Rules
+
+1. High-risk actions must generate candidates, not overwrite directly. The following actions default to candidate mode:
+   - `rewrite` - full rewrite of a scene
+   - `polish` - prose polishing
+   - `chat edit` - chat-guided revision
+   - `more_exciting` - intensity boost
+   - `more_reasonable` - logic improvement
+
+2. `candidate.source_path` must be a project-relative path without duplicate `project_id`.
+   - Correct: `chapters/vol-01/ch-001/sec-001.md`
+   - Wrong: `my-project/chapters/vol-01/ch-001/sec-001.md`
+
+3. Before adopting a candidate, the backend must verify `base_hash` or `base_mtime`. If the source file changed after the candidate was created, adoption fails with a conflict error.
+
+4. Before adopting, the backend must write a revision-log entry. The revision log records what changed, why, and which candidate was adopted.
+
+## Candidate Lifecycle
+
+```text
+pending -> adopted
+pending -> rejected
+pending -> discarded
+```
+
+- `pending` - candidate generated, awaiting user decision
+- `adopted` - user accepted, source file replaced with candidate content
+- `rejected` - user declined, candidate marked as rejected
+- `discarded` - candidate cleaned up without explicit decision
+
+## Candidate Storage
+
+Candidates are stored in the project `.candidates/` directory:
+
+```text
+project/
+  .candidates/
+    chapters__vol-01__ch-001__sec-001.rewrite.md
+    chapters__vol-01__ch-001__sec-001.polish.md
+```
+
+## API
+
+### POST /api/candidates
+
+Create a new candidate.
+
+### GET /api/candidates?project_id=xxx&source_path=yyy
+
+List candidates for a source file.
+
+### POST /api/candidates/{id}/adopt
+
+Adopt a candidate. Checks `base_hash` or `base_mtime` before applying.
+
+### POST /api/candidates/{id}/reject
+
+Reject a candidate.
+
+## Safety Checks
+
+- Adopting a candidate whose source file has changed must fail with a conflict error.
+- Candidate content must never be saved directly to the source file without the adopt flow.
+- The frontend must prevent direct editing of candidate files in the main editor.

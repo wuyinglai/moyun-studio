@@ -140,7 +140,7 @@ API 文档：启动后端后访问 `/docs`（Swagger）或 `/redoc`
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **newmoyun** (7064 symbols, 12376 relationships, 264 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **moyun-studio** (11043 symbols, 19251 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -163,10 +163,10 @@ This project is indexed by GitNexus as **newmoyun** (7064 symbols, 12376 relatio
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/newmoyun/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/newmoyun/clusters` | All functional areas |
-| `gitnexus://repo/newmoyun/processes` | All execution flows |
-| `gitnexus://repo/newmoyun/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/moyun-studio/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/moyun-studio/clusters` | All functional areas |
+| `gitnexus://repo/moyun-studio/processes` | All execution flows |
+| `gitnexus://repo/moyun-studio/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 

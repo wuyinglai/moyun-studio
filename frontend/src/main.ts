@@ -49,10 +49,10 @@ window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => 
 
 // 3. 全局资源/脚本错误
 window.addEventListener('error', (event: ErrorEvent) => {
-  const msg = event.message || String(event.error)
+  const msg = sanitizeErrorMessage(event.error || event.message)
   console.error('[Global Error]:', msg)
 
-  if (!isIgnorableError(event.error)) {
+  if (!isIgnorableError(event.error || event.message)) {
     try {
       useNotificationStore().error(`页面出现错误，请刷新重试`)
     } catch {
