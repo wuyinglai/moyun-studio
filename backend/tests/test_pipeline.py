@@ -374,3 +374,244 @@ class TestSystemVariables:
         )
         assert "pending_foreshadowing" in vars
         assert "active_quests" in vars
+
+
+# ─── Output Mode Normalization & Direct Write Protection Tests ────────────────
+
+class TestNormalizeOutputMode:
+    """_normalize_output_mode 防御性测试：legacy overwrite/rewrite 必须被规范化为安全模式"""
+
+    @pytest.fixture
+    def runner(self, mock_llm_service, mock_file_service, tmp_path):
+        prompts_dir = tmp_path / "prompts"
+        prompts_dir.mkdir()
+        return PipelineRunner(prompts_dir, mock_llm_service, mock_file_service)
+
+    @pytest.mark.asyncio
+    async def test_overwrite_existing_scene_normalized_to_candidate(self, runner, mock_file_service):
+        """overwrite + 已有内容的场景文件 → candidate（不直接覆盖）"""
+        # Override mock to return content for sec-001.md
+        async def mock_read_existing(path):
+            path_str = str(path)
+            if "sec-001.md" in path_str:
+                return "已有场景内容", None, {}
+            return "", None, {}
+
+        mock_file_service.read_file = AsyncMock(side_effect=mock_read_existing)
+
+        result = await runner._normalize_output_mode(
+            pipeline_name="generate",
+            project_id="test-project",
+            target_file="chapters/vol-01/ch-001/sec-001.md",
+            output_mode="overwrite",
+        )
+        assert result == "candidate"
+
+    @pytest.mark.asyncio
+    async def test_rewrite_existing_scene_normalized_to_candidate(self, runner, mock_file_service):
+        """rewrite + 已有内容的场景文件 → candidate（不直接覆盖）"""
+        async def mock_read_existing(path):
+            path_str = str(path)
+            if "sec-001.md" in path_str:
+                return "已有场景内容", None, {}
+            return "", None, {}
+
+        mock_file_service.read_file = AsyncMock(side_effect=mock_read_existing)
+
+        result = await runner._normalize_output_mode(
+            pipeline_name="generate",
+            project_id="test-project",
+            target_file="chapters/vol-01/ch-001/sec-001.md",
+            output_mode="rewrite",
+        )
+        assert result == "candidate"
+
+    @pytest.mark.asyncio
+    async def test_overwrite_empty_scene_normalized_to_write_scene(self, runner):
+        """overwrite + 空场景文件 → write_scene"""
+        # mock_file_service returns empty content for unknown files
+        result = await runner._normalize_output_mode(
+            pipeline_name="generate",
+            project_id="test-project",
+            target_file="chapters/vol-01/ch-001/sec-099.md",
+            output_mode="overwrite",
+        )
+        assert result == "write_scene"
+
+    @pytest.mark.asyncio
+    async def test_write_scene_empty_stays_write_scene(self, runner):
+        """write_scene + 空场景文件 → write_scene"""
+        result = await runner._normalize_output_mode(
+            pipeline_name="generate",
+            project_id="test-project",
+            target_file="chapters/vol-01/ch-001/sec-099.md",
+            output_mode="write_scene",
+        )
+        assert result == "write_scene"
+
+    @pytest.mark.asyncio
+    async def test_overwrite_dangerous_path_normalized_to_candidate(self, runner):
+        """overwrite + 危险路径（story-state.md）→ candidate"""
+        result = await runner._normalize_output_mode(
+            pipeline_name="generate",
+            project_id="test-project",
+            target_file="story-state.md",
+            output_mode="overwrite",
+        )
+        assert result == "candidate"
+
+    @pytest.mark.asyncio
+    async def test_require_candidate_overrides_overwrite(self, runner):
+        """require_candidate=True + overwrite → candidate"""
+        result = await runner._normalize_output_mode(
+            pipeline_name="generate",
+            project_id="test-project",
+            target_file="chapters/vol-01/ch-001/sec-099.md",
+            output_mode="overwrite",
+            require_candidate=True,
+        )
+        assert result == "candidate"
+
+
+class TestDirectWriteBranchProtection:
+    """验证管线直接写入分支不再接受 legacy overwrite/rewrite。
+
+    即使 output_mode 未被规范化（防御性测试），直接写入分支也不应处理
+    overwrite 或 rewrite，确保已有 sec 文件不会被静默覆盖。
+    """
+
+    @pytest.fixture
+    def runner(self, mock_llm_service, mock_file_service, tmp_path):
+        prompts_dir = tmp_path / "prompts"
+        prompts_dir.mkdir()
+        return PipelineRunner(prompts_dir, mock_llm_service, mock_file_service)
+
+    @staticmethod
+    def _make_mock_read(existing_sec: bool = False):
+        """创建 mock read_file，返回 3-tuple (content, frontmatter, mtime)"""
+        async def mock_read(path):
+            path_str = str(path)
+            if existing_sec and "sec-001.md" in path_str:
+                return "已有场景内容，不应被覆盖", None, None
+            elif ".candidates/metadata.json" in path_str:
+                return "{}", None, None
+            elif "meta.json" in path_str:
+                return json.dumps({"name": "test", "genre": "玄幻"}), None, None
+            elif "ch-meta.json" in path_str:
+                return json.dumps({"pending_foreshadowing": [], "active_quests": []}), None, None
+            return "", None, None
+        return mock_read
+
+    @pytest.mark.asyncio
+    async def test_overwrite_mode_does_not_directly_write_existing_sec(self, runner, mock_file_service, tmp_path):
+        """output_mode=overwrite 针对已有内容的 sec 文件不会直接写入文件"""
+        mock_file_service.read_file = AsyncMock(side_effect=self._make_mock_read(existing_sec=True))
+
+        write_calls = []
+        async def mock_write(path, content, frontmatter=None):
+            write_calls.append({"path": str(path), "content": content})
+        mock_file_service.write_file = AsyncMock(side_effect=mock_write)
+
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "test-ow"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "step1.md").write_text("测试输出", encoding="utf-8")
+
+        yaml_content = {
+            "name": "test-ow", "label": "覆盖测试",
+            "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/test-ow/step1"}]
+        }
+        yaml_path = tmp_path / "prompts" / "pipeline" / "test-ow.yaml"
+        yaml_path.write_text(yaml.dump(yaml_content, allow_unicode=True), encoding="utf-8")
+
+        runner.prompts_path = tmp_path / "prompts"
+        runner.env = Environment(loader=FileSystemLoader(str(tmp_path / "prompts")), autoescape=False)
+        runner.llm_service.config.max_prompt_tokens = 120000
+        runner.llm_service.config.context_window = 128000
+
+        events = []
+        async for event in runner.run(
+            "test-ow", "test-project",
+            "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="overwrite",
+        ):
+            events.append(event)
+
+        sec_writes = [c for c in write_calls if "sec-001.md" in c["path"]]
+        assert len(sec_writes) == 0, "overwrite 不应直接写入已有 sec 文件"
+        candidate_events = [e for e in events if e.get("event") == "candidate_created"]
+        assert len(candidate_events) > 0, "overwrite 应生成候选稿而非直接覆盖"
+
+    @pytest.mark.asyncio
+    async def test_rewrite_mode_does_not_directly_write_existing_sec(self, runner, mock_file_service, tmp_path):
+        """output_mode=rewrite 针对已有内容的 sec 文件不会直接写入文件"""
+        mock_file_service.read_file = AsyncMock(side_effect=self._make_mock_read(existing_sec=True))
+
+        write_calls = []
+        async def mock_write(path, content, frontmatter=None):
+            write_calls.append({"path": str(path), "content": content})
+        mock_file_service.write_file = AsyncMock(side_effect=mock_write)
+
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "test-rw"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "step1.md").write_text("测试输出", encoding="utf-8")
+
+        yaml_content = {
+            "name": "test-rw", "label": "改写测试",
+            "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/test-rw/step1"}]
+        }
+        yaml_path = tmp_path / "prompts" / "pipeline" / "test-rw.yaml"
+        yaml_path.write_text(yaml.dump(yaml_content, allow_unicode=True), encoding="utf-8")
+
+        runner.prompts_path = tmp_path / "prompts"
+        runner.env = Environment(loader=FileSystemLoader(str(tmp_path / "prompts")), autoescape=False)
+        runner.llm_service.config.max_prompt_tokens = 120000
+        runner.llm_service.config.context_window = 128000
+
+        events = []
+        async for event in runner.run(
+            "test-rw", "test-project",
+            "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="rewrite",
+        ):
+            events.append(event)
+
+        sec_writes = [c for c in write_calls if "sec-001.md" in c["path"]]
+        assert len(sec_writes) == 0, "rewrite 不应直接写入已有 sec 文件"
+        candidate_events = [e for e in events if e.get("event") == "candidate_created"]
+        assert len(candidate_events) > 0, "rewrite 应生成候选稿而非直接覆盖"
+
+    @pytest.mark.asyncio
+    async def test_write_scene_empty_target_works(self, runner, mock_file_service, tmp_path):
+        """write_scene + 空目标文件 → 正常直接写入"""
+        mock_file_service.read_file = AsyncMock(side_effect=self._make_mock_read(existing_sec=False))
+
+        write_calls = []
+        async def mock_write(path, content, frontmatter=None):
+            write_calls.append({"path": str(path), "content": content})
+        mock_file_service.write_file = AsyncMock(side_effect=mock_write)
+
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "test-ws"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "step1.md").write_text("测试输出", encoding="utf-8")
+
+        yaml_content = {
+            "name": "test-ws", "label": "写入测试",
+            "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/test-ws/step1"}]
+        }
+        yaml_path = tmp_path / "prompts" / "pipeline" / "test-ws.yaml"
+        yaml_path.write_text(yaml.dump(yaml_content, allow_unicode=True), encoding="utf-8")
+
+        runner.prompts_path = tmp_path / "prompts"
+        runner.env = Environment(loader=FileSystemLoader(str(tmp_path / "prompts")), autoescape=False)
+        runner.llm_service.config.max_prompt_tokens = 120000
+        runner.llm_service.config.context_window = 128000
+
+        async for event in runner.run(
+            "test-ws", "test-project",
+            "chapters/vol-01/ch-001/sec-001.md",
+            output_mode="write_scene",
+        ):
+            pass
+
+        sec_writes = [c for c in write_calls if "sec-001.md" in c["path"]]
+        assert len(sec_writes) > 0, "write_scene + 空目标应直接写入"

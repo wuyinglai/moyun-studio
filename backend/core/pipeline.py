@@ -606,8 +606,7 @@ class PipelineRunner:
                     "source_path": target_file,
                     "action": action.value,
                 })}
-            elif output_mode in ("rewrite", "overwrite", "write_scene"):
-                # LEGACY_COMPAT: overwrite is still handled here for old callers
+            elif output_mode == "write_scene":
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
             elif output_mode == "append":
                 new_content = (original_content + "\n\n" + final_output).strip()
