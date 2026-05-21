@@ -11,7 +11,12 @@ import uuid
 from fastapi import APIRouter, Depends
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError
+from backend.core.exceptions import (
+    MoyunFileNotFoundError,
+    ProjectNotFoundError,
+    ResourceNotFoundError,
+    ValidationError,
+)
 from backend.core.quality_service import QualityService
 from backend.schemas.common import ApiResponse
 from backend.schemas.quality import (
@@ -96,6 +101,16 @@ async def review_chapters_batch(
                 result=result,
             ))
             succeeded += 1
+
+        except (ResourceNotFoundError, MoyunFileNotFoundError, ValidationError) as e:
+            # 文件不存在或路径非法：记录错误，继续处理后续文件
+            logger.warning("批量审查跳过: %s - %s", target_file, str(e))
+            reviews.append(ReviewItem(
+                target_file=target_file,
+                status="error",
+                error=str(e),
+            ))
+            failed += 1
 
         except Exception as e:
             logger.error("批量审查失败: %s - %s", target_file, str(e))
