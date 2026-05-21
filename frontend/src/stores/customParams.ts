@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 export interface CustomParamCategory {
   key: string
@@ -22,7 +23,7 @@ export const useCustomParamsStore = defineStore('customParams', () => {
   /** 从后端加载自定义参数 */
   async function loadFromBackend() {
     try {
-      const data: { categories: CustomParamCategory[] } = await api.get('/config/custom-params')
+      const data: { categories: CustomParamCategory[] } = await api.get(API_ROUTES.configCustomParams)
       if (data.categories && data.categories.length > 0) {
         categories.value = data.categories
       }
@@ -35,7 +36,7 @@ export const useCustomParamsStore = defineStore('customParams', () => {
   /** 同步到后端 */
   async function syncToBackend() {
     try {
-      await api.put('/config/custom-params', {
+      await api.put(API_ROUTES.configCustomParams, {
         categories: categories.value.map(c => ({
           key: c.key,
           label: c.label,

@@ -1,6 +1,7 @@
 /** 候选稿模块 - API 调用 */
 
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 import type { CandidateInfo, CandidateDetail, AdoptResult } from './types'
 
 /** 获取项目的候选稿列表 */
@@ -26,7 +27,7 @@ export async function adoptCandidate(projectId: string, candidateId: string): Pr
 
 /** 删除候选稿 */
 export async function deleteCandidate(projectId: string, candidateId: string): Promise<{ success: boolean; message: string }> {
-  return await api.post(`/candidates/${projectId}/${candidateId}/delete`, {
+  return await api.post(API_ROUTES.candidateDelete(projectId, candidateId), {
     project_id: projectId,
     candidate_id: candidateId,
   })

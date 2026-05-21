@@ -9,11 +9,12 @@ import { useProjectStore } from '@/stores/project'
 import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 const DEBOUNCE_MS = 300
 
 function createBackendSnapshot(projectId: string, filePath: string, label?: string) {
-  api.post(`/snapshots/${projectId}`, {
+  api.post(API_ROUTES.snapshot(projectId), {
     file_path: filePath,
     label: label || null,
   }).catch(() => {
@@ -23,7 +24,7 @@ function createBackendSnapshot(projectId: string, filePath: string, label?: stri
 
 function createRevisionLog(projectId: string, filePath: string, before: string, after: string) {
   if (!before || before === after) return
-  api.post(`/revision-log/${projectId}`, {
+  api.post(API_ROUTES.revisionLog(projectId), {
     chapter_path: filePath,
     revision_type: 'auto_save',
     description: '自动保存',

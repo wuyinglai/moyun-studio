@@ -102,7 +102,7 @@ async function autoGenerate() {
       filePath,
     )
     content.value = storyStateStore.content
-    notification.success('故事状态已根据当前章节更新')
+    notification.success('故事状态已根据当前场景更新')
   } catch {
     notification.error('故事状态更新失败')
   } finally {

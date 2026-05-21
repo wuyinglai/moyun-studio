@@ -3,6 +3,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useFileStore } from '@/stores/file'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { useNotificationStore } from '@/stores/notification'
+import { API_ROUTES } from '@/shared/api/routes'
 
 // Module-level singleton refs -- shared across all consumers
 const _isGenerating = ref(false)
@@ -138,6 +139,7 @@ export function useFileGeneration() {
     filePath: string,
     pipelineName: string,
     extraVars?: Record<string, unknown>,
+    outputMode?: 'write_scene' | 'candidate' | 'append' | 'overwrite',
   ) {
     if (_isGenerating.value) return
 
@@ -153,14 +155,15 @@ export function useFileGeneration() {
     _abortController = new AbortController()
 
     try {
-      const response = await fetch(resolveApiUrl('/pipeline/run'), {
+      const mode = outputMode || (pipelineName === 'polish' || pipelineName === 'rewrite' ? 'candidate' : 'write_scene')
+      const response = await fetch(resolveApiUrl(API_ROUTES.pipelineRun), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pipeline: pipelineName,
           project_id: projectId,
           target_file: filePath,
-          output_mode: 'overwrite',
+          output_mode: mode,
           extra_vars: extraVars || {},
         }),
         signal: _abortController.signal,
@@ -177,25 +180,30 @@ export function useFileGeneration() {
       // 不再直接写入 store，避免重复写入
       // 将 filePath 作为事件detail的一部分传递，以便正确更新文件
       const filePathForEmitter = filePath
+      const candidateOnly = mode === 'candidate'
       await parseSSEStream(reader, (_delta) => {
         // delta 事件由 useSSE 通过 generationEmitter 监听并处理
         // filePath 已在 closure 中，通过 emitter detail 传递
       }, (prompt) => {
         _currentPrompt.value = prompt
         editorStore.setCompiledPrompt(filePathForEmitter, prompt)
-      }, filePathForEmitter)
+      }, candidateOnly ? undefined : filePathForEmitter, candidateOnly)
 
       // 管线写入文件后，从磁盘重新加载内容到编辑器
       try {
         const fileStore = useFileStore()
-        const result = await fileStore.readFile(projectId, filePathForEmitter)
-        if (result?.content) {
-          editorStore.loadContent(filePathForEmitter, result.content)
-          // 强制标记为外部更新，触发 CodeMirror watcher 刷新编辑器
-          editorStore.contentSource = 'external'
+        if (candidateOnly) {
+          fileStore.refreshTree()
+        } else {
+          const result = await fileStore.readFile(projectId, filePathForEmitter)
+          if (result?.content) {
+            editorStore.loadContent(filePathForEmitter, result.content)
+            // 强制标记为外部更新，触发 CodeMirror watcher 刷新编辑器
+            editorStore.contentSource = 'external'
+          }
+          // 文件已由 pipeline 写入磁盘，清除前端脏标记
+          fileStore.unsavedFiles.delete(filePathForEmitter)
         }
-        // 文件已由 pipeline 写入磁盘，清除前端脏标记
-        fileStore.unsavedFiles.delete(filePathForEmitter)
       } catch {
         // 文件可能不存在或读取失败，静默忽略
       }
@@ -220,6 +228,7 @@ export function useFileGeneration() {
     onDelta: (delta: string) => void,
     onPrompt?: (prompt: string) => void,
     targetFilePath?: string,
+    candidateOnly = false,
   ): Promise<void> {
     const decoder = new TextDecoder()
     let buffer = ''
@@ -247,6 +256,9 @@ export function useFileGeneration() {
             // 对于 generation 事件，注入 targetFilePath 以便正确更新文件
             if (currentEvent === 'generation' && targetFilePath) {
               parsed._targetFilePath = targetFilePath
+            }
+            if (candidateOnly) {
+              parsed._candidateOnly = true
             }
             generationEmitter.emit(currentEvent || 'message', parsed)
             // 原有回调逻辑保留（但 delta 写入已移除，由 useSSE 通过 emitter 处理）

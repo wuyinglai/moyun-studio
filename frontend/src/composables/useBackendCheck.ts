@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 const BACKEND_STORAGE_KEY = 'moyun-api-baseurl'
 
@@ -15,7 +16,7 @@ export function useBackendCheck() {
   async function checkBackend() {
     checking.value = true
     try {
-      await api.get('/llm/config', { timeout: 5000 })
+      await api.get(API_ROUTES.llmConfig, { timeout: 5000 })
       backendReachable.value = true
     } catch {
       backendReachable.value = false

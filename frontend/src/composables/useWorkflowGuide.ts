@@ -210,7 +210,7 @@ export function useWorkflowGuide() {
           } catch { /* file may not exist yet */ }
         }
 
-        await fileGen.runPipeline(projectId, targetFile, step.pipeline)
+        await fileGen.runPipeline(projectId, targetFile, step.pipeline, undefined, 'write_scene')
 
         taskStore.completeTask(wfTaskId)
         taskStore.addLog('success', `完成: ${wfTaskName}`)

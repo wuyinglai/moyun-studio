@@ -82,6 +82,7 @@
 import { computed, ref, watch } from 'vue'
 import { Modal } from 'ant-design-vue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
@@ -160,7 +161,7 @@ function restoreBackup(backupId: string) {
     cancelText: '取消',
     async onOk() {
       try {
-        await api.post(`/backup/${backupId}`, { target_project_id: null }, {
+        await api.post(API_ROUTES.backupDetail(backupId), { target_project_id: null }, {
           params: { project_id: projectId.value },
         })
         await fileStore.loadTree(projectId.value)
@@ -184,7 +185,7 @@ function deleteBackup(backupId: string) {
     okType: 'danger',
     async onOk() {
       try {
-        await api.delete(`/backup/${backupId}`, {
+        await api.delete(API_ROUTES.backupDetail(backupId), {
           params: { project_id: projectId.value },
         })
         notification.success('备份已删除')

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 import type { ReviewRequest, ReviewResponse, BatchReviewRequest, BatchReviewResponse } from '@/types/chat'
 
 export const useReviewStore = defineStore('review', () => {
@@ -21,7 +22,7 @@ export const useReviewStore = defineStore('review', () => {
    * 获取项目的所有审查历史
    */
   async function listReviews(projectId: string): Promise<{ reviews: Record<string, unknown>[]; total: number }> {
-    return await api.get(`/quality/reviews/${projectId}`)
+    return await api.get(API_ROUTES.qualityReviews(projectId))
   }
 
   return {

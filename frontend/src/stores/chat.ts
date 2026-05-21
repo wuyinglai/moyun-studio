@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useLLMStore } from './llm'
 import { useTaskStore } from './task'
+import { API_BASE, API_ROUTES } from '@/shared/api/routes'
 
 /**
  * 解析 SSE 响应流，逐行提取 data: JSON 中的 delta 内容
@@ -143,7 +144,7 @@ export const useChatStore = defineStore('chat', () => {
     startAIMessage()
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(API_BASE + API_ROUTES.chat, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

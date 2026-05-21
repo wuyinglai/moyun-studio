@@ -10,6 +10,7 @@ import { useProjectStore } from '@/stores/project'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { usePipelineStore } from '@/stores/pipeline'
 import { getPipelineForFile, guessPromptType } from '@/utils/promptTypes'
+import { API_ROUTES, API_BASE } from '@/shared/api/routes'
 
 export function usePromptSync() {
   const editorStore = useEditorStore()
@@ -49,7 +50,7 @@ export function usePromptSync() {
       if (!promptType) return
 
       try {
-        const res = await fetch(`/api/prompts/${promptType}?project_id=${projectStore.currentProject?.id || ''}`)
+        const res = await fetch(API_BASE + API_ROUTES.prompts(promptType) + `?project_id=${projectStore.currentProject?.id || ''}`)
         const json = await res.json()
         if (json?.data?.content) {
           editorStore.setFilePrompt(path, json.data.content)

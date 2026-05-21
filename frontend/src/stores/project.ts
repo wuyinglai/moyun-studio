@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 export interface Project {
   id: string   // computed alias for project_id
@@ -53,7 +54,7 @@ export const useProjectStore = defineStore('project', () => {
   async function loadProjects() {
     isLoading.value = true
     try {
-      const result = await api.get<{ projects: Record<string, unknown>[]; total: number }>('/projects')
+      const result = await api.get<{ projects: Record<string, unknown>[]; total: number }>(API_ROUTES.projects)
       projects.value = (result?.projects || []).map(normalizeProject)
     } finally {
       isLoading.value = false
@@ -63,7 +64,7 @@ export const useProjectStore = defineStore('project', () => {
   async function createProject(params: CreateProjectParams) {
     isCreating.value = true
     try {
-      const raw = await api.post<Record<string, unknown>>('/projects', {
+      const raw = await api.post<Record<string, unknown>>(API_ROUTES.projects, {
         name: params.name || '新项目',
         author: params.author || '',
         genre: params.genre || '',
@@ -83,14 +84,14 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   async function openProject(id: string) {
-    const raw = await api.get<Record<string, unknown>>(`/projects/${id}`)
+    const raw = await api.get<Record<string, unknown>>(API_ROUTES.projectDetail(id))
     const project = normalizeProject(raw)
     currentProject.value = project
     return project
   }
 
   async function deleteProject(id: string) {
-    await api.delete(`/projects/${id}`)
+    await api.delete(API_ROUTES.projectDetail(id))
     projects.value = projects.value.filter((p) => p.id !== id)
     if (currentProject.value?.id === id) {
       currentProject.value = null
@@ -98,7 +99,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   async function updateProject(id: string, data: Partial<Project>) {
-    const raw = await api.put<Record<string, unknown>>(`/projects/${id}`, data)
+    const raw = await api.put<Record<string, unknown>>(API_ROUTES.projectDetail(id), data)
     const updated = normalizeProject(raw)
     const index = projects.value.findIndex((p) => p.id === id)
     if (index !== -1) {

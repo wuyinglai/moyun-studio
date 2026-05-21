@@ -80,6 +80,7 @@ import { useProjectStore } from '@/stores/project'
 import { useEditorStore } from '@/stores/editor'
 import { useFileStore } from '@/stores/file'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
@@ -116,7 +117,7 @@ async function doSearch() {
   results.value = []
 
   try {
-    const res = await api.post<SearchResult[]>('/files/search', {
+    const res = await api.post<SearchResult[]>(API_ROUTES.filesSearch, {
       query: query.value,
       project_id: projectStore.currentProject.id,
       case_sensitive: caseSensitive.value,

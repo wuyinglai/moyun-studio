@@ -129,7 +129,7 @@ test.describe('墨韵 E2E 测试', () => {
 
     // 检查爽文模式元素
     await expect(page.getByText('爽文模式')).toBeVisible();
-    await expect(page.getByText('下一节')).toBeVisible();
+    await expect(page.getByText('下一场景')).toBeVisible();
 
     await page.screenshot({ path: path.join(screenshotDir, '05-lite-mode.png') });
   });

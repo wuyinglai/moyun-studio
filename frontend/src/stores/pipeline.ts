@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 export interface PipelineStepInfo {
   id: string
@@ -59,7 +60,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
 
   async function fetchPipelineDetail(name: string) {
     try {
-      const data = await api.get<{ pipeline: PipelineDetail }>(`/pipeline/${name}`)
+      const data = await api.get<{ pipeline: PipelineDetail }>(API_ROUTES.pipelineDetail(name))
       if (data?.pipeline) {
         currentDetail.value = data.pipeline
       }
@@ -83,7 +84,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
   async function saveStepPrompt(stepId: string, content: string) {
     if (!currentDetail.value) return
     try {
-      await api.put(`/pipeline/${currentPipelineName.value}`, {
+      await api.put(API_ROUTES.pipelineDetail(currentPipelineName.value), {
         name: currentPipelineName.value,
         steps: [{ id: stepId, prompt_content: content }],
       })
@@ -100,7 +101,7 @@ export const usePipelineStore = defineStore('pipeline', () => {
     steps: { id: string; label: string; prompt_content: string }[]
   ) {
     try {
-      await api.post('/pipeline/custom', { name, label, steps })
+      await api.post(API_ROUTES.pipelineCustom, { name, label, steps })
       await fetchPipelines()
     } catch (e) {
       console.warn('创建管线失败:', e)

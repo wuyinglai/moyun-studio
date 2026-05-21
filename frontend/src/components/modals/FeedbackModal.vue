@@ -143,6 +143,7 @@ import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 const uiStore = useUIStore()
 const projectStore = useProjectStore()
@@ -186,7 +187,7 @@ async function loadFeedbacks() {
 async function submitFeedback() {
   if (!projectStore.currentProject || !newFeedback.value.content) return
   try {
-    await api.post(`/feedback/${projectStore.currentProject.id}`, {
+    await api.post(API_ROUTES.feedback(projectStore.currentProject.id), {
       chapter_path: newFeedback.value.location || '',
       type: newFeedback.value.type,
       content: newFeedback.value.content,
@@ -204,7 +205,7 @@ async function submitFeedback() {
 async function resolveFeedback(feedbackId: string) {
   if (!projectStore.currentProject) return
   try {
-    await api.patch(`/feedback/${projectStore.currentProject.id}/${feedbackId}`, {
+    await api.patch(API_ROUTES.feedbackDetail(projectStore.currentProject.id, feedbackId), {
       resolved: true,
     })
     notification.success('反馈已标记为已解决')

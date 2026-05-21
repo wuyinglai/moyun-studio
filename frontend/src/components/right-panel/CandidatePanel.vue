@@ -132,6 +132,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 export interface CandidateInfo {
   id: string
@@ -246,7 +247,7 @@ async function adoptCandidate(candidate: CandidateInfo) {
   }
   
   try {
-    await api.post(`/candidates/${projectStore.currentProject?.id}/${candidate.id}/adopt`)
+    await api.post(API_ROUTES.candidateAdopt(projectStore.currentProject?.id || '', candidate.id))
     notification.success('候选稿已成功采用')
     await fetchCandidates()
   } catch {
@@ -266,7 +267,7 @@ async function deleteCandidate(candidate: CandidateInfo) {
   }
   
   try {
-    await api.delete(`/candidates/${projectStore.currentProject?.id}/${candidate.id}`)
+    await api.delete(API_ROUTES.candidateDetail(projectStore.currentProject?.id || '', candidate.id))
     notification.success('候选稿已成功删除')
     await fetchCandidates()
   } catch {

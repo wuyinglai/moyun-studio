@@ -1,4 +1,5 @@
 import api from '@/services/api'
+import { API_BASE, API_ROUTES } from '@/shared/api/routes'
 
 export interface LiteWritingPrefs {
   style: string
@@ -88,7 +89,7 @@ export async function createLiteProject(card: LiteIdeaCard, prefs: LiteWritingPr
 }
 
 export async function fetchLiteNextOptions(projectId: string, currentFile: string | null, prefs: LiteWritingPrefs) {
-  return await api.post<LiteNextOptionsResponse>('/lite/next-options', {
+  return await api.post<LiteNextOptionsResponse>(API_ROUTES.liteNextOptions, {
     project_id: projectId,
     current_file: currentFile,
     prefs,
@@ -125,7 +126,7 @@ export async function streamLiteNext(
   options: LiteWriteStreamOptions = {},
   outputFile: string | null = null,
 ) {
-  const response = await fetch('/api/lite/write-next-stream', {
+  const response = await fetch(API_BASE + API_ROUTES.liteWriteNextStream, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     signal: options.signal,

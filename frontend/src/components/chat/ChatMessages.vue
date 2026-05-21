@@ -31,10 +31,10 @@
       <div class="welcome-suggestions">
         <div
           class="suggestion-chip"
-          @click="$emit('send-suggestion', '帮我续写当前章节')"
+          @click="$emit('send-suggestion', '帮我续写当前场景')"
         >
           <span class="chip-icon">✏️</span>
-          <span>续写章节</span>
+          <span>续写场景</span>
         </div>
         <div
           class="suggestion-chip"

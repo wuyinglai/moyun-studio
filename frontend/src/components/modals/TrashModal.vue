@@ -74,6 +74,7 @@ import { useFileStore } from '@/stores/file'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 interface TrashItem {
   trash_name: string
@@ -109,7 +110,7 @@ async function loadTrash() {
 
 async function restore(trashName: string) {
   try {
-    await api.post('/trash/restore', { trash_name: trashName })
+    await api.post(API_ROUTES.trashRestore, { trash_name: trashName })
     notification.success('已恢复')
     if (projectStore.currentProject) await fileStore.loadTree(projectStore.currentProject.id)
     await loadTrash()

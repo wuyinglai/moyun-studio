@@ -138,6 +138,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useDiffSummary } from '@/composables/useDiffSummary'
 import { cancelQueuedTask } from '@/composables/useTaskQueue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 const diffSummary = useDiffSummary()
 
@@ -190,7 +191,7 @@ function formatTime(timestamp: number): string {
 async function handleCancelTask(taskId: string) {
   try {
     try {
-      await api.post(`/tasks/${taskId}/cancel`)
+      await api.post(API_ROUTES.taskCancel(taskId))
     } catch {
       // 本地临时任务可能尚未注册到后端，仍允许取消前端队列状态。
     }

@@ -124,6 +124,7 @@ import { useGenerationStore } from '@/stores/generation'
 import { useNotificationStore } from '@/stores/notification'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { parseScenePath, buildChapterPlanPath } from '@/modules/scene/scenePath'
+import { useFileGeneration } from '@/composables/useFileGeneration'
 
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
@@ -131,6 +132,7 @@ const editorStore = useEditorStore()
 const generationStore = useGenerationStore()
 const notification = useNotificationStore()
 const rightPanelStore = useRightPanelStore()
+const fileGen = useFileGeneration()
 
 const running = ref(false)
 const statusText = ref('')
@@ -143,14 +145,14 @@ const engineSummary = reactive({
 
 const projectId = computed(() => projectStore.currentProject?.id || '')
 const currentFilePath = computed(() => fileStore.currentFile?.path || editorStore.currentFilePath || '')
-const currentFileLabel = computed(() => currentFilePath.value || '尚未打开章节')
+const currentFileLabel = computed(() => currentFilePath.value || '尚未打开文件')
 const canGenerate = computed(() => Boolean(projectId.value && currentFilePath.value))
-const isChapterFile = computed(() => /chapters\/.*\.md$/.test(currentFilePath.value))
-const continueLabel = computed(() => isChapterFile.value ? '生成本节' : '续写当前文件')
-const rewriteLabel = computed(() => isChapterFile.value ? '重写本节' : '重写当前文件')
+const isChapterFile = computed(() => /chapters\/.*\/sec-\d+\.md$/.test(currentFilePath.value))
+const continueLabel = computed(() => isChapterFile.value ? '续写当前场景' : '续写当前文件')
+const rewriteLabel = computed(() => isChapterFile.value ? '重写当前场景' : '重写当前文件')
 const currentFileHint = computed(() => {
   if (!projectId.value) return '打开项目后可使用专业快捷操作。'
-  if (!currentFilePath.value) return '从文件树打开一个章节或素材文件。'
+  if (!currentFilePath.value) return '从文件树打开一个场景或素材文件。'
   return '专业版不要求先写大纲，可以围绕当前文件直接生成、重写和补强。'
 })
 
@@ -254,7 +256,7 @@ async function openCurrentPlan() {
 async function runAction(label: string, runner: () => Promise<void>) {
   if (!canGenerate.value || running.value) return
   running.value = true
-  statusText.value = `${label}已发送，生成结果会进入当前文件。`
+  statusText.value = `${label}已发送，重写类结果会先进入候选稿。`
   try {
     await runner()
     notification.success(statusText.value)
@@ -267,26 +269,31 @@ async function runAction(label: string, runner: () => Promise<void>) {
 }
 
 async function handleContinue() {
-  await runAction('生成本节', () => generationStore.continueWriting(
+  await runAction('续写当前场景', () => generationStore.continueWriting(
     projectId.value,
     currentFilePath.value,
-    '请基于故事引擎和前文记忆，继续写当前章节；优先推进人物欲望、冲突和读者期待，不需要依赖大纲。',
+    '请基于故事引擎和前文记忆，继续写当前场景；优先推进人物欲望、冲突和读者期待，不需要依赖大纲。',
   ))
 }
 
 async function handleRewrite() {
-  await runAction('重写本节', () => generationStore.rewriteContent(
-    projectId.value,
-    currentFilePath.value,
-    '请在保留核心事件的基础上重写当前文件，增强人物动机、场景行动和章节钩子。',
-  ))
+  await runAction('重写当前场景', async () => {
+    rightPanelStore.setActiveTab('candidate')
+    await fileGen.runPipeline(
+      projectId.value,
+      currentFilePath.value,
+      'rewrite',
+      { user_prompt: '请在保留核心事件的基础上重写当前文件，增强人物动机、场景行动和场景钩子。' },
+      'candidate',
+    )
+  })
 }
 
 async function handleBoost() {
   await runAction('补强爽点', () => generationStore.continueWriting(
     projectId.value,
     currentFilePath.value,
-    '请只追加一段补强内容：加强当前冲突压力、主角反击的爽点兑现，以及下一节钩子。不要写解释说明。',
+    '请只追加一段补强内容：加强当前冲突压力、主角反击的爽点兑现，以及下一场景钩子。不要写解释说明。',
   ))
 }
 </script>

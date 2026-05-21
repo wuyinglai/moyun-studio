@@ -211,6 +211,7 @@ import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
 import type { FileNode } from '@/stores/file'
+import { API_ROUTES, API_BASE } from '@/shared/api/routes'
 
 const rightPanelStore = useRightPanelStore()
 const editorStore = useEditorStore()
@@ -474,7 +475,7 @@ async function openReferencedFile(path: string) {
   }
   // 项目目录不存在 → 从 prompts 模板目录读取
   try {
-    const resp = await fetch(`/api/prompts/raw-file?path=${encodeURIComponent(path)}`)
+    const resp = await fetch(API_BASE + API_ROUTES.promptsRawFile + `?path=${encodeURIComponent(path)}`)
     const json = await resp.json()
     if (json?.data?.content) {
       fileStore.openFile(node)

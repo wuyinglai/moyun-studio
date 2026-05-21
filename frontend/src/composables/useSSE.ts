@@ -25,6 +25,7 @@ import { useTaskStore } from '@/stores/task'
 import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
 import { useChatStore } from '@/stores/chat'
+import { API_ROUTES, API_BASE } from '@/shared/api/routes'
 import type {
   SSEEventType,
   SSEEventData,
@@ -80,7 +81,7 @@ class SSEService {
     this._lastError.value = null
 
     try {
-      const url = '/api/sse'
+      const url = API_BASE + API_ROUTES.sse
       this.eventSource = new EventSource(url)
 
       this.eventSource.onopen = () => {

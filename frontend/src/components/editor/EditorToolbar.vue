@@ -184,6 +184,7 @@ import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { guessPromptType, getPipelineForFile } from '@/utils/promptTypes'
 import { isSceneFile as isSceneFilePath, getNextScenePath, buildScenePath } from '@/modules/scene/scenePath'
+import { API_ROUTES, API_BASE } from '@/shared/api/routes'
 
 const chatStore = useChatStore()
 const historyStore = useHistoryStore()
@@ -366,7 +367,7 @@ async function runPipeline(name: string) {
 
   rightPanelStore.setPipelineTab('quick')
 
-  // 提取管线输出到 materials/extracted/，不覆盖当前章节
+  // 提取管线输出到 materials/extracted/，不覆盖当前场景
   const filePath = editorStore.currentFilePath!
   const targetFile = name === 'extract'
     ? `materials/extracted/${filePath.replace(/^.*?chapters\//, '').replace(/\//g, '-')}`
@@ -387,6 +388,8 @@ async function runPipeline(name: string) {
         projectStore.currentProject!.id,
         targetFile,
         name,
+        undefined,
+        name === 'polish' || name === 'rewrite' ? 'candidate' : name === 'extract' ? 'overwrite' : 'write_scene',
       )
     },
     `${pipelineLabel}: ${fileName}`,
@@ -434,7 +437,7 @@ async function handleGenerateNext() {
       if (chainItem) {
         loadFilePrompt(projectId, filePath)
         syncGuideStep(filePath, 'running')
-        await fileGen.runPipeline(projectId, filePath, chainItem.pipeline, extraVars)
+        await fileGen.runPipeline(projectId, filePath, chainItem.pipeline, extraVars, 'write_scene')
         syncGuideStep(filePath, 'done')
       }
       return
@@ -469,7 +472,7 @@ async function handleGenerateNext() {
   syncGuideStep(next.path, 'running')
 
   // 运行对应 pipeline
-  await fileGen.runPipeline(projectId, next.path, next.pipeline, extraVars)
+  await fileGen.runPipeline(projectId, next.path, next.pipeline, extraVars, 'write_scene')
 
   // pipeline 完成 → 更新 guide 步骤状态为 done
   syncGuideStep(next.path, 'done')
@@ -497,7 +500,7 @@ async function handleGenerateNext() {
 
       // L2: 运行 pipeline 后继续推进
       syncGuideStep(nextNext.path, 'running')
-      await fileGen.runPipeline(projectId, nextNext.path, nextNext.pipeline, extraVars)
+      await fileGen.runPipeline(projectId, nextNext.path, nextNext.pipeline, extraVars, 'write_scene')
       syncGuideStep(nextNext.path, 'done')
       if (getAutoMode() === 'L2') {
         if (_l2StopRequested.value) {
@@ -514,7 +517,7 @@ async function handleGenerateNext() {
     return
   }
 
-  // L2: 完成后自动推进下一节
+  // L2: 完成后自动推进下一场景
   if (getAutoMode() === 'L2') {
     if (_l2StopRequested.value) {
       _l2StopRequested.value = false
@@ -591,7 +594,7 @@ async function loadFilePrompt(projectId: string, filePath: string) {
 
   const promptType = guessPromptType(filePath)
   if (promptType) {
-    fetch(`/api/prompts/${promptType}?project_id=${projectId}`)
+    fetch(API_BASE + API_ROUTES.prompts(promptType) + `?project_id=${projectId}`)
       .then(r => r.json())
       .then(json => {
         if (json?.data?.content) {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 
 export interface LLMConfig {
   apiType: 'openai' | 'ollama' | 'anthropic' | 'claude' | 'deepseek' | 'custom' | 'other'
@@ -26,7 +27,7 @@ export const useLLMStore = defineStore('llm', () => {
 
   async function loadConfig() {
     try {
-      const data = await api.get<Record<string, unknown>>('/llm/config')
+      const data = await api.get<Record<string, unknown>>(API_ROUTES.llmConfig)
       if (data) {
         config.value = normalizeConfig(data)
       }
@@ -37,7 +38,7 @@ export const useLLMStore = defineStore('llm', () => {
 
   async function saveConfig(cfg: Partial<LLMConfig>) {
     const next = normalizeConfig({ ...config.value, ...cfg })
-    await api.post('/llm/config', {
+    await api.post(API_ROUTES.llmConfig, {
       api_type: normalizeProvider(next.apiType),
       api_url: next.apiUrl,
       api_key: next.apiKey,

@@ -1,5 +1,6 @@
 import { ref, readonly, shallowRef } from 'vue'
 import api from '@/services/api'
+import { API_BASE, API_ROUTES } from '@/shared/api/routes'
 
 export interface WorkflowStep {
   id: string
@@ -122,7 +123,7 @@ export function useWorkflow() {
     let failed = false
 
     try {
-      const response = await fetch('/api/workflows/run', {
+      const response = await fetch(API_BASE + API_ROUTES.workflowsRun, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -312,7 +313,7 @@ export function useWorkflow() {
     let failed = false
 
     try {
-      const response = await fetch(`/api/workflows/runs/${runId}/resume`, {
+      const response = await fetch(API_BASE + API_ROUTES.workflowRunResume(runId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -475,7 +476,7 @@ export function useWorkflow() {
 
   async function stopWorkflow(runId: string): Promise<boolean> {
     try {
-      await api.post(`/workflows/stop/${runId}`)
+      await api.post(API_ROUTES.workflowStop(runId))
       _runLogs.value.push('[停止] 已发送停止信号')
       return true
     } catch (e) {
@@ -501,7 +502,7 @@ export function useWorkflow() {
     steps: WorkflowStep[]
   }): Promise<boolean> {
     try {
-      await api.post('/workflows/save', data)
+      await api.post(API_ROUTES.workflowsSave, data)
       await fetchWorkflows()
       return true
     } catch (e) {
@@ -512,7 +513,7 @@ export function useWorkflow() {
 
   async function deleteWorkflow(name: string): Promise<boolean> {
     try {
-      await api.delete(`/workflows/${name}`)
+      await api.delete(API_ROUTES.workflowDetail(name))
       await fetchWorkflows()
       return true
     } catch (e) {

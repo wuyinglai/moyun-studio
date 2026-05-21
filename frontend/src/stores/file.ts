@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { Modal } from 'ant-design-vue'
 import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 import { useProjectStore } from './project'
+import { useEditorStore } from './editor'
 
 export interface FileNode {
   name: string
@@ -14,6 +17,8 @@ export interface FileContent {
   content: string
   frontmatter?: Record<string, unknown>
   wordCount?: number
+  mtime?: number | null
+  hash?: string | null
 }
 
 export interface VersionSnapshot {
@@ -31,6 +36,7 @@ export const useFileStore = defineStore('file', () => {
   const unsavedFiles = ref<Set<string>>(new Set())
   const isLoading = ref(false)
   const fileContents = ref<Record<string, FileContent>>({})
+  const fileMeta = ref<Record<string, { mtime?: number | null; hash?: string | null }>>({})
   const snapshots = ref<Record<string, VersionSnapshot[]>>({})
 
   // 按 projectId 隔离的文件状态（持久化）
@@ -61,39 +67,85 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function readFile(projectId: string, path: string): Promise<FileContent> {
-    const data = await api.get<FileContent>('/file', { params: { project_id: projectId, path } })
+    const data = await api.get<FileContent>(API_ROUTES.file, { params: { project_id: projectId, path } })
     fileContents.value[path] = data
+    fileMeta.value[path] = { mtime: data.mtime, hash: data.hash }
     return data
   }
 
   async function saveFile(projectId: string, path: string, content: string) {
-    await api.post(`/file?project_id=${projectId}`, { path, content })
-    unsavedFiles.value.delete(path)
-    fileContents.value[path] = { content }
+    const known = fileMeta.value[path] || fileContents.value[path] || {}
+    try {
+      const result = await api.post<FileContent | null>(`${API_ROUTES.file}?project_id=${projectId}`, {
+        path,
+        content,
+        expected_mtime: known.mtime ?? undefined,
+        expected_hash: known.hash ?? undefined,
+      })
+      unsavedFiles.value.delete(path)
+      fileContents.value[path] = {
+        content,
+        mtime: result?.mtime ?? known.mtime,
+        hash: result?.hash ?? known.hash,
+      }
+      fileMeta.value[path] = {
+        mtime: result?.mtime ?? known.mtime,
+        hash: result?.hash ?? known.hash,
+      }
+    } catch (error: any) {
+      const code = error?.response?.data?.error?.code
+      if (error?.response?.status === 409 || code === 'FILE_CONFLICT') {
+        await showFileConflict(projectId, path)
+      }
+      throw error
+    }
+  }
+
+  async function showFileConflict(projectId: string, path: string) {
+    return new Promise<void>((resolve) => {
+      Modal.confirm({
+        title: '文件已被更新',
+        content: '服务器上的文件已有新版本。为了避免覆盖他人的修改，请重新加载服务器版本后再保存。',
+        okText: '重新加载服务器版本',
+        cancelText: '取消保存',
+        async onOk() {
+          const latest = await readFile(projectId, path)
+          fileContents.value[path] = latest
+          const editorStore = useEditorStore()
+          editorStore.loadContent(path, latest.content)
+          editorStore.contentSource = 'external'
+          unsavedFiles.value.delete(path)
+          resolve()
+        },
+        onCancel() {
+          resolve()
+        },
+      })
+    })
   }
 
   async function createFile(projectId: string, path: string, content: string = '') {
-    return await api.post('/file/create', { project_id: projectId, path, content })
+    return await api.post(API_ROUTES.fileCreate, { project_id: projectId, path, content })
   }
 
   async function createDirectory(projectId: string, path: string) {
-    return await api.post('/directory/create', { project_id: projectId, path })
+    return await api.post(API_ROUTES.directoryCreate, { project_id: projectId, path })
   }
 
   async function renameFile(projectId: string, oldPath: string, newPath: string) {
-    return await api.post('/file/rename', { project_id: projectId, old_path: oldPath, new_path: newPath })
+    return await api.post(API_ROUTES.fileRename, { project_id: projectId, old_path: oldPath, new_path: newPath })
   }
 
   async function deleteFile(projectId: string, path: string) {
-    return await api.post('/file/delete', { project_id: projectId, path })
+    return await api.post(API_ROUTES.fileDelete, { project_id: projectId, path })
   }
 
   async function deleteDirectory(projectId: string, path: string) {
-    return await api.post('/directory/delete', { project_id: projectId, path })
+    return await api.post(API_ROUTES.directoryDelete, { project_id: projectId, path })
   }
 
   async function loadSnapshots(projectId: string, path: string) {
-    const data = await api.get<VersionSnapshot[]>(`/snapshots/${projectId}`, {
+    const data = await api.get<VersionSnapshot[]>(API_ROUTES.snapshot(projectId), {
       params: { file_path: path },
     })
     snapshots.value[path] = data || []
@@ -101,7 +153,7 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function restoreSnapshot(projectId: string, path: string, snapshotId: string) {
-    return await api.post(`/snapshots/${projectId}/restore`, {
+    return await api.post(API_ROUTES.snapshotRestore(projectId), {
       project_id: projectId,
       path,
       snapshot_id: snapshotId,
@@ -109,11 +161,11 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function forwardVersion(projectId: string, path: string) {
-    return await api.post('/backup/forward', { project_id: projectId, path })
+    return await api.post(API_ROUTES.backupForward, { project_id: projectId, path })
   }
 
   async function backwardVersion(projectId: string, path: string) {
-    return await api.post('/backup/backward', { project_id: projectId, path })
+    return await api.post(API_ROUTES.backupBackward, { project_id: projectId, path })
   }
 
   function openFile(node: FileNode) {
@@ -197,6 +249,7 @@ export const useFileStore = defineStore('file', () => {
     unsavedFiles,
     isLoading,
     fileContents,
+    fileMeta,
     snapshots,
     loadTree,
     readFile,
