@@ -123,6 +123,7 @@ def _resolve_lite_output_file(
     is_blank_requested: bool,
 ) -> str:
     if req.output_file:
+        _validate_rel_path(req.output_file)
         return req.output_file
     effective_action = LITE_ACTION_ALIAS.get(req.action, req.action)
     target_has_content = bool(requested_content and not is_blank_requested)
@@ -207,8 +208,87 @@ def _rotate_cards(seed: str) -> list[LiteIdeaCard]:
     return (FALLBACK_IDEA_BANK[offset:] + FALLBACK_IDEA_BANK[:offset])[:5]
 
 
-def _project_file(project_dir: Path, rel_path: str) -> Path:
-    return project_dir / rel_path.strip("/")
+_FORBIDDEN_SEGMENTS = frozenset({".git", "node_modules", "__pycache__", ".env", ".config.json"})
+
+
+class LitePathError(ValueError):
+    """Raised when a Lite path fails safety validation."""
+
+
+def _validate_project_id(project_id: str) -> str:
+    """Validate project_id is safe (no traversal, no forbidden segments)."""
+    if not project_id or not project_id.strip():
+        raise LitePathError("project_id 不能为空")
+    # Reject absolute paths and traversal
+    if "/" in project_id or "\\" in project_id:
+        raise LitePathError(f"project_id 包含非法路径分隔符: {project_id!r}")
+    if project_id.startswith("."):
+        raise LitePathError(f"project_id 不能以点号开头: {project_id!r}")
+    if ".." in project_id:
+        raise LitePathError(f"project_id 包含路径遍历: {project_id!r}")
+    return project_id
+
+
+def _validate_rel_path(rel_path: str) -> str:
+    """Validate a user-supplied relative path is safe (no traversal, no forbidden segments)."""
+    if not rel_path:
+        return rel_path
+    normalized = rel_path.replace("\\", "/")
+    if normalized.startswith("/"):
+        raise LitePathError(f"不允许绝对路径: {rel_path!r}")
+    if len(normalized) >= 2 and normalized[1] == ":":
+        raise LitePathError(f"不允许 Windows 盘符路径: {rel_path!r}")
+    segments = [s for s in normalized.split("/") if s]
+    for seg in segments:
+        if seg == "..":
+            raise LitePathError(f"路径包含遍历段 '..': {rel_path!r}")
+        seg_lower = seg.lower()
+        if seg_lower in _FORBIDDEN_SEGMENTS:
+            raise LitePathError(f"路径包含禁止段 {seg!r}: {rel_path!r}")
+    return rel_path
+
+
+def _safe_project_path(project_dir: Path, rel_path: str) -> Path:
+    """Safely resolve a project-relative path, rejecting traversal and forbidden segments.
+
+    - Rejects absolute paths
+    - Rejects ``..`` path segments (POSIX and Windows forms)
+    - Rejects forbidden segments (.git, node_modules, etc.)
+    - Normalizes path separators
+    - Verifies the resolved path stays inside project_dir
+    """
+    if not rel_path:
+        raise LitePathError("相对路径不能为空")
+
+    # Normalize separators
+    normalized = rel_path.replace("\\", "/")
+
+    # Reject absolute paths
+    if normalized.startswith("/"):
+        raise LitePathError(f"不允许绝对路径: {rel_path!r}")
+
+    # Reject Windows drive letters
+    if len(normalized) >= 2 and normalized[1] == ":":
+        raise LitePathError(f"不允许 Windows 盘符路径: {rel_path!r}")
+
+    # Split into segments and check each
+    segments = [s for s in normalized.split("/") if s]
+    for seg in segments:
+        if seg == "..":
+            raise LitePathError(f"路径包含遍历段 '..': {rel_path!r}")
+        if seg == ".":
+            continue
+        # Check forbidden segments
+        seg_lower = seg.lower()
+        if seg_lower in _FORBIDDEN_SEGMENTS:
+            raise LitePathError(f"路径包含禁止段 {seg!r}: {rel_path!r}")
+
+    # Build the resolved path and verify it stays inside project_dir
+    resolved = (project_dir / "/".join(segments)).resolve()
+    if not str(resolved).startswith(str(project_dir.resolve())):
+        raise LitePathError(f"路径逃逸出项目目录: {rel_path!r}")
+
+    return resolved
 
 
 async def _write_json(path: Path, data: dict) -> None:
@@ -817,6 +897,9 @@ async def generate_next_options(
     settings: Settings = Depends(get_settings),
 ):
     """生成下一章爽点卡"""
+    _validate_project_id(req.project_id)
+    if req.current_file:
+        _validate_rel_path(req.current_file)
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
@@ -887,6 +970,9 @@ async def write_lite_next(
     settings: Settings = Depends(get_settings),
 ):
     """选卡生成章节，自动审稿并更新故事引擎"""
+    _validate_project_id(req.project_id)
+    if req.target_file:
+        _validate_rel_path(req.target_file)
     project_dir = settings.projects_path / req.project_id
     if not project_dir.exists():
         raise ProjectNotFoundError(req.project_id)
@@ -1078,6 +1164,13 @@ async def write_lite_next_stream(
     """选卡生成章节，流式输出正文，再审稿并更新故事引擎"""
 
     async def _stream() -> AsyncGenerator[dict, None]:
+        try:
+            _validate_project_id(req.project_id)
+            if req.target_file:
+                _validate_rel_path(req.target_file)
+        except LitePathError as e:
+            yield _lite_stream_event("error", {"message": str(e)})
+            return
         project_dir = settings.projects_path / req.project_id
         if not project_dir.exists():
             yield _lite_stream_event("error", {"message": f"项目不存在：{req.project_id}"})
