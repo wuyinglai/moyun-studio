@@ -52,6 +52,9 @@ class SSEManager:
         "memory.updated": "memory-updated",
     }
 
+    # Heartbeat 配置
+    HEARTBEAT_INTERVAL = 15  # 秒
+
     @staticmethod
     def _map_event_type(bus_event: str) -> str:
         return SSEManager._EVENT_MAP.get(bus_event, bus_event)
@@ -89,6 +92,21 @@ class SSEManager:
         for q in dead_queues:
             self.unsubscribe(q)
 
+    def build_heartbeat_message(self) -> str:
+        """构建 heartbeat 事件消息"""
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        data = {
+            "type": "sse.heartbeat",
+            "project_id": None,
+            "timestamp": now,
+            "payload": {
+                "server_time": now,
+                "interval": self.HEARTBEAT_INTERVAL,
+            },
+        }
+        return f"event: sse.heartbeat\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
 
 # 全局 SSE 管理器
 sse_manager = SSEManager()
@@ -107,10 +125,12 @@ async def event_generator(request: Request) -> AsyncGenerator[str, None]:
                 logger.info("客户端已断开连接")
                 break
             try:
-                message = await asyncio.wait_for(queue.get(), timeout=30)
+                message = await asyncio.wait_for(queue.get(), timeout=sse_manager.HEARTBEAT_INTERVAL)
                 yield message
             except asyncio.TimeoutError:
-                yield ": keep-alive\n\n"
+                # 发送 heartbeat 事件（替代原来的 SSE 注释 keep-alive）
+                yield sse_manager.build_heartbeat_message()
+                logger.debug("SSE heartbeat 已发送")
     except asyncio.CancelledError:
         logger.info("SSE 连接被取消")
     finally:

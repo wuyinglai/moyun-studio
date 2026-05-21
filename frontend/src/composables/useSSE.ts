@@ -12,6 +12,7 @@
  * - thinking: AI 思考中
  * - error: 错误
  * - done: 任务完成
+ * - sse.heartbeat: 心跳（不触发业务逻辑）
  */
 
 import { ref, readonly } from 'vue'
@@ -32,8 +33,12 @@ import type {
 
 export type { SSEEventType, SSEEventData, GenerationEvent }
 
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'error'
+
 const MAX_RECONNECT_ATTEMPTS = 10
-const INITIAL_RECONNECT_DELAY = 1000
+const INITIAL_RECONNECT_DELAY = 3000   // 3 秒首次重连
+const MAX_RECONNECT_DELAY = 10000      // 最大 10 秒退避
+const HEARTBEAT_TIMEOUT = 45000        // 45 秒无 heartbeat 视为断线（3 倍 heartbeat 间隔）
 
 class SSEService {
   private eventSource: EventSource | null = null
@@ -42,11 +47,14 @@ class SSEService {
   private isConnecting = false
   private manualClose = false
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null
 
   // 状态
   private _isConnected = ref(false)
   private _isReconnecting = ref(false)
   private _lastError = ref<string | null>(null)
+  private _connectionStatus = ref<ConnectionStatus>('disconnected')
+  private _lastHeartbeatAt = ref<number | null>(null)
 
   // 事件监听器
   private listeners = new Map<SSEEventType, Set<(data: any) => void>>()
@@ -55,6 +63,8 @@ class SSEService {
   public isConnected = readonly(this._isConnected)
   public isReconnecting = readonly(this._isReconnecting)
   public lastError = readonly(this._lastError)
+  public connectionStatus = readonly(this._connectionStatus)
+  public lastHeartbeatAt = readonly(this._lastHeartbeatAt)
 
   /**
    * 连接到 SSE
@@ -66,6 +76,7 @@ class SSEService {
 
     this.manualClose = false
     this.isConnecting = true
+    this._connectionStatus.value = 'connecting'
     this._lastError.value = null
 
     try {
@@ -78,13 +89,17 @@ class SSEService {
         this.isConnecting = false
         this.reconnectAttempts = 0
         this.reconnectDelay = INITIAL_RECONNECT_DELAY
+        this._connectionStatus.value = 'connected'
         this.emit('connected', { timestamp: Date.now() })
+        this._startHeartbeatWatchdog()
       }
 
       this.eventSource.onerror = () => {
         this._isConnected.value = false
         this.isConnecting = false
         this._lastError.value = 'SSE 连接错误'
+        this._connectionStatus.value = 'error'
+        this._stopHeartbeatWatchdog()
 
         // 自动重连
         if (!this.manualClose) {
@@ -100,7 +115,54 @@ class SSEService {
     } catch (error) {
       this.isConnecting = false
       this._lastError.value = 'SSE 连接失败'
+      this._connectionStatus.value = 'error'
       console.error('SSE 连接失败:', error)
+    }
+  }
+
+  /**
+   * 启动 heartbeat 看门狗
+   * 超过 HEARTBEAT_TIMEOUT 无 heartbeat 或正常事件，标记为断线
+   */
+  private _startHeartbeatWatchdog() {
+    this._stopHeartbeatWatchdog()
+    this._lastHeartbeatAt.value = Date.now()
+
+    const check = () => {
+      const last = this._lastHeartbeatAt.value
+      if (last && Date.now() - last > HEARTBEAT_TIMEOUT) {
+        // 超时未收到 heartbeat，标记断线
+        if (this._connectionStatus.value === 'connected') {
+          this._connectionStatus.value = 'disconnected'
+          this._isConnected.value = false
+          console.warn('SSE heartbeat 超时，连接可能断开')
+          // 触发重连
+          if (!this.manualClose) {
+            this.scheduleReconnect()
+          }
+        }
+      }
+    }
+
+    // 每 5 秒检查一次
+    this.heartbeatTimer = setInterval(check, 5000)
+  }
+
+  private _stopHeartbeatWatchdog() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+  }
+
+  /**
+   * 记录收到事件（更新 heartbeat 时间戳）
+   */
+  private _touchHeartbeat() {
+    this._lastHeartbeatAt.value = Date.now()
+    if (this._connectionStatus.value !== 'connected') {
+      this._connectionStatus.value = 'connected'
+      this._isConnected.value = true
     }
   }
 
@@ -118,12 +180,19 @@ class SSEService {
     // 存储 handler 以便后续移除
     ;(this as any)._generationHandler = handler
 
-    // 监听 step_done 事件，更新当前步骤信息
-    const stepHandler = (event: CustomEvent) => {
-      this.handleEvent('step_done', event.detail)
+    // 监听 fetch stream 中的非 generation 事件，确保候选稿和完成状态能驱动 UI。
+    const streamEventTypes = ['step_done', 'candidate_created', 'candidate-created', 'diff_summary', 'done', 'error']
+    const streamHandler = (event: CustomEvent) => {
+      const rawType = event.type
+      const normalized = rawType === 'candidate_created' ? 'candidate-created' : rawType
+      this.handleEvent(normalized as SSEEventType, event.detail)
+      this.emit(normalized as SSEEventType, event.detail)
     }
-    generationEmitter.addEventListener('step_done', stepHandler as EventListener)
-    ;(this as any)._stepDoneHandler = stepHandler
+    streamEventTypes.forEach((type) => {
+      generationEmitter.addEventListener(type, streamHandler as EventListener)
+    })
+    ;(this as any)._streamHandler = streamHandler
+    ;(this as any)._streamEventTypes = streamEventTypes
   }
 
   /**
@@ -155,6 +224,7 @@ class SSEService {
       'task-waiting-for-user',
       'task-completed',
       'memory-updated',
+      'sse.heartbeat',
     ]
 
     eventTypes.forEach((type) => {
@@ -164,6 +234,16 @@ class SSEService {
         }
         try {
           const data = JSON.parse(event.data)
+
+          // heartbeat 特殊处理：只更新状态，不触发业务逻辑
+          if (type === 'sse.heartbeat') {
+            this._touchHeartbeat()
+            return
+          }
+
+          // 其他事件也更新 heartbeat 时间戳
+          this._touchHeartbeat()
+
           this.handleEvent(type, data)
           this.emit(type, data)
         } catch (e) {
@@ -186,6 +266,11 @@ class SSEService {
     const chatStore = useChatStore()
     const projectStore = useProjectStore()
 
+    // heartbeat 不走业务逻辑
+    if (type === 'sse.heartbeat') {
+      return
+    }
+
     // 按 project_id 过滤：只处理当前项目的事件
     const currentProjectId = projectStore.currentProject?.id
     if (data.project_id && currentProjectId && data.project_id !== currentProjectId) {
@@ -197,13 +282,18 @@ class SSEService {
         // AI 生成内容 - 更新编辑器和聊天
         if (data.delta) {
           chatStore.appendAIMessage(data.delta)
-          if (data._targetFilePath) {
+          if (data._candidateOnly) {
+            break
+          } else if (data._targetFilePath) {
             editorStore.appendContentToFile(data._targetFilePath, data.delta)
           } else {
             editorStore.appendContent(data.delta)
           }
         } else if (data.content) {
-          if (data._targetFilePath) {
+          if (data._candidateOnly) {
+            chatStore.appendAIMessage(data.content)
+            break
+          } else if (data._targetFilePath) {
             editorStore.appendContentToFile(data._targetFilePath, data.content)
           } else {
             editorStore.appendContent(data.content)
@@ -215,13 +305,16 @@ class SSEService {
       case 'file-created':
       case 'candidate-created':
         // 新文件创建 - 刷新文件树
-        if (data.path) {
-          fileStore.handleFileCreated(data.path, data.name)
-          if (!data.path.startsWith('backup/snapshots/')) {
-            taskStore.addLog('success', `已创建文件: ${data.name || data.path}`)
-            notification.success(`已创建文件: ${data.name || data.path}`)
+      {
+        const path = data.path || data.candidate_path || data.source_path
+        if (path) {
+          fileStore.handleFileCreated(path, data.name)
+          if (!path.startsWith('backup/snapshots/')) {
+            taskStore.addLog('success', `已创建文件: ${data.name || path}`)
+            notification.success(type === 'candidate-created' ? '候选稿已生成' : `已创建文件: ${data.name || path}`)
           }
         }
+      }
         break
 
       case 'file-updated':
@@ -369,11 +462,13 @@ class SSEService {
     if (this.manualClose || this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
         this._lastError.value = 'SSE 重连次数已达上限'
+        this._connectionStatus.value = 'error'
       }
       return
     }
 
     this._isReconnecting.value = true
+    this._connectionStatus.value = 'reconnecting'
     this.reconnectAttempts++
 
     console.log(`${this.reconnectDelay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`)
@@ -383,8 +478,8 @@ class SSEService {
       this.connect()
     }, this.reconnectDelay)
 
-    // 指数退避
-    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000)
+    // 指数退避，上限 10 秒
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, MAX_RECONNECT_DELAY)
   }
 
   /**
@@ -392,6 +487,7 @@ class SSEService {
    */
   disconnect() {
     this.manualClose = true
+    this._stopHeartbeatWatchdog()
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
@@ -406,8 +502,18 @@ class SSEService {
       generationEmitter.removeEventListener('generation', handler as EventListener)
       delete (this as any)._generationHandler
     }
+    const streamHandler = (this as any)._streamHandler
+    const streamEventTypes = (this as any)._streamEventTypes || []
+    if (streamHandler) {
+      streamEventTypes.forEach((type: string) => {
+        generationEmitter.removeEventListener(type, streamHandler as EventListener)
+      })
+      delete (this as any)._streamHandler
+      delete (this as any)._streamEventTypes
+    }
     this._isConnected.value = false
     this._isReconnecting.value = false
+    this._connectionStatus.value = 'disconnected'
   }
 
   /**
@@ -452,6 +558,8 @@ export function useSSE() {
     isConnected: sseService.isConnected,
     isReconnecting: sseService.isReconnecting,
     lastError: sseService.lastError,
+    connectionStatus: sseService.connectionStatus,
+    lastHeartbeatAt: sseService.lastHeartbeatAt,
     connect: () => sseService.connect(),
     disconnect: () => sseService.disconnect(),
     on: (type: SSEEventType, callback: (data: any) => void) => sseService.on(type, callback),

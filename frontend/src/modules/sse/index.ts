@@ -22,6 +22,7 @@ export type {
   PipelineStartedEvent,
   PipelineStepEvent,
   MemoryUpdatedEvent,
+  HeartbeatEvent,
   SSEEventType,
   SSEEventData,
 } from './types'

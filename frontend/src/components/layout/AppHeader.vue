@@ -63,20 +63,18 @@
       <!-- LLM 连接状态 -->
       <button
         class="llm-status"
-        :class="{ 'llm-status--connected': llmStore.isConnected }"
+        :class="{
+          'llm-status--connected': llmStore.isConnected && sseConnectionStatus === 'connected',
+          'llm-status--reconnecting': sseConnectionStatus === 'reconnecting' || sseConnectionStatus === 'connecting',
+          'llm-status--disconnected': sseConnectionStatus === 'disconnected' || sseConnectionStatus === 'error',
+        }"
         :title="`LLM: ${connectionStatus}`"
         @click="uiStore.openSettings()"
       >
         <span class="status-dot">
           <span class="status-dot-inner" />
         </span>
-        <span class="status-text">{{ llmStore.isConnected ? '已连接' : '未连接' }}</span>
-        <span
-          v-if="sseConnected"
-          class="sse-indicator"
-          title="SSE已连接"
-          data-testid="sse-status-indicator"
-        >SSE</span>
+        <span class="status-text">{{ connectionStatusLabel }}</span>
       </button>
 
       <!-- LLM 调用中 -->
@@ -243,7 +241,7 @@ const editorStore = useEditorStore()
 const fileStore = useFileStore()
 const notification = useNotificationStore()
 const chatStore = useChatStore()
-const { isConnected: sseConnected, isReconnecting } = useSSE()
+const { isConnected: sseConnected, connectionStatus: sseConnectionStatus } = useSSE()
 const route = useRoute()
 const router = useRouter()
 
@@ -284,7 +282,19 @@ const generatingLabel = computed(() => {
 })
 
 const connectionStatus = computed(() => {
-  if (isReconnecting.value) return '重连中...'
+  if (sseConnectionStatus.value === 'reconnecting') return '重连中...'
+  if (sseConnectionStatus.value === 'connecting') return '连接中...'
+  if (sseConnectionStatus.value === 'disconnected') return '连接断开'
+  if (sseConnectionStatus.value === 'error') return '连接错误'
+  if (llmStore.isConnected && sseConnected.value) return '已连接'
+  return '未连接'
+})
+
+const connectionStatusLabel = computed(() => {
+  if (sseConnectionStatus.value === 'reconnecting') return '重连中'
+  if (sseConnectionStatus.value === 'connecting') return '连接中'
+  if (sseConnectionStatus.value === 'disconnected') return '已断开'
+  if (sseConnectionStatus.value === 'error') return '连接错误'
   if (llmStore.isConnected && sseConnected.value) return '已连接'
   return '未连接'
 })
@@ -553,18 +563,20 @@ async function switchWritingMode() {
   background: var(--jade-light);
 }
 
-.status-text {
-  font-size: 12px;
+.llm-status--reconnecting .status-dot {
+  background: var(--gold-primary);
 }
 
-.sse-indicator {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  background: rgba(45, 138, 110, 0.15);
-  color: var(--jade-light);
-  letter-spacing: 0.5px;
+.llm-status--disconnected .status-dot {
+  background: var(--vermillion);
+}
+
+.llm-status--reconnecting .status-dot-inner {
+  animation: ink-pulse 1s ease-out infinite;
+}
+
+.status-text {
+  font-size: 12px;
 }
 
 /* ── LLM 生成中动画 ── */

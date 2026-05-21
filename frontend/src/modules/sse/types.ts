@@ -25,6 +25,7 @@ export interface GenerationEvent extends BaseEvent {
   delta?: string
   content?: string
   _targetFilePath?: string
+  _candidateOnly?: boolean
 }
 
 export interface FileCreatedEvent extends BaseEvent {
@@ -120,6 +121,14 @@ export interface PipelineStepEvent extends BaseEvent {
 
 export type MemoryUpdatedEvent = BaseEvent
 
+export interface HeartbeatEvent extends BaseEvent {
+  type: 'sse.heartbeat'
+  payload: {
+    server_time: string
+    interval: number
+  }
+}
+
 export type SSEEventType =
   | 'generation'
   | 'file-created'
@@ -146,6 +155,7 @@ export type SSEEventType =
   | 'task-waiting-for-user'
   | 'task-completed'
   | 'memory-updated'
+  | 'sse.heartbeat'
 
 export type SSEEventData =
   | GenerationEvent
@@ -167,3 +177,4 @@ export type SSEEventData =
   | PipelineStartedEvent
   | PipelineStepEvent
   | MemoryUpdatedEvent
+  | HeartbeatEvent
