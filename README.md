@@ -46,11 +46,15 @@ Supports DeepSeek, Ollama, and other LiteLLM-compatible models.
 
 ## Example Project
 
+A complete demo novel project is available at [`examples/demo-novel/`](examples/demo-novel/). It demonstrates the standard project structure, scene-level writing model, story memory files, and character profiles.
+
+### Quick Start
+
 1. Start backend and frontend.
 2. Open the web UI.
 3. Configure your LLM provider in Settings.
 4. Create a new project or use Lite mode to pick an opening hook.
-5. Click "写下一部分" to generate a scene.
+5. Click "写下一场景" to generate a scene.
 6. Review the candidate draft before applying changes.
 
 ## Documentation

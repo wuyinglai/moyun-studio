@@ -1,0 +1,13 @@
+{
+  "title": "黑塔信号",
+  "genre": "近未来悬疑",
+  "language": "zh-CN",
+  "description": "前城市AI治理系统工程师林澈与调查记者沈知夏，在雨夜废弃地铁站发现一枚异常芯片，由此揭开三年前失踪案与城市AI命运分级系统背后的秘密。",
+  "structure": {
+    "volumes_per_story": 1,
+    "chapters_per_volume": 12,
+    "scenes_per_chapter": 5
+  },
+  "created_at": "2025-01-15T10:00:00",
+  "updated_at": "2025-01-15T10:00:00"
+}

@@ -1,0 +1,62 @@
+{
+  "volume": 1,
+  "chapter": 1,
+  "title": "旧港站",
+  "scene_cards": [
+    {
+      "scene_id": "sec-001",
+      "title": "雨夜信号",
+      "purpose": "建立悬念，引出芯片和旧港站",
+      "pov": "林澈",
+      "location": "旧港站废弃站台",
+      "characters": ["林澈"],
+      "conflict": "匿名信息的真实意图不明，林澈独自面对未知",
+      "clue": "芯片编号 T-0773，信号灯三次闪烁",
+      "status": "drafted"
+    },
+    {
+      "scene_id": "sec-002",
+      "title": "不速之客",
+      "purpose": "引入沈知夏，建立人物对峙和合作关系",
+      "pov": "林澈",
+      "location": "旧港站站厅层",
+      "characters": ["林澈", "沈知夏"],
+      "conflict": "两人互不信任，但被迫合作；芯片对沈知夏有异常反应",
+      "clue": "寻人启事档案，芯片感应反应，失踪者信号汇聚",
+      "status": "drafted"
+    },
+    {
+      "scene_id": "sec-003",
+      "title": "芯片解码",
+      "purpose": "林澈初步分析芯片数据，发现黑塔编号的规律",
+      "pov": "林澈",
+      "location": "林澈的公寓",
+      "characters": ["林澈"],
+      "conflict": "芯片数据加密方式与天衡内部协议相似，林澈必须面对自己的过去",
+      "clue": "加密协议与天衡同源，数据指向多个离线节点",
+      "status": "planned"
+    },
+    {
+      "scene_id": "sec-004",
+      "title": "线人警告",
+      "purpose": "沈知夏收到线人警告，天衡已追踪到异常查询",
+      "pov": "沈知夏",
+      "location": "报社办公室",
+      "characters": ["沈知夏"],
+      "conflict": "线人身份可能暴露，沈知夏必须在保护线人和继续调查之间抉择",
+      "clue": "天衡的追踪能力超出预期，查询记录被标记",
+      "status": "planned"
+    },
+    {
+      "scene_id": "sec-005",
+      "title": "旧同事",
+      "purpose": "林澈联系天衡旧同事，得知内部正在清理痕迹",
+      "pov": "林澈",
+      "location": "城中村面馆",
+      "characters": ["林澈"],
+      "conflict": "旧同事暗示林澈也被列入监控名单，时间紧迫",
+      "clue": "内部清理行动代号'归零'，涉及所有三年前的算法记录",
+      "status": "planned"
+    }
+  ]
+}
