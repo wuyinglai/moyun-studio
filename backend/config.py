@@ -97,6 +97,12 @@ class Settings(BaseSettings):
         description="批量生成最大场景数（默认 10）",
     )
 
+    # ─── Pipeline 校验配置 ──────────────────────────────────────
+    validate_pipelines_on_start: bool = Field(
+        default=True,
+        description="启动时是否校验 pipeline YAML 配置（默认 True）",
+    )
+
     @field_validator("workspace_path", mode="before")
     @classmethod
     def resolve_workspace(cls, v: str | Path) -> Path:

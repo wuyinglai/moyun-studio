@@ -20,6 +20,7 @@ from backend.core.event_bus import EventBus
 from backend.core.exceptions import MoyunException
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
+from backend.core.pipeline_validator import validate_all_pipelines
 from backend.core.task_queue import TaskQueue, run_task_worker
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,28 @@ async def lifespan(app: FastAPI):
     settings.workspace_path.mkdir(parents=True, exist_ok=True)
     settings.projects_path.mkdir(parents=True, exist_ok=True)
     settings.prompts_path.mkdir(parents=True, exist_ok=True)
+
+    # ── Pipeline YAML 校验 ──────────────────────────────────────
+    if settings.validate_pipelines_on_start:
+        # 校验系统 prompts 目录下的 pipeline YAML
+        system_prompts = settings.system_prompts_path
+        if system_prompts.exists():
+            results = validate_all_pipelines(system_prompts)
+            has_errors = any(not r.valid for r in results)
+            if has_errors:
+                error_details = []
+                for r in results:
+                    if r.errors:
+                        for err in r.errors:
+                            step_info = f" (step={err.step_id})" if err.step_id else ""
+                            error_details.append(f"  [{r.file}]{step_info}: {err.message}")
+                error_msg = "Pipeline YAML 校验失败:\n" + "\n".join(error_details)
+                if settings.debug:
+                    raise RuntimeError(error_msg)
+                else:
+                    logger.error(error_msg)
+        else:
+            logger.warning("系统 prompts 目录不存在，跳过 pipeline 校验: %s", system_prompts)
 
     # 初始化 EventBus 并挂载到 app.state
     event_bus = EventBus()
