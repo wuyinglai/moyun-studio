@@ -8,13 +8,13 @@
 from datetime import datetime
 import json
 import logging
-from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
 from backend.core.exceptions import ProjectNotFoundError
+from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.schemas.common import ApiResponse
 
@@ -93,15 +93,18 @@ async def generate_style_guide(
     从项目 meta.json 读取题材/主题/基调等信息，调用 LLM 生成文风指南。
     也支持通过请求体传入自定义参数覆盖 meta.json。
     """
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+
+    # 检查项目是否存在
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     # 读取 meta.json
     meta = {}
-    meta_path = project_dir / "meta.json"
-    if meta_path.exists():
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta_rel_path = _meta_rel_path(project_id)
+    if await fs.exists(meta_rel_path):
+        meta_raw, _, _ = await fs.read_file(meta_rel_path)
+        meta = json.loads(meta_raw)
 
     genre = req.genre if req and req.genre else meta.get("genre", "")
     theme = req.theme if req and req.theme else meta.get("theme", "")
@@ -133,8 +136,8 @@ async def generate_style_guide(
         content = DEFAULT_STYLE_GUIDE
 
     # 写入文件
-    file_path = _get_style_guide_path(project_id, settings)
-    file_path.write_text(content, encoding="utf-8")
+    rel_path = _style_guide_rel_path(project_id)
+    await fs.write_file(rel_path, content)
     logger.info("文风指南已通过 AI 生成: %s", project_id)
 
     return ApiResponse.ok(StyleGuideContent(
@@ -186,12 +189,24 @@ DEFAULT_STYLE_GUIDE = """# 文风指南
 """
 
 
+# ─── 工具函数 ────────────────────────────────────────────────────────
+
+def _make_file_service(settings: Settings) -> FileService:
+    """创建 FileService 实例"""
+    return FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
+
+
+def _style_guide_rel_path(project_id: str) -> str:
+    """获取 style-guide.md 的 FileService 相对路径"""
+    return f"{project_id}/style-guide.md"
+
+
+def _meta_rel_path(project_id: str) -> str:
+    """获取 meta.json 的 FileService 相对路径"""
+    return f"{project_id}/meta.json"
+
+
 # ─── 路由 ────────────────────────────────────────────────────────────
-
-def _get_style_guide_path(project_id: str, settings: Settings) -> Path:
-    """获取文风指南文件路径"""
-    return settings.projects_path / project_id / "style-guide.md"
-
 
 @router.get("/{project_id}", response_model=ApiResponse[StyleGuideContent])
 async def get_style_guide(
@@ -209,27 +224,25 @@ async def get_style_guide(
     Raises:
         ProjectNotFoundError: 项目不存在时抛出
     """
-    file_path = _get_style_guide_path(project_id, settings)
+    fs = _make_file_service(settings)
+    rel_path = _style_guide_rel_path(project_id)
 
     # 检查项目是否存在
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
-    # 如果文件不存在，返回默认模板
-    if not file_path.exists():
+    # 如果文件不存在，创建默认模板
+    if not await fs.exists(rel_path):
         logger.info("文风指南文件不存在，创建默认模板: %s", project_id)
-        file_path.write_text(DEFAULT_STYLE_GUIDE, encoding="utf-8")
+        await fs.write_file(rel_path, DEFAULT_STYLE_GUIDE)
         return ApiResponse.ok(StyleGuideContent(
             content=DEFAULT_STYLE_GUIDE,
             last_modified=datetime.now().isoformat()
         ))
 
     # 读取文件
-    content = file_path.read_text(encoding="utf-8")
-    last_modified = datetime.fromtimestamp(
-        file_path.stat().st_mtime
-    ).isoformat()
+    content, _, mtime = await fs.read_file(rel_path)
+    last_modified = datetime.fromtimestamp(mtime).isoformat() if mtime else None
 
     logger.debug("获取文风指南成功: %s", project_id)
     return ApiResponse.ok(StyleGuideContent(
@@ -256,15 +269,15 @@ async def save_style_guide(
     Raises:
         ProjectNotFoundError: 项目不存在时抛出
     """
-    file_path = _get_style_guide_path(project_id, settings)
+    fs = _make_file_service(settings)
+    rel_path = _style_guide_rel_path(project_id)
 
     # 检查项目是否存在
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     # 写入文件
-    file_path.write_text(req.content, encoding="utf-8")
+    await fs.write_file(rel_path, req.content)
 
     logger.info("文风指南已保存: %s", project_id)
     return ApiResponse.ok(message="文风指南已保存")
