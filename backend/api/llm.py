@@ -164,13 +164,19 @@ async def test_connection(
             LLMStatusResponse(connected=False, model=model, message="连接超时")
         )
     except Exception as e:
+        import re
         import traceback
         err_type = type(e).__name__
         err_msg = str(e)[:200]
         tb = traceback.format_exc()
-        logger.error(f"LLM连接测试失败: [{err_type}] {err_msg}\n{tb[:500]}")
+        # 脱敏：移除日志中可能泄露的 API Key
+        safe_tb = re.sub(r'(api[_-]?key[=:]\s*)\S+', r'\1***', tb[:500], flags=re.IGNORECASE)
+        safe_tb = re.sub(r'sk-[a-zA-Z0-9]{10,}', 'sk-***', safe_tb)
+        safe_msg = re.sub(r'(api[_-]?key[=:]\s*)\S+', r'\1***', err_msg, flags=re.IGNORECASE)
+        safe_msg = re.sub(r'sk-[a-zA-Z0-9]{10,}', 'sk-***', safe_msg)
+        logger.error(f"LLM连接测试失败: [{err_type}] {safe_msg}\n{safe_tb}")
         return ApiResponse.ok(
-            LLMStatusResponse(connected=False, model=model, message=f"[{err_type}] {err_msg}")
+            LLMStatusResponse(connected=False, model=model, message=f"[{err_type}] {safe_msg}")
         )
 
 

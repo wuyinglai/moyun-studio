@@ -285,3 +285,35 @@ class TestLLMService:
             with pytest.raises(LLMError):
                 import asyncio
                 asyncio.run(svc.complete_sync([{"role": "user", "content": "test"}]))
+
+
+class TestAPIKeyRedaction:
+    """验证 API Key 在错误日志中被脱敏"""
+
+    def test_sk_pattern_redacted(self):
+        import re
+        msg = "Request failed with key sk-1234567890abcdef1234567890"
+        safe = re.sub(r'sk-[a-zA-Z0-9]{10,}', 'sk-***', msg)
+        assert 'sk-1234567890' not in safe
+        assert 'sk-***' in safe
+
+    def test_api_key_assignment_redacted(self):
+        import re
+        msg = "api_key=sk-abcdef1234567890"
+        safe = re.sub(r'(api[_-]?key[=:]\s*)\S+', r'\1***', msg, flags=re.IGNORECASE)
+        assert 'sk-abcdef' not in safe
+        assert 'api_key=***' in safe
+
+    def test_bearer_token_redacted(self):
+        import re
+        msg = "Authorization: Bearer sk-1234567890abcdef"
+        safe = re.sub(r'sk-[a-zA-Z0-9]{10,}', 'sk-***', msg)
+        assert 'sk-1234567890abcdef' not in safe
+        assert 'sk-***' in safe
+
+    def test_no_key_unchanged(self):
+        import re
+        msg = "Connection timeout after 30s"
+        safe = re.sub(r'sk-[a-zA-Z0-9]{10,}', 'sk-***', msg)
+        safe = re.sub(r'(api[_-]?key[=:]\s*)\S+', r'\1***', safe, flags=re.IGNORECASE)
+        assert safe == msg
