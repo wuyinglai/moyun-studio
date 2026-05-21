@@ -151,7 +151,7 @@ workspace/prompts/
 | 项目设置 | `projects/{project_name}/meta.json` | genre, theme, tone, scale, pov 等 |
 | 文风指南 | `projects/{project_name}/style-guide.md` | 文风定义 |
 | 故事状态 | `projects/{project_name}/story-state.md` | 全局状态 |
-| 近期上下文 | `projects/{project_name}/recent-context.md` | 最近5章摘要 |
+| 近期上下文 | `projects/{project_name}/recent-context.md` | 最近15个场景摘要 |
 | 世界观设定 | `projects/{project_name}/materials/extracted/worldbuilding.md` | 世界观 |
 | 角色设定 | `projects/{project_name}/characters/*.json` | 角色档案 |
 | 章节元数据 | `projects/{project_name}/chapters/{vol}/ch-{xxx}/ch-meta.json` | goal, memory 等 |
@@ -216,7 +216,7 @@ PipelineRunner 自动加载以下变量：
 - 主线/支线进度
 - 关键人物关系
 - 待处理事项
-- 最近5章摘要
+- 最近15个场景摘要
 
 **更新**：每次生成章节后自动更新
 
@@ -226,10 +226,10 @@ PipelineRunner 自动加载以下变量：
 
 **位置**：`projects/{project_name}/recent-context.md`
 
-**用途**：存储最近5章摘要
+**用途**：存储最近15个场景摘要
 
 **内容**：
-- 最近5章的详细摘要
+- 最近15个场景的详细摘要
 - 人物状态速查
 - 伏笔状态速查
 - 势力关系速查

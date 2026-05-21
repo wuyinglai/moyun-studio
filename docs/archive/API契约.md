@@ -1,5 +1,7 @@
 # API 契约文档 [已废弃]
 
+> Archived. This document may be outdated. See docs/document-index.md for current documentation.
+
 > ⚠️ **已废弃**：FastAPI 自动生成 OpenAPI 文档（`/docs` 和 `/redoc`），这是唯一的 API 参考来源。
 > 保留此文作为历史参考，不再单独维护。最后更新：2026-05-14
 >

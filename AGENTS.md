@@ -6,6 +6,20 @@ Moyun Studio is a local-first AI fiction writing studio with scene-level writing
 
 ---
 
+## AI Reading Order
+
+Before editing code, read:
+
+1. **AGENTS.md** (this file) — Product rules, forbidden zones, code map
+2. **docs/code-map.md** — 12 feature areas mapped to files
+3. **docs/frontend-user-flow.md** — User flows for all routes
+4. **docs/contracts/scene-path-contract.md** — Scene path rules (sec = scene)
+5. **Relevant contract under docs/contracts/** — api-contract, event-contract, candidate-contract
+
+Do not rely on archived documents unless explicitly asked.
+
+---
+
 ## Non-negotiable Product Rules / 不可违反的产品规则
 
 These rules are enforced at the product level. Violating any of them will break user data or core workflows.
@@ -163,8 +177,12 @@ These rules are enforced at the product level. Violating any of them will break 
 | `docs/编码规范.md` | 详细编码规范 | 写代码前 |
 | `docs/文件系统设计.md` | 文件存储结构和命名规则 | 涉及文件操作时 |
 | `docs/后端架构设计.md` | 后端架构概览 | 了解整体设计时 |
-| `docs/开发步骤.md` | 迭代开发流程 | 了解项目流程时 |
 | `docs/frontend-user-flow.md` | 前端用户流程 | 修改用户流程时 |
+| `docs/contracts/scene-path-contract.md` | 场景路径契约 | 涉及场景路径时 |
+| `docs/contracts/api-contract.md` | API 契约（文件读写、冲突检测） | 涉及 API 时 |
+| `docs/contracts/event-contract.md` | SSE 事件契约 | 涉及事件时 |
+| `docs/contracts/candidate-contract.md` | 候选稿契约 | 涉及候选稿时 |
+| `docs/document-index.md` | 文档总索引 | 查找文档时 |
 | `CONTEXT.md` | 领域术语定义 | Yes |
 | `docs/agents/` | Agent skills 说明 | 使用 agent 时 |
 

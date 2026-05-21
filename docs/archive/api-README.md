@@ -1,5 +1,7 @@
 # API 文档拆分入口
 
+> Archived. This document may be outdated. See docs/document-index.md for current documentation.
+
 当前权威 API 契约仍是 [../API契约.md](../API契约.md)。本目录用于后续把过大的 API 契约拆成模块文档。
 
 ## 计划拆分

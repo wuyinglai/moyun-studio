@@ -1,5 +1,7 @@
 # 功能规格拆分入口
 
+> Archived. This document may be outdated. See docs/document-index.md for current documentation.
+
 当前权威功能规格仍是 [../功能清单.md](../功能清单.md)。本目录用于后续把过大的功能清单拆成更小的主题文档。
 
 ## 计划拆分
