@@ -26,7 +26,7 @@ class PipelineRunRequest(BaseModel):
     project_id: str
     target_file: str | None = None
     user_input: str | None = None
-    output_mode: str = "overwrite"  # overwrite | append | dimension_file
+    output_mode: str = "overwrite"  # legacy overwrite | write_scene | candidate | append | dimension_file
     extra_vars: dict = Field(default_factory=dict)
 
 

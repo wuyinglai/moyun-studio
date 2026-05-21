@@ -45,7 +45,7 @@
 - 组件：`LiteWritingView`。
 - `onMounted` 无 projectId 时执行 `projectStore.closeProject()`，然后 `loadIdeas(false)`。
 - 首屏是 5 张开局卡，调用 `fetchLiteIdeas` 或预取缓存。
-- 用户选开局卡后调用 `createLiteProject(card, prefs)`，创建项目、加载文件树、跳转 `/project/:projectId/lite`，并自动写第一节。
+- 用户选开局卡后调用 `createLiteProject(card, prefs)`，创建项目、加载文件树、跳转 `/project/:projectId/lite`，并自动写第一场景。
 
 ### `/project/:projectId/lite`
 
@@ -53,7 +53,7 @@
 - 路由守卫打开项目并加载文件树。
 - 页面自己决定打开哪个章节，不使用主工作台默认打开 `outline.md` 的逻辑。
 - 左侧列出 `chapters/**/sec-*.md`，中间 textarea 是 Lite 编辑器，右侧是爽点卡、聊天改稿、参数、故事状态摘要。
-- 选爽点卡会直接调用流式接口写下一节；重写/更爽/更合理/聊天改稿会生成候选稿，不覆盖原文，需用户采用。
+- 选爽点卡会直接调用流式接口写下一场景；重写/更爽/更合理/聊天改稿会生成候选稿，不覆盖原文，需用户采用。
 
 ## 2. 主工作台流程
 
@@ -111,7 +111,7 @@
 读取：
 
 - `fileStore.readFile(projectId, path)` 调用 `GET /api/file?project_id=&path=`。
-- 内容存入 `fileStore.fileContents[path]` 和 `editorStore.contents[path]`。
+- 内容和 `mtime/hash` 存入 `fileStore.fileContents[path]` / `fileStore.fileMeta[path]`，正文进入 `editorStore.contents[path]`。
 
 编辑：
 
@@ -123,8 +123,8 @@
 保存：
 
 - 保存按钮通常经 `EditorToolbar` 或快捷键调用 `fileStore.saveFile(projectId, path, content)`。
-- API 是 `POST /api/file?project_id=...`，body 包含 `path`、`content`。
-- 当前前端 `saveFile` 没有传 `expected_mtime`，所以保存是直接覆盖式。
+- API 是 `POST /api/file?project_id=...`，body 包含 `path`、`content`、`expected_mtime`、`expected_hash`。
+- 如果后端返回 `FILE_CONFLICT`，前端提示用户重新加载服务器版本或取消保存，不静默覆盖。
 
 ### 2.6 “写下一部分”实际做什么
 
@@ -151,7 +151,7 @@
    - `pipeline`
    - `project_id`
    - `target_file`
-   - `output_mode: overwrite`
+   - `output_mode: write_scene`
    - `extra_vars`
 7. 返回是 fetch + ReadableStream 的 SSE 流。
 8. `parseSSEStream` 将事件转发到 `generationEmitter`。
@@ -162,7 +162,7 @@
 
 - 它不是简单“点击按钮直接生成正文”。
 - 它先推导下一文件和 pipeline。
-- 它通过 pipeline 流式写入目标文件。
+- 它通过 pipeline 流式写入新场景或空场景；若目标已有内容，后端应转候选稿或要求确认，不能静默覆盖。
 - 前端流式显示来自 fetch stream + `generationEmitter`。
 - 最终内容以后端写盘结果为准，再读回 editor。
 
@@ -187,14 +187,14 @@
 1. `EditorToolbar` 上的“润色 / 精修 / 提取”
    - 只在场景文件 `sec-*.md` 上显示。
    - 调用 `runPipeline('polish' | 'rewrite' | 'extract')`。
-   - `polish` / `rewrite` 的 `targetFile` 是当前文件，`output_mode: overwrite`。
-   - `extract` 输出到 `materials/extracted/...`，不覆盖当前章节。
-   - 是否产生 candidate 取决于后端 pipeline 实现；前端这里不是显式 candidate 流程。
+   - `polish` / `rewrite` 属于高风险修改，默认使用 `output_mode: candidate`，不直接覆盖正式正文。
+   - `extract` 输出到 `materials/extracted/...`，不覆盖当前场景。
+   - 用户在 Candidate 面板点击采用后，候选稿才覆盖 `source_path`。
 
 2. 右侧 `ProfessionalQuickPanel`
-   - “生成本节”调用 `generationStore.continueWriting`，再调用 `POST /api/generate`，`mode: append`。
-   - “重写本节”调用 `generationStore.rewriteContent`，再调用 `POST /api/generate`，`mode: rewrite`。
-   - 该 store 当前主要建立任务状态；流式事件由 `useSSE` 处理。
+   - “续写当前场景”调用 `generationStore.continueWriting`，再调用 `POST /api/generate`，`mode: append`。
+   - “重写当前场景”调用 `generationStore.rewriteContent`，默认生成 candidate，不直接覆盖正式正文。
+   - 该 store 当前主要建立任务状态；流式事件由 `useSSE`/fetch stream 处理。
 
 候选稿面板：
 
@@ -217,7 +217,7 @@ Lite 是爽文/轻量写作入口，目标是减少用户理解 prompt、workflo
 它的核心交互是：
 
 - 无项目：选开局卡创建项目。
-- 有项目：选下一节爽点卡，自动流式写入下一场景。
+- 有项目：选下一场景爽点卡，自动流式写入下一场景。
 - 对当前场景进行重写/更爽/更合理/聊天改稿时，生成候选稿，用户满意后采用。
 
 ### 3.2 是否需要项目
@@ -239,14 +239,14 @@ Lite 是爽文/轻量写作入口，目标是减少用户理解 prompt、workflo
    - `openChapter(created.first_file, { skipOptions: true })`
    - 构造一张 openingCard 并 `runGeneration(openingCard, 'write', first_file)`
 
-因此 Lite 新项目创建后会自动进入项目态，并开始写第一节。
+因此 Lite 新项目创建后会自动进入项目态，并开始写第一场景。
 
 ### 3.4 带 projectId 时如何读取上下文
 
 - 路由守卫和 `openProject(id)` 加载项目与文件树。
 - `chapterFiles` 从 `fileStore.tree` 中筛选 `chapters/**/sec-*.md`。
 - `openChapter(path)` 读取当前场景内容。
-- `refreshOptions(currentFile)` 调用 `fetchLiteNextOptions(projectId, currentFile, prefs)`，后端根据当前文件、前文、story engine、recent context 生成下一节爽点卡。
+- `refreshOptions(currentFile)` 调用 `fetchLiteNextOptions(projectId, currentFile, prefs)`，后端根据当前文件、前文、story engine、recent context 生成下一场景爽点卡。
 - 页面故事状态摘要来自后端返回或本地更新的 `engineSummary`。
 
 ### 3.5 用户点击生成时调用什么
@@ -298,9 +298,9 @@ Lite 的 `rewrite` / `more_exciting` / `more_reasonable` / `chat revision`：
 
 会。以下动作走 candidate：
 
-- “重写这一章/节”
-- “更爽一点”
-- “更合理一点”
+- “重写当前场景”
+- “让当前场景更爽”
+- “让当前场景更合理”
 - “灵感改稿”
 
 这些动作通过 `outputFile` 与 `targetFile` 不同来标记 candidate；页面在 `candidateDraft` 存 sourcePath、candidate path、action、content。
@@ -313,7 +313,7 @@ Lite 流式完成后 `onDone` 会接收：
 - `story_engine_summary`
 - `chapter_plan`
 
-前端显示质量摘要和故事状态摘要。实际 `story-engine.md`、`recent-context.md`、`ch-meta.json` 的写入发生在后端 `/api/lite/write-next-stream` 流程中；前端完成后会 `fileStore.loadTree(projectId)` 并刷新下一节爽点卡。
+前端显示质量摘要和故事状态摘要。实际 `story-engine.md`、`recent-context.md`、`ch-meta.json` 的写入发生在后端 `/api/lite/write-next-stream` 流程中；前端完成后会 `fileStore.loadTree(projectId)` 并刷新下一场景爽点卡。
 
 ### 3.11 Lite 与主工作台共享什么
 
@@ -351,7 +351,7 @@ flowchart TD
   J --> K["editorStore.loadContent + CodeMirror 显示"]
   K --> L["用户编辑正文"]
   L --> M["editorStore.updateContent + markDirty"]
-  M --> N["保存: POST /api/file"]
+  M --> N["保存: POST /api/file + expected_mtime/hash"]
   N --> O["点击 写下一部分"]
   O --> P["推导 next scene/path + pipeline"]
   P --> Q["POST /api/pipeline/run"]
@@ -366,13 +366,11 @@ flowchart TD
   A["打开 sec 文件"] --> B["工具栏/右侧快捷面板"]
   B --> C{"触发哪种动作?"}
   C --> D["EditorToolbar polish/rewrite pipeline"]
-  C --> E["ProfessionalQuickPanel continue/rewrite /api/generate"]
-  D --> F["可能直接 overwrite 当前文件"]
-  E --> G["流式事件更新 editor 或任务状态"]
-  F --> H{"后端是否创建 candidate?"}
-  G --> H
-  H -->|是| I["RightPanel Candidate tab 列表刷新"]
-  H -->|否| J["当前文件内容被更新"]
+  C --> E["ProfessionalQuickPanel rewrite"]
+  D --> F["output_mode: candidate"]
+  E --> F
+  F --> H["后端创建 candidate"]
+  H --> I["RightPanel Candidate tab 列表刷新"]
   I --> K["预览候选稿"]
   K --> L["POST /api/candidates/:id/adopt"]
   L --> M["覆盖 source_path 原文件"]
@@ -432,8 +430,8 @@ flowchart TD
 | 主工作台 candidate 面板 | `/project/:id` | 打开 Candidate tab | candidate 列表显示 | `GET /api/candidates/:projectId` | 否 | 否 | 否 | 是 | 否 |
 | 采用候选稿 | `/project/:id` | 预览 candidate，点击采用 | 状态更新/通知成功 | `GET /api/candidates/:id`、`POST /api/candidates/:id/adopt` | 否 | 否 | 是，覆盖 source | 是 | 否 |
 | Lite 无项目入口 | `/lite` | 打开页面 | 5 张开局卡或加载态可见 | `POST /api/lite/ideas` | 可 mock | 否 | 否 | 否 | 否 |
-| Lite 创建项目并写第一节 | `/lite` | 选开局卡 | 跳转 `/project/:id/lite`，textarea 流式显示 | `POST /api/lite/projects`、`POST /api/lite/write-next-stream` | 可真实 LLM 独立测 | 是，真实 LLM 时检查 | 是，sec 文件 | 否 | 是，story engine |
-| Lite 选爽点卡写下一节 | `/project/:id/lite` | 选右侧爽点卡 | 目标 sec 打开，流式输出，下一批卡刷新 | `POST /api/lite/write-next-stream`、`POST /api/lite/next-options` | 可 mock/真实各一套 | 真实时检查 | 是 | 否 | 是 |
+| Lite 创建项目并写第一场景 | `/lite` | 选开局卡 | 跳转 `/project/:id/lite`，textarea 流式显示 | `POST /api/lite/projects`、`POST /api/lite/write-next-stream` | 可真实 LLM 独立测 | 是，真实 LLM 时检查 | 是，sec 文件 | 否 | 是，story engine |
+| Lite 选爽点卡写下一场景 | `/project/:id/lite` | 选右侧爽点卡 | 目标 sec 打开，流式输出，下一批卡刷新 | `POST /api/lite/write-next-stream`、`POST /api/lite/next-options` | 可 mock/真实各一套 | 真实时检查 | 是 | 否 | 是 |
 | Lite 重写生成候选稿 | `/project/:id/lite` | 点“重写/更爽/聊天改稿” | candidate bar 出现，原文不被覆盖 | `POST /api/lite/write-next-stream` 带 `output_file` | 可 mock | 可不查 | 是，候选路径 | 是 | 可不查 |
 | Lite 采用候选稿 | `/project/:id/lite` | 点击“采用候选稿” | candidate bar 消失，正文替换 | candidate adopt API | 否 | 否 | 是，覆盖 source | 是 | 可不查 |
 | 批量生成场景 | `/project/:id` | 更多 → 批量生成 | modal 展示结果表，文件树刷新 | `POST /api/generate/batch` | 可真实 LLM 少量测 | 真实时检查 | 是或 candidate | 可能 | 可能 |

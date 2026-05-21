@@ -9,6 +9,7 @@
   GET  /api/tree           获取文件树（?project_id=）
 """
 
+import hashlib
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -130,12 +131,13 @@ async def read_file(
         logger.warning("读取文件失败", extra={"project_id": project_id, "path": path, "error": str(e)})
         raise HTTPException(status_code=500, detail="读取文件失败")
 
+    content_hash = hashlib.md5(content.encode("utf-8")).hexdigest()
     return ApiResponse.ok(
-        FileReadResponse(path=path, content=content, frontmatter=fm, mtime=mtime)
+        FileReadResponse(path=path, content=content, frontmatter=fm, mtime=mtime, hash=content_hash)
     )
 
 
-@router.post("/file", response_model=ApiResponse[None])
+@router.post("/file", response_model=ApiResponse[FileReadResponse | None])
 async def write_file(
     req: FileWriteRequest,
     request: Request,
@@ -146,6 +148,8 @@ async def write_file(
     """写入文件内容"""
     fs = _project_file_service(settings, project_id)
     full_path = f"{project_id}/{req.path}"
+    content_hash = hashlib.md5(req.content.encode("utf-8")).hexdigest()
+    mtime = None
     try:
         await fs.write_file(
             full_path,
@@ -154,6 +158,7 @@ async def write_file(
             expected_mtime=req.expected_mtime,
             expected_hash=req.expected_hash,
         )
+        _, _, mtime = await fs.read_file(full_path)
     except (FileConflictError, ValidationError):
         raise
     except Exception as e:
@@ -166,10 +171,6 @@ async def write_file(
     event_bus = getattr(request.app.state, "event_bus", None)
     if event_bus:
         file_size = len(req.content.encode("utf-8")) if req.content else 0
-        try:
-            _, _, mtime = await fs.read_file(full_path)
-        except Exception:
-            mtime = None
         evt = make_file_updated_event(
             project_id=project_id,
             path=f"{project_id}/{req.path}",
@@ -179,7 +180,16 @@ async def write_file(
         )
         await event_bus.publish(evt.type, evt.to_sse_dict())
 
-    return ApiResponse.ok(message="文件已保存")
+    return ApiResponse.ok(
+        FileReadResponse(
+            path=req.path,
+            content=req.content,
+            frontmatter=req.frontmatter,
+            mtime=mtime,
+            hash=content_hash,
+        ),
+        message="文件已保存",
+    )
 
 
 @router.post("/file/create", response_model=ApiResponse[None])

@@ -12,6 +12,7 @@ class FileReadResponse(BaseModel):
     content: str
     frontmatter: dict | None = None
     mtime: float | None = None  # 文件修改时间（用于并发控制）
+    hash: str | None = None  # 文件内容哈希（用于并发控制）
 
 
 class FileWriteRequest(BaseModel):

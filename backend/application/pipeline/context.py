@@ -20,7 +20,7 @@ class PipelineContext(BaseModel):
     pipeline_name: str = Field(..., description="管线名称")
     target_file: str | None = Field(None, description="目标文件路径")
     task_id: str = Field("", description="任务ID")
-    output_mode: str = Field("overwrite", description="输出模式")
+    output_mode: str = Field("overwrite", description="输出模式：legacy overwrite/write_scene/candidate/append")
     user_input: str | None = Field(None, description="用户输入")
     step_outputs: dict[str, str] = Field(default_factory=dict, description="步骤输出映射")
     system_vars: dict = Field(default_factory=dict, description="系统变量")

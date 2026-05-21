@@ -433,3 +433,62 @@ class TestSceneWritingSmoke:
             step_data = json.loads(step_data)
         assert step_data.get("step_id") == "rewrite"
         assert step_data.get("status") == "done"
+
+        # rewrite/polish 类高风险修改必须先生成候选稿，不直接覆盖正式场景。
+        scene_file = project_dir / scene_rel_path
+        assert scene_file.read_text(encoding="utf-8") == SCENE_CONTENT
+        assert "candidate_created" in event_types
+
+    @pytest.mark.asyncio
+    async def test_pipeline_write_scene_existing_file_becomes_candidate(self, tmp_path):
+        """write_scene 写已有 sec 文件时应转候选稿，不静默覆盖。"""
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        project_id = "smoke-write-scene"
+        project_dir = _make_project(workspace, project_id)
+        scene_file = _make_scene_file(project_dir)
+
+        prompts_dir = workspace / "prompts"
+        pipeline_dir = prompts_dir / "pipeline"
+        pipeline_dir.mkdir(parents=True, exist_ok=True)
+        (pipeline_dir / "generate.yaml").write_text(
+            "name: generate\n"
+            "label: 生成\n"
+            "steps:\n"
+            "  - id: draft\n"
+            "    label: 生成场景\n"
+            "    prompt: generate/scene\n"
+            "    confirm: false\n",
+            encoding="utf-8",
+        )
+        step_dir = prompts_dir / "generate"
+        step_dir.mkdir(exist_ok=True)
+        (step_dir / "scene.md").write_text("请写场景：{{ file_path }}", encoding="utf-8")
+
+        fs = FileService(workspace)
+        mock_llm = MagicMock()
+        mock_llm.config.max_prompt_tokens = 120000
+        mock_llm.config.context_window = 128000
+        mock_llm.config.reserved_output_tokens = 8000
+
+        async def mock_complete(*args, **kwargs):
+            yield "这是新的第二版场景。"
+
+        mock_llm.complete = mock_complete
+
+        from backend.core.pipeline import PipelineRunner
+
+        runner = PipelineRunner(prompts_path=prompts_dir, llm_service=mock_llm, file_service=fs)
+        scene_rel_path = "chapters/vol-01/ch-001/sec-001.md"
+
+        events = []
+        async for event in runner.run(
+            pipeline_name="generate",
+            project_id=project_id,
+            target_file=scene_rel_path,
+            output_mode="write_scene",
+        ):
+            events.append(event)
+
+        assert scene_file.read_text(encoding="utf-8") == SCENE_CONTENT
+        assert "candidate_created" in [event.get("event") for event in events]

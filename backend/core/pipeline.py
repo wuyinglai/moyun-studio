@@ -302,6 +302,13 @@ class PipelineRunner:
         """
         pipeline = self.load_pipeline(pipeline_name)
         extra_vars = extra_vars or {}
+        output_mode = await self._normalize_output_mode(
+            pipeline_name=pipeline_name,
+            project_id=project_id,
+            target_file=target_file,
+            output_mode=output_mode,
+            require_candidate=require_candidate,
+        )
 
         logger.info(
             "管线开始执行: %s (project=%s, target=%s, mode=%s)",
@@ -575,9 +582,11 @@ class PipelineRunner:
                 logger.warning("重新读取文件 %s/%s 失败: %s", project_id, target_file, e)
 
             # 判断是否需要生成候选稿
-            should_use_candidate = require_candidate or (output_mode == "rewrite" and original_content)
+            should_use_candidate = output_mode == "candidate"
+            if output_mode == "write_scene" and original_content.strip():
+                should_use_candidate = True
 
-            if should_use_candidate and original_content:
+            if should_use_candidate:
                 # 生成候选稿而不是直接覆盖
                 candidate_service = CandidateService(self.file_service)
                 action = self._infer_candidate_action(pipeline_name, output_mode)
@@ -595,7 +604,7 @@ class PipelineRunner:
                     "source_path": target_file,
                     "action": action.value,
                 })}
-            elif output_mode in ("rewrite", "overwrite"):
+            elif output_mode in ("rewrite", "overwrite", "write_scene"):
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
             elif output_mode == "append":
                 new_content = (original_content + "\n\n" + final_output).strip()
@@ -606,7 +615,7 @@ class PipelineRunner:
                 pass
 
         # 生成完成后自动更新 story-state 和 recent-context
-        if target_file and final_output:
+        if target_file and final_output and not candidate_id:
             await self._update_after_generation(project_id, target_file, final_output, original_content)
 
         # 内容有变化时生成 AI 修改摘要
@@ -635,6 +644,35 @@ class PipelineRunner:
             "task_id": task_id,
             "message": "管线执行完成",
         })}
+
+    async def _normalize_output_mode(
+        self,
+        pipeline_name: str,
+        project_id: str,
+        target_file: str | None,
+        output_mode: str,
+        require_candidate: bool = False,
+    ) -> str:
+        """Map legacy output modes to explicit safe behavior."""
+        if require_candidate:
+            return "candidate"
+
+        mode = output_mode or "overwrite"
+        pipeline_lower = pipeline_name.lower()
+        if pipeline_lower in {"polish", "rewrite"} or pipeline_lower.endswith("-polish") or pipeline_lower.endswith("-rewrite"):
+            return "candidate"
+
+        if mode == "overwrite" and target_file:
+            if self._is_scene_file(target_file):
+                return "write_scene"
+            if self._is_dangerous_output(target_file):
+                return "candidate"
+
+        return mode
+
+    @staticmethod
+    def _is_scene_file(path: str) -> bool:
+        return bool(re.search(r"^chapters/vol-\d+/ch-\d+/sec-\d+\.md$", path))
 
     async def _update_after_generation(self, project_id: str, target_file: str, content: str, original_content: str = "") -> None:
         # — 更新 recent-context.md（委托 MemoryService）—
