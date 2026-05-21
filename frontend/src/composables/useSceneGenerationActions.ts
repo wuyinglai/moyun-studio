@@ -300,6 +300,10 @@ export function useSceneGenerationActions() {
     }
 
     rightPanelStore.setPipelineTab('quick')
+    const candidateOnly = name === 'polish' || name === 'rewrite'
+    if (candidateOnly) {
+      rightPanelStore.setActiveTab('candidate')
+    }
 
     // 提取管线输出到 materials/extracted/，不覆盖当前场景
     const filePath = editorStore.currentFilePath!
@@ -323,8 +327,11 @@ export function useSceneGenerationActions() {
           targetFile,
           name,
           undefined,
-          name === 'polish' || name === 'rewrite' ? 'candidate' : name === 'extract' ? 'overwrite' : 'write_scene',
+          candidateOnly ? 'candidate' : name === 'extract' ? 'overwrite' : 'write_scene',
         )
+        if (candidateOnly) {
+          notification.success('已生成候选稿，采用后才会覆盖当前场景。')
+        }
       },
       `${pipelineLabel}: ${fileName}`,
     )

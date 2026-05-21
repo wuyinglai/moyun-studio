@@ -103,7 +103,7 @@ class EventTypes:
 
     # 新格式（点分命名）
     FILE_CREATED_NEW = "file.created"
-    FILE_UPDATED_NEW = "file.updated"
+    FILE_UPDATED_NEW = "file.updated"  # AI_GUARDRAIL_ALLOW: event type constant
     FILE_DELETED_NEW = "file.deleted"
 
     CANDIDATE_CREATED = "candidate.created"

@@ -42,7 +42,7 @@ async def get_raw_prompt(
     if not file_path.exists() or not file_path.is_relative_to(settings.prompts_path):
         raise HTTPException(status_code=404, detail=f"Prompt 文件不存在: {path}")
     content = file_path.read_text(encoding="utf-8")
-    return ApiResponse.ok({"path": path, "content": content})
+    return ApiResponse.ok({"path": path, "content": content})  # AI_GUARDRAIL_ALLOW: prompt API response, not SSE
 
 @router.get("", response_model=ApiResponse[dict])
 async def list_prompts(settings: Settings = Depends(get_settings)):
@@ -95,7 +95,7 @@ async def get_prompt_version_content(
         "version": version,
         "metadata": metadata,
         "source": metadata.get("source", ""),
-        "content": content,
+        "content": content,  # AI_GUARDRAIL_ALLOW: prompt archive API response, not SSE
         "files": [str(p.relative_to(archive_dir)).replace("\\", "/") for p in md_files],
     })
 

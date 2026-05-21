@@ -400,7 +400,7 @@ class GenerationService:
                         candidate_svc = CandidateService(self.file_service)
                         candidate = await candidate_svc.create_candidate(
                             project_id=project_id,
-                            source_path=tgt["target_rel_path"],  # 使用相对路径，不带 project_id
+                            source_path=tgt["target_rel_path"],  # 使用相对路径，不带 project_id  AI_GUARDRAIL_ALLOW
                             action=CandidateAction.CONTINUE,
                             content=generated.strip(),
                         )

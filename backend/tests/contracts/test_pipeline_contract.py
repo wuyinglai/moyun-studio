@@ -60,7 +60,7 @@ class TestPipelineOutputPolicyContract:
         )
         assert result.mode == "write"
 
-    def test_overwrite_existing_sec_must_candidate(self):
+    def test_overwrite_existing_sec_must_candidate(self):  # AI_GUARDRAIL_ALLOW: contract test
         """output_mode=overwrite 且目标 sec 已有内容 → candidate"""
         result = decide_output(
             action="generate",
@@ -70,8 +70,8 @@ class TestPipelineOutputPolicyContract:
         )
         assert result.mode == "candidate"
 
-    def test_overwrite_dangerous_path_must_candidate(self):
-        """output_mode=overwrite 对危险路径 → candidate"""
+    def test_overwrite_dangerous_path_must_candidate(self):  # AI_GUARDRAIL_ALLOW: contract test
+        """output_mode=overwrite 对危险路径 → candidate  AI_GUARDRAIL_ALLOW"""
         result = decide_output(
             action="generate",
             target_path="story-state.md",

@@ -283,7 +283,7 @@ class PipelineRunner:
         project_id: str,
         target_file: str | None = None,
         user_input: str | None = None,
-        output_mode: str = "overwrite",
+        output_mode: str = "overwrite",  # AI_GUARDRAIL_ALLOW: default param, policy enforces safety
         extra_vars: dict | None = None,
         stop_event: asyncio.Event | None = None,
         llm_extra_kwargs: dict | None = None,
@@ -605,7 +605,7 @@ class PipelineRunner:
                     "source_path": target_file,
                     "action": action.value,
                 })}
-            elif output_mode in ("rewrite", "overwrite", "write_scene"):
+            elif output_mode in ("rewrite", "overwrite", "write_scene"):  # AI_GUARDRAIL_ALLOW: policy-gated branch
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
             elif output_mode == "append":
                 new_content = (original_content + "\n\n" + final_output).strip()

@@ -106,7 +106,7 @@ def decide_output(
     Args:
         action: 操作类型（rewrite, polish, write_new_scene, extract 等）
         target_path: 目标文件相对路径
-        output_mode: 显式指定的输出模式（overwrite, write_scene, candidate, append, rewrite, none）
+        output_mode: 显式指定的输出模式（overwrite, write_scene, candidate, append, rewrite, none）  # AI_GUARDRAIL_ALLOW: docstring
         file_exists: 目标文件是否存在
         file_has_content: 目标文件是否有实质内容
         require_candidate: 是否强制生成候选稿

@@ -165,6 +165,35 @@ class TestLiteWriteActionContract:
             True, True,
         ) is True
 
+    def test_lite_backend_falls_back_to_candidate_path_for_rewrite(self):
+        """Lite 后端即使调用方未传 output_file，也不能把 rewrite 直接写回已有场景"""
+        from backend.api.lite import _resolve_lite_output_file
+        from backend.schemas.lite import LiteNextOptionCard, LiteWriteNextRequest
+
+        req = LiteWriteNextRequest(
+            project_id="test-project",
+            target_file="chapters/vol-01/ch-001/sec-001.md",
+            action="rewrite",
+            selected_card=LiteNextOptionCard(
+                id="card-1",
+                title="改稿",
+                beat="加强冲突",
+                scene="当前场景",
+                payoff="兑现爽点",
+                hook="留下钩子",
+            ),
+        )
+
+        output_file = _resolve_lite_output_file(
+            req,
+            "chapters/vol-01/ch-001/sec-001.md",
+            "已有正文内容，不能直接覆盖。",
+            False,
+        )
+
+        assert output_file.startswith(".lite-candidates/")
+        assert output_file.endswith(".rewrite.md")
+
     def test_chat_edit_generates_candidate(self):
         """chat_edit 操作必须生成 candidate"""
         from backend.policies.candidate_policy import should_create_candidate

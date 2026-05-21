@@ -147,7 +147,7 @@ async def _bridge_events_to_sse(event_bus: EventBus, sse_manager) -> None:
     # 新事件类型 → 前端兼容事件名映射
     _NEW_TO_FRONTEND = {
         "file.created": "file-created",
-        "file.updated": "file-updated",
+        "file.updated": "file-updated",  # AI_GUARDRAIL_ALLOW: event name mapping
         "file.deleted": "file-deleted",
         "candidate.created": "file-created",
         "candidate.adopted": "file-updated",

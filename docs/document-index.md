@@ -63,6 +63,17 @@ Moved to [archive/](archive/). Do not rely on archived documents unless explicit
 | [archive/api-README.md](archive/api-README.md) | Empty placeholder |
 | [archive/features-README.md](archive/features-README.md) | Empty placeholder |
 
+## AI Tooling
+
+Scripts and docs that help AI agents work safely:
+
+- [task-entrypoints.md](task-entrypoints.md) — Per-task read-first files, rules, and test commands
+- [../scripts/ai-check.sh](../scripts/ai-check.sh) — Quality check script (bash): --backend / --frontend / --docs / --all
+- [../scripts/ai-check.ps1](../scripts/ai-check.ps1) — Quality check script (PowerShell): -Mode backend/frontend/docs/all
+- [../scripts/ai-guardrails.sh](../scripts/ai-guardrails.sh) — Dangerous pattern detection (bash)
+- [../scripts/ai-guardrails.ps1](../scripts/ai-guardrails.ps1) — Dangerous pattern detection (PowerShell)
+- [../scripts/prompt-impact.py](../scripts/prompt-impact.py) — Find which pipelines reference a prompt file
+
 ## History
 
 Historical materials in [history/](history/) — not authoritative, kept for reference only.

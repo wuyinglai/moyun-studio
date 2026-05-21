@@ -337,7 +337,7 @@ async def update_memory(
             "risk_reason": risk_reason,
             "updated_files": [],
             "requires_review": True,
-            "content": req.content,
+            "content": req.content,  # AI_GUARDRAIL_ALLOW: workflow API response, not SSE
             "scene_path": req.scene_path,
         })
 

@@ -185,7 +185,7 @@ class WorkflowRunner:
             d["input"] = step.input
         if step.output:
             d["output"] = step.output
-        if step.output_mode != "overwrite":
+        if step.output_mode != "overwrite":  # AI_GUARDRAIL_ALLOW: schema serialization
             d["output_mode"] = step.output_mode
         if step.action:
             d["action"] = step.action

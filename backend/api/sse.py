@@ -39,7 +39,7 @@ class SSEManager:
         "prompt": "prompt",
         # 新点分格式（主映射在 main.py _bridge_events_to_sse 中）
         "file.created": "file-created",
-        "file.updated": "file-updated",
+        "file.updated": "file-updated",  # AI_GUARDRAIL_ALLOW: event name mapping
         "file.deleted": "file-deleted",
         "candidate.created": "candidate-created",
         "candidate.adopted": "candidate-adopted",

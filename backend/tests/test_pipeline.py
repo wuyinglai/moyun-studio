@@ -237,7 +237,7 @@ class TestPipelineRun:
             "test-pipeline",
             "test-project",
             "chapters/test.md",
-            output_mode="overwrite"
+            output_mode="overwrite"  # AI_GUARDRAIL_ALLOW: test param
         ):
             events.append(event)
 

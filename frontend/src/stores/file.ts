@@ -105,8 +105,8 @@ export const useFileStore = defineStore('file', () => {
   async function showFileConflict(projectId: string, path: string) {
     return new Promise<void>((resolve) => {
       Modal.confirm({
-        title: '文件已被更新',
-        content: '服务器上的文件已有新版本。为了避免覆盖他人的修改，请重新加载服务器版本后再保存。',
+        title: '文件已被其他操作修改',
+        content: '文件已被其他操作修改，请重新加载服务器版本或取消保存。为避免静默覆盖，本次保存没有写入。',
         okText: '重新加载服务器版本',
         cancelText: '取消保存',
         async onOk() {

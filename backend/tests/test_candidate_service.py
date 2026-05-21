@@ -32,7 +32,7 @@ class TestCandidateServiceSourcePath:
         source_path = "chapters/vol-01/ch-001/sec-001.md"
         candidate = await candidate_svc.create_candidate(
             project_id="test-project",
-            source_path=source_path,  # 不带 project_id
+            source_path=source_path,  # 不带 project_id  AI_GUARDRAIL_ALLOW
             action=CandidateAction.REWRITE,
             content="# 测试内容",
         )

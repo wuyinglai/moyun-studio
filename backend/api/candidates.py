@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from backend.config import get_settings
 from backend.core.candidate_service import CandidateService, AdoptResult
+from backend.core.exceptions import FileConflictError
 from backend.core.file_ops import FileService
 from backend.domain.events import make_candidate_adopted_event, make_candidate_created_event
 from backend.schemas.candidate import (
@@ -107,11 +108,9 @@ async def adopt_candidate(
     result = await candidate_service.adopt_candidate(project_id, candidate_id)
 
     if result == AdoptResult.CONFLICT:
-        return AdoptCandidateResponse(
-            success=False,
-            message="源文件已被修改，候选稿与当前文件不一致，请重新生成",
-            file_path=candidate.source_path,
-            conflict=True,
+        raise FileConflictError(
+            "源文件已被其他操作修改，请重新生成候选稿后再采用。",
+            {"candidate_id": candidate_id, "source_path": candidate.source_path},
         )
 
     if result != AdoptResult.SUCCESS:

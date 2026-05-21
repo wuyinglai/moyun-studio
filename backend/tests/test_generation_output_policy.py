@@ -262,15 +262,15 @@ class TestDecideOutput:
         """output_mode=overwrite 对危险路径 → candidate"""
         result = decide_output(
             "generate", "chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param
         )
         assert result.mode == "candidate"
 
-    def test_output_mode_overwrite_safe_path(self):
+    def test_output_mode_overwrite_safe_path(self):  # AI_GUARDRAIL_ALLOW: test for overwrite safety
         """output_mode=overwrite 对安全路径 → write"""
         result = decide_output(
             "generate", "materials/extracted/chars.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param
         )
         assert result.mode == "write"
 
@@ -280,7 +280,7 @@ class TestDecideOutput:
         """story-state.md overwrite → candidate"""
         result = decide_output(
             "update", "story-state.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param
         )
         assert result.mode == "candidate"
 
@@ -288,7 +288,7 @@ class TestDecideOutput:
         """recent-context.md overwrite → candidate"""
         result = decide_output(
             "update", "recent-context.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param
         )
         assert result.mode == "candidate"
 
@@ -296,7 +296,7 @@ class TestDecideOutput:
         """style-guide.md overwrite → candidate"""
         result = decide_output(
             "update", "style-guide.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param
         )
         assert result.mode == "candidate"
 

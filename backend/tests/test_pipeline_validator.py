@@ -197,7 +197,7 @@ class TestDangerousOutputWarning:
             "label": "旧模式",
             "steps": [
                 {"id": "step1", "label": "步骤1", "prompt": "pipeline/deprecated/step1",
-                 "fallback": None, "output_mode": "overwrite"},
+                 "fallback": None, "output_mode": "overwrite"},  # AI_GUARDRAIL_ALLOW: test data
             ],
         }
         yaml_path = _write_pipeline_yaml(tmp_path, "deprecated", data)

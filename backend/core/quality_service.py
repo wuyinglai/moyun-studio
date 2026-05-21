@@ -95,7 +95,7 @@ class QualityService:
         # 渲染审查 prompt
         prompt_engine = PromptEngine(self.settings.prompts_path, self.file_service)
         variables = {
-            "content": content,
+            "content": content,  # AI_GUARDRAIL_ALLOW: prompt variable, not SSE
             "chapter_title": chapter_title or Path(target_file).stem,
             "story_state": story_state,
             "style_guide": style_guide,

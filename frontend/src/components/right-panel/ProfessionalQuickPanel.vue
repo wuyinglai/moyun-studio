@@ -290,11 +290,16 @@ async function handleRewrite() {
 }
 
 async function handleBoost() {
-  await runAction('补强爽点', () => generationStore.continueWriting(
-    projectId.value,
-    currentFilePath.value,
-    '请只追加一段补强内容：加强当前冲突压力、主角反击的爽点兑现，以及下一场景钩子。不要写解释说明。',
-  ))
+  await runAction('补强爽点', async () => {
+    rightPanelStore.setActiveTab('candidate')
+    await fileGen.runPipeline(
+      projectId.value,
+      currentFilePath.value,
+      'rewrite',
+      { user_prompt: '请生成一版候选稿：保留当前场景核心事件，加强冲突压力、主角反击的爽点兑现，以及下一场景钩子。不要直接覆盖原文。' },
+      'candidate',
+    )
+  })
 }
 </script>
 

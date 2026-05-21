@@ -128,15 +128,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
+import { useFileStore, type FileNode } from '@/stores/file'
+import { useEditorStore } from '@/stores/editor'
+import { useSSE } from '@/composables/useSSE'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
-import type { CandidateInfo } from '@/shared/api/types'
+import type { CandidateAdoptResult, CandidateInfo } from '@/shared/api/types'
 
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
+const fileStore = useFileStore()
+const editorStore = useEditorStore()
+const sse = useSSE()
 
 const candidates = ref<CandidateInfo[]>([])
 const loading = ref(false)
@@ -144,6 +150,8 @@ const selectedId = ref<string | null>(null)
 const previewing = ref(false)
 const previewCandidateInfo = ref<CandidateInfo | null>(null)
 const previewContent = ref('')
+let disposeCandidateCreated: (() => void) | null = null
+let disposeCandidateAdopted: (() => void) | null = null
 
 function actionLabel(action: string): string {
   const labels: Record<string, string> = {
@@ -227,17 +235,75 @@ function closePreview() {
   previewContent.value = ''
 }
 
+function getApiErrorCode(error: unknown): string | undefined {
+  const response = (error as { response?: { data?: { error?: { code?: string } } } }).response
+  return response?.data?.error?.code
+}
+
+function getApiErrorMessage(error: unknown): string {
+  const response = (error as {
+    response?: {
+      data?: {
+        error?: { message?: string }
+        message?: string
+        detail?: string | { message?: string }
+      }
+    }
+    message?: string
+  }).response
+  const detail = response?.data?.detail
+  if (typeof detail === 'string') return detail
+  return response?.data?.error?.message
+    || response?.data?.message
+    || detail?.message
+    || (error as { message?: string }).message
+    || ''
+}
+
+async function syncAdoptedSource(sourcePath: string) {
+  const projectId = projectStore.currentProject?.id
+  if (!projectId || !sourcePath) return
+
+  fileStore.refreshTree()
+  if (editorStore.currentFilePath === sourcePath) {
+    const latest = await fileStore.readFile(projectId, sourcePath)
+    const node: FileNode = {
+      name: sourcePath.split('/').pop() || sourcePath,
+      path: sourcePath,
+      type: 'file',
+    }
+    fileStore.openFile(node)
+    editorStore.setCurrentFile(sourcePath)
+    editorStore.loadContent(sourcePath, latest.content)
+    fileStore.unsavedFiles.delete(sourcePath)
+  }
+}
+
 async function adoptCandidate(candidate: CandidateInfo) {
   if (!confirm(`确定要采用这个候选稿吗？这将覆盖原文件 "${candidate.source_filename}"。`)) {
     return
   }
   
   try {
-    await api.post(API_ROUTES.candidateAdopt(projectStore.currentProject?.id || '', candidate.id))
-    notification.success('候选稿已成功采用')
+    const result = await api.post<CandidateAdoptResult>(
+      API_ROUTES.candidateAdopt(projectStore.currentProject?.id || '', candidate.id),
+    )
+    if (result?.conflict || result?.success === false) {
+      notification.error(result?.message || '源文件已被其他操作修改，请重新生成候选稿后再采用。')
+      await fetchCandidates()
+      return
+    }
+
+    notification.success('候选稿已采用，正式正文已更新。')
     await fetchCandidates()
-  } catch {
-    notification.error('采用候选稿失败')
+    await syncAdoptedSource(result?.file_path || candidate.source_path)
+  } catch (error: unknown) {
+    if ((error as { response?: { status?: number } }).response?.status === 409 || getApiErrorCode(error) === 'FILE_CONFLICT') {
+      notification.error(getApiErrorMessage(error) || '源文件已被其他操作修改，请重新生成候选稿后再采用。')
+      await fetchCandidates()
+      return
+    }
+    notification.error(getApiErrorMessage(error) || '采用候选稿失败')
   }
 }
 
@@ -262,13 +328,24 @@ async function deleteCandidate(candidate: CandidateInfo) {
 }
 
 onMounted(() => {
-  fetchCandidates()
+  void fetchCandidates()
+  disposeCandidateCreated = sse.on('candidate-created', () => {
+    void fetchCandidates()
+  })
+  disposeCandidateAdopted = sse.on('candidate-adopted', () => {
+    void fetchCandidates()
+  })
+})
+
+onUnmounted(() => {
+  disposeCandidateCreated?.()
+  disposeCandidateAdopted?.()
 })
 
 watch(() => projectStore.currentProject?.id, () => {
   selectedId.value = null
   closePreview()
-  fetchCandidates()
+  void fetchCandidates()
 })
 </script>
 

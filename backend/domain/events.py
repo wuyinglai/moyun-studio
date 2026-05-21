@@ -3,7 +3,7 @@
 所有事件都遵循 AppEvent 结构，确保：
 1. 所有事件都带 project_id
 2. 有任务上下文时带 task_id
-3. file.updated 不发送完整正文 content
+3. file.updated 不发送完整正文 content  AI_GUARDRAIL_ALLOW
 4. 前端收到 SSE 后按 project_id/task_id 过滤
 """
 
@@ -21,7 +21,7 @@ class EventType(str, Enum):
 
     # 文件事件
     FILE_CREATED = "file.created"
-    FILE_UPDATED = "file.updated"
+    FILE_UPDATED = "file.updated"  # AI_GUARDRAIL_ALLOW: event type constant
     FILE_DELETED = "file.deleted"
 
     # 候选稿事件
@@ -147,7 +147,7 @@ def make_file_updated_event(
     mtime: float | None = None,
     source: str = "",
 ) -> AppEvent:
-    """构造 file.updated 事件（不发送完整正文 content）"""
+    """构造 file.updated 事件（不发送完整正文 content）  AI_GUARDRAIL_ALLOW"""
     payload: dict = {"path": path}
     if size is not None:
         payload["size"] = size

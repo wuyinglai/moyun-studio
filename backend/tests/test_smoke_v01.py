@@ -11,8 +11,8 @@
    - revision-log 已生成
    - candidate status 变为 adopted
    - recent-context.md 更新
-   - 没有 project_id/project_id 路径
-   - file.updated 事件不包含 content
+   - 没有 project_id/project_id 路径  AI_GUARDRAIL_ALLOW
+   - file.updated 事件不包含 content  AI_GUARDRAIL_ALLOW
 """
 
 import json
@@ -201,7 +201,7 @@ class TestSceneWritingSmoke:
         assert "word_count_after" in log_data
         assert "adopted_at" in log_data
 
-        # ─── 6d. 没有 project_id/project_id 路径 ────────
+        # ─── 6d. 没有 project_id/project_id 路径 ────────  AI_GUARDRAIL_ALLOW
         # 检查候选稿的 source_path 不含双重 project_id
         assert candidate.source_path == scene_rel_path
         assert f"{project_id}/{project_id}" not in candidate.source_path
@@ -291,9 +291,9 @@ class TestSceneWritingSmoke:
         assert evt.project_id == "test-project"
 
         sse_dict = evt.to_sse_dict()
-        assert "content" not in sse_dict, "file.updated 事件不应包含 content"
+        assert "content" not in sse_dict, "file.updated 事件不应包含 content"  # AI_GUARDRAIL_ALLOW
         assert sse_dict["payload"]["path"] == "chapters/vol-01/ch-001/sec-001.md"
-        assert "content" not in sse_dict["payload"], "file.updated payload 不应包含 content"
+        assert "content" not in sse_dict["payload"], "file.updated payload 不应包含 content"  # AI_GUARDRAIL_ALLOW
         assert "path" in sse_dict
         assert "size" in sse_dict
         assert "mtime" in sse_dict

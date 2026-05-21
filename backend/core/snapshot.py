@@ -82,7 +82,7 @@ class SnapshotManager:
         snapshot_data = {
             "snapshot_id": snapshot_id,
             "file_path": file_path,
-            "content": content,
+            "content": content,  # AI_GUARDRAIL_ALLOW: snapshot data, not SSE
             "metadata": metadata,
             "label": label,
             "created_at": created_at

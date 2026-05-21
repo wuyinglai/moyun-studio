@@ -189,7 +189,7 @@ async def create_feedback(
         "id": feedback_id,
         "chapter_path": req.chapter_path,
         "type": req.type,
-        "content": req.content,
+        "content": req.content,  # AI_GUARDRAIL_ALLOW: feedback API response, not SSE
         "location": req.location,
         "satisfaction_level": req.satisfaction_level,
         "resolved": False,

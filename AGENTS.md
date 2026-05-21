@@ -165,6 +165,25 @@ These rules are enforced at the product level. Violating any of them will break 
 - Keep scene output around 600-1000 Chinese characters
 - High-risk rewrite/polish should preserve candidate workflow
 
+### Before submitting changes, run:
+
+Bash:
+```bash
+bash scripts/ai-check.sh --all
+bash scripts/ai-guardrails.sh
+```
+
+Windows PowerShell:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/ai-check.ps1 -Mode all
+powershell -ExecutionPolicy Bypass -File scripts/ai-guardrails.ps1
+```
+
+Prompt 修改前运行:
+```bash
+python scripts/prompt-impact.py <prompt-file>
+```
+
 ---
 
 ## 关键文档索引

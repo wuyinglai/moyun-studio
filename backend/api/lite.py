@@ -100,6 +100,30 @@ GENRES = ["玄幻", "武侠", "言情", "都市", "仙侠"]
 
 SECTIONS_PER_CHAPTER = 4
 CHAPTERS_PER_VOLUME = 10
+HIGH_RISK_LITE_ACTIONS = {"rewrite", "more_exciting", "more_reasonable"}
+
+
+def _lite_candidate_path(source_path: str, action: str) -> str:
+    safe_source = source_path.removesuffix(".md").replace("\\", "/").replace("/", "__")
+    return f".lite-candidates/{safe_source}.{action}.md"
+
+
+def _resolve_lite_output_file(
+    req: LiteWriteNextRequest,
+    target_file: str,
+    requested_content: str,
+    is_blank_requested: bool,
+) -> str:
+    if req.output_file:
+        return req.output_file
+    target_has_content = bool(requested_content and not is_blank_requested)
+    if (
+        req.action in HIGH_RISK_LITE_ACTIONS
+        and req.target_file
+        and should_create_candidate(req.action, target_file, bool(requested_content), target_has_content)
+    ):
+        return _lite_candidate_path(target_file, req.action)
+    return target_file
 
 
 def _prefs_to_text(prefs) -> str:
@@ -865,6 +889,8 @@ async def write_lite_next(
         target_file = req.target_file
     else:
         target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
+    output_file = _resolve_lite_output_file(req, target_file, requested_content, is_blank_requested)
+    is_candidate = output_file != target_file
     vol, ch, _sec = _path_parts(target_file)
     await _ensure_chapter(project_dir, vol, ch, req.selected_card.title)
 
@@ -944,13 +970,16 @@ async def write_lite_next(
         content = _fallback_section_content(target_file, req.selected_card, prefs_text, story_engine)
         used_fallback = True
     content = _ensure_section_heading(target_file, req.selected_card.title, content)
-    await file_service.write_file(f"{req.project_id}/{target_file}", content)
+    await file_service.write_file(f"{req.project_id}/{output_file}", content)
 
-    # 更新章节记忆和待回收伏笔
-    await _update_ch_meta(file_service, req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
+    if not is_candidate:
+        # 更新章节记忆和待回收伏笔
+        await _update_ch_meta(file_service, req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
 
     quality_summary = ""
-    if used_fallback:
+    if is_candidate:
+        quality_summary = "候选稿已生成，确认满意后可采用替换原文。"
+    elif used_fallback:
         quality_summary = "模型生成超时，已先写入临时草稿；可点“重写这一章”补成正式正文。"
     else:
         try:
@@ -989,22 +1018,25 @@ async def write_lite_next(
                 )
                 if repaired:
                     content = _ensure_section_heading(target_file, req.selected_card.title, repaired)
-                    await file_service.write_file(f"{req.project_id}/{target_file}", content)
+                    await file_service.write_file(f"{req.project_id}/{output_file}", content)
                     quality_summary = "已根据审稿意见自动补强逻辑、动机和爽点。"
         except Exception as e:
             logger.warning("爽文模式质量审查失败: %s", e)
             quality_summary = _quality_one_line("", req.action)
 
-    updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
-    await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
-    await file_service.write_file(
-        f"{req.project_id}/recent-context.md",
-        recent_context.rstrip() + f"\n\n- {Path(target_file).parent.name}：{req.selected_card.title}，{req.selected_card.payoff}",
-    )
+    if is_candidate:
+        updated_engine = story_engine
+    else:
+        updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
+        await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
+        await file_service.write_file(
+            f"{req.project_id}/recent-context.md",
+            recent_context.rstrip() + f"\n\n- {Path(target_file).parent.name}：{req.selected_card.title}，{req.selected_card.payoff}",
+        )
 
     # 完成第4节 → 整章写完，自动生成下一章章规划
     chapter_plan_result = None
-    if _sec == SECTIONS_PER_CHAPTER:
+    if not is_candidate and _sec == SECTIONS_PER_CHAPTER:
         chapter_plan_result = await _generate_chapter_plan(
             file_service=file_service,
             llm_svc=svc,
@@ -1019,7 +1051,7 @@ async def write_lite_next(
         )
 
     return ApiResponse.ok(LiteWriteNextResponse(
-        file_path=target_file,
+        file_path=output_file,
         content=content,
         quality_summary=quality_summary,
         story_engine_summary=_summarize_story_engine(updated_engine),
@@ -1048,7 +1080,7 @@ async def write_lite_next_stream(
             target_file = req.target_file
         else:
             target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
-        output_file = req.output_file or target_file
+        output_file = _resolve_lite_output_file(req, target_file, requested_content, is_blank_requested)
         # 候选稿策略：高风险操作（rewrite/more_exciting/more_reasonable/continue）对已有内容的场景生成 candidate
         # 详见 backend/policies/candidate_policy.py
         is_candidate = output_file != target_file
@@ -1152,7 +1184,7 @@ async def write_lite_next_stream(
                 content = target_content.rstrip() + "\n\n" + generated_text
             else:
                 content = generated_text
-            yield _lite_stream_event("replace", {"content": content.strip()})
+            yield _lite_stream_event("replace", {"content": content.strip()})  # AI_GUARDRAIL_ALLOW: lite streaming event, not file.updated
 
             content = _ensure_section_heading(target_file, req.selected_card.title, content.strip())
             await file_service.write_file(f"{req.project_id}/{output_file}", content)
@@ -1202,7 +1234,7 @@ async def write_lite_next_stream(
 
             yield _lite_stream_event("done", {
                 "file_path": output_file,
-                "content": content,
+                "content": content,  # AI_GUARDRAIL_ALLOW: lite generation result, not file.updated
                 "quality_summary": quality_summary,
                 "story_engine_summary": _summarize_story_engine(updated_engine),
                 "chapter_plan": chapter_plan_result,

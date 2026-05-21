@@ -151,6 +151,35 @@ class TestCandidateAdoptContract:
         content, _, _ = await fs.read_file("test-project/chapters/vol-01/ch-001/sec-001.md")
         assert content == modified
 
+    def test_adopt_conflict_api_returns_409(self, client: TestClient, temp_workspace, test_settings, monkeypatch):
+        """API adopt 发生源文件冲突时必须返回 FILE_CONFLICT / 409"""
+        test_settings.workspace_path = temp_workspace
+        monkeypatch.setattr("backend.api.candidates.get_settings", lambda: test_settings)
+        project_dir = temp_workspace / "projects" / "test-project"
+        scene_dir = project_dir / "chapters" / "vol-01" / "ch-001"
+        scene_dir.mkdir(parents=True, exist_ok=True)
+        source_path = "chapters/vol-01/ch-001/sec-001.md"
+        scene_file = project_dir / source_path
+        scene_file.write_text("原始正文", encoding="utf-8")
+
+        create_resp = client.post("/api/candidates/test-project", json={
+            "project_id": "test-project",
+            "source_path": source_path,
+            "action": "rewrite",
+            "content": "候选稿正文",
+        })
+        assert create_resp.status_code == 200
+        candidate_id = create_resp.json()["id"]
+
+        import time
+        time.sleep(0.01)
+        scene_file.write_text("外部修改后的正文", encoding="utf-8")
+        adopt_resp = client.post(f"/api/candidates/test-project/{candidate_id}/adopt")
+
+        assert adopt_resp.status_code == 409
+        assert "FILE_CONFLICT" in str(adopt_resp.json())
+        assert scene_file.read_text(encoding="utf-8") == "外部修改后的正文"
+
     @pytest.mark.asyncio
     async def test_adopt_non_pending_rejected(self, fs: FileService):
         """非 PENDING 状态的候选稿不允许采用"""
