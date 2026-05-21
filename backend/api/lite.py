@@ -19,6 +19,7 @@ from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.project_service import ProjectService
 from backend.core.prompt_engine import PromptEngine
 from backend.core.quality_service import QualityService
+from backend.policies.candidate_policy import should_create_candidate
 from backend.schemas.common import ApiResponse
 from backend.schemas.lite import (
     LiteIdeaCard,
@@ -1048,6 +1049,8 @@ async def write_lite_next_stream(
         else:
             target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
         output_file = req.output_file or target_file
+        # 候选稿策略：高风险操作（rewrite/more_exciting/more_reasonable/continue）对已有内容的场景生成 candidate
+        # 详见 backend/policies/candidate_policy.py
         is_candidate = output_file != target_file
 
         vol, ch, _sec = _path_parts(target_file)

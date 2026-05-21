@@ -16,6 +16,7 @@ from backend.config import Settings
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
+from backend.policies.candidate_policy import should_create_candidate
 from backend.schemas.llm import BatchGenerateItem, BatchGenerateResponse
 from backend.application.scene_service import SceneService
 from backend.domain.events import (
@@ -194,55 +195,33 @@ class GenerationService:
                     CandidateService,
                 )
 
-                # 检查目标文件是否有内容
                 target_exists = content and len(content.strip()) > 0
 
-                if mode == "rewrite":
-                    # rewrite 模式：必须生成候选稿
+                if should_create_candidate(mode, file_path, target_exists, target_exists):
+                    # Generate candidate
+                    action = CandidateAction.REWRITE if mode == "rewrite" else CandidateAction.CONTINUE
                     try:
                         candidate_svc = CandidateService(self.file_service)
+                        new_content = (content + "\n\n" + generated_text) if mode == "append" and target_exists else generated_text
                         candidate = await candidate_svc.create_candidate(
                             project_id=project_id,
                             source_path=file_path,
-                            action=CandidateAction.REWRITE,
-                            content=generated_text,
+                            action=action,
+                            content=new_content,
                         )
-                        logger.info("Fallback rewrite 已保存为候选稿: %s -> %s", file_path, candidate.id)
+                        logger.info("Fallback %s 已保存为候选稿: %s -> %s", mode, file_path, candidate.id)
                         yield {"event": "candidate_created", "data": json.dumps({
                             "task_id": task_id,
                             "candidate_id": candidate.id,
                             "source_path": file_path,
-                            "action": CandidateAction.REWRITE.value,
+                            "action": action.value,
                         })}
                     except Exception as e:
                         logger.warning("创建候选稿失败: %s", e)
-                        # 候选稿创建失败时跳过写入，避免覆盖原文件
                 elif mode == "append":
-                    if target_exists:
-                        # 目标文件已有内容：生成候选稿
-                        try:
-                            new_content = content + "\n\n" + generated_text
-                            candidate_svc = CandidateService(self.file_service)
-                            candidate = await candidate_svc.create_candidate(
-                                project_id=project_id,
-                                source_path=file_path,
-                                action=CandidateAction.CONTINUE,
-                                content=new_content,
-                            )
-                            logger.info("Fallback append 已保存为候选稿: %s -> %s", file_path, candidate.id)
-                            yield {"event": "candidate_created", "data": json.dumps({
-                                "task_id": task_id,
-                                "candidate_id": candidate.id,
-                                "source_path": file_path,
-                                "action": CandidateAction.CONTINUE.value,
-                            })}
-                        except Exception as e:
-                            logger.warning("创建候选稿失败: %s", e)
-                    else:
-                        # 目标文件为空或不存在：直接写入
-                        new_content = content + "\n\n" + generated_text if content else generated_text
-                        await self.file_service.write_file(f"{project_id}/{file_path}", new_content, fm)
-                        logger.info("Fallback append 直接写入（目标文件为空）: %s", file_path)
+                    new_content = content + "\n\n" + generated_text if content else generated_text
+                    await self.file_service.write_file(f"{project_id}/{file_path}", new_content, fm)
+                    logger.info("Fallback append 直接写入（目标文件为空）: %s", file_path)
 
             yield {"event": "done", "data": json.dumps({"task_id": task_id, "message": "生成完成"})}
             if event_bus:
@@ -401,9 +380,16 @@ class GenerationService:
                 )
 
                 # 安全策略：检查目标文件是否为空，空则直接写入，否则生成候选稿
-                target_exists = not await self.scene_service.is_scene_empty(project_id, tgt["target_rel_path"])
+                from backend.policies.candidate_policy import should_create_candidate as _should_candidate
 
-                if target_exists:
+                target_content = ""
+                try:
+                    target_content, _, _ = await self.file_service.read_file(tgt["target_full_path"])
+                except Exception:
+                    pass
+                target_has_content = bool(target_content and target_content.strip())
+
+                if _should_candidate("batch_generate", tgt["target_rel_path"], bool(target_content), target_has_content):
                     # 目标文件已有内容：生成候选稿
                     # 注意：source_path 必须是项目内相对路径（不带 project_id）
                     try:

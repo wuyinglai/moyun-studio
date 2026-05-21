@@ -35,6 +35,7 @@ from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService
 from backend.core.prompt_versioning import archive_prompt
+from backend.policies.generation_output_policy import decide_output, is_dangerous_output, OutputDecision
 from backend.schemas.candidate import CandidateAction
 from backend.schemas.pipeline import PipelineDef
 from backend.application.memory_service import MemoryService
@@ -653,26 +654,44 @@ class PipelineRunner:
         output_mode: str,
         require_candidate: bool = False,
     ) -> str:
-        """Map legacy output modes to explicit safe behavior."""
+        """Map legacy output modes to explicit safe behavior using GenerationOutputPolicy."""
         if require_candidate:
             return "candidate"
 
-        mode = output_mode or "overwrite"
-        pipeline_lower = pipeline_name.lower()
-        if pipeline_lower in {"polish", "rewrite"} or pipeline_lower.endswith("-polish") or pipeline_lower.endswith("-rewrite"):
-            return "candidate"
+        # Check if target file has content
+        file_has_content = False
+        if target_file:
+            try:
+                content = _file_content(
+                    await self.file_service.read_file(f"{project_id}/{target_file}")
+                )
+                file_has_content = bool(content and content.strip())
+            except Exception:
+                pass
 
-        if mode == "overwrite" and target_file:
-            if self._is_scene_file(target_file):
-                return "write_scene"
-            if self._is_dangerous_output(target_file):
-                return "candidate"
+        decision = decide_output(
+            action=pipeline_name,
+            target_path=target_file or "",
+            output_mode=output_mode,
+            file_exists=True,  # if we got here, we're targeting something
+            file_has_content=file_has_content,
+            require_candidate=require_candidate,
+            pipeline_name=pipeline_name,
+        )
 
-        return mode
+        # Map OutputDecision.mode back to legacy output_mode strings
+        mode_map = {
+            "write": "write_scene" if self._is_scene_file(target_file or "") else "overwrite",
+            "candidate": "candidate",
+            "append": "append",
+            "reject": "none",
+        }
+        return mode_map.get(decision.mode, output_mode)
 
     @staticmethod
     def _is_scene_file(path: str) -> bool:
-        return bool(re.search(r"^chapters/vol-\d+/ch-\d+/sec-\d+\.md$", path))
+        from backend.policies.generation_output_policy import is_scene_file as _is_scene
+        return _is_scene(path)
 
     async def _update_after_generation(self, project_id: str, target_file: str, content: str, original_content: str = "") -> None:
         # — 更新 recent-context.md（委托 MemoryService）—
@@ -802,47 +821,8 @@ class PipelineRunner:
             return CandidateAction.REWRITE
 
     def _is_dangerous_output(self, output_path: str) -> bool:
-        """判断输出路径是否为危险路径（需要候选稿保护）
-        
-        危险路径包括：
-        - 章节文件（chapters/vol-xx/ch-xx/sec-xx.md）
-        - 核心状态文件（style-guide.md, story-state.md, recent-context.md, outline.md）
-        
-        安全路径包括：
-        - materials/extracted/ 目录
-        - .candidates/ 目录
-        - revision-log/ 目录
-        - logs/ 目录
-        """
-        output_path_lower = output_path.lower()
-
-        # 安全路径白名单
-        safe_prefixes = (
-            "materials/extracted/",
-            "materials/drafts/",
-            ".candidates/",
-            "revision-log/",
-            "logs/",
-        )
-        for prefix in safe_prefixes:
-            if output_path_lower.startswith(prefix):
-                return False
-
-        # 危险路径检测
-        dangerous_patterns = (
-            "/sec-",           # 章节文件
-            "style-guide.md",  # 文风指南
-            "story-state.md",  # 故事状态
-            "recent-context.md", # 近期上下文
-            "outline.md",      # 大纲
-            "meta.json",       # 项目元数据
-            "ch-meta.json",    # 章节元数据
-        )
-        for pattern in dangerous_patterns:
-            if pattern in output_path_lower:
-                return True
-
-        return False
+        """判断输出路径是否为危险路径（需要候选稿保护）— 委托给 generation_output_policy"""
+        return is_dangerous_output(output_path)
 
     async def _write_step_output_or_candidate(
         self,
