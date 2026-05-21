@@ -7,14 +7,14 @@
 
 from datetime import datetime
 import logging
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError
+from backend.core.exceptions import MoyunFileNotFoundError, ProjectNotFoundError
+from backend.core.file_ops import FileService
 from backend.schemas.common import ApiResponse
 
 logger = logging.getLogger(__name__)
@@ -132,9 +132,14 @@ DEFAULT_STORY_STATE = """# 故事全局状态
 
 # ─── 工具函数 ────────────────────────────────────────────────────────
 
-def _get_story_state_path(project_id: str, settings: Settings) -> Path:
-    """获取故事状态文件路径"""
-    return settings.projects_path / project_id / "story-state.md"
+def _make_file_service(settings: Settings) -> FileService:
+    """创建 FileService 实例"""
+    return FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
+
+
+def _story_state_rel_path(project_id: str) -> str:
+    """获取 story-state.md 的 FileService 相对路径"""
+    return f"{project_id}/story-state.md"
 
 
 def _parse_story_state(content: str) -> StoryStateContent:
@@ -143,7 +148,6 @@ def _parse_story_state(content: str) -> StoryStateContent:
     这是一个简化实现，直接返回原始内容和解析后的关键信息。
     完整实现需要更复杂的Markdown解析逻辑。
     """
-    # 简化实现：返回空结构，实际使用时应解析Markdown内容
     return StoryStateContent(
         protagonist_status={},
         factions={},
@@ -173,17 +177,17 @@ async def get_story_state(
     Raises:
         ProjectNotFoundError: 项目不存在时抛出
     """
-    file_path = _get_story_state_path(project_id, settings)
+    fs = _make_file_service(settings)
+    rel_path = _story_state_rel_path(project_id)
 
     # 检查项目是否存在
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     # 如果文件不存在，创建默认模板
-    if not file_path.exists():
+    if not await fs.exists(rel_path):
         logger.info("故事状态文件不存在，创建默认模板: %s", project_id)
-        file_path.write_text(DEFAULT_STORY_STATE, encoding="utf-8")
+        await fs.write_file(rel_path, DEFAULT_STORY_STATE)
         return ApiResponse.ok(StoryStateContent(
             protagonist_status={},
             factions={},
@@ -195,10 +199,8 @@ async def get_story_state(
         ))
 
     # 读取文件
-    content = file_path.read_text(encoding="utf-8")
-    last_modified = datetime.fromtimestamp(
-        file_path.stat().st_mtime
-    ).isoformat()
+    content, _, mtime = await fs.read_file(rel_path)
+    last_modified = datetime.fromtimestamp(mtime).isoformat() if mtime else None
 
     # 解析Markdown内容
     parsed = _parse_story_state(content)
@@ -226,19 +228,19 @@ async def update_story_state(
     Raises:
         ProjectNotFoundError: 项目不存在时抛出
     """
-    file_path = _get_story_state_path(project_id, settings)
+    fs = _make_file_service(settings)
+    rel_path = _story_state_rel_path(project_id)
 
     # 检查项目是否存在
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     # 如果文件不存在，创建默认模板
-    if not file_path.exists():
-        file_path.write_text(DEFAULT_STORY_STATE, encoding="utf-8")
+    if not await fs.exists(rel_path):
+        await fs.write_file(rel_path, DEFAULT_STORY_STATE)
 
     # 读取现有内容
-    current_content = file_path.read_text(encoding="utf-8")
+    current_content, _, _ = await fs.read_file(rel_path)
 
     # 构建更新后的结构化数据
     updated_state: dict[str, Any] = {}
@@ -262,7 +264,7 @@ async def update_story_state(
 - 更新时间：{datetime.now().isoformat()}
 - 更新内容：{updated_state}
 """
-    file_path.write_text(current_content + update_log, encoding="utf-8")
+    await fs.write_file(rel_path, current_content + update_log)
 
     logger.info("故事状态已更新: %s", project_id)
     return ApiResponse.ok(message="故事状态已更新")
