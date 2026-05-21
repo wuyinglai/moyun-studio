@@ -8,11 +8,9 @@
   DELETE /api/materials/{type}/{id}        删除提取结果
 """
 
-import asyncio
 from datetime import datetime, timezone
 import json
 import logging
-from pathlib import Path
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -97,76 +95,110 @@ class ExtractTaskRequest(BaseModel):
 
 # ─── 辅助函数 ──────────────────────────────────────────────────────
 
-def _materials_dir(project_dir: Path) -> Path:
-    return project_dir / "materials" / "extracted"
+def _make_file_service(settings: Settings) -> FileService:
+    """创建 FileService 实例"""
+    return FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
 
 
-def _type_dir(project_dir: Path, material_type: str) -> Path:
-    """获取指定类型素材的目录"""
-    td = _materials_dir(project_dir) / material_type
-    td.mkdir(parents=True, exist_ok=True)
-    return td
-
-
-def _material_file(project_dir: Path, material_type: str, item_id: str) -> Path:
-    if material_type == "summaries":
-        return _materials_dir(project_dir) / material_type / f"{item_id}.md"
-    elif material_type == "worldbuilding":
-        return _materials_dir(project_dir) / "worldbuilding.md"
+def _material_rel_path(material_type: str, item_id: str) -> str:
+    """获取素材文件的 FileService 相对路径"""
+    if material_type == "worldbuilding":
+        return "materials/extracted/worldbuilding.md"
+    elif material_type == "summaries":
+        return f"materials/extracted/summaries/{item_id}.md"
     else:
-        return _type_dir(project_dir, material_type) / f"{item_id}.json"
+        return f"materials/extracted/{material_type}/{item_id}.json"
 
 
-def _load_material(project_dir: Path, material_type: str, item_id: str) -> dict | None:
-    mf = _material_file(project_dir, material_type, item_id)
-    if not mf.exists():
+def _type_dir_rel_path(material_type: str) -> str:
+    """获取素材类型目录的 FileService 相对路径"""
+    return f"materials/extracted/{material_type}"
+
+
+async def _load_material(fs: FileService, project_id: str, material_type: str, item_id: str) -> dict | None:
+    """加载素材"""
+    rel_path = _material_rel_path(material_type, item_id)
+    full_rel = f"{project_id}/{rel_path}"
+
+    if not await fs.exists(full_rel):
         return None
+
+    content, _, _ = await fs.read_file(full_rel)
+
     if material_type == "worldbuilding":
-        return {"content": mf.read_text(encoding="utf-8")}
+        return {"content": content}
     elif material_type == "summaries":
-        # summaries 是 markdown 文件
-        return {"summary_id": item_id, "summary": mf.read_text(encoding="utf-8")}
-    return json.loads(mf.read_text(encoding="utf-8"))
+        return {"summary_id": item_id, "summary": content}
+    return json.loads(content)
 
 
-def _save_material(project_dir: Path, material_type: str, item_id: str, data: dict) -> None:
-    mf = _material_file(project_dir, material_type, item_id)
-    mf.parent.mkdir(parents=True, exist_ok=True)
+async def _save_material(fs: FileService, project_id: str, material_type: str, item_id: str, data: dict) -> None:
+    """保存素材"""
+    rel_path = _material_rel_path(material_type, item_id)
+    full_rel = f"{project_id}/{rel_path}"
+
+    # 确保目录存在
+    type_dir_rel = f"{project_id}/{_type_dir_rel_path(material_type)}"
+    if material_type != "worldbuilding":
+        await fs.create_directory(type_dir_rel)
+
     if material_type == "worldbuilding":
-        mf.write_text(data.get("content", ""), encoding="utf-8")
+        await fs.write_file(full_rel, data.get("content", ""))
     elif material_type == "summaries":
-        mf.write_text(data.get("summary", ""), encoding="utf-8")
+        await fs.write_file(full_rel, data.get("summary", ""))
     else:
-        mf.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        await fs.write_file(full_rel, json.dumps(data, ensure_ascii=False, indent=2))
 
 
-def _list_materials(project_dir: Path, material_type: str) -> list[dict]:
+async def _list_materials(fs: FileService, project_id: str, material_type: str) -> list[dict]:
     """列出指定类型的所有素材"""
     if material_type == "worldbuilding":
-        mf = _materials_dir(project_dir) / "worldbuilding.md"
-        if mf.exists():
-            return [{"world_id": "main", "content": mf.read_text(encoding="utf-8")[:200]}]
+        full_rel = f"{project_id}/materials/extracted/worldbuilding.md"
+        if await fs.exists(full_rel):
+            content, _, _ = await fs.read_file(full_rel)
+            return [{"world_id": "main", "content": content[:200]}]
         return []
 
-    type_dir = _type_dir(project_dir, material_type)
-    if not type_dir.exists():
-        return []
+    type_dir_rel = f"{project_id}/{_type_dir_rel_path(material_type)}"
+    items = await fs.list_directory(type_dir_rel)
 
-    items = []
-    for f in type_dir.iterdir():
-        if f.suffix == ".json":
-            data = json.loads(f.read_text(encoding="utf-8"))
-            items.append(data)
-        elif f.suffix == ".md" and material_type == "summaries":
-            data = {"summary_id": f.stem, "summary": f.read_text(encoding="utf-8")[:200]}
-            items.append(data)
-    return items
+    result = []
+    for item in items:
+        if item["is_dir"]:
+            continue
+        name = item["name"]
+        item_rel = f"{type_dir_rel}/{name}"
+        try:
+            content, _, _ = await fs.read_file(item_rel)
+        except (MoyunFileNotFoundError, ValidationError):
+            continue
+
+        if name.endswith(".json"):
+            try:
+                result.append(json.loads(content))
+            except json.JSONDecodeError:
+                continue
+        elif name.endswith(".md") and material_type == "summaries":
+            stem = name[:-3]  # remove .md
+            result.append({"summary_id": stem, "summary": content[:200]})
+
+    return result
 
 
 def _validate_type(material_type: str) -> bool:
     """验证素材类型是否合法"""
     valid_types = ["plots", "scenes", "summaries", "worldbuilding", "character"]
     return material_type in valid_types or material_type in ["plot", "scene", "summary", "character"]
+
+
+def _validate_item_id(item_id: str) -> None:
+    """验证 item_id 不包含路径遍历"""
+    if not item_id:
+        raise ValidationError(message="item_id 不能为空", field="item_id")
+    if ".." in item_id or "/" in item_id or "\\" in item_id:
+        raise ValidationError(message=f"非法 item_id: {item_id}", field="item_id")
+    if item_id.startswith("."):
+        raise ValidationError(message=f"非法 item_id: {item_id}", field="item_id")
 
 
 # ─── 路由 ─────────────────────────────────────────────────────────
@@ -179,8 +211,8 @@ async def list_materials(
 ):
     """获取指定类型素材列表"""
     logger.info("获取素材列表", extra={"material_type": material_type, "project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     if not _validate_type(material_type):
@@ -190,7 +222,7 @@ async def list_materials(
     if material_type in ["plot", "scene", "summary", "character"]:
         material_type = f"{material_type}s"
 
-    items = _list_materials(project_dir, material_type)
+    items = await _list_materials(fs, project_id, material_type)
     return ApiResponse.ok(MaterialListResponse(items=items, total=len(items)))
 
 
@@ -203,18 +235,20 @@ async def get_material(
 ):
     """获取素材详情"""
     logger.info("获取素材详情", extra={"material_type": material_type, "item_id": item_id, "project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     if not _validate_type(material_type):
         raise ValidationError(message=f"无效的素材类型: {material_type}", field="material_type")
 
+    _validate_item_id(item_id)
+
     # 统一为复数形式
     if material_type in ["plot", "scene", "summary", "character"]:
         material_type = f"{material_type}s"
 
-    data = _load_material(project_dir, material_type, item_id)
+    data = await _load_material(fs, project_id, material_type, item_id)
     if data is None:
         raise ResourceNotFoundError(resource="material", identifier=item_id)
 
@@ -230,8 +264,8 @@ async def create_material(
 ):
     """手动创建素材"""
     logger.info("创建素材", extra={"material_type": material_type, "project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     if not _validate_type(material_type):
@@ -276,7 +310,7 @@ async def create_material(
     else:
         data = req.content or {"id": item_id}
 
-    _save_material(project_dir, material_type, item_id, data)
+    await _save_material(fs, project_id, material_type, item_id, data)
     return ApiResponse.ok(data, message="素材创建成功")
 
 
@@ -291,8 +325,8 @@ async def submit_extract_task(
         "source_file": req.source_file,
         "project_id": req.project_id,
     })
-    project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(req.project_id):
         raise ProjectNotFoundError(req.project_id)
 
     # 验证提取类型
@@ -301,25 +335,21 @@ async def submit_extract_task(
         raise ValidationError(message=f"不支持的提取类型: {req.type}，支持: {', '.join(valid_types)}")
 
     # 验证源文件存在（通过 FileService.read_file 内部校验路径安全）
-    file_service = FileService(
-        settings.projects_path,
-        max_file_write_size=settings.max_file_write_size,
-    )
     try:
-        source_content, _, _ = await file_service.read_file(f"{req.project_id}/{req.source_file}")
+        source_content, _, _ = await fs.read_file(f"{req.project_id}/{req.source_file}")
     except (MoyunFileNotFoundError, ValidationError):
         raise ResourceNotFoundError(resource="file", identifier=req.source_file)
 
     # 读取 style-guide
     style_guide = ""
     try:
-        content, _, _ = await file_service.read_file(f"{req.project_id}/style-guide.md")
+        content, _, _ = await fs.read_file(f"{req.project_id}/style-guide.md")
         style_guide = content
     except Exception:
         pass
 
     # 渲染提取 prompt
-    prompt_engine = PromptEngine(settings.prompts_path, file_service)
+    prompt_engine = PromptEngine(settings.prompts_path, fs)
     variables = {
         "text": source_content,
         "style_guide": style_guide,
@@ -350,6 +380,7 @@ async def submit_extract_task(
 
     # 摘要用源文件标识，其他类型用随机 ID
     if req.type == "summary":
+        from pathlib import Path
         save_id = Path(req.source_file).stem  # sec-001 → sec-001
     else:
         save_id = item_id
@@ -357,14 +388,14 @@ async def submit_extract_task(
     save_type = f"{req.type}s"  # character → characters
     if req.type == "summary":
         # 摘要保存为 markdown
-        _save_material(project_dir, "summaries", save_id, {
+        await _save_material(fs, req.project_id, "summaries", save_id, {
             "summary": result,
             "source_file": req.source_file,
             "created_at": now,
         })
     else:
         # 角色/情节/场景保存为带 content 字段的 JSON
-        _save_material(project_dir, save_type, save_id, {
+        await _save_material(fs, req.project_id, save_type, save_id, {
             f"{req.type}_id": save_id,
             "content": result,
             "source_file": req.source_file,
@@ -399,20 +430,24 @@ async def delete_material(
 ):
     """删除素材"""
     logger.info("删除素材", extra={"material_type": material_type, "item_id": item_id, "project_id": project_id})
-    project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    fs = _make_file_service(settings)
+    if not await fs.exists(project_id):
         raise ProjectNotFoundError(project_id)
 
     if not _validate_type(material_type):
         raise ValidationError(message=f"无效的素材类型: {material_type}", field="material_type")
 
+    _validate_item_id(item_id)
+
     # 统一为复数形式
     if material_type in ["plot", "scene", "summary", "character"]:
         material_type = f"{material_type}s"
 
-    mf = _material_file(project_dir, material_type, item_id)
-    if not mf.exists():
+    rel_path = _material_rel_path(material_type, item_id)
+    full_rel = f"{project_id}/{rel_path}"
+
+    if not await fs.exists(full_rel):
         raise ResourceNotFoundError(resource="material", identifier=item_id)
 
-    await asyncio.to_thread(mf.unlink)
+    await fs.delete_file(full_rel)
     return ApiResponse.ok(message="素材已删除")
