@@ -386,17 +386,9 @@ import { useProjectStore } from '@/stores/project'
 import { useFileStore, type FileNode } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
-import {
-  createLiteProject,
-  defaultLitePrefs,
-  fetchLiteIdeas,
-  fetchLiteNextOptions,
-  streamLiteNext,
-  type LiteIdeaCard,
-  type LiteWriteAction,
-  type LiteNextOptionCard,
-} from '@/services/liteService'
-import { consumeOrFetch } from '@/composables/useLitePrefetch'
+import { defaultLitePrefs, type LiteIdeaCard, type LiteNextOptionCard } from '@/services/liteService'
+import { useLiteGeneration } from '@/composables/useLiteGeneration'
+import { useLiteCandidateActions } from '@/composables/useLiteCandidateActions'
 
 const route = useRoute()
 const router = useRouter()
@@ -405,48 +397,21 @@ const fileStore = useFileStore()
 const editorStore = useEditorStore()
 const notification = useNotificationStore()
 
-const ideaCards = ref<LiteIdeaCard[]>([])
-const nextCards = ref<LiteNextOptionCard[]>([])
-const nextTargetFile = ref('')
-const pendingTargetLabel = ref('')
+// Component-level state (not managed by composables)
 const content = ref('')
 const currentFilePath = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
-const streamingFilePath = ref('')
-const streamingBuffers = ref<Record<string, string>>({})
-const candidateDraft = ref<{
-  sourcePath: string
-  path: string
-  action: LiteWriteAction
-  title: string
-  content: string
-} | null>(null)
-const chapterStatus = ref<Record<string, 'done' | 'blank' | 'draft'>>({})
-const chapterMilestone = ref<{ vol: number; ch: number; summary: string; nextGoal: string } | null>(null)
-const qualitySummary = ref('')
-const engineSummary = ref<Record<string, string>>({})
-const loadingIdeas = ref(false)
-const loadingOptions = ref(false)
-const optionError = ref('')
-const optionRequestId = ref(0)
-const workPhase = ref('')
-const workDetail = ref('')
-const creating = ref(false)
-const generating = ref(false)
-const generationAbortController = ref<AbortController | null>(null)
-const lastGenerationCard = ref<LiteNextOptionCard | null>(null)
-const autoScrollDuringGeneration = ref(true)
 const saving = ref(false)
 const dirty = ref(false)
-const chatRevisionInput = ref('')
-const chatRevisionNote = ref('')
 const prefs = reactive(defaultLitePrefs())
+const chapterStatus = ref<Record<string, 'done' | 'blank' | 'draft'>>({})
 
 const styles = ['轻松', '热血', '细腻', '幽默', '电影感']
 const intensities = ['克制', '标准', '拉满']
 const paces = ['慢热', '均衡', '快节奏']
 const protagonists = ['冷静', '张扬', '腹黑', '善良', '疯批边缘']
 
+// Computed: chapter file list
 const chapterFiles = computed(() => {
   const seen = new Set<string>()
   const files: FileNode[] = []
@@ -463,297 +428,9 @@ const chapterFiles = computed(() => {
   return files.sort((a, b) => a.path.localeCompare(b.path))
 })
 
-const optionActionLabel = computed(() => {
-  if (nextTargetFile.value) {
-    const verb = isChapterStart(nextTargetFile.value) && chapterMilestone.value ? '开启' : '自动写'
-    return `选这个，${verb}${formatChapterLabel(nextTargetFile.value)}`
-  }
-  return '选这个，自动写下一场景'
-})
-
-const currentChapterProgress = computed(() => {
-  const basePath = streamingFilePath.value || currentFilePath.value || nextTargetFile.value
-  if (basePath && chapterMilestone.value) {
-    const meta = parseSectionPath(basePath)
-    if (meta.vol === chapterMilestone.value.vol && meta.ch === chapterMilestone.value.ch) {
-      return `第${meta.ch}章完成 · 下一章已准备`
-    }
-  }
-  return basePath ? chapterProgressText(basePath) : ''
-})
-
-const completionSummary = computed(() => {
-  if (candidateDraft.value && currentFilePath.value === candidateDraft.value.path) {
-    return `候选稿：${candidateActionText(candidateDraft.value.action)}，满意后再采用替换原文`
-  }
-  if (generating.value && pendingTargetLabel.value) {
-    return `正在写${pendingTargetLabel.value} · ${currentChapterProgress.value || '本章进度更新中'}`
-  }
-  if (!currentFilePath.value || chapterStatus.value[currentFilePath.value] !== 'done') {
-    return currentChapterProgress.value
-  }
-  return `${formatChapterLabel(currentFilePath.value)}已完成 · ${currentChapterProgress.value}`
-})
-
-const nextTargetHint = computed(() => {
-  if (loadingOptions.value) return ''
-  if (!nextTargetFile.value) return ''
-  const verb = isChapterStart(nextTargetFile.value) && chapterMilestone.value ? '开启' : '自动写'
-  return `选择一张卡，${verb}${formatChapterLabel(nextTargetFile.value)}`
-})
-
-const canContinueDraft = computed(() => {
-  return Boolean(
-    currentFilePath.value
-    && chapterStatus.value[currentFilePath.value] === 'draft'
-    && content.value.trim()
-    && lastGenerationCard.value,
-  )
-})
-
-const isViewingCandidate = computed(() => {
-  return Boolean(candidateDraft.value && currentFilePath.value === candidateDraft.value.path)
-})
-
-const canRunChatRevision = computed(() => {
-  return Boolean(
-    chatRevisionInput.value.trim()
-    && currentFilePath.value
-    && !generating.value
-    && !saving.value,
-  )
-})
-
-const activeWorkStatus = computed(() => {
-  if (workPhase.value) {
-    return {
-      title: workPhase.value,
-      detail: workDetail.value,
-    }
-  }
-  if (loadingOptions.value) {
-    return {
-      title: '正在生成爽点卡',
-      detail: '正在读取前文、故事引擎和近期上下文，给下一场景准备 3 个方向。',
-    }
-  }
-  if (creating.value) {
-    return {
-      title: '正在创建作品',
-      detail: '正在建立章节目录、故事引擎和初始写作参数。',
-    }
-  }
-  return null
-})
-
-onMounted(async () => {
-  if (route.params.projectId) {
-    await openProject(route.params.projectId as string)
-  } else {
-    projectStore.closeProject()
-    await loadIdeas(false)
-  }
-})
-
-watch(() => route.params.projectId, async (id) => {
-  if (id) {
-    // 如果正在创建项目中，跳过 watch 处理，由 startProject 处理完整流程
-    if (creating.value) {
-      return
-    }
-    await openProject(id as string)
-  } else {
-    projectStore.closeProject()
-    await loadIdeas(false)
-  }
-})
-
-async function loadIdeas(force: boolean) {
-  loadingIdeas.value = true
-  try {
-    if (force) {
-      // 换一批：优先消费预取好的下一批
-      try {
-        ideaCards.value = await consumeOrFetch()
-      } catch {
-        // 预取失败，兜底请求
-        ideaCards.value = await fetchLiteIdeas(String(Date.now()))
-      }
-    } else {
-      // 首次进入：优先消费预取缓存
-      ideaCards.value = await consumeOrFetch()
-    }
-  } finally {
-    loadingIdeas.value = false
-  }
-}
-
-async function startProject(card: LiteIdeaCard) {
-  creating.value = true
-  try {
-    const created = await createLiteProject(card, prefs)
-
-    await projectStore.openProject(created.project_id)
-
-    await fileStore.loadTree(created.project_id)
-
-    await router.push(`/project/${created.project_id}/lite`)
-
-    await openChapter(created.first_file, { skipOptions: true })
-    engineSummary.value = {
-      protagonist_goal: '主角：证明自己，摆脱羞辱，获得真正能改变命运的力量。',
-      current_conflict: card.core_conflict,
-      foreshadowing: card.one_liner,
-      stage_goal: '当前 5 章目标：完成开局压迫到第一次漂亮反击。',
-    }
-    const openingCard: LiteNextOptionCard = {
-      id: `opening-${card.id}`,
-      title: card.title,
-      beat: `第一章围绕“${card.one_liner}”展开，写出压迫、反击前奏和主角钩子。`,
-      scene: '开局冲突现场',
-      protagonist_desire: card.protagonist_hook,
-      obstacle: card.core_conflict,
-      payoff: card.selling_point,
-      hook: '让更大的冲突在结尾露出苗头',
-      advancement: '完成开局压迫和第一次行动选择，为下一场景留出明确冲突。',
-    }
-    nextTargetFile.value = created.first_file
-    nextCards.value = []
-    await runGeneration(openingCard, 'write', created.first_file)
-  } catch (e: unknown) {
-    notification.error((e instanceof Error ? e.message : '') || '创建爽文项目失败')
-  } finally {
-    creating.value = false
-  }
-}
-
-function formatChapterLabel(path: string) {
-  const vol = path.match(/vol-(\d+)/)?.[1]
-  const ch = path.match(/ch-(\d+)/)?.[1]
-  const sec = path.match(/sec-(\d+)/)?.[1]
-  if (!vol && !ch && !sec) return path.split('/').pop()?.replace('.md', '') || path
-  const parts = []
-  if (vol) parts.push(`第${Number(vol)}卷`)
-  if (ch) parts.push(`第${Number(ch)}章`)
-  if (sec) parts.push(`第${Number(sec)}场景`)
-  return parts.join(' ')
-}
-
-function candidateActionText(action: LiteWriteAction) {
-  if (candidateDraft.value?.path.endsWith('.chat.md')) return '聊天改稿'
-  if (action === 'rewrite') return '重写当前场景'
-  if (action === 'more_exciting') return '让当前场景更爽'
-  if (action === 'more_reasonable') return '让当前场景更合理'
-  return '候选稿'
-}
-
-function buildCandidatePath(sourcePath: string, action: LiteWriteAction) {
-  const safeSource = sourcePath.replace(/\.md$/, '').replace(/[\\/]/g, '__')
-  return `.lite-candidates/${safeSource}.${action}.md`
-}
-
-function buildChatRevisionPath(sourcePath: string) {
-  const safeSource = sourcePath.replace(/\.md$/, '').replace(/[\\/]/g, '__')
-  return `.lite-candidates/${safeSource}.chat.md`
-}
-
-function setWorkStatus(title: string, detail: string) {
-  workPhase.value = title
-  workDetail.value = detail
-}
-
-function clearWorkStatus() {
-  workPhase.value = ''
-  workDetail.value = ''
-}
-
-function parseSectionPath(path: string) {
-  const vol = Number(path.match(/vol-(\d+)/)?.[1] || 0)
-  const ch = Number(path.match(/ch-(\d+)/)?.[1] || 0)
-  const sec = Number(path.match(/sec-(\d+)/)?.[1] || 0)
-  return { vol, ch, sec }
-}
-
-function isChapterStart(path: string) {
-  return parseSectionPath(path).sec === 1
-}
-
-function chapterProgressText(path: string) {
-  const { vol, ch } = parseSectionPath(path)
-  if (!vol || !ch) return ''
-  const sameChapter = chapterFiles.value.filter((node) => {
-    const meta = parseSectionPath(node.path)
-    return meta.vol === vol && meta.ch === ch
-  })
-  const total = Math.max(sameChapter.length, 4)
-  const done = sameChapter.filter((node) => chapterStatus.value[node.path] === 'done').length
-  return `第${ch}章 ${Math.min(done, total)}/${total} 场景`
-}
-
-function isAbortError(e: unknown) {
-  return e instanceof DOMException && e.name === 'AbortError'
-}
-
-function isTextareaNearBottom() {
-  const el = textareaRef.value
-  if (!el) return true
-  return el.scrollTop + el.clientHeight >= el.scrollHeight - 32
-}
-
-function handleTextareaScroll() {
-  if (!generating.value) return
-  autoScrollDuringGeneration.value = isTextareaNearBottom()
-}
-
-async function scrollTextareaToBottom() {
-  if (!autoScrollDuringGeneration.value || currentFilePath.value !== streamingFilePath.value) return
-  await nextTick()
-  const el = textareaRef.value
-  if (el) el.scrollTop = el.scrollHeight
-}
-
-function appendDraftContent(base: string, addition: string) {
-  if (!base.trim()) return addition
-  if (!addition.trim()) return base
-  return `${base.replace(/\s+$/, '')}\n\n${addition.replace(/^\s+/, '')}`
-}
-
-function stripLeadingMarkdownHeading(text: string) {
-  return text.replace(/^\s*#{1,6}\s+[^\n\r]*(\r?\n)+/, '')
-}
-
-function extractNextChapterGoal(plan: string | null | undefined) {
-  const fallback = '下一章会把本章留下的压力继续推高。'
-  if (!plan) return fallback
-  const line = plan
-    .split(/\r?\n/)
-    .map(item => item.replace(/^#+\s*/, '').replace(/^[-*]\s*/, '').trim())
-    .find(item => item && !item.includes('章规划格式'))
-  return line ? line.slice(0, 80) : fallback
-}
-
-function buildChapterMilestone(result: { file_path: string; chapter_plan?: string | null }, card: LiteNextOptionCard) {
-  const { vol, ch } = parseSectionPath(result.file_path)
-  if (!vol || !ch) return null
-  return {
-    vol,
-    ch,
-    summary: `第${ch}章完成：${card.title}，${card.payoff}`,
-    nextGoal: `下一章目标：${extractNextChapterGoal(result.chapter_plan)}`,
-  }
-}
-
-function isBlankChapter(text: string) {
-  const body = text
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line && !line.startsWith('#'))
-    .join('')
-  return body.length < 20
-}
-
+// UI helpers
 function chapterBadge(path: string) {
-  if (path === streamingFilePath.value) return '生成中'
+  if (path === gen.streamingFilePath.value) return '生成中'
   if (chapterStatus.value[path] === 'done') return '已写'
   if (chapterStatus.value[path] === 'draft') return '草稿'
   if (chapterStatus.value[path] === 'blank') return '待写'
@@ -761,95 +438,42 @@ function chapterBadge(path: string) {
 }
 
 function chapterBadgeKind(path: string) {
-  if (path === streamingFilePath.value) return 'streaming'
+  if (path === gen.streamingFilePath.value) return 'streaming'
   return chapterStatus.value[path] || 'unknown'
 }
 
-function normalizeChapterHeading(path: string, text: string) {
-  const lines = text.split(/\r?\n/)
-  const first = lines[0] || ''
-  if (!first.trim().startsWith('#')) return text
-  const expectedPrefix = `# ${formatChapterLabel(path)}`
-  if (first.startsWith(expectedPrefix)) return text
-  const title = first
-    .replace(/^#+\s*/, '')
-    .replace(/第\d+卷/g, '')
-    .replace(/第\d+章/g, '')
-    .replace(/第\d+场景/g, '')
-    .replace(/第\d+节/g, '')
-    .replace(/\s*-\s*/g, ' ')
-    .trim() || projectStore.currentProject?.name || ''
-  lines[0] = title ? `${expectedPrefix} ${title}` : expectedPrefix
-  return lines.join('\n')
+function chapterProgressText(path: string) {
+  const { vol, ch } = gen.parseSectionPath(path)
+  if (!vol || !ch) return ''
+  const sameChapter = chapterFiles.value.filter((node) => {
+    const meta = gen.parseSectionPath(node.path)
+    return meta.vol === vol && meta.ch === ch
+  })
+  const total = Math.max(sameChapter.length, 4)
+  const done = sameChapter.filter((node) => chapterStatus.value[node.path] === 'done').length
+  return `第${ch}章 ${Math.min(done, total)}/${total} 场景`
 }
 
-function buildOpeningCardFromProject(): LiteNextOptionCard {
-  const project = projectStore.currentProject
-  return {
-    id: 'opening-current-project',
-    title: project?.name || '开局第一章',
-    beat: `第一章围绕“${project?.name || '开局冲突'}”展开，写出人物欲望、压迫感和第一个钩子。`,
-    scene: project?.background || '开局冲突现场',
-    protagonist_desire: '主角要摆脱被动处境，拿到第一份可见收益。',
-    obstacle: project?.background || '旧秩序和当面施压的人挡在前面。',
-    payoff: project?.theme || '完成开局爽点兑现',
-    hook: '让更大的冲突在结尾露出苗头',
-    advancement: '把主角目标、压迫来源和下一场景冲突接力点建立起来。',
-  }
+// Scroll helpers
+function isTextareaNearBottom() {
+  const el = textareaRef.value
+  if (!el) return true
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - 32
 }
 
-async function openProject(projectId: string) {
-  await projectStore.openProject(projectId)
-  await fileStore.loadTree(projectId)
-  const { node: resume, hasWritten } = await findResumeChapter(projectId)
-  if (resume) await openChapter(resume.path, { skipOptions: !hasWritten })
-  if (resume && !hasWritten && !creating.value && isBlankChapter(content.value)) {
-    const openingCard = buildOpeningCardFromProject()
-    nextTargetFile.value = resume.path
-    nextCards.value = []
-    await runGeneration(openingCard, 'write', resume.path)
-  } else if (!resume) {
-    await refreshOptions()
-  }
+function handleTextareaScroll() {
+  if (!gen.generating.value) return
+  gen.autoScrollDuringGeneration.value = isTextareaNearBottom()
 }
 
-async function findResumeChapter(projectId: string) {
-  let lastWritten = chapterFiles.value[0] || null
-  let hasWritten = false
-  let firstBlank: FileNode | null = null
-  for (const node of chapterFiles.value) {
-    const data = await fileStore.readFile(projectId, node.path)
-    const blank = isBlankChapter(data.content || '')
-    chapterStatus.value[node.path] = blank ? 'blank' : 'done'
-    if (blank && !firstBlank) {
-      firstBlank = node
-    }
-    if (blank) continue
-    hasWritten = true
-    lastWritten = node
-  }
-  if (firstBlank) return { node: firstBlank, hasWritten }
-  return { node: lastWritten, hasWritten }
+async function scrollTextareaToBottom() {
+  if (!gen.autoScrollDuringGeneration.value || currentFilePath.value !== gen.streamingFilePath.value) return
+  await nextTick()
+  const el = textareaRef.value
+  if (el) el.scrollTop = el.scrollHeight
 }
 
-async function openChapter(path: string, options: { skipOptions?: boolean } = {}) {
-  if (!generating.value && !(await confirmDirty())) return
-  const projectId = projectStore.currentProject?.id
-  if (!projectId) return
-  const buffered = streamingBuffers.value[path]
-  const data = buffered === undefined ? await fileStore.readFile(projectId, path) : { content: buffered }
-  currentFilePath.value = path
-  content.value = normalizeChapterHeading(path, data.content || '')
-  chapterStatus.value[path] = isBlankChapter(content.value) ? 'blank' : 'done'
-  fileStore.openFile({ name: path.split('/').pop() || '', path, type: 'file' })
-  editorStore.loadContent(path, content.value)
-  editorStore.setCurrentFile(path)
-  dirty.value = false
-  if (!generating.value && !options.skipOptions) {
-    await refreshOptions(path)
-  }
-}
-
+// Chapter operations (UI-level)
 async function confirmDirty() {
   if (!dirty.value) return true
   return await new Promise<boolean>((resolve) => {
@@ -864,13 +488,31 @@ async function confirmDirty() {
   })
 }
 
+async function openChapter(path: string, options: { skipOptions?: boolean } = {}) {
+  if (!gen.generating.value && !(await confirmDirty())) return
+  const projectId = projectStore.currentProject?.id
+  if (!projectId) return
+  const buffered = gen.streamingBuffers.value[path]
+  const data = buffered === undefined ? await fileStore.readFile(projectId, path) : { content: buffered }
+  currentFilePath.value = path
+  content.value = gen.normalizeChapterHeading(path, data.content || '')
+  chapterStatus.value[path] = gen.isBlankChapter(content.value) ? 'blank' : 'done'
+  fileStore.openFile({ name: path.split('/').pop() || '', path, type: 'file' })
+  editorStore.loadContent(path, content.value)
+  editorStore.setCurrentFile(path)
+  dirty.value = false
+  if (!gen.generating.value && !options.skipOptions) {
+    await gen.refreshOptions(path)
+  }
+}
+
 async function saveCurrent() {
   const projectId = projectStore.currentProject?.id
   if (!projectId || !currentFilePath.value) return
   saving.value = true
   try {
     await fileStore.saveFile(projectId, currentFilePath.value, content.value)
-    chapterStatus.value[currentFilePath.value] = isBlankChapter(content.value) ? 'blank' : 'done'
+    chapterStatus.value[currentFilePath.value] = gen.isBlankChapter(content.value) ? 'blank' : 'done'
     dirty.value = false
     notification.success('已保存')
   } finally {
@@ -878,300 +520,203 @@ async function saveCurrent() {
   }
 }
 
-async function acceptCandidate() {
-  const draft = candidateDraft.value
-  const projectId = projectStore.currentProject?.id
-  if (!draft || !projectId) return
-  saving.value = true
-  setWorkStatus('正在采用候选稿', '正在覆盖原场景、清理候选文件，并刷新下一场景方向。')
-  try {
-    await fileStore.saveFile(projectId, draft.sourcePath, content.value)
-    setWorkStatus('正在清理候选稿', '候选稿已经写入原场景，正在删除临时文件。')
-    await fileStore.deleteFile(projectId, draft.path)
-    candidateDraft.value = null
-    delete streamingBuffers.value[draft.path]
-    currentFilePath.value = draft.sourcePath
-    content.value = normalizeChapterHeading(draft.sourcePath, content.value)
-    chapterStatus.value[draft.sourcePath] = isBlankChapter(content.value) ? 'blank' : 'done'
-    dirty.value = false
-    fileStore.openFile({ name: draft.sourcePath.split('/').pop() || '', path: draft.sourcePath, type: 'file' })
-    editorStore.setCurrentFile(draft.sourcePath)
-    editorStore.loadContent(draft.sourcePath, content.value)
-    await fileStore.loadTree(projectId)
-    setWorkStatus('正在刷新下一场景方向', '正在根据采用后的正文重新生成下一场景爽点卡。')
-    await refreshOptions(draft.sourcePath)
-    notification.success('已采用候选稿并替换原文')
-  } finally {
-    saving.value = false
-    if (!loadingOptions.value) clearWorkStatus()
-  }
-}
+// ─── Composables ──────────────────────────────────────────
 
-async function discardCandidate() {
-  const draft = candidateDraft.value
-  const projectId = projectStore.currentProject?.id
-  if (!draft || !projectId) return
-  try {
-    await fileStore.deleteFile(projectId, draft.path)
-  } catch {
-    // 候选稿已经不存在时也允许回到原文。
-  }
-  candidateDraft.value = null
-  delete streamingBuffers.value[draft.path]
-  await openChapter(draft.sourcePath, { skipOptions: true })
-  notification.success('已放弃候选稿')
-}
+const gen = useLiteGeneration({
+  content,
+  currentFilePath,
+  chapterStatus,
+  textareaRef,
+  scrollTextareaToBottom,
+  dirty,
+  prefs,
+  chapterFiles,
+  openChapter,
+})
 
-async function refreshOptions(baseFile = currentFilePath.value || null) {
-  const projectId = projectStore.currentProject?.id
-  if (!projectId) return
-  const requestId = ++optionRequestId.value
-  loadingOptions.value = true
-  optionError.value = ''
-  nextCards.value = []
-  setWorkStatus('正在生成爽点卡', '正在读取前文、故事引擎和近期上下文，给下一场景准备 3 个方向。')
-  try {
-    const data = await fetchLiteNextOptions(projectId, baseFile, prefs)
-    if (requestId !== optionRequestId.value) return
-    setWorkStatus('爽点卡已生成', '下一场景方向已经准备好，可以选择一张卡继续写。')
-    nextCards.value = data.cards
-    nextTargetFile.value = data.next_file
-    if (!data.cards.length) {
-      optionError.value = '这次没有生成出爽点卡，点“刷新”再试一次。'
-      nextTargetFile.value = ''
-    }
-  } catch {
-    if (requestId !== optionRequestId.value) return
-    optionError.value = '爽点卡生成失败，点“刷新”重试。'
-    nextTargetFile.value = ''
-  } finally {
-    if (requestId === optionRequestId.value) {
-      loadingOptions.value = false
-      clearWorkStatus()
+const cand = useLiteCandidateActions({
+  content,
+  currentFilePath,
+  chapterStatus,
+  streamingBuffers: gen.streamingBuffers,
+  generating: gen.generating,
+  saving,
+  dirty,
+  prefs,
+  formatChapterLabel: gen.formatChapterLabel,
+  isBlankChapter: gen.isBlankChapter,
+  normalizeChapterHeading: gen.normalizeChapterHeading,
+  buildCandidatePath: gen.buildCandidatePath,
+  buildChatRevisionPath: gen.buildChatRevisionPath,
+  refreshOptions: gen.refreshOptions,
+  setWorkStatus: gen.setWorkStatus,
+  clearWorkStatus: gen.clearWorkStatus,
+  runGeneration: gen.runGeneration,
+  openChapter,
+  loadingOptions: gen.loadingOptions,
+})
+
+// ─── UI Computed ──────────────────────────────────────────
+
+const optionActionLabel = computed(() => {
+  if (gen.nextTargetFile.value) {
+    const verb = gen.isChapterStart(gen.nextTargetFile.value) && gen.chapterMilestone.value ? '开启' : '自动写'
+    return `选这个，${verb}${gen.formatChapterLabel(gen.nextTargetFile.value)}`
+  }
+  return '选这个，自动写下一场景'
+})
+
+const currentChapterProgress = computed(() => {
+  const basePath = gen.streamingFilePath.value || currentFilePath.value || gen.nextTargetFile.value
+  if (basePath && gen.chapterMilestone.value) {
+    const meta = gen.parseSectionPath(basePath)
+    if (meta.vol === gen.chapterMilestone.value.vol && meta.ch === gen.chapterMilestone.value.ch) {
+      return `第${meta.ch}章完成 · 下一章已准备`
     }
   }
-}
+  return basePath ? chapterProgressText(basePath) : ''
+})
 
-async function generateWithCard(card: LiteNextOptionCard) {
-  if (generating.value) return
-  await runGeneration(card, 'write', nextTargetFile.value || null)
-}
-
-async function rewriteCurrent() {
-  if (generating.value) return
-  const card = nextCards.value[0]
-  if (card && currentFilePath.value) {
-    await runGeneration(card, 'rewrite', currentFilePath.value, buildCandidatePath(currentFilePath.value, 'rewrite'))
+const completionSummary = computed(() => {
+  if (cand.candidateDraft.value && currentFilePath.value === cand.candidateDraft.value.path) {
+    return `候选稿：${gen.candidateActionText(cand.candidateDraft.value.action, cand.candidateDraft.value.path)}，满意后再采用替换原文`
   }
-}
-
-async function improveCurrent(action: 'more_exciting' | 'more_reasonable') {
-  if (generating.value) return
-  const card = nextCards.value[0]
-  if (card && currentFilePath.value) {
-    await runGeneration(card, action, currentFilePath.value, buildCandidatePath(currentFilePath.value, action))
+  if (gen.generating.value && gen.pendingTargetLabel.value) {
+    return `正在写${gen.pendingTargetLabel.value} · ${currentChapterProgress.value || '本章进度更新中'}`
   }
-}
-
-async function runChatRevision() {
-  const instruction = chatRevisionInput.value.trim()
-  if (!instruction || generating.value) return
-  const sourcePath = candidateDraft.value?.sourcePath || currentFilePath.value
-  if (!sourcePath) return
-  const label = formatChapterLabel(sourcePath)
-  const card: LiteNextOptionCard = {
-    id: `chat-revision-${Date.now()}`,
-    title: '聊天改稿',
-    beat: `根据用户聊天指令改写当前场景：${instruction}`,
-    scene: `保留${label}的主要剧情，只调整用户指出的问题。`,
-    protagonist_desire: '保持人物核心欲望不变，让行动更贴合用户修改方向。',
-    obstacle: '不能破坏前文逻辑、人物动机、场景钩子和既有设定。',
-    payoff: `完成用户要求：${instruction}`,
-    hook: '保留或加强本场景结尾钩子。',
-    advancement: '生成一版可采用的候选稿，供用户确认后替换原文。',
+  if (!currentFilePath.value || chapterStatus.value[currentFilePath.value] !== 'done') {
+    return currentChapterProgress.value
   }
-  chatRevisionNote.value = `正在根据“${instruction}”生成候选稿。`
-  await runGeneration(card, 'rewrite', sourcePath, buildChatRevisionPath(sourcePath))
-  chatRevisionNote.value = '候选稿已生成，可以在编辑器中查看并决定是否采用。'
-}
+  return `${gen.formatChapterLabel(currentFilePath.value)}已完成 · ${currentChapterProgress.value}`
+})
 
-function stopGeneration() {
-  generationAbortController.value?.abort()
-}
+const nextTargetHint = computed(() => {
+  if (gen.loadingOptions.value) return ''
+  if (!gen.nextTargetFile.value) return ''
+  const verb = gen.isChapterStart(gen.nextTargetFile.value) && gen.chapterMilestone.value ? '开启' : '自动写'
+  return `选择一张卡，${verb}${gen.formatChapterLabel(gen.nextTargetFile.value)}`
+})
 
-async function continueDraft() {
-  if (generating.value || !currentFilePath.value || !lastGenerationCard.value) return
-  streamingBuffers.value[currentFilePath.value] = content.value
-  await runGeneration(lastGenerationCard.value, 'continue', currentFilePath.value)
-}
-
-async function runGeneration(card: LiteNextOptionCard, action: LiteWriteAction, targetFile: string | null, outputFile: string | null = null) {
-  const projectId = projectStore.currentProject?.id
-  if (!projectId || generating.value) return
-  const isCandidate = Boolean(outputFile && outputFile !== targetFile)
-  const candidateLabel = outputFile?.endsWith('.chat.md') ? '聊天改稿' : candidateActionText(action)
-  const sourcePath = targetFile || nextTargetFile.value || currentFilePath.value || ''
-  generating.value = true
-  const abortController = new AbortController()
-  generationAbortController.value = abortController
-  lastGenerationCard.value = card
-  autoScrollDuringGeneration.value = true
-  let generatedFilePath = outputFile || sourcePath
-  let streamHeadingPrefix = ''
-  const continueBaseContent = action === 'continue' && generatedFilePath ? (streamingBuffers.value[generatedFilePath] || content.value) : ''
-  pendingTargetLabel.value = formatChapterLabel(sourcePath)
-  setWorkStatus(
-    isCandidate ? `正在生成${candidateLabel}候选稿` : `正在写${pendingTargetLabel.value}`,
-    isCandidate ? '正在准备当前场景、用户要求和故事状态，候选稿不会覆盖原文。' : '正在准备前文、故事引擎、近期上下文和本场景爽点卡。',
+const canContinueDraft = computed(() => {
+  return Boolean(
+    currentFilePath.value
+    && chapterStatus.value[currentFilePath.value] === 'draft'
+    && content.value.trim()
+    && gen.lastGenerationCard.value,
   )
-  qualitySummary.value = isCandidate
-    ? `正在生成${candidateActionText(action)}候选稿，原文不会被覆盖。`
-    : `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
-  try {
-    await streamLiteNext(projectId, targetFile || nextTargetFile.value || currentFilePath.value || null, card, prefs, action, {
-      onMeta: (meta) => {
-        generatedFilePath = meta.file_path
-        streamingFilePath.value = meta.file_path
-        const displayPath = meta.source_file || meta.file_path
-        setWorkStatus(
-          meta.is_candidate ? `正在生成${candidateLabel}候选稿` : `正在写${formatChapterLabel(displayPath)}`,
-          'AI 已开始响应，正文会流式出现在编辑器里。',
-        )
-        const headingPrefix = `# ${formatChapterLabel(displayPath)} ${card.title}\n\n`
-        streamHeadingPrefix = headingPrefix
-        const placeholder = action === 'continue'
-          ? continueBaseContent
-          : `${headingPrefix}AI 正在起笔，请稍等...`
-        streamingBuffers.value[meta.file_path] = action === 'continue' ? continueBaseContent : headingPrefix
-        chapterStatus.value[meta.file_path] = 'blank'
-        currentFilePath.value = meta.file_path
-        pendingTargetLabel.value = formatChapterLabel(displayPath)
-        if (meta.is_candidate && meta.source_file) {
-          candidateDraft.value = {
-            sourcePath: meta.source_file,
-            path: meta.file_path,
-            action,
-            title: card.title,
-            content: placeholder,
-          }
-        }
-        content.value = placeholder
-        dirty.value = false
-        fileStore.openFile({ name: meta.file_path.split('/').pop() || '', path: meta.file_path, type: 'file' })
-        editorStore.setCurrentFile(meta.file_path)
-        editorStore.loadContent(meta.file_path, placeholder)
-        void scrollTextareaToBottom()
-      },
-      onStatus: (message) => {
-        if (message.includes('更新故事状态')) {
-          setWorkStatus('正在更新故事状态', '正在写入故事引擎、近期上下文和场景记忆，保证后续连续性。')
-        } else if (message.includes('审稿')) {
-          setWorkStatus('正在质量审稿', '正在检查逻辑、爽点兑现和连续性。')
-        }
-        qualitySummary.value = message === 'AI 正在写正文...'
-          ? `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
-          : message
-      },
-      onDelta: (delta) => {
-        if (!generatedFilePath) return
-        setWorkStatus(
-          isCandidate ? `正在生成${candidateLabel}候选稿` : `正在写${pendingTargetLabel.value}`,
-          'AI 正在输出正文，已生成内容会自动保留。',
-        )
-        const currentBuffer = streamingBuffers.value[generatedFilePath] || ''
-        const safeDelta = action !== 'continue' && currentBuffer === streamHeadingPrefix
-          ? stripLeadingMarkdownHeading(delta)
-          : delta
-        const nextContent = action === 'continue' && currentBuffer === continueBaseContent
-          ? appendDraftContent(currentBuffer, safeDelta)
-          : currentBuffer + safeDelta
-        streamingBuffers.value[generatedFilePath] = nextContent
-        editorStore.loadContent(generatedFilePath, nextContent)
-        if (currentFilePath.value === generatedFilePath) {
-          content.value = nextContent
-          void scrollTextareaToBottom()
-        }
-        if (!isBlankChapter(nextContent)) {
-          chapterStatus.value[generatedFilePath] = 'done'
-        }
-      },
-      onReplace: (nextContent) => {
-        if (!generatedFilePath) return
-        streamingBuffers.value[generatedFilePath] = nextContent
-        if (candidateDraft.value?.path === generatedFilePath) {
-          candidateDraft.value.content = nextContent
-        }
-        chapterStatus.value[generatedFilePath] = isBlankChapter(nextContent) ? 'blank' : 'done'
-        editorStore.loadContent(generatedFilePath, nextContent)
-        if (currentFilePath.value === generatedFilePath) {
-          content.value = nextContent
-          void scrollTextareaToBottom()
-        }
-      },
-      onDone: (result) => {
-        setWorkStatus(
-          isCandidate ? '候选稿已生成' : '场景已写入',
-          isCandidate ? '候选稿已保存，可以采用或放弃。' : '正文已经保存，正在准备后续爽点卡。',
-        )
-        generatedFilePath = result.file_path
-        streamingBuffers.value[result.file_path] = result.content
-        if (candidateDraft.value?.path === result.file_path) {
-          candidateDraft.value.content = result.content
-        }
-        chapterStatus.value[result.file_path] = isBlankChapter(result.content) ? 'blank' : 'done'
-        qualitySummary.value = result.quality_summary
-        engineSummary.value = result.story_engine_summary
-        if (result.chapter_plan) {
-          chapterMilestone.value = buildChapterMilestone(result, card)
-          notification.success(`第${parseSectionPath(result.file_path).ch}章完成，下一章已准备`)
-        } else if (action !== 'continue') {
-          chapterMilestone.value = null
-        }
-        dirty.value = false
-        fileStore.openFile({ name: result.file_path.split('/').pop() || '', path: result.file_path, type: 'file' })
-        editorStore.loadContent(result.file_path, result.content)
-        if (currentFilePath.value === result.file_path) {
-          content.value = result.content
-          editorStore.setCurrentFile(result.file_path)
-          void scrollTextareaToBottom()
-        }
-      },
-    }, { signal: abortController.signal }, outputFile)
-    generating.value = false
-    generationAbortController.value = null
-    streamingFilePath.value = ''
-    pendingTargetLabel.value = ''
-    await fileStore.loadTree(projectId)
-    if (!isCandidate) {
-      setWorkStatus('正在刷新下一场景方向', '正在根据最新正文生成下一场景爽点卡。')
-      await refreshOptions(generatedFilePath || currentFilePath.value || null)
-      notification.success('场景已生成')
-    } else {
-      notification.success('候选稿已生成')
+})
+
+const isViewingCandidate = computed(() => {
+  return Boolean(cand.candidateDraft.value && currentFilePath.value === cand.candidateDraft.value.path)
+})
+
+const canRunChatRevision = computed(() => {
+  return Boolean(
+    cand.chatRevisionInput.value.trim()
+    && currentFilePath.value
+    && !gen.generating.value
+    && !saving.value,
+  )
+})
+
+const activeWorkStatus = computed(() => {
+  if (gen.workPhase.value) {
+    return {
+      title: gen.workPhase.value,
+      detail: gen.workDetail.value,
     }
-  } catch (e: unknown) {
-    if (isAbortError(e)) {
-      const draft = generatedFilePath ? (streamingBuffers.value[generatedFilePath] || '') : ''
-      if (generatedFilePath) {
-        chapterStatus.value[generatedFilePath] = draft.trim() ? 'draft' : 'blank'
-      }
-      dirty.value = Boolean(draft)
-      qualitySummary.value = draft
-        ? `已停止生成，${pendingTargetLabel.value}的草稿已保留，满意可以保存。`
-        : `已停止生成${pendingTargetLabel.value}。`
-      notification.success('已停止生成')
-    } else {
-      notification.error((e instanceof Error ? e.message : '') || '生成失败')
-    }
-  } finally {
-    generating.value = false
-    generationAbortController.value = null
-    streamingFilePath.value = ''
-    pendingTargetLabel.value = ''
-    if (!loadingOptions.value) clearWorkStatus()
   }
+  if (gen.loadingOptions.value) {
+    return {
+      title: '正在生成爽点卡',
+      detail: '正在读取前文、故事引擎和近期上下文，给下一场景准备 3 个方向。',
+    }
+  }
+  if (gen.creating.value) {
+    return {
+      title: '正在创建作品',
+      detail: '正在建立章节目录、故事引擎和初始写作参数。',
+    }
+  }
+  return null
+})
+
+// ─── Event Handlers ───────────────────────────────────────
+
+async function handleStartProject(card: LiteIdeaCard) {
+  await gen.startProject(card, router, cand.candidateDraft)
 }
 
+async function handleGenerateWithCard(card: LiteNextOptionCard) {
+  await gen.generateWithCard(card, cand.candidateDraft)
+}
+
+async function handleRewriteCurrent() {
+  await cand.rewriteCurrent(gen.nextCards.value, currentFilePath.value)
+}
+
+async function handleImproveCurrent(action: 'more_exciting' | 'more_reasonable') {
+  await cand.improveCurrent(action, gen.nextCards.value, currentFilePath.value)
+}
+
+async function handleContinueDraft() {
+  await gen.continueDraft(cand.candidateDraft)
+}
+
+async function handleRunChatRevision() {
+  await cand.runChatRevision(currentFilePath.value)
+}
+
+// ─── Lifecycle ────────────────────────────────────────────
+
+onMounted(async () => {
+  if (route.params.projectId) {
+    await gen.openProject(route.params.projectId as string, cand.candidateDraft)
+  } else {
+    projectStore.closeProject()
+    await gen.loadIdeas(false)
+  }
+})
+
+watch(() => route.params.projectId, async (id) => {
+  if (id) {
+    if (gen.creating.value) return
+    await gen.openProject(id as string, cand.candidateDraft)
+  } else {
+    projectStore.closeProject()
+    await gen.loadIdeas(false)
+  }
+})
+
+// ─── Template aliases (avoid changing template) ───────────
+const ideaCards = gen.ideaCards
+const nextCards = gen.nextCards
+const pendingTargetLabel = gen.pendingTargetLabel
+const streamingFilePath = gen.streamingFilePath
+const generating = gen.generating
+const loadingIdeas = gen.loadingIdeas
+const loadingOptions = gen.loadingOptions
+const optionError = gen.optionError
+const creating = gen.creating
+const qualitySummary = gen.qualitySummary
+const engineSummary = gen.engineSummary
+const chapterMilestone = gen.chapterMilestone
+const candidateDraft = cand.candidateDraft
+const chatRevisionInput = cand.chatRevisionInput
+const chatRevisionNote = cand.chatRevisionNote
+const formatChapterLabel = gen.formatChapterLabel
+const candidateActionText = gen.candidateActionText
+function loadIdeas(force: boolean) { gen.loadIdeas(force) }
+function startProject(card: LiteIdeaCard) { handleStartProject(card) }
+function generateWithCard(card: LiteNextOptionCard) { handleGenerateWithCard(card) }
+function rewriteCurrent() { handleRewriteCurrent() }
+function improveCurrent(action: 'more_exciting' | 'more_reasonable') { handleImproveCurrent(action) }
+function continueDraft() { handleContinueDraft() }
+function runChatRevision() { handleRunChatRevision() }
+function stopGeneration() { gen.stopGeneration() }
+function acceptCandidate() { cand.acceptCandidate() }
+function discardCandidate() { cand.discardCandidate() }
+function refreshOptions() { gen.refreshOptions() }
 </script>
 
 <style scoped lang="scss">
