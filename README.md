@@ -63,6 +63,16 @@ A complete demo novel project is available at [`examples/demo-novel/`](examples/
 - [AGENTS.md](AGENTS.md) — AI collaboration rules and code map
 - [GitHub Wiki](https://github.com/wuyinglai/moyun-studio/wiki) — User-facing documentation
 
+## Release Check
+
+Run before release:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1
+```
+
+This script runs guardrails, backend safety tests (A-E), full backend tests, and frontend lint/build. It does **not** run real LLM E2E or require API Keys. Real LLM E2E is a separate optional check requiring `MOYUN_E2E_REAL_LLM=true`.
+
 ## Tech Stack
 
 - **Backend**: FastAPI, LiteLLM, aiofiles, Pydantic, Jinja2
