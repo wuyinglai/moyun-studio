@@ -200,6 +200,7 @@ See [docs/roadmap.md](docs/roadmap.md) for planned features and milestones.
 - [Roadmap](docs/roadmap.md) — Planned features
 - [Document Index](docs/document-index.md) — Complete documentation navigation
 - [Release Checklist](docs/RELEASE_CHECKLIST.md) — Pre-release verification steps
+- [Release Preflight](docs/release-preflight.md) — Pre-release tag and CLI checks
 - [v0.1.1 Release Notes](docs/releases/v0.1.1.md)
 - [v0.1.0 Release Notes](docs/releases/v0.1.0.md)
 
