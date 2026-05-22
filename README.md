@@ -4,6 +4,8 @@
 
 所有数据留在你的机器上，无需云数据库、无需注册账号。
 
+> **Current version: v0.1.1** — Maintenance release. See [Release Notes](docs/releases/v0.1.1.md) and [Changelog](docs/changelog.md).
+
 ## Core Features
 
 - **Scene-level writing** — `sec-*.md` = 单场景（600-1000 字），写作和生成的最小单位
@@ -22,6 +24,8 @@
 | npm | 9+ |
 
 ## Quick Start
+
+> Detailed guide: [docs/quick-start.md](docs/quick-start.md)
 
 ### 1. Clone & Install
 
@@ -104,6 +108,44 @@ Frontend starts at `http://localhost:5173`.
 | `pytest` | Run tests |
 | `ruff check .` | Lint |
 
+## Project Structure
+
+```
+moyun-studio/
+├── backend/               # FastAPI backend
+│   ├── api/               # API endpoints
+│   ├── application/       # Application services (scene, memory, pipeline)
+│   ├── core/              # Core services (LLM, file ops, candidates, events)
+│   ├── domain/            # Domain models and events
+│   ├── models/            # Pydantic models
+│   ├── schemas/           # Request/response schemas
+│   ├── policies/          # Business policies (candidate, generation output)
+│   ├── tests/             # Backend tests
+│   └── config.py          # Configuration (pydantic-settings)
+├── frontend/              # Vue 3 + TypeScript frontend
+│   ├── src/
+│   │   ├── components/    # Vue components (editor, chat, modals, panels)
+│   │   ├── composables/   # Composables (SSE, auto-save, keyboard shortcuts)
+│   │   ├── modules/       # Feature modules (candidate, scene, pipeline, SSE)
+│   │   ├── stores/        # Pinia stores
+│   │   ├── views/         # Page views (LiteWritingView)
+│   │   └── services/      # API service layer
+│   └── tests/             # E2E tests (Playwright)
+├── prompts/               # Prompt templates and pipeline YAML
+│   ├── blocks/            # Reusable prompt blocks
+│   ├── generate/          # Generation prompts
+│   ├── pipeline/          # Pipeline definitions (YAML + prompts)
+│   ├── extract/           # Extraction prompts
+│   ├── review/            # Quality review prompts
+│   ├── transform/         # Transform prompts (polish, shorten, expand)
+│   └── templates/         # File templates (ch-meta, story-state, etc.)
+├── examples/              # Example projects
+│   └── demo-novel/        # Demo: "黑塔信号" (near-future suspense)
+├── docs/                  # Documentation
+├── scripts/               # Utility scripts (release check, guardrails)
+└── workspace/             # User data (gitignored, created at runtime)
+```
+
 ## Configuration
 
 All configuration is managed via `.env` file (copy from `.env.example`). Key settings:
@@ -127,7 +169,12 @@ A complete demo novel is at [`examples/demo-novel/`](examples/demo-novel/):
 - **Title**: 黑塔信号 (Black Tower Signal)
 - Demonstrates standard project structure and scene-level writing model
 
-To use it, copy into your workspace:
+A minimal example project is at [`examples/basic-novel-project/`](examples/basic-novel-project/):
+
+- Minimal project structure for quick reference
+- Includes `meta.json`, `outline.md`, and one scene file
+
+To use either, copy into your workspace:
 
 ```powershell
 Copy-Item -Recurse examples/demo-novel workspace/projects/demo-novel
@@ -135,18 +182,26 @@ Copy-Item -Recurse examples/demo-novel workspace/projects/demo-novel
 
 ## Known Issues
 
-See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations and workarounds.
+See [docs/known-issues.md](docs/known-issues.md) for current limitations and workarounds.
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+See [docs/changelog.md](docs/changelog.md) for release history.
+
+## Roadmap
+
+See [docs/roadmap.md](docs/roadmap.md) for planned features and milestones.
 
 ## Documentation
 
+- [Quick Start Guide](docs/quick-start.md) — Step-by-step setup walkthrough
+- [Known Issues](docs/known-issues.md) — Current limitations and workarounds
+- [Changelog](docs/changelog.md) — Release history
+- [Roadmap](docs/roadmap.md) — Planned features
 - [Document Index](docs/document-index.md) — Complete documentation navigation
 - [Release Checklist](docs/RELEASE_CHECKLIST.md) — Pre-release verification steps
+- [v0.1.1 Release Notes](docs/releases/v0.1.1.md)
 - [v0.1.0 Release Notes](docs/releases/v0.1.0.md)
-- [GitHub Wiki](https://github.com/wuyinglai/moyun-studio/wiki)
 
 ## Tech Stack
 

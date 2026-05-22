@@ -1,0 +1,13 @@
+{
+  "title": "山城雾事",
+  "genre": "都市悬疑",
+  "language": "zh-CN",
+  "description": "一个关于山城老街消失的钟表匠和一封迟来二十年的信的故事。",
+  "structure": {
+    "volumes_per_story": 1,
+    "chapters_per_volume": 3,
+    "scenes_per_chapter": 5
+  },
+  "created_at": "2026-05-22T10:00:00",
+  "updated_at": "2026-05-22T10:00:00"
+}

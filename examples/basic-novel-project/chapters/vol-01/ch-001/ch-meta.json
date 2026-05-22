@@ -1,0 +1,37 @@
+{
+  "chapter_title": "消失的钟表匠",
+  "volume": 1,
+  "chapter": 1,
+  "scenes": [
+    {
+      "index": 1,
+      "title": "晨雾巡逻",
+      "summary": "林小北巡逻发现钟表铺门开着，陈伯不在",
+      "status": "written"
+    },
+    {
+      "index": 2,
+      "title": "走访邻居",
+      "summary": "走访邻居得知陈伯昨晚在修老座钟",
+      "status": "planned"
+    },
+    {
+      "index": 3,
+      "title": "暗格中的信",
+      "summary": "在店铺暗格中发现一封未寄出的信",
+      "status": "planned"
+    },
+    {
+      "index": 4,
+      "title": "监控线索",
+      "summary": "调取监控发现陈伯凌晨独自走向江边",
+      "status": "planned"
+    },
+    {
+      "index": 5,
+      "title": "江边发现",
+      "summary": "江边发现陈伯的拐杖，人不见踪影",
+      "status": "planned"
+    }
+  ]
+}
