@@ -1,40 +1,42 @@
 # Moyun Studio / 墨韵
 
-Local-first AI fiction studio with story memory, safe revisions, and customizable workflows.
+**Local-first AI fiction writing studio** — 本地优先的 AI 小说创作工作台，支持场景级写作、故事记忆、安全候选稿与人机协同创作。
 
-墨韵是一个本地优先的 AI 小说创作工作台，面向长篇小说创作，支持故事记忆、安全候选稿、可配置工作流与人机协同创作。
+所有数据留在你的机器上，无需云数据库、无需注册账号。
+
+## Core Features
+
+- **Scene-level writing** — `sec-*.md` = 单场景（600-1000 字），写作和生成的最小单位
+- **Candidate-based safe revision** — 润色/重写等高风险操作生成候选稿，审核后才覆盖正文
+- **Story memory** — 自动维护 `recent-context.md`、`story-state.md` 等记忆文件
+- **Two entry points** — Lite 快写模式 + Professional 全功能工作台
+- **Customizable pipelines** — YAML 定义 Prompt 工作流，支持多步生成
+- **Local file storage** — 零数据库，所有项目文件都在本地 `workspace/` 目录
+
+## Requirements
+
+| Dependency | Version |
+|------------|---------|
+| Python | 3.10+ |
+| Node.js | 18+ |
+| npm | 9+ |
 
 ## Quick Start
 
-### Backend
-
-```bat
-cd backend
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r requirements.txt
-copy ..\.env.example ..\.env
-uvicorn backend.main:app --reload
-```
-
-### Frontend
+### 1. Clone & Install
 
 ```bash
-cd frontend
-npm install
-npm run dev
+git clone https://github.com/wuyinglai/moyun-studio.git
+cd moyun-studio
 ```
 
-After starting, access the frontend at `http://localhost:5173`. Backend API docs at `/docs` or `/redoc`.
+### 2. Configure Environment
 
-## Two Entry Points
+```bash
+cp .env.example .env
+```
 
-- **Lite Mode** (`/lite`) — Casual writing page with opening hooks, satisfying plot points, streaming generation, and candidate drafts.
-- **Professional Mode** (`/project/:id`) — Full workbench with file tree, prompts, pipelines, workflows, snapshots, and comparison.
-
-## LLM Configuration
-
-Copy `.env.example` to `.env` and fill in your API Key:
+Edit `.env` and fill in your LLM API Key:
 
 ```env
 LLM_API_KEY=sk-xxx
@@ -42,37 +44,109 @@ LLM_API_BASE=https://api.openai.com/v1
 LLM_MODEL=gpt-4
 ```
 
-Supports DeepSeek, Ollama, and other LiteLLM-compatible models.
+Supports DeepSeek, Ollama, and other LiteLLM-compatible providers.
+
+### 3. Start Backend
+
+```bash
+cd backend
+python -m venv venv
+
+# Windows
+.\venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn backend.main:app --reload
+```
+
+Backend API starts at `http://localhost:8000`. API docs at `/docs` (Swagger) or `/redoc`.
+
+### 4. Start Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend starts at `http://localhost:5173`.
+
+### 5. Write Your First Scene
+
+1. Open `http://localhost:5173` in your browser.
+2. Configure your LLM provider in **Settings** (gear icon).
+3. Choose an entry point:
+   - **Lite Mode** (`/lite`) — Pick an opening hook, click "写下一场景"
+   - **Professional Mode** — Create a project, navigate the file tree
+4. Review the generated candidate draft before applying changes.
+
+## Available Commands
+
+### Frontend (`cd frontend`)
+
+| Command | Description |
+|---------|-------------|
+| `npm install` | Install dependencies |
+| `npm run dev` | Start dev server (port 5173) |
+| `npm run build` | Type-check and build for production |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Run ESLint with auto-fix |
+
+### Backend (`cd backend`, with venv activated)
+
+| Command | Description |
+|---------|-------------|
+| `pip install -r requirements.txt` | Install dependencies |
+| `uvicorn backend.main:app --reload` | Start dev server (port 8000) |
+| `pytest` | Run tests |
+| `ruff check .` | Lint |
+
+## Configuration
+
+All configuration is managed via `.env` file (copy from `.env.example`). Key settings:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LLM_API_KEY` | (empty) | Your LLM API key — **required for AI features** |
+| `LLM_API_BASE` | (empty) | API base URL (e.g. `https://api.openai.com/v1`) |
+| `LLM_MODEL` | `gpt-4` | Default model name |
+| `LLM_PROVIDER` | `openai` | Provider: `openai`, `anthropic`, `ollama`, `custom` |
+| `DEBUG` | `false` | Enable debug logging |
+| `WORKSPACE_PATH` | `./workspace` | Project data directory |
+
+Full configuration reference: [backend/config.py](backend/config.py)
 
 ## Example Project
 
-A complete demo novel project is available at [`examples/demo-novel/`](examples/demo-novel/). It demonstrates the standard project structure, scene-level writing model, story memory files, and character profiles.
+A complete demo novel is at [`examples/demo-novel/`](examples/demo-novel/):
 
-### Quick Start
+- **Genre**: Near-future suspense (近未来悬疑)
+- **Title**: 黑塔信号 (Black Tower Signal)
+- Demonstrates standard project structure and scene-level writing model
 
-1. Start backend and frontend.
-2. Open the web UI.
-3. Configure your LLM provider in Settings.
-4. Create a new project or use Lite mode to pick an opening hook.
-5. Click "写下一场景" to generate a scene.
-6. Review the candidate draft before applying changes.
+To use it, copy into your workspace:
+
+```powershell
+Copy-Item -Recurse examples/demo-novel workspace/projects/demo-novel
+```
+
+## Known Issues
+
+See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations and workarounds.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Documentation
 
 - [Document Index](docs/document-index.md) — Complete documentation navigation
-- [AGENTS.md](AGENTS.md) — AI collaboration rules and code map
-- [v0.1.0 Release Notes](docs/releases/v0.1.0.md) — Release scope, safety fixes, known limitations
-- [GitHub Wiki](https://github.com/wuyinglai/moyun-studio/wiki) — User-facing documentation
-
-## Release Check
-
-Run before release:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1
-```
-
-This script runs guardrails, backend safety tests (A-E), full backend tests, and frontend lint/build. It does **not** run real LLM E2E or require API Keys. Real LLM E2E is a separate optional check requiring `MOYUN_E2E_REAL_LLM=true`.
+- [Release Checklist](docs/RELEASE_CHECKLIST.md) — Pre-release verification steps
+- [v0.1.0 Release Notes](docs/releases/v0.1.0.md)
+- [GitHub Wiki](https://github.com/wuyinglai/moyun-studio/wiki)
 
 ## Tech Stack
 
