@@ -104,7 +104,6 @@ Check-File "docs/roadmap.md" "docs/roadmap.md"
 Check-File "docs/changelog.md" "docs/changelog.md"
 Check-File "docs/releases/v0.1.0.md" "docs/releases/v0.1.0.md"
 Check-File "docs/releases/v0.1.1.md" "docs/releases/v0.1.1.md"
-Check-File "docs/KNOWN_ISSUES.md" "docs/KNOWN_ISSUES.md"
 Check-File "docs/RELEASE_CHECKLIST.md" "docs/RELEASE_CHECKLIST.md"
 
 # ---- 5. Example projects ----

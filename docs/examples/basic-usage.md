@@ -106,4 +106,4 @@ VITE v8.x.x  ready in xxx ms
 | Generation fails | Verify API key is valid and has credits; check backend logs |
 | SSL errors on Windows | Add `MOYUN_DISABLE_PROXY_DETECTION=true` to `.env` |
 
-For more details, see [docs/KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
+For more details, see [docs/known-issues.md](../known-issues.md).

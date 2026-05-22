@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `docs/changelog.md` — this file, replacing root-level CHANGELOG.md reference
 - Added `examples/basic-novel-project/` — minimal example project for quick reference
 - Updated `docs/releases/v0.1.1.md` — release notes for v0.1.1
-- Added `_misc/scripts/verify-release.ps1` — verification script for release readiness
+- Added `scripts/verify-release.ps1` — verification script for release readiness
 
 ### Changed
 

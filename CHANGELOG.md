@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `examples/basic-novel-project/` — minimal example project for quick reference
 - Added `scripts/verify-release.ps1` — verification script for release readiness
 - Enhanced `.env.example` with section comments and proxy workaround
-- Added `docs/KNOWN_ISSUES.md` — known limitations, common startup failures, and workarounds
+- Added `docs/known-issues.md` — known limitations, common startup failures, and workarounds
 - Added `docs/RELEASE_CHECKLIST.md` — pre-release verification steps
 - Added `docs/examples/basic-usage.md` — minimal usage walkthrough
 

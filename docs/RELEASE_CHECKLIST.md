@@ -36,7 +36,7 @@ Use this checklist before creating a new release.
 
 - [ ] `README.md` is up to date
 - [ ] `CHANGELOG.md` is updated with this version's changes
-- [ ] `docs/KNOWN_ISSUES.md` is updated
+- [ ] `docs/known-issues.md` is updated
 - [ ] Release notes file exists at `docs/releases/vX.Y.Z.md`
 - [ ] `docs/RELEASE_CHECKLIST.md` itself is current
 
