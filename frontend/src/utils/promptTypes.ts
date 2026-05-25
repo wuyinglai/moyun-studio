@@ -1,6 +1,6 @@
 /**
- * 文件路径 → pipeline 名称映射
- * 用于从 pipeline 定义加载 prompt，替代静态的 guessPromptType
+ * File path -> pipeline name mapping.
+ * Used to load the prompt from pipeline definitions instead of guessing.
  */
 export const FILE_TO_PIPELINE: Record<string, string> = {
   'style-guide.md': 'style-guide',
@@ -11,7 +11,7 @@ export const FILE_TO_PIPELINE: Record<string, string> = {
   '书名与创意.md': 'title',
 }
 
-/** 根据文件路径查对应的 pipeline 名称 */
+/** Return the pipeline name for a project file path. */
 export function getPipelineForFile(filePath: string): string | null {
   for (const [key, pipeline] of Object.entries(FILE_TO_PIPELINE)) {
     if (filePath.endsWith(key)) return pipeline
@@ -20,9 +20,10 @@ export function getPipelineForFile(filePath: string): string | null {
 }
 
 /**
- * 根据文件路径推测对应的 Prompt 模板类型（兜底用）
+ * Guess the legacy prompt type for files that do not have a pipeline mapping.
  */
 export function guessPromptType(filePath: string): string | null {
+  if (/书名与创意\.md$/i.test(filePath)) return 'generate/title'
   if (/\/sec-\d+\.md$/.test(filePath)) return 'generate/chapter'
   if (/style-guide\.md$/i.test(filePath)) return 'generate/continuation'
   if (/story-state\.md$/i.test(filePath)) return 'generate/continuation'

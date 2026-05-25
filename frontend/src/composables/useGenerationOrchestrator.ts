@@ -14,11 +14,11 @@ import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
-import { useWorkflowGuide } from './useWorkflowGuide'
+import { useFileGeneration } from './useFileGeneration'
 
 export function useGenerationOrchestrator() {
   const projectStore = useProjectStore()
-  const guide = useWorkflowGuide()
+  const fileGen = useFileGeneration()
 
   watch(
     () => projectStore.pendingGeneration,
@@ -33,7 +33,7 @@ export function useGenerationOrchestrator() {
       }
 
       const projectId = projectStore.currentProject.id
-      const { filePath, prompt } = pending
+      const { filePath, prompt, promptType, extraVars } = pending
       const editorStore = useEditorStore()
       const fileStore = useFileStore()
 
@@ -46,10 +46,16 @@ export function useGenerationOrchestrator() {
       fileStore.openFile(node)
       editorStore.setCurrentFile(filePath)
 
-      // 启动完整小说创作工作流（第一步就是生成书名与创意）
+      // 新项目首轮只生成当前打开的「书名与创意.md」，后续步骤由用户点击继续。
       useNotificationStore().info('正在生成创意...')
-      await guide.start(projectId, filePath)
-      projectStore.setPendingGeneration(null)
+      try {
+        await fileGen.generateToFile(projectId, filePath, prompt, extraVars, promptType)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '自动生成失败'
+        useNotificationStore().error(message)
+      } finally {
+        projectStore.setPendingGeneration(null)
+      }
     },
   )
 }

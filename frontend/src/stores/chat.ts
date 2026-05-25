@@ -96,6 +96,9 @@ export const useChatStore = defineStore('chat', () => {
    * SSE 事件：追加 AI 消息内容
    */
   function appendAIMessage(content: string) {
+    if (!currentAIMessageId.value) {
+      startAIMessage()
+    }
     if (currentAIMessageId.value) {
       const msg = messages.value.find((m) => m.id === currentAIMessageId.value)
       if (msg) {

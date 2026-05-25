@@ -168,6 +168,44 @@ class TestPipelineLoading:
             pipeline_runner.load_pipeline("invalid")
         assert "加载管线定义失败" in str(exc_info.value)
 
+    def test_get_pipeline_detail_reads_system_prompt_path(self, mock_llm_service, mock_file_service, tmp_path):
+        user_prompts = tmp_path / "workspace" / "prompts"
+        system_prompts = tmp_path / "prompts"
+        (user_prompts / "pipeline").mkdir(parents=True)
+        (system_prompts / "pipeline").mkdir(parents=True)
+        (system_prompts / "generate" / "title").mkdir(parents=True)
+
+        (system_prompts / "pipeline" / "title.yaml").write_text(
+            yaml.dump({
+                "name": "title",
+                "label": "生成书名与创意",
+                "steps": [{
+                    "id": "generate",
+                    "label": "生成书名与创意",
+                    "prompt": "generate/title/main",
+                    "fallback": None,
+                    "confirm": False,
+                }],
+            }, allow_unicode=True),
+            encoding="utf-8",
+        )
+        (system_prompts / "generate" / "title" / "main.md").write_text(
+            "系统书名 prompt",
+            encoding="utf-8",
+        )
+
+        runner = PipelineRunner(
+            user_prompts,
+            mock_llm_service,
+            mock_file_service,
+            system_prompts_path=system_prompts,
+        )
+
+        detail = runner.get_pipeline_detail("title")
+
+        assert detail["name"] == "title"
+        assert detail["steps"][0]["prompt_content"] == "系统书名 prompt"
+
 
 # ─── Reference Pattern Tests ─────────────────────────────────────────────────
 
@@ -445,6 +483,25 @@ class TestNormalizeOutputMode:
             pipeline_name="generate",
             project_id="test-project",
             target_file="chapters/vol-01/ch-001/sec-099.md",
+            output_mode="write_scene",
+        )
+        assert result == "write_scene"
+
+    @pytest.mark.asyncio
+    async def test_write_scene_scaffold_placeholder_stays_write_scene(self, runner, mock_file_service):
+        """write_scene + scaffold placeholder -> write_scene for first-run project setup."""
+        async def mock_read_placeholder(path):
+            path_str = str(path)
+            if "style-guide.md" in path_str:
+                return "# 文风指南\n\n在此描述写作风格、语气、叙事视角等要求。", None
+            return "", None
+
+        mock_file_service.read_file = AsyncMock(side_effect=mock_read_placeholder)
+
+        result = await runner._normalize_output_mode(
+            pipeline_name="style-guide",
+            project_id="test-project",
+            target_file="style-guide.md",
             output_mode="write_scene",
         )
         assert result == "write_scene"

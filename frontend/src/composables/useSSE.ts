@@ -283,10 +283,10 @@ class SSEService {
 
     switch (type) {
       case 'generation':
-        // AI 生成内容 - 更新编辑器和聊天
+        // AI 生成内容：文件生成只更新编辑器，候选稿预览才进入聊天消息流。
         if (d.delta) {
-          chatStore.appendAIMessage(d.delta as string)
           if (d._candidateOnly) {
+            chatStore.appendAIMessage(d.delta as string)
             break
           } else if (d._targetFilePath) {
             editorStore.appendContentToFile(d._targetFilePath as string, d.delta as string)
@@ -302,7 +302,6 @@ class SSEService {
           } else {
             editorStore.appendContent(d.content as string)
           }
-          chatStore.appendAIMessage(d.content as string)
         }
         break
 
@@ -377,7 +376,6 @@ class SSEService {
 
           if (d.status === 'running') {
             taskStore.addLog('info', `任务开始: ${(d.name as string) || taskId}`)
-            chatStore.startAIMessage(taskId)
           } else if (d.status === 'done' || d.status === 'completed') {
             taskStore.addLog('success', `任务完成: ${(d.name as string) || taskId}`)
           } else if (d.status === 'failed') {

@@ -371,7 +371,27 @@ export function useSceneGenerationActions() {
         return
       }
       promptType = guessed
-      extraVars = {}
+      extraVars = promptType === 'generate/title' && projectStore.currentProject
+        ? {
+            genre: projectStore.currentProject.genre || '',
+            tone: projectStore.currentProject.tone || '',
+            theme: projectStore.currentProject.theme || '',
+            setting: projectStore.currentProject.background || '',
+            writing_style: projectStore.currentProject.writing_style || '',
+          }
+        : {}
+    }
+
+    if (/书名与创意\.md$/i.test(filePath) && projectStore.currentProject) {
+      promptType = 'generate/title'
+      extraVars = {
+        ...extraVars,
+        genre: projectStore.currentProject.genre || extraVars.genre || '',
+        tone: projectStore.currentProject.tone || extraVars.tone || '',
+        theme: projectStore.currentProject.theme || extraVars.theme || '',
+        setting: projectStore.currentProject.background || extraVars.setting || '',
+        writing_style: projectStore.currentProject.writing_style || extraVars.writing_style || '',
+      }
     }
 
     // 2. 确认覆盖
@@ -400,7 +420,16 @@ export function useSceneGenerationActions() {
     const userPrompt = extraVars.user_prompt || ''
     delete extraVars.user_prompt
     try {
-      await fileGen.generateToFile(projectId, filePath, userPrompt, extraVars, promptType)
+      const pipelineName = getPipelineForFile(filePath)
+      if (pipelineName && pipelineName !== 'title') {
+        const pipelineExtraVars: Record<string, unknown> = { ...extraVars }
+        if (userPrompt) {
+          pipelineExtraVars.user_prompt = userPrompt
+        }
+        await fileGen.runPipeline(projectId, filePath, pipelineName, pipelineExtraVars, 'write_scene')
+      } else {
+        await fileGen.generateToFile(projectId, filePath, userPrompt, extraVars, promptType)
+      }
       notification.success('已重新生成')
     } catch (e: unknown) {
       notification.error((e instanceof Error ? e.message : '') || '重新生成失败')

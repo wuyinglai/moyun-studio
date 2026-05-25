@@ -64,6 +64,29 @@ def _int_config(value: Any, default: int) -> int:
         return default
 
 
+def _is_scaffold_placeholder(path: str | None, content: str) -> bool:
+    """Return True for project bootstrap templates that are safe to replace."""
+    if not path or not content.strip():
+        return False
+
+    normalized_path = path.replace("\\", "/").rsplit("/", 1)[-1]
+    stripped = content.strip()
+    placeholder_markers = {
+        "style-guide.md": ("# 文风指南", "在此描述写作风格"),
+        "outline.md": ("# 大纲", "在此编写故事大纲"),
+        "story-state.md": ("# 故事状态", "## 主角状态", "## 势力关系", "## 伏笔追踪", "## 主线进度"),
+    }
+    markers = placeholder_markers.get(normalized_path)
+    if not markers:
+        return False
+    return all(marker in stripped for marker in markers)
+
+
+def _has_substantive_content(path: str | None, content: str) -> bool:
+    """Treat bootstrap placeholders as empty for first-run generation."""
+    return bool(content and content.strip()) and not _is_scaffold_placeholder(path, content)
+
+
 class PipelineError(Exception):
     pass
 
@@ -585,7 +608,7 @@ class PipelineRunner:
 
             # 判断是否需要生成候选稿
             should_use_candidate = output_mode == "candidate"
-            if output_mode == "write_scene" and original_content.strip():
+            if output_mode == "write_scene" and _has_substantive_content(target_file, original_content):
                 should_use_candidate = True
 
             if should_use_candidate:
@@ -666,7 +689,7 @@ class PipelineRunner:
                 content = _file_content(
                     await self.file_service.read_file(f"{project_id}/{target_file}")
                 )
-                file_has_content = bool(content and content.strip())
+                file_has_content = _has_substantive_content(target_file, content)
             except Exception:
                 pass
 
@@ -982,9 +1005,13 @@ class PipelineRunner:
             # 优先用 step.prompt 路径（实际用于生成的模板）
             prompt_content = ""
             if step.prompt:
-                prompt_path = self.prompts_path / f"{step.prompt}.md"
-                if prompt_path.exists():
-                    prompt_content = prompt_path.read_text(encoding="utf-8")
+                prompt_paths = [self.prompts_path / f"{step.prompt}.md"]
+                if self.system_prompts_path:
+                    prompt_paths.append(Path(self.system_prompts_path) / f"{step.prompt}.md")
+                for prompt_path in prompt_paths:
+                    if prompt_path.exists():
+                        prompt_content = prompt_path.read_text(encoding="utf-8")
+                        break
             # 如果 step.prompt 指向 pipeline 内置路径，补充尝试
             if not prompt_content:
                 alt_path = self._get_step_prompt_path(name, step.id)

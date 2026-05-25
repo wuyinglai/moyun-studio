@@ -1,0 +1,8 @@
+name: title
+label: 生成书名与创意
+steps:
+  - id: generate
+    label: 生成书名与创意
+    prompt: generate/title/main
+    fallback: null
+    confirm: false

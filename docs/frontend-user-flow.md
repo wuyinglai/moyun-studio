@@ -74,9 +74,9 @@
 6. `CreateProjectModal` 额外创建 `书名与创意.md`。
 7. 设置 `projectStore.pendingGeneration`，包含 `filePath`、`promptType: generate/title` 和创作参数。
 8. 路由跳转 `/project/{project.id}`。
-9. `useGenerationOrchestrator` 监听到 `pendingGeneration`，打开目标文件，并调用 `useWorkflowGuide().start(projectId, filePath)` 启动完整创作工作流。
+9. `useGenerationOrchestrator` 监听到 `pendingGeneration`，打开目标文件，并调用 `fileGen.generateToFile(projectId, filePath, prompt, extraVars, promptType)` 生成 `书名与创意.md`。
 
-结论：新建项目不是只创建目录，也不是立刻写正文；它会创建初始文件，并通过 workflow guide 触发后续生成流程。
+结论：新建项目不是只创建目录；它会创建初始文件，并先自动生成 `书名与创意.md`。后续风格指南、大纲、世界设定和正文生成由用户继续点击“写下一场景”推进。
 
 ### 2.2 创建项目后进入哪个路由
 
@@ -345,8 +345,8 @@ flowchart TD
   D --> E["setPendingGeneration"]
   E --> F["router.push /project/:projectId"]
   F --> G["路由守卫 openProject + loadTree"]
-  G --> H["useGenerationOrchestrator 启动 workflow guide"]
-  H --> I["用户在 FileTree 打开 sec 文件"]
+  G --> H["useGenerationOrchestrator 生成 书名与创意.md"]
+  H --> I["用户点击 写下一场景 或在 FileTree 打开 sec 文件"]
   I --> J["GET /api/file"]
   J --> K["editorStore.loadContent + CodeMirror 显示"]
   K --> L["用户编辑正文"]
