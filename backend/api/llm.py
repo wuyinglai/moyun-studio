@@ -48,7 +48,7 @@ def _config_file(settings: Settings) -> Path:
 
 async def _load_global_config(settings: Settings) -> dict:
     cf = _config_file(settings)
-    if not cf.exists():
+    if not await asyncio.to_thread(cf.exists):
         return {}
     try:
         text = await asyncio.to_thread(cf.read_text, encoding="utf-8")

@@ -136,7 +136,9 @@ function getExpandedDirs(): string[] {
 }
 
 function saveExpandedDirs(dirs: string[]) {
-  localStorage.setItem(EXPANDED_KEY, JSON.stringify(dirs))
+  try {
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify(dirs))
+  } catch { /* localStorage 不可用时忽略 */ }
 }
 
 const isExpanded = ref(

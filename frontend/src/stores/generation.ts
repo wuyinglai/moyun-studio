@@ -62,7 +62,10 @@ export const useGenerationStore = defineStore('generation', () => {
       await response.body?.getReader()?.cancel()
 
       // 根据自动化模式决定是否等待确认
-      const autoMode = localStorage.getItem('moyun-auto-mode') || 'L1'
+      const autoMode = (() => {
+        try { return localStorage.getItem('moyun-auto-mode') || 'L1' }
+        catch { return 'L1' }
+      })()
       if (autoMode === 'L1') {
         taskStore.waitForConfirm(taskId)
       } else {
@@ -101,7 +104,10 @@ export const useGenerationStore = defineStore('generation', () => {
         'candidate',
       )
 
-      const autoMode = localStorage.getItem('moyun-auto-mode') || 'L1'
+      const autoMode = (() => {
+        try { return localStorage.getItem('moyun-auto-mode') || 'L1' }
+        catch { return 'L1' }
+      })()
       if (autoMode === 'L1') {
         taskStore.waitForConfirm(taskId)
       } else {

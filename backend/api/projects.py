@@ -34,7 +34,7 @@ router = APIRouter(tags=["projects"])
 async def list_projects(settings: Settings = Depends(get_settings)):
     """获取所有项目列表"""
     svc = ProjectService(settings)
-    projects = svc.list_projects()
+    projects = await asyncio.to_thread(svc.list_projects)
     return ApiResponse.ok(ProjectListResponse(projects=projects, total=len(projects)))
 
 
@@ -88,7 +88,7 @@ async def create_project(
             (project_dir / filename).write_text, content, "utf-8",
         )
 
-    info = svc.get_project_info(project_dir)
+    info = await asyncio.to_thread(svc.get_project_info, project_dir)
     return ApiResponse.ok(info, message="项目创建成功")
 
 
@@ -100,10 +100,10 @@ async def get_project(
     """获取项目详情"""
     svc = ProjectService(settings)
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
-    info = svc.get_project_info(project_dir)
+    info = await asyncio.to_thread(svc.get_project_info, project_dir)
     if info is None:
         logger.error("项目meta损坏", extra={"project_id": project_id})
         raise ProjectNotFoundError(project_id)
@@ -119,10 +119,10 @@ async def update_project(
     """更新项目元数据"""
     svc = ProjectService(settings)
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
-    meta = svc._load_meta(project_dir)
+    meta = await asyncio.to_thread(svc._load_meta, project_dir)
     if meta is None:
         logger.error("项目meta损坏", extra={"project_id": project_id})
         raise ProjectNotFoundError(project_id)
@@ -134,7 +134,7 @@ async def update_project(
     meta["updated_at"] = datetime.now(timezone.utc).isoformat()
     await asyncio.to_thread(svc.write_meta, project_dir, meta)
 
-    info = svc.get_project_info(project_dir)
+    info = await asyncio.to_thread(svc.get_project_info, project_dir)
     if info is None:
         raise ProjectNotFoundError(project_id)
     return ApiResponse.ok(info, message="项目已更新")
@@ -148,14 +148,14 @@ async def recalculate_project_stats(
     """重新计算项目完成度统计"""
     svc = ProjectService(settings)
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
-    stats = svc.recalculate_stats(project_dir)
+    stats = await asyncio.to_thread(svc.recalculate_stats, project_dir)
     completion_rate = (stats["completed_sections"] / stats["total_sections"]) if stats["total_sections"] > 0 else 0.0
 
     # 更新 context.json
-    svc.save_stats(project_dir, stats)
+    await asyncio.to_thread(svc.save_stats, project_dir, stats)
 
     logger.info("项目统计已重新计算", extra={
         "project_id": project_id,
@@ -181,7 +181,7 @@ async def delete_project(
 ):
     """删除项目（不可恢复）"""
     svc = ProjectService(settings)
-    svc.delete_project_dir(project_id)
+    await asyncio.to_thread(svc.delete_project_dir, project_id)
     logger.info("项目已删除", extra={"project_id": project_id})
     return ApiResponse.ok(message=f"项目 {project_id} 已删除")
 

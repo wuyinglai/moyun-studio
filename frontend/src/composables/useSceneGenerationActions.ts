@@ -11,7 +11,7 @@ import { useFileStore } from '@/stores/file'
 import { usePipelineStore } from '@/stores/pipeline'
 import { useTaskStore } from '@/stores/task'
 import { useFileGeneration } from '@/composables/useFileGeneration'
-import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
+import { useWorkflowGuide, type StepStatus } from '@/composables/useWorkflowGuide'
 import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { guessPromptType, getPipelineForFile } from '@/utils/promptTypes'
@@ -56,7 +56,11 @@ export function useSceneGenerationActions() {
   let _nextConfirmQueued: string | null = null
 
   function getAutoMode(): string {
-    return localStorage.getItem('moyun-auto-mode') || 'L1'
+    try {
+      return localStorage.getItem('moyun-auto-mode') || 'L1'
+    } catch {
+      return 'L1'
+    }
   }
 
   function getNextInChain(currentPath: string): { path: string; pipeline: string } | null {
@@ -97,22 +101,21 @@ export function useSceneGenerationActions() {
   })
 
   function syncGuideStep(path: string, status: 'running' | 'done') {
-    // TODO: type guide step status properly to avoid `as any`
     if (isSceneFilePath(path)) {
-      if (guide.steps.value[6]) guide.steps.value[6].status = status as any
+      if (guide.steps.value[6]) guide.steps.value[6].status = status as StepStatus
       if (status === 'running') {
         for (let i = 0; i < 6; i++) {
-          if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as any
+          if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as StepStatus
         }
       }
       return
     }
     for (const [key, idx] of Object.entries(GUIDE_STEP_MAP)) {
       if (path.endsWith(key) && guide.steps.value[idx]) {
-        guide.steps.value[idx].status = status as any
+        guide.steps.value[idx].status = status as StepStatus
         if (status === 'running') {
           for (let i = 0; i < idx; i++) {
-            if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as any
+            if (guide.steps.value[i]) guide.steps.value[i].status = 'done' as StepStatus
           }
         }
         return

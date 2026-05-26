@@ -7,6 +7,7 @@
 """
 
 from datetime import datetime, timezone
+import asyncio
 import json
 import logging
 import math
@@ -170,14 +171,14 @@ async def confirm_outline(
       chapters/vol-XX/ch-XXX/ch-meta.json
     """
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     logger.info("确认大纲", extra={"project_id": project_id})
 
     # 更新 outline.md
     outline_path = project_dir / "outline.md"
-    outline_path.write_text(req.outline, encoding="utf-8")
+    await asyncio.to_thread(outline_path.write_text, req.outline, encoding="utf-8")
 
     # 解析章节
     chapter_pattern = r'#\s*第(\d+)章\s+(.+?)(?=\n#|\Z)'
@@ -201,9 +202,12 @@ async def confirm_outline(
 
     # 清理旧的目录结构（平级 chapter-* 和旧版 vol-*）
     chapters_dir = project_dir / "chapters"
-    for old in list(chapters_dir.glob("chapter-*")) + list(chapters_dir.glob("vol-*")):
-        if old.is_dir():
-            shutil.rmtree(old)
+    old_dirs = await asyncio.to_thread(
+        lambda: list(chapters_dir.glob("chapter-*")) + list(chapters_dir.glob("vol-*"))
+    )
+    for old in old_dirs:
+        if await asyncio.to_thread(old.is_dir):
+            await asyncio.to_thread(shutil.rmtree, old)
 
     # 创建卷/章/节 3 级目录
     total_sections = 0
@@ -215,49 +219,46 @@ async def confirm_outline(
             continue
 
         vol_dir = chapters_dir / f"vol-{vol_idx + 1:02d}"
-        vol_dir.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(vol_dir.mkdir, parents=True, exist_ok=True)
 
         # vol-meta.json
-        (vol_dir / "vol-meta.json").write_text(
-            json.dumps({
-                "volume_number": vol_idx + 1,
-                "chapter_range": f"{vol_chapters[0]['number']:03d}-{vol_chapters[-1]['number']:03d}",
-                "total_chapters": len(vol_chapters),
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }, ensure_ascii=False, indent=2),
-            encoding="utf-8"
-        )
+        vol_meta = json.dumps({
+            "volume_number": vol_idx + 1,
+            "chapter_range": f"{vol_chapters[0]['number']:03d}-{vol_chapters[-1]['number']:03d}",
+            "total_chapters": len(vol_chapters),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }, ensure_ascii=False, indent=2)
+        await asyncio.to_thread((vol_dir / "vol-meta.json").write_text, vol_meta, encoding="utf-8")
 
         for ch in vol_chapters:
             ch_dir = vol_dir / f"ch-{ch['number']:03d}"
-            ch_dir.mkdir(parents=True, exist_ok=True)
+            await asyncio.to_thread(ch_dir.mkdir, parents=True, exist_ok=True)
 
             # ch-meta.json
-            (ch_dir / "ch-meta.json").write_text(
-                json.dumps({
-                    "chapter_number": ch['number'],
-                    "title": ch['title'],
-                    "section_count": ch['sections'],
-                    "word_count": 0,
-                    "status": "draft",
-                    "memory": "",
-                    "story_state": "",
-                    "pending_foreshadowing": [],
-                    "active_quests": [],
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                }, ensure_ascii=False, indent=2),
-                encoding="utf-8"
-            )
+            ch_meta = json.dumps({
+                "chapter_number": ch['number'],
+                "title": ch['title'],
+                "section_count": ch['sections'],
+                "word_count": 0,
+                "status": "draft",
+                "memory": "",
+                "story_state": "",
+                "pending_foreshadowing": [],
+                "active_quests": [],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }, ensure_ascii=False, indent=2)
+            await asyncio.to_thread((ch_dir / "ch-meta.json").write_text, ch_meta, encoding="utf-8")
 
             # 子目录
-            (ch_dir / "feedback").mkdir(exist_ok=True)
-            (ch_dir / "revision-log").mkdir(exist_ok=True)
+            await asyncio.to_thread((ch_dir / "feedback").mkdir, exist_ok=True)
+            await asyncio.to_thread((ch_dir / "revision-log").mkdir, exist_ok=True)
 
             # sec-001.md ~ sec-00N.md
             for sec_num in range(1, ch['sections'] + 1):
                 sec_file = ch_dir / f"sec-{sec_num:03d}.md"
-                if not sec_file.exists():
-                    sec_file.write_text(
+                if not await asyncio.to_thread(sec_file.exists):
+                    await asyncio.to_thread(
+                        sec_file.write_text,
                         f"# 第{ch['number']}章 {ch['title']} - 第{sec_num}节\n\n",
                         encoding="utf-8"
                     )
@@ -266,17 +267,17 @@ async def confirm_outline(
 
     # 更新 meta.json
     svc = ProjectService(settings)
-    meta = svc._load_meta(project_dir)
+    meta = await asyncio.to_thread(svc._load_meta, project_dir)
     if meta:
         meta.update({
             "chapter_count": total_chapters,
             "volume_count": num_volumes,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
-        svc.write_meta(project_dir, meta)
+        await asyncio.to_thread(svc.write_meta, project_dir, meta)
 
     # 更新 context.json
-    context = svc._load_context(project_dir)
+    context = await asyncio.to_thread(svc._load_context, project_dir)
     if context:
         context["stats"].update({
             "total_sections": total_sections,
@@ -284,7 +285,7 @@ async def confirm_outline(
             "volume_count": num_volumes,
         })
         context["updated_at"] = datetime.now(timezone.utc).isoformat()
-        svc.write_context(project_dir, context)
+        await asyncio.to_thread(svc.write_context, project_dir, context)
 
     logger.info("目录结构创建完成", extra={
         "project_id": project_id,

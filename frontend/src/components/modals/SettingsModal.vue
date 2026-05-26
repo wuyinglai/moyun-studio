@@ -291,9 +291,17 @@ const themes = [
   { id: 'gray', name: '经典炭灰', preview: 'linear-gradient(135deg, #1f1f1f, #2d2d2d, #3d3d3d)' },
 ]
 
-const autoMode = ref(localStorage.getItem('moyun-auto-mode') || 'L1')
+const autoMode = ref((() => {
+  try {
+    return localStorage.getItem('moyun-auto-mode') || 'L1'
+  } catch {
+    return 'L1'
+  }
+})())
 watch(autoMode, (val) => {
-  localStorage.setItem('moyun-auto-mode', val)
+  try {
+    localStorage.setItem('moyun-auto-mode', val)
+  } catch { /* localStorage 不可用时忽略 */ }
   // G0104 同步到后端 .config.json
   saveRemoteConfig({ autoMode: val }).catch(() => {})
 })
@@ -302,7 +310,11 @@ watch(visible, (val) => {
   if (val) {
     config.value = { ...llmStore.config }
     testResult.value = null
-    autoMode.value = localStorage.getItem('moyun-auto-mode') || 'L1'
+    try {
+      autoMode.value = localStorage.getItem('moyun-auto-mode') || 'L1'
+    } catch {
+      autoMode.value = 'L1'
+    }
     backendUrl.value = customUrl.value
   } else {
     // 关闭弹窗时取消所有进行中的请求

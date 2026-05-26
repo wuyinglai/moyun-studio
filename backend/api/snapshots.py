@@ -1,5 +1,6 @@
 """墨韵 - 版本快照 API."""
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, Query
@@ -44,7 +45,7 @@ async def list_snapshots(
 ):
     """获取文件的快照列表。"""
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
@@ -63,7 +64,7 @@ async def create_snapshot(
 ):
     """创建版本快照。"""
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
@@ -92,7 +93,7 @@ async def restore_snapshot(
 ):
     """恢复指定快照到文件。"""
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
@@ -119,7 +120,7 @@ async def compare_snapshots(
 ):
     """对比两个持久快照。"""
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)

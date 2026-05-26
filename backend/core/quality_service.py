@@ -5,6 +5,7 @@
 - 审查结果持久化
 """
 
+import asyncio
 from datetime import datetime, timezone
 import json
 import logging
@@ -82,11 +83,14 @@ class QualityService:
         # 读取角色档案（合并所有角色文件）
         characters_dir = project_dir / "characters"
         characters_text = ""
-        if characters_dir.exists():
+        if await asyncio.to_thread(characters_dir.exists):
+            char_files = await asyncio.to_thread(
+                lambda: sorted(characters_dir.glob("*.json"))
+            )
             parts: list[str] = []
-            for f in sorted(characters_dir.glob("*.json")):
+            for f in char_files:
                 try:
-                    parts.append(f.read_text(encoding="utf-8"))
+                    parts.append(await asyncio.to_thread(f.read_text, encoding="utf-8"))
                 except Exception:
                     pass
             if parts:

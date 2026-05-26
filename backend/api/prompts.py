@@ -6,6 +6,7 @@
   POST /api/prompts/{name}    保存/更新Prompt内容
 """
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -39,29 +40,31 @@ async def get_raw_prompt(
 ):
     """读取 prompts 目录下的原始文件内容"""
     file_path = settings.prompts_path / path
-    if not file_path.exists() or not file_path.is_relative_to(settings.prompts_path):
+    if not await asyncio.to_thread(file_path.exists) or not file_path.is_relative_to(settings.prompts_path):
         raise HTTPException(status_code=404, detail=f"Prompt 文件不存在: {path}")
-    content = file_path.read_text(encoding="utf-8")
+    content = await asyncio.to_thread(file_path.read_text, encoding="utf-8")
     return ApiResponse.ok({"path": path, "content": content})  # AI_GUARDRAIL_ALLOW: prompt API response, not SSE
 
 @router.get("", response_model=ApiResponse[dict])
 async def list_prompts(settings: Settings = Depends(get_settings)):
     """获取所有Prompt模板列表"""
     prompts_path = settings.prompts_path
-    if not prompts_path.exists():
+    if not await asyncio.to_thread(prompts_path.exists):
         return ApiResponse.ok({"prompts": [], "total": 0})
 
     prompts = []
     for category in ["generate", "extract", "transform"]:
         cat_path = prompts_path / category
-        if cat_path.exists():
-            for d in sorted(cat_path.iterdir()):
-                if d.is_dir():
+        if await asyncio.to_thread(cat_path.exists):
+            dirs = await asyncio.to_thread(lambda p=cat_path: sorted(p.iterdir()))
+            for d in dirs:
+                if await asyncio.to_thread(d.is_dir):
                     prompt_file = d / "main.md"
+                    exists = await asyncio.to_thread(prompt_file.exists)
                     prompts.append({
                         "name": f"{category}/{d.name}",
                         "category": category,
-                        "exists": prompt_file.exists(),
+                        "exists": exists,
                     })
 
     return ApiResponse.ok({"prompts": prompts, "total": len(prompts)})
@@ -84,12 +87,12 @@ async def get_prompt_version_content(
 ):
     """读取指定 prompt 归档版本的内容。"""
     archive_dir = settings.prompts_path / ".archive" / version
-    if not archive_dir.exists() or not archive_dir.is_dir():
+    if not await asyncio.to_thread(archive_dir.exists) or not await asyncio.to_thread(archive_dir.is_dir):
         raise ResourceNotFoundError(resource="prompt archive", identifier=version)
 
-    metadata = _read_archive_metadata(archive_dir)
-    md_files = sorted(p for p in archive_dir.rglob("*.md") if p.is_file())
-    content = md_files[0].read_text(encoding="utf-8") if md_files else ""
+    metadata = await _read_archive_metadata(archive_dir)
+    md_files = await asyncio.to_thread(lambda: sorted(p for p in archive_dir.rglob("*.md") if p.is_file()))
+    content = await asyncio.to_thread(md_files[0].read_text, encoding="utf-8") if md_files else ""
 
     return ApiResponse.ok({
         "version": version,
@@ -107,16 +110,16 @@ async def restore_prompt_version(
 ):
     """将 prompt 恢复到归档记录中的来源路径。"""
     archive_dir = settings.prompts_path / ".archive" / version
-    if not archive_dir.exists() or not archive_dir.is_dir():
+    if not await asyncio.to_thread(archive_dir.exists) or not await asyncio.to_thread(archive_dir.is_dir):
         raise ResourceNotFoundError(resource="prompt archive", identifier=version)
 
-    metadata = _read_archive_metadata(archive_dir)
+    metadata = await _read_archive_metadata(archive_dir)
     source = metadata.get("source")
     if not source:
         raise HTTPException(status_code=400, detail="归档缺少 source，无法恢复")
 
     target_path = _resolve_prompt_source(settings.prompts_path, source)
-    ok = restore_archive(archive_dir, target_path)
+    ok = await asyncio.to_thread(restore_archive, archive_dir, target_path)
     if not ok:
         raise HTTPException(status_code=500, detail="恢复归档失败")
 
@@ -135,10 +138,10 @@ async def get_prompt(
     """获取指定Prompt内容"""
     prompt_key = f"{category}/{name}"
     prompt_file = settings.prompts_path / category / name / "main.md"
-    if not prompt_file.exists():
+    if not await asyncio.to_thread(prompt_file.exists):
         raise TemplateNotFoundError(template=f"{category}/{name}")
 
-    raw_content = prompt_file.read_text(encoding="utf-8")
+    raw_content = await asyncio.to_thread(prompt_file.read_text, encoding="utf-8")
 
     return ApiResponse.ok({
         "name": prompt_key,
@@ -156,19 +159,20 @@ async def save_prompt(
 ):
     """保存Prompt内容"""
     prompt_dir = settings.prompts_path / category / name
-    prompt_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(prompt_dir.mkdir, parents=True, exist_ok=True)
     prompt_file = prompt_dir / "main.md"
-    prompt_file.write_text(req.content, encoding="utf-8")
+    await asyncio.to_thread(prompt_file.write_text, req.content, encoding="utf-8")
 
     return ApiResponse.ok(message=f"Prompt {category}/{name} 已保存")
 
 
-def _read_archive_metadata(archive_dir: Path) -> dict:
+async def _read_archive_metadata(archive_dir: Path) -> dict:
     meta_file = archive_dir / ".metadata.json"
-    if not meta_file.exists():
+    if not await asyncio.to_thread(meta_file.exists):
         return {}
     import json
-    return json.loads(meta_file.read_text(encoding="utf-8"))
+    text = await asyncio.to_thread(meta_file.read_text, encoding="utf-8")
+    return json.loads(text)
 
 
 def _resolve_prompt_source(prompts_path: Path, source: str) -> Path:

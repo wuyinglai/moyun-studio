@@ -7,6 +7,7 @@
   DELETE /api/characters/{id}        标记角色为 inactive
 """
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends
@@ -82,7 +83,7 @@ async def list_characters(
     """获取项目角色列表"""
     logger.info("获取角色列表", extra={"project_id": project_id})
     svc = CharacterService(settings)
-    characters = [_dict_to_profile(c) for c in svc.list_characters(project_id)]
+    characters = [_dict_to_profile(c) for c in await asyncio.to_thread(svc.list_characters, project_id)]
     characters.sort(key=lambda c: c.name)
     return ApiResponse.ok(CharacterListResponse(characters=characters, total=len(characters)))
 
@@ -96,7 +97,7 @@ async def get_character(
     """获取角色详情"""
     logger.info("获取角色详情", extra={"character_id": character_id, "project_id": project_id})
     svc = CharacterService(settings)
-    data = svc.get_character(project_id, character_id)
+    data = await asyncio.to_thread(svc.get_character, project_id, character_id)
     return ApiResponse.ok(_dict_to_profile(data))
 
 
@@ -108,7 +109,7 @@ async def create_character(
     """创建新角色"""
     logger.info("创建角色", extra={"name": req.name, "project_id": req.project_id})
     svc = CharacterService(settings)
-    character = svc.create_character(req.project_id, req)
+    character = await asyncio.to_thread(svc.create_character, req.project_id, req)
     return ApiResponse.ok(_dict_to_profile(character), message="角色创建成功")
 
 
@@ -122,7 +123,7 @@ async def update_character(
     """更新角色信息"""
     logger.info("更新角色", extra={"character_id": character_id, "project_id": project_id})
     svc = CharacterService(settings)
-    data = svc.update_character(project_id, character_id, req)
+    data = await asyncio.to_thread(svc.update_character, project_id, character_id, req)
     return ApiResponse.ok(_dict_to_profile(data), message="角色更新成功")
 
 
@@ -135,5 +136,5 @@ async def deactivate_character(
     """将角色标记为 inactive（不提供物理删除）"""
     logger.info("标记角色为inactive", extra={"character_id": character_id, "project_id": project_id})
     svc = CharacterService(settings)
-    svc.deactivate_character(project_id, character_id)
+    await asyncio.to_thread(svc.deactivate_character, project_id, character_id)
     return ApiResponse.ok(message="角色已标记为 inactive")

@@ -1,6 +1,12 @@
 import axios, { type AxiosRequestConfig, type AxiosError } from 'axios'
 import { useNotificationStore } from '@/stores/notification'
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    __retryCount?: number
+  }
+}
+
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1000
 
@@ -12,7 +18,7 @@ const rawApi = axios.create({
 
 // 请求拦截器：动态 baseURL + 注入重试计数
 rawApi.interceptors.request.use((config) => {
-  ;(config as any).__retryCount = 0
+  ;config.__retryCount = 0
   // 如果用户在设置中配置了自定义后端地址，覆盖 baseURL
   if (typeof window !== 'undefined') {
     try {
@@ -43,7 +49,7 @@ function isRetryable(error: AxiosError): boolean {
 rawApi.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const config = error.config as any
+    const config = error.config
     if (!config || !isRetryable(error)) {
       return Promise.reject(error)
     }

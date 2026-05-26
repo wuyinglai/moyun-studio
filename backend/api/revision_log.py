@@ -5,6 +5,7 @@
   POST /api/revision-log/{project_id}       记录修改日志
 """
 
+import asyncio
 from datetime import datetime
 import difflib
 import json
@@ -91,15 +92,16 @@ def _generate_diff(before: str, after: str) -> str:
     return "".join(diff)
 
 
-def _load_revision_logs(revision_dir: Path) -> list[dict[str, Any]]:
+async def _load_revision_logs(revision_dir: Path) -> list[dict[str, Any]]:
     """加载所有修改日志"""
-    if not revision_dir.exists():
+    if not await asyncio.to_thread(revision_dir.exists):
         return []
 
+    log_files = await asyncio.to_thread(lambda: list(revision_dir.glob("*.json")))
     logs = []
-    for f in revision_dir.glob("*.json"):
+    for f in log_files:
         try:
-            data = json.loads(f.read_text(encoding="utf-8"))
+            data = json.loads(await asyncio.to_thread(f.read_text, encoding="utf-8"))
             logs.append(data)
         except json.JSONDecodeError:
             logger.warning("修改日志文件解析失败: %s", f)
@@ -109,20 +111,21 @@ def _load_revision_logs(revision_dir: Path) -> list[dict[str, Any]]:
     return logs
 
 
-def _save_revision_log(revision_dir: Path, log_data: dict[str, Any]) -> None:
+async def _save_revision_log(revision_dir: Path, log_data: dict[str, Any]) -> None:
     """保存修改日志"""
-    revision_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(revision_dir.mkdir, parents=True, exist_ok=True)
     file_path = revision_dir / f"{log_data['id']}.json"
-    file_path.write_text(
+    await asyncio.to_thread(
+        file_path.write_text,
         json.dumps(log_data, ensure_ascii=False, indent=2),
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
 
-def _get_revision_log_file(revision_dir: Path, log_id: str) -> Path | None:
+async def _get_revision_log_file(revision_dir: Path, log_id: str) -> Path | None:
     """获取修改日志文件路径"""
     file_path = revision_dir / f"{log_id}.json"
-    return file_path if file_path.exists() else None
+    return file_path if await asyncio.to_thread(file_path.exists) else None
 
 
 def _count_words(text: str) -> int:
@@ -155,7 +158,7 @@ async def list_revision_logs(
     """
     # 检查项目是否存在
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     all_logs: list[dict[str, Any]] = []
@@ -163,13 +166,16 @@ async def list_revision_logs(
     if chapter_path:
         # 获取特定章节的日志
         revision_dir = _get_revision_log_dir(project_id, chapter_path, settings)
-        all_logs = _load_revision_logs(revision_dir)
+        all_logs = await _load_revision_logs(revision_dir)
     else:
         # 获取所有章节的日志
         chapters_dir = settings.projects_path / project_id / "chapters"
-        if chapters_dir.exists():
-            for revision_dir in chapters_dir.rglob("revision-log"):
-                logs = _load_revision_logs(revision_dir)
+        if await asyncio.to_thread(chapters_dir.exists):
+            revision_dirs = await asyncio.to_thread(
+                lambda: list(chapters_dir.rglob("revision-log"))
+            )
+            for rev_dir in revision_dirs:
+                logs = await _load_revision_logs(rev_dir)
                 all_logs.extend(logs)
 
     # 过滤
@@ -206,7 +212,7 @@ async def create_revision_log(
     """
     # 检查项目是否存在
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     # 生成日志ID
@@ -238,7 +244,7 @@ async def create_revision_log(
 
     # 获取日志目录并保存
     revision_dir = _get_revision_log_dir(project_id, req.chapter_path, settings)
-    _save_revision_log(revision_dir, log_data)
+    await _save_revision_log(revision_dir, log_data)
 
     logger.info(
         "修改日志已创建: 项目=%s, 章节=%s, 类型=%s, 字数变化=%s",
@@ -268,15 +274,18 @@ async def get_revision_log(
     """
     # 检查项目是否存在
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     # 查找日志文件
     log_file = None
     chapters_dir = settings.projects_path / project_id / "chapters"
-    if chapters_dir.exists():
-        for revision_dir in chapters_dir.rglob("revision-log"):
-            f = _get_revision_log_file(revision_dir, log_id)
+    if await asyncio.to_thread(chapters_dir.exists):
+        revision_dirs = await asyncio.to_thread(
+            lambda: list(chapters_dir.rglob("revision-log"))
+        )
+        for rev_dir in revision_dirs:
+            f = await _get_revision_log_file(rev_dir, log_id)
             if f:
                 log_file = f
                 break
@@ -285,7 +294,7 @@ async def get_revision_log(
         raise ResourceNotFoundError(resource="revision-log", identifier=log_id)
 
     # 加载日志
-    log_data = json.loads(log_file.read_text(encoding="utf-8"))
+    log_data = json.loads(await asyncio.to_thread(log_file.read_text, encoding="utf-8"))
 
     logger.debug("获取修改日志详情: %s", log_id)
     return ApiResponse.ok(RevisionLog(**log_data))

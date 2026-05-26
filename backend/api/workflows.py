@@ -23,7 +23,11 @@ from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.workflow import WorkflowError, WorkflowRunner
 from backend.schemas.common import ApiResponse
-from backend.schemas.workflow import WorkflowRunRequest, WorkflowSaveRequest, WorkflowResumeRequest
+from backend.schemas.workflow import (
+    WorkflowResumeRequest,
+    WorkflowRunRequest,
+    WorkflowSaveRequest,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["workflow"])
@@ -65,7 +69,7 @@ async def list_workflows(
 ):
     """获取所有可用工作流"""
     runner = _build_runner(settings)
-    workflows = runner.list_workflows()
+    workflows = await asyncio.to_thread(runner.list_workflows)
     result = [
         {
             "name": wf.name,
@@ -87,7 +91,7 @@ async def get_workflow(
     """获取工作流详情"""
     runner = _build_runner(settings)
     try:
-        wf = runner.load_workflow(name)
+        wf = await asyncio.to_thread(runner.load_workflow, name)
     except WorkflowError:
         from backend.core.exceptions import ResourceNotFoundError
         raise ResourceNotFoundError(resource="workflow", identifier=name)
@@ -127,7 +131,7 @@ async def save_workflow(
     """保存（创建或更新）工作流"""
     runner = _build_runner(settings)
     try:
-        wf = runner.save_workflow(req)
+        wf = await asyncio.to_thread(runner.save_workflow, req)
         return ApiResponse.ok({"workflow": {"name": wf.name, "label": wf.label}})
     except WorkflowError as e:
         from backend.core.exceptions import MoyunException
@@ -142,7 +146,7 @@ async def delete_workflow(
     """删除工作流"""
     runner = _build_runner(settings)
     try:
-        result = runner.delete_workflow(name)
+        result = await asyncio.to_thread(runner.delete_workflow, name)
         return ApiResponse.ok({
             "message": f"工作流 {name} 已删除到回收站",
             "trash": result,
@@ -268,11 +272,11 @@ async def get_workflow_run_status(
 ):
     """查询工作流执行状态（断点续跑用）"""
     runner = _build_runner(settings)
-    state = runner._load_state(run_id)
+    state = await asyncio.to_thread(runner._load_state, run_id)
     if not state:
         from backend.core.exceptions import ResourceNotFoundError
         raise ResourceNotFoundError(resource="workflow_run", identifier=run_id)
-    
+
     return ApiResponse.ok({
         "run": {
             "run_id": state.run_id,

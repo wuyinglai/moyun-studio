@@ -9,6 +9,7 @@
   DELETE /api/pipeline/{name}      删除管线（移到回收站）
 """
 
+import asyncio
 import json
 import logging
 
@@ -43,7 +44,7 @@ async def run_pipeline(
 
     # 验证项目存在
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         from backend.core.exceptions import ProjectNotFoundError
         raise ProjectNotFoundError(req.project_id)
 
@@ -106,9 +107,9 @@ async def list_pipelines(
 
     # 检查自定义管线
     custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
-    if custom_dir.exists():
+    if await asyncio.to_thread(custom_dir.exists):
         custom_pipeline_dir = custom_dir / "pipeline"
-        if custom_pipeline_dir.exists():
+        if await asyncio.to_thread(custom_pipeline_dir.exists):
             custom_runner = PipelineRunner(custom_dir, llm_service, file_service, source="custom")
             for f in sorted(custom_pipeline_dir.glob("*.yaml")):
                 try:
@@ -137,7 +138,7 @@ async def get_pipeline(
     # 判断是系统管线还是自定义管线
     custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
     custom_yaml = custom_dir / "pipeline" / f"{name}.yaml"
-    if custom_yaml.exists():
+    if await asyncio.to_thread(custom_yaml.exists):
         runner = PipelineRunner(custom_dir, llm_service, file_service)
     else:
         runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
@@ -164,7 +165,7 @@ async def save_pipeline(
     # 判断是系统管线还是自定义管线
     custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
     custom_yaml = custom_dir / "pipeline" / f"{name}.yaml"
-    if custom_yaml.exists():
+    if await asyncio.to_thread(custom_yaml.exists):
         prompts_path = custom_dir
     else:
         prompts_path = settings.prompts_path
@@ -223,18 +224,18 @@ async def delete_pipeline(
 
     found = False
 
-    if system_yaml.exists() or system_dir.exists():
-        if system_yaml.exists():
+    if await asyncio.to_thread(system_yaml.exists) or await asyncio.to_thread(system_dir.exists):
+        if await asyncio.to_thread(system_yaml.exists):
             trash.move_to_trash(system_yaml)
             found = True
-        if system_dir.exists():
+        if await asyncio.to_thread(system_dir.exists):
             trash.move_to_trash(system_dir)
             found = True
-    elif custom_yaml.exists() or custom_dir.exists():
-        if custom_yaml.exists():
+    elif await asyncio.to_thread(custom_yaml.exists) or await asyncio.to_thread(custom_dir.exists):
+        if await asyncio.to_thread(custom_yaml.exists):
             trash.move_to_trash(custom_yaml)
             found = True
-        if custom_dir.exists():
+        if await asyncio.to_thread(custom_dir.exists):
             trash.move_to_trash(custom_dir)
             found = True
 

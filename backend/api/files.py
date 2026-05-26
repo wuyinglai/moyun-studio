@@ -9,6 +9,7 @@
   GET  /api/tree           获取文件树（?project_id=）
 """
 
+import asyncio
 import hashlib
 import logging
 
@@ -26,8 +27,8 @@ from backend.core.exceptions import (
 from backend.core.file_ops import FileService
 from backend.domain.events import (
     make_file_created_event,
-    make_file_updated_event,
     make_file_deleted_event,
+    make_file_updated_event,
 )
 from backend.schemas.common import ApiResponse
 from backend.schemas.file import (
@@ -202,7 +203,7 @@ async def create_file(
     """创建新文件"""
     fs = _project_file_service(settings, req.project_id)
     project_dir = _project_dir(settings, req.project_id)
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     full_path = f"{req.project_id}/{req.path}"
@@ -237,7 +238,7 @@ async def rename_file(
     """重命名/移动文件（路径安全校验通过 FileService.rename_path）"""
     fs = _project_file_service(settings, req.project_id)
     project_dir = _project_dir(settings, req.project_id)
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     # 使用 FileService 的安全重命名方法
@@ -269,7 +270,7 @@ async def create_directory(
     """创建新目录（路径安全校验通过 FileService.create_project_directory）"""
     fs = _project_file_service(settings, req.project_id)
     project_dir = _project_dir(settings, req.project_id)
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     # 使用 FileService 的安全创建目录方法
@@ -300,7 +301,7 @@ async def delete_file(
     """将文件移入回收站"""
     fs = _project_file_service(settings, req.project_id)
     project_dir = _project_dir(settings, req.project_id)
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     full_path = f"{req.project_id}/{req.path}"
@@ -329,7 +330,7 @@ async def delete_directory(
     """将目录移入回收站"""
     fs = _project_file_service(settings, req.project_id)
     project_dir = _project_dir(settings, req.project_id)
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     full_path = f"{req.project_id}/{req.path}"
@@ -357,7 +358,7 @@ async def get_tree(
     """获取项目文件树"""
     fs = _project_file_service(settings, project_id)
     project_dir = _project_dir(settings, project_id)
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     raw_tree = await fs.get_file_tree(project_id, max_depth=5)

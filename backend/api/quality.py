@@ -5,6 +5,7 @@
   POST /api/quality/review-batch  批量审查多个章节
 """
 
+import asyncio
 import logging
 import uuid
 
@@ -52,7 +53,7 @@ async def review_chapter(
 ):
     """审查单个章节的质量"""
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     # 文件存在性由 QualityService.perform_review 内部通过 FileService 校验
@@ -61,7 +62,7 @@ async def review_chapter(
     review_id = str(uuid.uuid4())[:8]
     result = await svc.perform_review(req.project_id, req.target_file, req.chapter_title)
 
-    svc.save_review_result(req.project_id, req.target_file, review_id, result)
+    await asyncio.to_thread(svc.save_review_result, req.project_id, req.target_file, review_id, result)
 
     logger.info("质量审查完成: %s", req.target_file)
 
@@ -79,7 +80,7 @@ async def review_chapters_batch(
 ):
     """批量审查多个章节的质量"""
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     svc = QualityService(settings)
@@ -93,7 +94,7 @@ async def review_chapters_batch(
             result = await svc.perform_review(req.project_id, target_file, None)
 
             review_id = str(uuid.uuid4())[:8]
-            svc.save_review_result(req.project_id, target_file, review_id, result)
+            await asyncio.to_thread(svc.save_review_result, req.project_id, target_file, review_id, result)
 
             reviews.append(ReviewItem(
                 target_file=target_file,
@@ -136,5 +137,5 @@ async def list_reviews(
 ):
     """获取项目的所有审查历史"""
     svc = QualityService(settings)
-    items = svc.list_reviews(project_id)
+    items = await asyncio.to_thread(svc.list_reviews, project_id)
     return ApiResponse.ok({"reviews": items, "total": len(items)})

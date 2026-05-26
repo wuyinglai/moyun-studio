@@ -356,7 +356,7 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
     ch_dir = vol_dir / f"ch-{chapter_number:03d}"
     await asyncio.to_thread(vol_dir.mkdir, parents=True, exist_ok=True)
     vol_meta = vol_dir / "vol-meta.json"
-    if not vol_meta.exists():
+    if not await asyncio.to_thread(vol_meta.exists):
         await _write_json(vol_meta, {
             "volume_number": volume_number,
             "chapter_range": f"{chapter_number:03d}-{chapter_number:03d}",
@@ -367,7 +367,7 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
     await asyncio.to_thread((ch_dir / "feedback").mkdir, parents=True, exist_ok=True)
     await asyncio.to_thread((ch_dir / "revision-log").mkdir, parents=True, exist_ok=True)
     ch_meta = ch_dir / "ch-meta.json"
-    if not ch_meta.exists():
+    if not await asyncio.to_thread(ch_meta.exists):
         await _write_json(ch_meta, {
             "chapter_number": chapter_number,
             "title": title,
@@ -382,7 +382,7 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
         })
     for section_number in range(1, SECTIONS_PER_CHAPTER + 1):
         file_path = ch_dir / f"sec-{section_number:03d}.md"
-        if not file_path.exists():
+        if not await asyncio.to_thread(file_path.exists):
             await _write_text(file_path, f"# 第{volume_number}卷 第{chapter_number}章 {title} - 第{section_number}节\n\n")
     return _section_path(volume_number, chapter_number, 1)
 
@@ -901,7 +901,7 @@ async def generate_next_options(
     if req.current_file:
         _validate_rel_path(req.current_file)
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
@@ -974,7 +974,7 @@ async def write_lite_next(
     if req.target_file:
         _validate_rel_path(req.target_file)
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
@@ -1172,7 +1172,7 @@ async def write_lite_next_stream(
             yield _lite_stream_event("error", {"message": str(e)})
             return
         project_dir = settings.projects_path / req.project_id
-        if not project_dir.exists():
+        if not await asyncio.to_thread(project_dir.exists):
             yield _lite_stream_event("error", {"message": f"项目不存在：{req.project_id}"})
             return
 

@@ -21,8 +21,10 @@ const _confirmResolvers = new Map<string, () => void>()
 const PREFIX = 'moyun:task-queue:'
 
 function _saveQueueMeta() {
-  const metas = _queue.value.map(t => ({ id: t.id, name: t.name }))
-  localStorage.setItem(PREFIX + 'queue', JSON.stringify(metas))
+  try {
+    const metas = _queue.value.map(t => ({ id: t.id, name: t.name }))
+    localStorage.setItem(PREFIX + 'queue', JSON.stringify(metas))
+  } catch { /* localStorage 不可用时忽略 */ }
 }
 
 function _loadQueueMeta(): { id: string; name: string }[] {
@@ -43,13 +45,19 @@ export function restoreInterruptedTasks() {
     taskStore.addTask(meta.id, `[中断] ${meta.name}`)
     taskStore.markInterrupted(meta.id)
   }
-  localStorage.removeItem(PREFIX + 'queue')
+  try {
+    localStorage.removeItem(PREFIX + 'queue')
+  } catch { /* localStorage 不可用时忽略 */ }
 }
 
 /* ─── 内部处理逻辑 ──────────────────────────────────────── */
 
 function getAutoMode(): string {
-  return localStorage.getItem('moyun-auto-mode') || 'L1'
+  try {
+    return localStorage.getItem('moyun-auto-mode') || 'L1'
+  } catch {
+    return 'L1'
+  }
 }
 
 async function processQueue() {

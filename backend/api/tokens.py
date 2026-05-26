@@ -5,11 +5,13 @@
   POST /api/tokens/estimate 估算项目/模板的token数
 """
 
+import asyncio
 import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+
 try:
     import tiktoken
 except ImportError:
@@ -180,7 +182,7 @@ async def estimate_tokens(
         估算Token数
     """
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     text = ""
@@ -192,8 +194,10 @@ async def estimate_tokens(
 
         # 读取模板文件
         template_path = settings.prompts_path / req.template / "main.md"
-        if template_path.exists():
-            template_content = template_path.read_text(encoding="utf-8")
+        if await asyncio.to_thread(template_path.exists):
+            template_content = await asyncio.to_thread(
+                template_path.read_text, encoding="utf-8"
+            )
             # 简单估算：模板变量替换后的长度
             text = template_content
             if req.variables:
@@ -206,18 +210,23 @@ async def estimate_tokens(
     elif req.target == "chapter":
         # 估算最新章节的Token数
         chapters_dir = project_dir / "chapters"
-        if chapters_dir.exists():
+        if await asyncio.to_thread(chapters_dir.exists):
             # 查找最新章节
-            chapter_files = list(chapters_dir.rglob("sec-*.md"))
+            chapter_files = await asyncio.to_thread(
+                lambda: list(chapters_dir.rglob("sec-*.md"))
+            )
             if chapter_files:
-                latest = max(chapter_files, key=lambda f: f.stat().st_mtime)
-                text = latest.read_text(encoding="utf-8")
+                latest = max(
+                    chapter_files,
+                    key=lambda f: f.stat().st_mtime,
+                )
+                text = await asyncio.to_thread(latest.read_text, encoding="utf-8")
 
     elif req.target == "outline":
         # 估算大纲文件的Token数
         outline_file = project_dir / "outline.md"
-        if outline_file.exists():
-            text = outline_file.read_text(encoding="utf-8")
+        if await asyncio.to_thread(outline_file.exists):
+            text = await asyncio.to_thread(outline_file.read_text, encoding="utf-8")
 
     # 计算Token数
     tokens = await _count_tokens_async(text)

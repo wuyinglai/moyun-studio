@@ -301,10 +301,18 @@ const connectionStatusLabel = computed(() => {
 
 const isLiteRoute = computed(() => route.name === 'project-lite' || route.name === 'lite-home')
 
-const autoMode = computed(() => localStorage.getItem('moyun-auto-mode') || 'L1')
+const autoMode = computed(() => {
+  try {
+    return localStorage.getItem('moyun-auto-mode') || 'L1'
+  } catch {
+    return 'L1'
+  }
+})
 
 function setAutoMode(mode: 'L1' | 'L2') {
-  localStorage.setItem('moyun-auto-mode', mode)
+  try {
+    localStorage.setItem('moyun-auto-mode', mode)
+  } catch { /* localStorage 不可用时忽略 */ }
 }
 
 async function toggleThinking() {

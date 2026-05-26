@@ -6,6 +6,7 @@
   POST /api/trash/empty     清空回收站
 """
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends
@@ -30,7 +31,7 @@ async def list_trash(
 ):
     """列出回收站所有内容"""
     trash = TrashService(settings.workspace_path)
-    items = trash.list_trash()
+    items = await asyncio.to_thread(trash.list_trash)
     return ApiResponse.ok({"items": items, "total": len(items)})
 
 
@@ -41,7 +42,7 @@ async def restore_from_trash(
 ):
     """从回收站恢复到原位置"""
     trash = TrashService(settings.workspace_path)
-    dest = trash.restore(req.trash_name)
+    dest = await asyncio.to_thread(trash.restore, req.trash_name)
     if dest is None:
         raise ResourceNotFoundError(resource="trash", identifier=req.trash_name)
     return ApiResponse.ok({"restored_path": str(dest)})
@@ -53,5 +54,5 @@ async def empty_trash(
 ):
     """清空回收站"""
     trash = TrashService(settings.workspace_path)
-    count = trash.empty_trash()
+    count = await asyncio.to_thread(trash.empty_trash)
     return ApiResponse.ok({"message": f"回收站已清空，共删除 {count} 项", "count": count})

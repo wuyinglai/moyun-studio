@@ -168,7 +168,11 @@ export function useWorkflowGuide() {
   }
 
   function getAutoMode(): string {
-    return localStorage.getItem('moyun-auto-mode') || 'L1'
+    try {
+      return localStorage.getItem('moyun-auto-mode') || 'L1'
+    } catch {
+      return 'L1'
+    }
   }
 
   /** 从当前 stepIndex 开始执行 */
