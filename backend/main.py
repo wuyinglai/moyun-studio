@@ -20,7 +20,12 @@ from backend.core.event_bus import EventBus
 from backend.core.exceptions import MoyunException
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
-from backend.core.llm_circuit_breaker import CircuitBreakerConfig, init_circuit_breaker
+from backend.core.llm_circuit_breaker import (
+    CircuitBreakerConfig,
+    get_circuit_breaker,
+    get_state_file_path,
+    init_circuit_breaker,
+)
 from backend.core.pipeline_validator import validate_all_pipelines
 from backend.core.task_queue import TaskQueue, run_task_worker
 
@@ -46,6 +51,10 @@ async def lifespan(app: FastAPI):
         enabled=settings.llm_circuit_breaker_enabled,
     )
     init_circuit_breaker(breaker_config)
+
+    # 恢复熔断器持久化状态
+    state_file = get_state_file_path(settings.workspace_path)
+    await get_circuit_breaker().load_state(state_file)
 
     # ── Pipeline YAML 校验 ──────────────────────────────────────
     if settings.validate_pipelines_on_start:
@@ -114,6 +123,12 @@ async def lifespan(app: FastAPI):
     )
 
     yield
+
+    # 持久化熔断器状态
+    try:
+        await get_circuit_breaker().save_state(state_file)
+    except Exception as e:
+        logger.warning("熔断器状态保存失败: %s", e)
 
     # 关闭时停止桥接任务
     if hasattr(app.state, 'sse_bridge_task'):

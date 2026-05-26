@@ -6,6 +6,7 @@
   PATCH /api/feedback/{project_id}/{feedback_id}  更新反馈状态
 """
 
+import asyncio
 from datetime import datetime
 import json
 import logging
@@ -78,38 +79,39 @@ def _get_feedback_dir(project_id: str, chapter_path: str, settings: Settings) ->
     return settings.projects_path / project_id / chapter_dir / "feedback"
 
 
-def _load_feedbacks(feedback_dir: Path) -> list[dict[str, Any]]:
+async def _load_feedbacks(feedback_dir: Path) -> list[dict[str, Any]]:
     """加载所有反馈"""
-    if not feedback_dir.exists():
+    if not await asyncio.to_thread(feedback_dir.exists):
         return []
 
+    files = await asyncio.to_thread(lambda: list(feedback_dir.glob("*.json")))
     feedbacks = []
-    for f in feedback_dir.glob("*.json"):
+    for f in files:
         try:
-            data = json.loads(f.read_text(encoding="utf-8"))
+            text = await asyncio.to_thread(f.read_text, encoding="utf-8")
+            data = json.loads(text)
             feedbacks.append(data)
-        except json.JSONDecodeError:
-            logger.warning("反馈文件解析失败: %s", f)
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("反馈文件解析失败: %s - %s", f, e)
 
     # 按时间倒序排列
     feedbacks.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return feedbacks
 
 
-def _save_feedback(feedback_dir: Path, feedback_data: dict[str, Any]) -> None:
+async def _save_feedback(feedback_dir: Path, feedback_data: dict[str, Any]) -> None:
     """保存反馈"""
-    feedback_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(feedback_dir.mkdir, parents=True, exist_ok=True)
     file_path = feedback_dir / f"{feedback_data['id']}.json"
-    file_path.write_text(
-        json.dumps(feedback_data, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
+    content = json.dumps(feedback_data, ensure_ascii=False, indent=2)
+    await asyncio.to_thread(file_path.write_text, content, encoding="utf-8")
 
 
-def _get_feedback_file(feedback_dir: Path, feedback_id: str) -> Path | None:
+async def _get_feedback_file(feedback_dir: Path, feedback_id: str) -> Path | None:
     """获取反馈文件路径"""
     file_path = feedback_dir / f"{feedback_id}.json"
-    return file_path if file_path.exists() else None
+    exists = await asyncio.to_thread(file_path.exists)
+    return file_path if exists else None
 
 
 # ─── 路由 ────────────────────────────────────────────────────────────
@@ -133,7 +135,7 @@ async def list_feedbacks(
     """
     # 检查项目是否存在
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     all_feedbacks: list[dict[str, Any]] = []
@@ -141,13 +143,14 @@ async def list_feedbacks(
     if chapter_path:
         # 获取特定章节的反馈
         feedback_dir = _get_feedback_dir(project_id, chapter_path, settings)
-        all_feedbacks = _load_feedbacks(feedback_dir)
+        all_feedbacks = await _load_feedbacks(feedback_dir)
     else:
         # 获取所有章节的反馈
         chapters_dir = settings.projects_path / project_id / "chapters"
-        if chapters_dir.exists():
-            for feedback_dir in chapters_dir.rglob("feedback"):
-                feedbacks = _load_feedbacks(feedback_dir)
+        if await asyncio.to_thread(chapters_dir.exists):
+            feedback_dirs = await asyncio.to_thread(lambda: list(chapters_dir.rglob("feedback")))
+            for fd in feedback_dirs:
+                feedbacks = await _load_feedbacks(fd)
                 all_feedbacks.extend(feedbacks)
 
     # 过滤
@@ -178,7 +181,7 @@ async def create_feedback(
     """
     # 检查项目是否存在
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     # 生成反馈ID
@@ -199,7 +202,7 @@ async def create_feedback(
 
     # 获取反馈目录并保存
     feedback_dir = _get_feedback_dir(project_id, req.chapter_path, settings)
-    _save_feedback(feedback_dir, feedback_data)
+    await _save_feedback(feedback_dir, feedback_data)
 
     logger.info(
         "用户反馈已创建: 项目=%s, 章节=%s, 反馈ID=%s",
@@ -231,7 +234,7 @@ async def update_feedback(
     """
     # 检查项目是否存在
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     # 查找反馈文件
@@ -240,9 +243,10 @@ async def update_feedback(
 
     # 搜索反馈文件
     chapters_dir = settings.projects_path / project_id / "chapters"
-    if chapters_dir.exists():
-        for fd in chapters_dir.rglob("feedback"):
-            f = _get_feedback_file(fd, feedback_id)
+    if await asyncio.to_thread(chapters_dir.exists):
+        dirs = await asyncio.to_thread(lambda: list(chapters_dir.rglob("feedback")))
+        for fd in dirs:
+            f = await _get_feedback_file(fd, feedback_id)
             if f:
                 feedback_file = f
                 feedback_dir = fd
@@ -252,7 +256,8 @@ async def update_feedback(
         raise ResourceNotFoundError(resource="feedback", identifier=feedback_id)
 
     # 加载并更新反馈
-    feedback_data = json.loads(feedback_file.read_text(encoding="utf-8"))
+    text = await asyncio.to_thread(feedback_file.read_text, encoding="utf-8")
+    feedback_data = json.loads(text)
 
     if req.resolved is not None:
         feedback_data["resolved"] = req.resolved
@@ -263,7 +268,7 @@ async def update_feedback(
         feedback_data["content"] = req.content
 
     # 保存更新
-    _save_feedback(feedback_dir, feedback_data)
+    await _save_feedback(feedback_dir, feedback_data)
 
     logger.info("反馈已更新: %s", feedback_id)
 
@@ -293,9 +298,10 @@ async def delete_feedback(
     feedback_dir = None
 
     chapters_dir = settings.projects_path / project_id / "chapters"
-    if chapters_dir.exists():
-        for fd in chapters_dir.rglob("feedback"):
-            f = _get_feedback_file(fd, feedback_id)
+    if await asyncio.to_thread(chapters_dir.exists):
+        dirs = await asyncio.to_thread(lambda: list(chapters_dir.rglob("feedback")))
+        for fd in dirs:
+            f = await _get_feedback_file(fd, feedback_id)
             if f:
                 feedback_file = f
                 feedback_dir = fd
@@ -305,10 +311,11 @@ async def delete_feedback(
         raise ResourceNotFoundError(resource="feedback", identifier=feedback_id)
 
     # 标记为已解决而非物理删除
-    feedback_data = json.loads(feedback_file.read_text(encoding="utf-8"))
+    text = await asyncio.to_thread(feedback_file.read_text, encoding="utf-8")
+    feedback_data = json.loads(text)
     feedback_data["resolved"] = True
     feedback_data["resolved_at"] = datetime.now().isoformat()
-    _save_feedback(feedback_dir, feedback_data)
+    await _save_feedback(feedback_dir, feedback_data)
 
     logger.info("反馈已标记为已解决: %s", feedback_id)
 

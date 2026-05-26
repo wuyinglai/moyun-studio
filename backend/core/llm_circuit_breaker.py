@@ -11,9 +11,12 @@
 支持按 provider+base_url+model 维度隔离状态。
 """
 
-import logging
-import time
+import asyncio
 from enum import Enum
+import json
+import logging
+from pathlib import Path
+import time
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -199,9 +202,46 @@ class LLMCircuitBreaker:
             }
         return result
 
+    async def save_state(self, state_file: Path) -> None:
+        """将熔断状态持久化到文件"""
+        data: dict[str, Any] = {}
+        for key, circuit in self._circuits.items():
+            data[key] = {
+                "state": circuit.state.value,
+                "failure_count": circuit.failure_count,
+                "last_failure_time": circuit.last_failure_time,
+            }
+        try:
+            await asyncio.to_thread(state_file.parent.mkdir, parents=True, exist_ok=True)
+            content = json.dumps(data, ensure_ascii=False, indent=2)
+            await asyncio.to_thread(state_file.write_text, content, encoding="utf-8")
+            logger.debug("熔断器状态已持久化到 %s (%d 条记录)", state_file, len(data))
+        except OSError as e:
+            logger.warning("熔断器状态持久化失败: %s", e)
+
+    async def load_state(self, state_file: Path) -> None:
+        """从文件恢复熔断状态"""
+        if not await asyncio.to_thread(state_file.exists):
+            return
+        try:
+            text = await asyncio.to_thread(state_file.read_text, encoding="utf-8")
+            data = json.loads(text)
+            for key, info in data.items():
+                circuit = self._get_circuit(key)
+                state_val = info.get("state", "closed")
+                circuit.state = CircuitState(state_val)
+                circuit.failure_count = info.get("failure_count", 0)
+                circuit.last_failure_time = info.get("last_failure_time", 0)
+            logger.info("熔断器状态已从 %s 恢复 (%d 条记录)", state_file, len(data))
+        except (json.JSONDecodeError, OSError, ValueError) as e:
+            logger.warning("熔断器状态恢复失败: %s", e)
+
 
 # 全局熔断器实例（在 main.py lifespan 中初始化）
 circuit_breaker: LLMCircuitBreaker | None = None
+
+# 默认持久化文件路径
+_STATE_FILE_NAME = ".circuit-breaker-state.json"
 
 
 def get_circuit_breaker() -> LLMCircuitBreaker:
@@ -223,3 +263,8 @@ def init_circuit_breaker(config: CircuitBreakerConfig) -> LLMCircuitBreaker:
         config.reset_timeout_seconds,
     )
     return circuit_breaker
+
+
+def get_state_file_path(workspace_path: Path) -> Path:
+    """获取熔断器状态文件路径"""
+    return workspace_path / _STATE_FILE_NAME

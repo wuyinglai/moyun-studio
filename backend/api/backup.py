@@ -53,41 +53,52 @@ def _ensure_backup_dir(project_dir: Path) -> Path:
     return backup_dir
 
 
-def _load_backup_meta(backup_path: Path) -> dict | None:
+async def _load_backup_meta(backup_path: Path) -> dict | None:
     meta_file = backup_path / "meta.json"
-    if not meta_file.exists():
+    if not await asyncio.to_thread(meta_file.exists):
         return None
-    return json.loads(meta_file.read_text(encoding="utf-8"))
+    try:
+        text = await asyncio.to_thread(meta_file.read_text, encoding="utf-8")
+        return json.loads(text)
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("备份元数据解析失败: %s - %s", meta_file, e)
+        return None
 
 
-def _save_backup_meta(backup_path: Path, meta: dict) -> None:
+async def _save_backup_meta(backup_path: Path, meta: dict) -> None:
     meta_file = backup_path / "meta.json"
-    meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    content = json.dumps(meta, ensure_ascii=False, indent=2)
+    await asyncio.to_thread(meta_file.write_text, content, encoding="utf-8")
 
 
-def _compute_backup_size(backup_path: Path) -> int:
-    total = 0
-    for item in backup_path.rglob("*"):
-        if item.is_file():
-            total += item.stat().st_size
-    return total
+async def _compute_backup_size(backup_path: Path) -> int:
+    def _compute() -> int:
+        total = 0
+        for item in backup_path.rglob("*"):
+            if item.is_file():
+                total += item.stat().st_size
+        return total
+    return await asyncio.to_thread(_compute)
 
 
-def _count_files(backup_path: Path) -> int:
-    return sum(1 for item in backup_path.rglob("*") if item.is_file())
+async def _count_files(backup_path: Path) -> int:
+    def _count() -> int:
+        return sum(1 for item in backup_path.rglob("*") if item.is_file())
+    return await asyncio.to_thread(_count)
 
 
-def _get_backup_info(backup_path: Path) -> BackupInfo | None:
-    meta = _load_backup_meta(backup_path)
+async def _get_backup_info(backup_path: Path) -> BackupInfo | None:
+    meta = await _load_backup_meta(backup_path)
     if meta is None:
         return None
+    size = await _compute_backup_size(backup_path)
     return BackupInfo(
         backup_id=meta["backup_id"],
         project_id=meta["project_id"],
         description=meta.get("description", ""),
         created_at=meta.get("created_at", ""),
         file_count=meta.get("file_count", 0),
-        total_size=_compute_backup_size(backup_path),
+        total_size=size,
     )
 
 
@@ -121,17 +132,18 @@ async def list_backups(
 ):
     logger.info("获取备份列表", extra={"project_id": project_id})
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     backup_root = _backup_dir(project_dir)
-    if not backup_root.exists():
+    if not await asyncio.to_thread(backup_root.exists):
         return ApiResponse.ok(BackupListResponse(backups=[], total=0))
 
+    paths = await asyncio.to_thread(lambda: sorted(backup_root.iterdir(), key=lambda x: x.name, reverse=True))
     backups: list[BackupInfo] = []
-    for path in sorted(backup_root.iterdir(), key=lambda x: x.name, reverse=True):
-        if path.is_dir():
-            info = _get_backup_info(path)
+    for path in paths:
+        if await asyncio.to_thread(path.is_dir):
+            info = await _get_backup_info(path)
             if info:
                 backups.append(info)
 
@@ -145,15 +157,15 @@ async def create_backup(
 ):
     logger.info("创建备份", extra={"project_id": req.project_id, "description": req.description})
     project_dir = settings.projects_path / req.project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
     backup_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
     backup_path = _ensure_backup_dir(project_dir) / backup_id
-    backup_path.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(backup_path.mkdir, parents=True, exist_ok=True)
     await asyncio.to_thread(_create_backup_snapshot, project_dir, backup_path)
 
-    file_count = _count_files(backup_path)
+    file_count = await _count_files(backup_path)
     now = datetime.now(timezone.utc).isoformat()
     meta = {
         "backup_id": backup_id,
@@ -162,15 +174,16 @@ async def create_backup(
         "created_at": now,
         "file_count": file_count,
     }
-    await asyncio.to_thread(_save_backup_meta, backup_path, meta)
+    await _save_backup_meta(backup_path, meta)
 
+    total_size = await _compute_backup_size(backup_path)
     info = BackupInfo(
         backup_id=backup_id,
         project_id=req.project_id,
         description=req.description,
         created_at=now,
         file_count=file_count,
-        total_size=_compute_backup_size(backup_path),
+        total_size=total_size,
     )
     return ApiResponse.ok(info, message="备份创建成功")
 
@@ -184,27 +197,29 @@ async def restore_backup(
 ):
     logger.info("恢复备份", extra={"backup_id": backup_id, "project_id": project_id, "target": req.target_project_id})
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     backup_path = _backup_dir(project_dir) / backup_id
-    if not backup_path.exists():
+    if not await asyncio.to_thread(backup_path.exists):
         raise ResourceNotFoundError(resource="backup", identifier=backup_id)
 
     target_dir = settings.projects_path / req.target_project_id if req.target_project_id else project_dir
-    target_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(target_dir.mkdir, parents=True, exist_ok=True)
 
-    for item in target_dir.iterdir():
+    items = await asyncio.to_thread(lambda: list(target_dir.iterdir()))
+    for item in items:
         if item.name == "backup":
             continue
-        if item.is_dir():
+        if await asyncio.to_thread(item.is_dir):
             await _rmtree_async(item)
         else:
             await asyncio.to_thread(item.unlink)
 
-    for item in backup_path.iterdir():
+    backup_items = await asyncio.to_thread(lambda: list(backup_path.iterdir()))
+    for item in backup_items:
         dest = target_dir / item.name
-        if item.is_dir():
+        if await asyncio.to_thread(item.is_dir):
             await _copytree_async(item, dest)
         else:
             await _copy2_async(item, dest)
@@ -221,11 +236,11 @@ async def delete_backup(
 ):
     logger.info("删除备份", extra={"backup_id": backup_id, "project_id": project_id})
     project_dir = settings.projects_path / project_id
-    if not project_dir.exists():
+    if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
     backup_path = _backup_dir(project_dir) / backup_id
-    if not backup_path.exists():
+    if not await asyncio.to_thread(backup_path.exists):
         raise ResourceNotFoundError(resource="backup", identifier=backup_id)
 
     await _rmtree_async(backup_path)
