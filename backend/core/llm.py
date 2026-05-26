@@ -16,8 +16,8 @@ try:
 except ImportError:
     tiktoken = None
 
-from backend.core.exceptions import LLMError, LLMCircuitOpenError
-from backend.core.llm_circuit_breaker import get_circuit_breaker, LLMCircuitBreaker
+from backend.core.exceptions import LLMAPIError, LLMCircuitOpenError, LLMError
+from backend.core.llm_circuit_breaker import LLMCircuitBreaker, get_circuit_breaker
 
 if TYPE_CHECKING:
     pass
@@ -47,8 +47,8 @@ def load_llm_config_from_workspace(settings) -> dict:
                 "model": data.get("model", settings.llm_model),
                 "thinking": data.get("thinking", settings.llm_thinking),
             }
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logging.getLogger(__name__).warning(f"读取 llm_config.json 失败: {e}")
 
     # 2) .config.json（LLM API 保存到此文件）
     dot_config = settings.workspace_path / ".config.json"
@@ -64,8 +64,8 @@ def load_llm_config_from_workspace(settings) -> dict:
                     "model": data.get("model", settings.llm_model),
                     "thinking": data.get("thinking", settings.llm_thinking),
                 }
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logging.getLogger(__name__).warning(f"读取 .config.json 失败: {e}")
 
     # 3) 回退到 Settings
     return {
@@ -352,11 +352,27 @@ class LLMService:
 
             except LLMCircuitOpenError:
                 raise
+            except asyncio.TimeoutError:
+                breaker.record_failure(breaker_key, "timeout")
+                raise LLMError(message=f"LLM 调用超时（{model}），请检查模型服务或增加超时时间") from None
+            except litellm.exceptions.AuthenticationError:
+                breaker.record_failure(breaker_key, "auth_error")
+                raise LLMAPIError(model=model, reason="API Key 无效或已过期") from None
+            except litellm.exceptions.RateLimitError:
+                breaker.record_failure(breaker_key, "rate_limit")
+                raise LLMAPIError(model=model, reason="请求频率超限，请稍后重试") from None
+            except litellm.exceptions.Timeout:
+                breaker.record_failure(breaker_key, "timeout")
+                raise LLMError(message=f"LLM 请求超时（{model}），请检查网络连接或模型服务") from None
+            except litellm.exceptions.APIError as e:
+                breaker.record_failure(breaker_key, "api_error")
+                raise LLMAPIError(model=model, reason=str(e)[:200], status_code=getattr(e, 'status_code', None)) from e
             except Exception as e:
-                # 调用失败，记录到熔断器
+                # 未知错误，记录到熔断器
                 error_type = type(e).__name__
+                self.logger.error(f"LLM 未知错误 [{error_type}]: {e}")
                 breaker.record_failure(breaker_key, error_type)
-                raise LLMError(message=f"LLM调用失败: {e!s}")
+                raise LLMError(message=f"LLM调用失败: {e!s}") from e
 
     async def _call_with_retry(self, **kwargs) -> Any:
         """带重试的调用"""

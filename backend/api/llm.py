@@ -8,6 +8,7 @@
   GET  /api/llm/status      获取LLM状态
 """
 
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -45,25 +46,29 @@ def _config_file(settings: Settings) -> Path:
     return settings.workspace_path / ".config.json"
 
 
-def _load_global_config(settings: Settings) -> dict:
+async def _load_global_config(settings: Settings) -> dict:
     cf = _config_file(settings)
-    if cf.exists():
-        try:
-            return json.loads(cf.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {}
+    if not cf.exists():
+        return {}
+    try:
+        text = await asyncio.to_thread(cf.read_text, encoding="utf-8")
+        return json.loads(text)
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"读取 LLM 全局配置失败: {e}")
+        return {}
 
 
-def _save_global_config(settings: Settings, data: dict) -> None:
+async def _save_global_config(settings: Settings, data: dict) -> None:
     cf = _config_file(settings)
-    cf.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    content = json.dumps(data, ensure_ascii=False, indent=2)
+    await asyncio.to_thread(cf.write_text, content, encoding="utf-8")
 
 
 @router.get("/config", response_model=ApiResponse[LLMConfigResponse])
 async def get_llm_config(settings: Settings = Depends(get_settings)):
     """获取当前LLM配置（不返回API Key）"""
-    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
+    cfg_data = await _load_global_config(settings)
+    cfg = cfg_data.get(_LLM_CONFIG_KEY, {})
     return ApiResponse.ok(
         LLMConfigResponse(
             api_type=cfg.get("apiType", settings.llm_provider),
@@ -80,7 +85,7 @@ async def save_llm_config(
     settings: Settings = Depends(get_settings),
 ):
     """保存LLM配置"""
-    data = _load_global_config(settings)
+    data = await _load_global_config(settings)
     existing = data.get(_LLM_CONFIG_KEY, {})
     data[_LLM_CONFIG_KEY] = {
         "apiType": req.api_type,
@@ -89,7 +94,7 @@ async def save_llm_config(
         "model": req.model,
         "thinking": req.thinking,
     }
-    _save_global_config(settings, data)
+    await _save_global_config(settings, data)
     logger.info("LLM配置已保存", extra={"api_type": req.api_type, "model": req.model})
     return ApiResponse.ok(message="配置已保存")
 
@@ -97,7 +102,8 @@ async def save_llm_config(
 @router.get("/status", response_model=ApiResponse[LLMStatusResponse])
 async def get_llm_status(settings: Settings = Depends(get_settings)):
     """获取LLM连接状态（快速检查，不发真实请求）"""
-    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
+    cfg_data = await _load_global_config(settings)
+    cfg = cfg_data.get(_LLM_CONFIG_KEY, {})
     api_key = cfg.get("apiKey", settings.llm_api_key)
     model = cfg.get("model", settings.llm_model)
     api_type = cfg.get("apiType", settings.llm_provider)
@@ -183,7 +189,8 @@ async def test_connection(
 @router.get("/models", response_model=ApiResponse[LLMModelsResponse])
 async def get_models(settings: Settings = Depends(get_settings)):
     """获取可用模型列表"""
-    cfg = _load_global_config(settings).get(_LLM_CONFIG_KEY, {})
+    cfg_data = await _load_global_config(settings)
+    cfg = cfg_data.get(_LLM_CONFIG_KEY, {})
     api_type = cfg.get("apiType", settings.llm_provider)
 
     # 预设模型列表

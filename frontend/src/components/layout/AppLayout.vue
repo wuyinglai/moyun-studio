@@ -6,7 +6,12 @@
       :style="{ width: leftWidth }"
       aria-label="文件导航"
     >
-      <FileTree />
+      <ErrorBoundary
+        title="文件树加载出错"
+        description="文件导航发生了意外错误，你可以重试或刷新页面。"
+      >
+        <FileTree />
+      </ErrorBoundary>
     </nav>
 
     <!-- 中栏分隔条 -->
@@ -78,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import FileTree from '@/components/file-tree/FileTree.vue'
 import EditorTabs from '@/components/editor/EditorTabs.vue'
 import EditorToolbar from '@/components/editor/EditorToolbar.vue'
@@ -158,6 +163,13 @@ function stopDrag() {
     },
   }).catch(() => {}) // 静默失败，localStorage 兜底
 }
+
+// 组件卸载时清理拖拽监听器，防止泄漏
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onHDrag)
+  document.removeEventListener('mousemove', onVDrag)
+  document.removeEventListener('mouseup', stopDrag)
+})
 
 function onHDrag(e: MouseEvent) {
   if (!dragging || dragging === 'v') return

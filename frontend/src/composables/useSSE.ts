@@ -50,6 +50,11 @@ class SSEService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
 
+  // generationEmitter 监听器引用，用于清理
+  private _generationHandler: EventListener | null = null
+  private _streamHandler: EventListener | null = null
+  private _streamEventTypes: string[] = []
+
   // 状态
   private _isConnected = ref(false)
   private _isReconnecting = ref(false)
@@ -179,8 +184,7 @@ class SSEService {
       this.handleEvent('generation', detail)
     }
     generationEmitter.addEventListener('generation', handler)
-    // 存储 handler 以便后续移除
-    ;(this as { _generationHandler?: EventListener })._generationHandler = handler
+    this._generationHandler = handler
 
     // 监听 fetch stream 中的非 generation 事件，确保候选稿和完成状态能驱动 UI。
     const streamEventTypes = ['step_done', 'candidate_created', 'candidate-created', 'diff_summary', 'done', 'error']
@@ -194,8 +198,8 @@ class SSEService {
     streamEventTypes.forEach((type) => {
       generationEmitter.addEventListener(type, streamHandler)
     })
-    ;(this as { _streamHandler?: EventListener })._streamHandler = streamHandler
-    ;(this as { _streamEventTypes?: string[] })._streamEventTypes = streamEventTypes
+    this._streamHandler = streamHandler
+    this._streamEventTypes = streamEventTypes
   }
 
   /**
@@ -463,8 +467,15 @@ class SSEService {
   private scheduleReconnect() {
     if (this.manualClose || this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        this._lastError.value = 'SSE 重连次数已达上限'
+        this._lastError.value = 'SSE 重连次数已达上限，请刷新页面'
         this._connectionStatus.value = 'error'
+        // 通知用户连接已无法自动恢复
+        try {
+          const notification = useNotificationStore()
+          notification.error('与服务器连接已断开，请刷新页面')
+        } catch {
+          // store 可能未初始化
+        }
       }
       return
     }
@@ -475,7 +486,14 @@ class SSEService {
 
     console.log(`${this.reconnectDelay}ms 后尝试第 ${this.reconnectAttempts} 次重连...`)
 
+    // 清理已有的重连 timer，防止多次调用导致堆积
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+
     this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
       this.disconnect()
       this.connect()
     }, this.reconnectDelay)
@@ -499,19 +517,16 @@ class SSEService {
       this.eventSource = null
     }
     // 移除 generationEmitter 监听器
-    const handler = (this as { _generationHandler?: EventListener })._generationHandler
-    if (handler) {
-      generationEmitter.removeEventListener('generation', handler)
-      delete (this as { _generationHandler?: EventListener })._generationHandler
+    if (this._generationHandler) {
+      generationEmitter.removeEventListener('generation', this._generationHandler)
+      this._generationHandler = null
     }
-    const streamHandler = (this as { _streamHandler?: EventListener })._streamHandler
-    const streamEventTypes = (this as { _streamEventTypes?: string[] })._streamEventTypes || []
-    if (streamHandler) {
-      streamEventTypes.forEach((type: string) => {
-        generationEmitter.removeEventListener(type, streamHandler)
+    if (this._streamHandler) {
+      this._streamEventTypes.forEach((type: string) => {
+        generationEmitter.removeEventListener(type, this._streamHandler!)
       })
-      delete (this as { _streamHandler?: EventListener })._streamHandler
-      delete (this as { _streamEventTypes?: string[] })._streamEventTypes
+      this._streamHandler = null
+      this._streamEventTypes = []
     }
     this._isConnected.value = false
     this._isReconnecting.value = false

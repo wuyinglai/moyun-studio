@@ -18,6 +18,7 @@
 }
 """
 
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -39,20 +40,23 @@ def _config_file(settings: Settings) -> Path:
     return settings.workspace_path / ".config.json"
 
 
-def _load_config(settings: Settings) -> dict:
+async def _load_config(settings: Settings) -> dict:
     cf = _config_file(settings)
-    if cf.exists():
-        try:
-            return json.loads(cf.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return {}
+    if not cf.exists():
+        return {}
+    try:
+        text = await asyncio.to_thread(cf.read_text, encoding="utf-8")
+        return json.loads(text)
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"读取全局配置失败: {e}")
+        return {}
 
 
-def _save_config(settings: Settings, data: dict) -> None:
+async def _save_config(settings: Settings, data: dict) -> None:
     cf = _config_file(settings)
     cf.parent.mkdir(parents=True, exist_ok=True)
-    cf.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    content = json.dumps(data, ensure_ascii=False, indent=2)
+    await asyncio.to_thread(cf.write_text, content, encoding="utf-8")
 
 
 # ─── 完整配置 CRUD ────────────────────────────────────────────
@@ -78,7 +82,7 @@ class UpdateAppConfigRequest(BaseModel):
 @router.get("", response_model=ApiResponse[AppConfigResponse])
 async def get_app_config(settings: Settings = Depends(get_settings)):
     """获取完整应用配置"""
-    config = _load_config(settings)
+    config = await _load_config(settings)
     return ApiResponse.ok(AppConfigResponse(
         theme=config.get("theme", "dark"),
         autoMode=config.get("autoMode", "L1"),
@@ -94,7 +98,7 @@ async def save_app_config(
     settings: Settings = Depends(get_settings),
 ):
     """保存完整应用配置（只更新提供的字段，不覆盖未提供的字段）"""
-    config = _load_config(settings)
+    config = await _load_config(settings)
 
     if req.theme is not None:
         config["theme"] = req.theme
@@ -107,7 +111,7 @@ async def save_app_config(
     if req.customParams is not None:
         config["customParams"] = req.customParams
 
-    _save_config(settings, config)
+    await _save_config(settings, config)
 
     logger.info("应用配置已更新", extra={"fields": [k for k, v in req.model_dump(exclude_none=True).items()]})
     return ApiResponse.ok(AppConfigResponse(
@@ -141,7 +145,7 @@ class UpdateCustomParamsRequest(BaseModel):
 @router.get("/custom-params", response_model=ApiResponse[CustomParamsResponse])
 async def get_custom_params(settings: Settings = Depends(get_settings)):
     """获取自定义创作参数"""
-    config = _load_config(settings)
+    config = await _load_config(settings)
     params = config.get(_CUSTOM_PARAMS_KEY, {})
     categories = params.get("categories", [])
     return ApiResponse.ok(CustomParamsResponse(categories=categories))
@@ -153,11 +157,11 @@ async def save_custom_params(
     settings: Settings = Depends(get_settings),
 ):
     """保存自定义创作参数"""
-    config = _load_config(settings)
+    config = await _load_config(settings)
     config[_CUSTOM_PARAMS_KEY] = {
         "categories": [c.model_dump() for c in req.categories]
     }
-    _save_config(settings, config)
+    await _save_config(settings, config)
 
     logger.info("自定义参数已保存", extra={"category_count": len(req.categories)})
     return ApiResponse.ok(

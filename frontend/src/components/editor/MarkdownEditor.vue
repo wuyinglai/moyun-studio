@@ -90,6 +90,7 @@ const { isPreviewMode, previewHtml, updatePreview } = useMarkdownPreview()
 const codemirrorEl = ref<HTMLElement | null>(null)
 let editorView: EditorView | null = null
 let applyingExternalUpdate = false
+let pendingContentUpdate: number | null = null
 
 const moyunTheme = EditorView.theme({
   '&': {
@@ -207,26 +208,35 @@ watch(
   (content) => {
     if (content === undefined || !editorView) return
     if (editorStore.contentSource !== 'external') return
-    const current = editorView.state.doc.toString()
-    if (current !== content) {
-      const scroller = editorView.scrollDOM
-      const prevScrollTop = scroller.scrollTop
 
-      applyingExternalUpdate = true
-      try {
-        editorView.dispatch({
-          changes: { from: 0, to: current.length, insert: content },
-        })
-      } finally {
-        applyingExternalUpdate = false
-      }
-      editorStore.markLocalEdit()
-
-      // AI 生成时保持滚动位置不变，防止编辑框跳动
-      requestAnimationFrame(() => {
-        scroller.scrollTop = prevScrollTop
-      })
+    // 使用 rAF 节流：AI 流式生成时高频更新，合并到下一帧统一处理
+    if (pendingContentUpdate !== null) {
+      cancelAnimationFrame(pendingContentUpdate)
     }
+    pendingContentUpdate = requestAnimationFrame(() => {
+      pendingContentUpdate = null
+      if (!editorView) return
+      const current = editorView.state.doc.toString()
+      if (current !== content) {
+        const scroller = editorView.scrollDOM
+        const prevScrollTop = scroller.scrollTop
+
+        applyingExternalUpdate = true
+        try {
+          editorView.dispatch({
+            changes: { from: 0, to: current.length, insert: content },
+          })
+        } finally {
+          applyingExternalUpdate = false
+        }
+        editorStore.markLocalEdit()
+
+        // AI 生成时保持滚动位置不变，防止编辑框跳动
+        requestAnimationFrame(() => {
+          scroller.scrollTop = prevScrollTop
+        })
+      }
+    })
   }
 )
 
@@ -250,6 +260,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (pendingContentUpdate !== null) {
+    cancelAnimationFrame(pendingContentUpdate)
+    pendingContentUpdate = null
+  }
   window.removeEventListener('editor:undo', handleUndo)
   window.removeEventListener('editor:redo', handleRedo)
   window.removeEventListener('editor:jump-to-line', handleJumpToLine)

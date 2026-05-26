@@ -26,9 +26,26 @@ const errorMessage = ref('')
 onErrorCaptured((err: Error, _instance, info) => {
   // 过滤敏感信息：截断过长的 message，移除 API Key
   let msg = err.message || String(err)
-  // 移除可能的 API Key 模式
-  msg = msg.replace(/sk-[a-zA-Z0-9]{10,}/g, 'sk-***')
-  msg = msg.replace(/api[_-]?key[=:]\s*\S+/gi, 'api_key=***')
+  // 移除可能的敏感信息模式
+  const SENSITIVE_PATTERNS = [
+    /sk-[a-zA-Z0-9]{10,}/g,                  // OpenAI API Key
+    /pk-[a-zA-Z0-9]{10,}/g,                  // Pinecone 等其他服务 Key
+    /\b(?:Bearer|Token|Authorization)\s+\S+/gi, // Auth headers
+    /[?&](?:key|token|api_key|apikey)=\S+/gi,   // URL 参数中的密钥
+    /api[_-]?key[=:]\s*\S+/gi,                // api_key= 形式
+    /[A-Z_]+_API_KEY=\S+/g,                   // 环境变量形式
+  ]
+  for (const pattern of SENSITIVE_PATTERNS) {
+    msg = msg.replace(pattern, '***')
+  }
+  // 混淆本地文件路径（避免泄露用户名等）
+  msg = msg.replace(/(?:\/[A-Za-z0-9_.-]+){3,}/g, (match) => {
+    const parts = match.split('/')
+    if (parts.length > 3) {
+      return '/' + parts[1] + '/***/' + parts[parts.length - 1]
+    }
+    return match
+  })
   // 截断过长内容（避免正文全文泄露到错误日志）
   if (msg.length > 200) {
     msg = msg.substring(0, 200) + '...'
