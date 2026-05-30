@@ -68,7 +68,8 @@ function handleRetry() {
 }
 
 function handleGoHome() {
-  router.push('/').catch(() => {
+  router.push('/').catch((err: unknown) => {
+    console.error('路由跳转失败:', err instanceof Error ? err.message : err)
     // 路由跳转失败时刷新页面
     window.location.href = '/'
   })
@@ -127,6 +128,7 @@ function handleRefresh() {
       <div class="error-actions">
         <button
           class="retry-btn"
+          aria-label="重试组件加载"
           data-testid="error-boundary-retry"
           @click="handleRetry"
         >
@@ -134,12 +136,14 @@ function handleRefresh() {
         </button>
         <button
           class="refresh-btn"
+          aria-label="刷新页面"
           @click="handleRefresh"
         >
           刷新页面
         </button>
         <button
           class="home-btn"
+          aria-label="返回项目列表"
           @click="handleGoHome"
         >
           返回项目列表

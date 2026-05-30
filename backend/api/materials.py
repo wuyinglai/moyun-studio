@@ -8,6 +8,7 @@
   DELETE /api/materials/{type}/{id}        删除提取结果
 """
 
+import asyncio
 from datetime import datetime, timezone
 import json
 import logging
@@ -346,7 +347,7 @@ async def submit_extract_task(
         content, _, _ = await fs.read_file(f"{req.project_id}/style-guide.md")
         style_guide = content
     except Exception:
-        pass
+        logger.debug("加载提取模式失败", exc_info=True)
 
     # 渲染提取 prompt
     prompt_engine = PromptEngine(settings.prompts_path, fs)
@@ -357,7 +358,7 @@ async def submit_extract_task(
     prompt_text = await prompt_engine.render(f"extract/{req.type}", variables)
 
     # 调用 LLM（提取任务使用较低温度）
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     svc = LLMService.from_workspace_config(llm_cfg)
 
     logger.info("LLM提取中", extra={

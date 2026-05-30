@@ -27,9 +27,9 @@ from backend.core.trash import TrashService
 from backend.schemas.candidate import CandidateAction
 from backend.schemas.workflow import (
     WorkflowDef,
+    WorkflowRunState,
     WorkflowSaveRequest,
     WorkflowStepDef,
-    WorkflowRunState,
 )
 
 logger = logging.getLogger(__name__)
@@ -162,7 +162,7 @@ class WorkflowRunner:
             data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
             return WorkflowDef(**data)
         except Exception as e:
-            raise WorkflowError(f"加载工作流失败 {name}: {e}")
+            raise WorkflowError(f"加载工作流失败 {name}: {e}") from e
 
     def list_workflows(self) -> list[WorkflowDef]:
         """列出所有工作流"""
@@ -224,7 +224,7 @@ class WorkflowRunner:
             return WorkflowDef(name=req.name, label=req.label, description=req.description,
                              variables=req.variables, steps=req.steps)
         except Exception as e:
-            raise WorkflowError(f"保存工作流失败 {req.name}: {e}")
+            raise WorkflowError(f"保存工作流失败 {req.name}: {e}") from e
 
     def delete_workflow(self, name: str) -> dict:
         """删除工作流 YAML 文件（移到回收站）
@@ -239,7 +239,7 @@ class WorkflowRunner:
             trash = TrashService(self.workflows_path.parent)
             return trash.move_to_trash(yaml_path)
         except Exception as e:
-            raise WorkflowError(f"删除工作流失败 {name}: {e}")
+            raise WorkflowError(f"删除工作流失败 {name}: {e}") from e
 
     def count_steps(self, steps: list[WorkflowStepDef]) -> int:
         """递归统计步骤总数（含 loop 内子步骤按 1 步计）"""
@@ -478,8 +478,8 @@ class WorkflowRunner:
             completed_paths.add(saved_state.current_step_path)
 
         # 发送节点完成事件
-        if completed_paths is not None:
-            completed_paths.add(step_path)
+        if completed_paths is not None and saved_state.current_step_path:
+            completed_paths.add(saved_state.current_step_path)
 
         yield {"event": "step_done", "data": json.dumps({
             "step_id": current_step.id,
@@ -660,7 +660,7 @@ class WorkflowRunner:
         except WorkflowPaused:
             raise
         except Exception as e:
-            raise WorkflowError(f"步骤 {step.label} 执行失败: {e}")
+            raise WorkflowError(f"步骤 {step.label} 执行失败: {e}") from e
 
         yield {"event": "step_done", "data": json.dumps({
             "step_id": step.id,
@@ -824,7 +824,7 @@ class WorkflowRunner:
                         context.step_outputs[step.id] = target_file
 
         except PipelineError as e:
-            raise WorkflowError(f"管线 {step.pipeline} 执行失败: {e}")
+            raise WorkflowError(f"管线 {step.pipeline} 执行失败: {e}") from e
 
     # ─── Loop 节点 ────────────────────────────────────────────────
 

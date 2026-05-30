@@ -23,7 +23,8 @@ export function prefetchIdeas(): void {
         _fetchPromise = null
         return cards
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        console.error('预取开局卡失败:', err instanceof Error ? err.message : err)
         _fetchPromise = null
         return [] as LiteIdeaCard[]
       })

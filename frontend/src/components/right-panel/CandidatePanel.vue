@@ -189,7 +189,7 @@ function formatTime(timeStr: string): string {
   }
 }
 
-async function fetchCandidates() {
+async function fetchCandidates(silent = false) {
   if (!projectStore.currentProject?.id) return
   
   loading.value = true
@@ -201,14 +201,16 @@ async function fetchCandidates() {
       filename: c.candidate_path.split('/').pop() || c.candidate_path,
     }))
   } catch {
-    notification.error('获取候选稿列表失败')
+    if (!silent) {
+      notification.error('获取候选稿列表失败')
+    }
   } finally {
     loading.value = false
   }
 }
 
 function refreshCandidates() {
-  fetchCandidates()
+  fetchCandidates(false)
 }
 
 function selectCandidate(candidate: CandidateInfo) {
@@ -328,12 +330,12 @@ async function deleteCandidate(candidate: CandidateInfo) {
 }
 
 onMounted(() => {
-  void fetchCandidates()
+  void fetchCandidates(true)
   disposeCandidateCreated = sse.on('candidate-created', () => {
-    void fetchCandidates()
+    void fetchCandidates(true)
   })
   disposeCandidateAdopted = sse.on('candidate-adopted', () => {
-    void fetchCandidates()
+    void fetchCandidates(true)
   })
 })
 
@@ -345,7 +347,7 @@ onUnmounted(() => {
 watch(() => projectStore.currentProject?.id, () => {
   selectedId.value = null
   closePreview()
-  void fetchCandidates()
+  void fetchCandidates(true)
 })
 </script>
 

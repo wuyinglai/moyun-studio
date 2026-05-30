@@ -4,8 +4,9 @@
 候选稿作为安全修改事务处理：创建时记录 base_hash/base_mtime，采用时校验一致性。
 """
 
-import difflib
 from datetime import datetime
+import asyncio
+import difflib
 import hashlib
 import json
 import logging
@@ -54,7 +55,7 @@ class CandidateService:
 
     async def _ensure_candidates_dir(self, project_id: str) -> None:
         """确保候选稿目录存在"""
-        self.file_service._resolve_path(self._get_candidates_dir(project_id)).mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(self.file_service._resolve_path(self._get_candidates_dir(project_id)).mkdir, parents=True, exist_ok=True)
 
     async def _load_metadata(self, project_id: str) -> dict:
         """加载候选稿元数据"""
@@ -123,7 +124,7 @@ class CandidateService:
             base_hash = self._compute_hash(source_content)
             base_mtime = mtime
         except Exception:
-            pass
+            logger.debug("读取源文件失败，跳过 base_hash 记录", exc_info=True)
 
         # 2. 保存候选正文
         await self.file_service.write_file(candidate_path, content)
@@ -235,7 +236,7 @@ class CandidateService:
             current_hash = self._compute_hash(original_content)
             current_mtime = mtime
         except Exception:
-            pass
+            logger.debug("读取源文件失败", exc_info=True)
 
         # 2. 对比当前 hash/mtime 和 base_hash/base_mtime
         if candidate_info.base_hash and current_hash != candidate_info.base_hash:
@@ -320,7 +321,7 @@ class CandidateService:
                 ))
                 revision_entry["diff"] = diff
             except Exception:
-                pass
+                logger.debug("生成 diff 失败", exc_info=True)
 
             revision_log_path = f"{project_id}/{revision_log_dir}/{revision_id}.json"
             await self.file_service.write_file(

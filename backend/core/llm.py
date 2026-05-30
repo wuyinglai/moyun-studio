@@ -148,6 +148,9 @@ class LLMConfig:
         # DeepSeek
         "deepseek-chat": 8192,
         "deepseek-r1-chat": 128000,
+        "deepseek-v4-flash": 128000,
+        "deepseek-v3": 128000,
+        "deepseek-v4": 128000,
         # Qwen
         "qwen-7b-chat": 8192,
         "qwen-14b-chat": 16384,
@@ -205,14 +208,24 @@ class LLMConfig:
                 return window
 
         # 按参数推断
-        if "7b" in model_name:
+        if "7b" in model_name or "8b" in model_name:
             return 8192
         elif "14b" in model_name:
             return 16384
+        elif "27b" in model_name:
+            return 32768
         elif "32b" in model_name:
             return 32768
         elif "72b" in model_name or "70b" in model_name:
             return 64000
+
+        # DeepSeek 族模型默认 128k（避免未录入的新模型回退到 8k）
+        if "deepseek" in model_name:
+            return 128000
+
+        # Qwen 族模型默认 32k（未匹配到精确参数时）
+        if "qwen" in model_name.lower():
+            return 32768
 
         # 默认返回 GPT-4 级别
         return 8192

@@ -6,6 +6,7 @@ import { useEditorStore } from './editor'
 import { useTaskStore } from './task'
 import { useRightPanelStore } from './rightPanel'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { getPipelineForFile } from '@/utils/promptTypes'
 import type { BatchGenerateRequest, BatchGenerateResponse, ExtractTaskRequest, ExtractTaskResponse } from '@/types/chat'
 
 export const useGenerationStore = defineStore('generation', () => {
@@ -27,10 +28,29 @@ export const useGenerationStore = defineStore('generation', () => {
 
   /**
    * 续写当前文件（仅任务管理，流式事件由 useSSE 处理）
+   * 管线映射文件会被自动路由到 runPipeline，不会走 generate/continuation
    */
   async function continueWriting(projectId: string, filePath: string, prompt?: string) {
     const taskStore = useTaskStore()
     const editorStore = useEditorStore()
+
+    // 管线映射文件走专用管线，不走 generate/continuation
+    const pipelineName = getPipelineForFile(filePath)
+    if (pipelineName && pipelineName !== 'title') {
+      const fileGen = useFileGeneration()
+      const taskId = `task-${Date.now()}`
+      taskStore.addTask(taskId, `生成: ${filePath.split('/').pop()}`)
+      taskStore.startTask(taskId)
+      try {
+        await fileGen.runPipeline(projectId, filePath, pipelineName,
+          prompt ? { user_prompt: prompt } : {}, 'write_scene')
+        taskStore.completeTask(taskId)
+      } catch (e) {
+        taskStore.failTask(taskId)
+        throw e
+      }
+      return
+    }
 
     if (prompt) {
       editorStore.setFilePrompt(filePath, prompt)

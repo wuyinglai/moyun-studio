@@ -75,20 +75,22 @@ def _get_file_service(settings: Settings = Depends(get_settings)) -> FileService
     return FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
 
 
-def _project_collection_root(settings: Settings, project_id: str):
+async def _project_collection_root(settings: Settings, project_id: str):
     legacy_project_dir = settings.workspace_path / project_id
-    if legacy_project_dir.exists():
+    if await asyncio.to_thread(legacy_project_dir.exists):
         return settings.workspace_path
     return settings.projects_path
 
 
-def _project_dir(settings: Settings, project_id: str):
-    return _project_collection_root(settings, project_id) / project_id
+async def _project_dir(settings: Settings, project_id: str):
+    root = await _project_collection_root(settings, project_id)
+    return root / project_id
 
 
-def _project_file_service(settings: Settings, project_id: str) -> FileService:
+async def _project_file_service(settings: Settings, project_id: str) -> FileService:
+    root = await _project_collection_root(settings, project_id)
     return FileService(
-        _project_collection_root(settings, project_id),
+        root,
         max_file_write_size=settings.max_file_write_size,
     )
 
@@ -119,7 +121,7 @@ async def read_file(
     settings: Settings = Depends(get_settings),
 ):
     """读取文件内容"""
-    fs = _project_file_service(settings, project_id)
+    fs = await _project_file_service(settings, project_id)
     full_path = f"{project_id}/{path}"
     try:
         content, fm, mtime = await fs.read_file(full_path)
@@ -127,10 +129,10 @@ async def read_file(
         raise ResourceNotFoundError(resource="file", identifier=f"{project_id}/{path}")
     except ValidationError as e:
         logger.warning("读取文件路径校验失败", extra={"project_id": project_id, "path": path, "error": str(e)})
-        raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=400, detail=e.message) from e
     except Exception as e:
         logger.warning("读取文件失败", extra={"project_id": project_id, "path": path, "error": str(e)})
-        raise HTTPException(status_code=500, detail="读取文件失败")
+        raise HTTPException(status_code=500, detail="读取文件失败") from e
 
     content_hash = hashlib.md5(content.encode("utf-8")).hexdigest()
     return ApiResponse.ok(
@@ -147,7 +149,7 @@ async def write_file(
     settings: Settings = Depends(get_settings),
 ):
     """写入文件内容"""
-    fs = _project_file_service(settings, project_id)
+    fs = await _project_file_service(settings, project_id)
     full_path = f"{project_id}/{req.path}"
     content_hash = hashlib.md5(req.content.encode("utf-8")).hexdigest()
     mtime = None
@@ -164,7 +166,7 @@ async def write_file(
         raise
     except Exception as e:
         logger.error("写入文件失败", extra={"project_id": project_id, "path": req.path, "error": str(e)})
-        raise HTTPException(status_code=500, detail="写入文件失败")
+        raise HTTPException(status_code=500, detail="写入文件失败") from e
 
     logger.info("文件已保存", extra={"project_id": project_id, "path": req.path})
 
@@ -201,8 +203,8 @@ async def create_file(
     settings: Settings = Depends(get_settings),
 ):
     """创建新文件"""
-    fs = _project_file_service(settings, req.project_id)
-    project_dir = _project_dir(settings, req.project_id)
+    fs = await _project_file_service(settings, req.project_id)
+    project_dir = await _project_dir(settings, req.project_id)
     if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
@@ -236,8 +238,8 @@ async def rename_file(
     settings: Settings = Depends(get_settings),
 ):
     """重命名/移动文件（路径安全校验通过 FileService.rename_path）"""
-    fs = _project_file_service(settings, req.project_id)
-    project_dir = _project_dir(settings, req.project_id)
+    fs = await _project_file_service(settings, req.project_id)
+    project_dir = await _project_dir(settings, req.project_id)
     if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
@@ -268,8 +270,8 @@ async def create_directory(
     settings: Settings = Depends(get_settings),
 ):
     """创建新目录（路径安全校验通过 FileService.create_project_directory）"""
-    fs = _project_file_service(settings, req.project_id)
-    project_dir = _project_dir(settings, req.project_id)
+    fs = await _project_file_service(settings, req.project_id)
+    project_dir = await _project_dir(settings, req.project_id)
     if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
@@ -299,8 +301,8 @@ async def delete_file(
     settings: Settings = Depends(get_settings),
 ):
     """将文件移入回收站"""
-    fs = _project_file_service(settings, req.project_id)
-    project_dir = _project_dir(settings, req.project_id)
+    fs = await _project_file_service(settings, req.project_id)
+    project_dir = await _project_dir(settings, req.project_id)
     if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
@@ -328,8 +330,8 @@ async def delete_directory(
     settings: Settings = Depends(get_settings),
 ):
     """将目录移入回收站"""
-    fs = _project_file_service(settings, req.project_id)
-    project_dir = _project_dir(settings, req.project_id)
+    fs = await _project_file_service(settings, req.project_id)
+    project_dir = await _project_dir(settings, req.project_id)
     if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(req.project_id)
 
@@ -356,8 +358,8 @@ async def get_tree(
     settings: Settings = Depends(get_settings),
 ):
     """获取项目文件树"""
-    fs = _project_file_service(settings, project_id)
-    project_dir = _project_dir(settings, project_id)
+    fs = await _project_file_service(settings, project_id)
+    project_dir = await _project_dir(settings, project_id)
     if not await asyncio.to_thread(project_dir.exists):
         raise ProjectNotFoundError(project_id)
 
@@ -382,7 +384,7 @@ async def search_files(
     settings: Settings = Depends(get_settings),
 ):
     """在项目中搜索文件内容"""
-    fs = _project_file_service(settings, req.project_id)
+    fs = await _project_file_service(settings, req.project_id)
     results = await fs.search_files(
         req.project_id,
         req.query,

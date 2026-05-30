@@ -82,7 +82,7 @@ async def create_project(
         ("story-state.md", "# 故事状态\n\n## 主角状态\n\n## 势力关系\n\n## 伏笔追踪\n\n## 主线进度\n"),
         ("story-engine.md", "# 故事引擎\n\n## 人物欲望\n\n## 冲突推进\n\n## 场景直觉\n\n## 前文记忆\n\n## 读者期待\n\n## 阶段性目标\n"),
         ("recent-context.md", "# 近期上下文\n\n（最近5章摘要，由系统自动维护）\n"),
-        ("outline.md", f"# {req.name} - 大纲\n\n"),
+        ("outline.md", f"# {req.name} - 大纲\n\n在此编写故事大纲\n"),
     ]:
         await asyncio.to_thread(
             (project_dir / filename).write_text, content, "utf-8",

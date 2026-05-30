@@ -39,9 +39,14 @@ class Settings(BaseSettings):
 
     # ─── 系统Prompt配置 ────────────────────────────────────────
     system_prompts_path: Path = Field(
-        default=Path("prompts"),
+        default=Path(__file__).parent.parent / "prompts",
         description="系统默认Prompt模板目录（Git追踪）",
     )
+
+    @field_validator("system_prompts_path", mode="before")
+    @classmethod
+    def resolve_system_prompts(cls, v: str | Path) -> Path:
+        return Path(v).resolve()
 
     # ─── LLM 配置 ───────────────────────────────────────────────
     llm_provider: Literal["openai", "anthropic", "ollama", "custom"] = Field(

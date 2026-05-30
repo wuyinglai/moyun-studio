@@ -161,7 +161,7 @@ function stopDrag() {
       right: Math.round(parseFloat(rightWidth.value) * 100) / 100,
       editorChat: Math.round(parseFloat(topHeight.value) * 100) / 100,
     },
-  }).catch(() => {}) // 静默失败，localStorage 兜底
+  }).catch((err: unknown) => { console.error('远程配置保存失败:', err instanceof Error ? err.message : err) }) // 静默失败，localStorage 兜底
 }
 
 // 组件卸载时清理拖拽监听器，防止泄漏

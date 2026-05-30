@@ -12,19 +12,19 @@ import json
 import logging
 from pathlib import Path
 
+from backend.application.scene_service import SceneService
 from backend.config import Settings
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
-from backend.policies.candidate_policy import should_create_candidate
-from backend.schemas.llm import BatchGenerateItem, BatchGenerateResponse
-from backend.application.scene_service import SceneService
 from backend.domain.events import (
     make_pipeline_started_event,
     make_pipeline_step_completed_event,
     make_pipeline_step_failed_event,
     make_task_completed_event,
 )
+from backend.policies.candidate_policy import should_create_candidate
+from backend.schemas.llm import BatchGenerateItem, BatchGenerateResponse
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class GenerationService:
         # Resolve action aliases for backward compatibility
         resolved_mode = ACTION_ALIAS.get(mode, mode)
 
-        llm_cfg = load_llm_config_from_workspace(self.settings)
+        llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, self.settings)
         svc = LLMService.from_workspace_config(llm_cfg)
         runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service, system_prompts_path=self.settings.system_prompts_path)
 
@@ -187,8 +187,7 @@ class GenerationService:
                         "context_window": context_window,
                     })}
             except Exception:
-                pass
-
+                logger.debug("创建候选稿失败", exc_info=True)
             messages = [{"role": "user", "content": prompt_text}]
             stop_event = self._stop_signals.get(task_id)
             generated_text = ""
@@ -273,7 +272,7 @@ class GenerationService:
         """批量生成场景正文（sec = 单场景，默认800字，每章5场景）"""
         project_dir = self.settings.projects_path / project_id
         from backend.core.exceptions import ProjectNotFoundError
-        if not project_dir.exists():
+        if not await asyncio.to_thread(project_dir.exists):
             raise ProjectNotFoundError(project_id)
 
         logger.info("批量生成开始", extra={
@@ -290,19 +289,19 @@ class GenerationService:
         if volume_number:
             vol_dirs = [chapters_dir / f"vol-{volume_number:02d}"]
         else:
-            vol_dirs = sorted(chapters_dir.glob("vol-*"))
+            vol_dirs = sorted(await asyncio.to_thread(lambda: list(chapters_dir.glob("vol-*"))))
 
         for vol_dir in vol_dirs:
-            if not vol_dir.is_dir():
+            if not await asyncio.to_thread(vol_dir.is_dir):
                 continue
 
             if chapter_number:
                 ch_dirs = [vol_dir / f"ch-{chapter_number:03d}"]
             else:
-                ch_dirs = sorted(vol_dir.glob("ch-*"))
+                ch_dirs = sorted(await asyncio.to_thread(lambda: list(vol_dir.glob("ch-*"))))
 
             for ch_dir in ch_dirs:
-                if not ch_dir.is_dir():
+                if not await asyncio.to_thread(ch_dir.is_dir):
                     continue
 
                 ch_num = int(ch_dir.name.split("-")[1])
@@ -325,7 +324,7 @@ class GenerationService:
                         sec_num,
                     )
                     sec_file = ch_dir / f"sec-{sec_num:03d}.md"
-                    if sec_file.exists():
+                    if await asyncio.to_thread(sec_file.exists):
                         targets.append({
                             "ch_dir": ch_dir,
                             "ch_num": int(ch_dir.name.split("-")[1]),
@@ -343,7 +342,7 @@ class GenerationService:
             logger.warning("批量生成数量 %d 超过限制 %d，截断", len(targets), max_count)
             targets = targets[:max_count]
 
-        llm_cfg = load_llm_config_from_workspace(self.settings)
+        llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, self.settings)
         svc = LLMService.from_workspace_config(llm_cfg)
         runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service, system_prompts_path=self.settings.system_prompts_path)
 
@@ -371,7 +370,7 @@ class GenerationService:
                         ch_meta = json.loads(meta_content)
                         chapter_title = ch_meta.get("title", "")
                 except Exception:
-                    pass
+                    logger.debug("读取目标文件失败", exc_info=True)
 
                 variables = {
                     "chapter_name": f"第{tgt['ch_num']}章 {chapter_title}".strip(),
@@ -393,13 +392,15 @@ class GenerationService:
                 )
 
                 # 安全策略：检查目标文件是否为空，空则直接写入，否则生成候选稿
-                from backend.policies.candidate_policy import should_create_candidate as _should_candidate
+                from backend.policies.candidate_policy import (
+                    should_create_candidate as _should_candidate,
+                )
 
                 target_content = ""
                 try:
                     target_content, _, _ = await self.file_service.read_file(tgt["target_full_path"])
                 except Exception:
-                    pass
+                    logger.debug("读取上下文文件失败", exc_info=True)
                 target_has_content = bool(target_content and target_content.strip())
 
                 if _should_candidate("batch_generate", tgt["target_rel_path"], bool(target_content), target_has_content):

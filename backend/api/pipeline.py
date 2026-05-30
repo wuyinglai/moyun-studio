@@ -50,7 +50,7 @@ async def run_pipeline(
 
     # 初始化服务
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
@@ -95,11 +95,11 @@ async def list_pipelines(
 ):
     """获取所有可用管线"""
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
-    pipelines = runner.list_pipelines()
+    pipelines = await asyncio.to_thread(runner.list_pipelines)
     result = [
         {"name": p.name, "label": p.label, "steps": [{"id": s.id, "label": s.label} for s in p.steps], "source": "system"}
         for p in pipelines
@@ -111,16 +111,16 @@ async def list_pipelines(
         custom_pipeline_dir = custom_dir / "pipeline"
         if await asyncio.to_thread(custom_pipeline_dir.exists):
             custom_runner = PipelineRunner(custom_dir, llm_service, file_service, source="custom")
-            for f in sorted(custom_pipeline_dir.glob("*.yaml")):
+            for f in await asyncio.to_thread(lambda: sorted(custom_pipeline_dir.glob("*.yaml"))):
                 try:
-                    p = custom_runner.load_pipeline(f.stem)
+                    p = await asyncio.to_thread(custom_runner.load_pipeline, f.stem)
                     result.append({
                         "name": p.name, "label": p.label,
                         "steps": [{"id": s.id, "label": s.label} for s in p.steps],
                         "source": "custom",
                     })
                 except Exception:
-                    pass
+                    logger.warning("跳过无效自定义管线 %s", f.name, exc_info=True)
 
     return ApiResponse.ok({"pipelines": result, "total": len(result)})
 
@@ -132,7 +132,7 @@ async def get_pipeline(
 ):
     """获取管线详情"""
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
 
     # 判断是系统管线还是自定义管线
@@ -144,7 +144,7 @@ async def get_pipeline(
         runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
     try:
-        detail = runner.get_pipeline_detail(name)
+        detail = await asyncio.to_thread(runner.get_pipeline_detail, name)
         return ApiResponse.ok({"pipeline": detail})
     except PipelineError:
         from backend.core.exceptions import ResourceNotFoundError
@@ -159,7 +159,7 @@ async def save_pipeline(
 ):
     """保存管线定义或步骤 prompt"""
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
 
     # 判断是系统管线还是自定义管线
@@ -173,12 +173,12 @@ async def save_pipeline(
     runner = PipelineRunner(prompts_path, llm_service, file_service)
 
     if req.steps is not None:
-        runner.save_pipeline_yaml(name, req.label or name, req.steps)
+        await asyncio.to_thread(runner.save_pipeline_yaml, name, req.label or name, req.steps)
 
     if req.steps:
         for step in req.steps:
             if step.get("prompt_content"):
-                runner.save_step_prompt(name, step["id"], step["prompt_content"])
+                await asyncio.to_thread(runner.save_step_prompt, name, step["id"], step["prompt_content"])
 
     return ApiResponse.ok(message=f"管线 {name} 已保存")
 
@@ -190,20 +190,20 @@ async def create_custom_pipeline(
 ):
     """创建自定义管线"""
     custom_dir = settings.workspace_path / ".moyun" / "custom-pipelines"
-    custom_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(custom_dir.mkdir, parents=True, exist_ok=True)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     runner = PipelineRunner(custom_dir, llm_service, file_service)
 
     # 保存 YAML
-    runner.save_pipeline_yaml(req.name, req.label, req.steps)
+    await asyncio.to_thread(runner.save_pipeline_yaml, req.name, req.label, req.steps)
 
     # 保存每步 prompt
     for step in req.steps:
         if step.get("prompt_content"):
-            runner.save_step_prompt(req.name, step["id"], step["prompt_content"])
+            await asyncio.to_thread(runner.save_step_prompt, req.name, step["id"], step["prompt_content"])
 
     return ApiResponse.ok(message=f"自定义管线 {req.name} 已创建")
 
@@ -226,17 +226,17 @@ async def delete_pipeline(
 
     if await asyncio.to_thread(system_yaml.exists) or await asyncio.to_thread(system_dir.exists):
         if await asyncio.to_thread(system_yaml.exists):
-            trash.move_to_trash(system_yaml)
+            await asyncio.to_thread(trash.move_to_trash, system_yaml)
             found = True
         if await asyncio.to_thread(system_dir.exists):
-            trash.move_to_trash(system_dir)
+            await asyncio.to_thread(trash.move_to_trash, system_dir)
             found = True
     elif await asyncio.to_thread(custom_yaml.exists) or await asyncio.to_thread(custom_dir.exists):
         if await asyncio.to_thread(custom_yaml.exists):
-            trash.move_to_trash(custom_yaml)
+            await asyncio.to_thread(trash.move_to_trash, custom_yaml)
             found = True
         if await asyncio.to_thread(custom_dir.exists):
-            trash.move_to_trash(custom_dir)
+            await asyncio.to_thread(trash.move_to_trash, custom_dir)
             found = True
 
     if not found:

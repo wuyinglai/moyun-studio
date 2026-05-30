@@ -9,6 +9,12 @@
  * - fetch() 调用需要完整路径，使用 API_BASE + path 拼接
  */
 
+export interface FileContentResponse {
+  content: string
+  hash?: string
+  mtime?: number
+}
+
 export const API_BASE = '/api'
 
 export const API_ROUTES = {

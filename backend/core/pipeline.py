@@ -29,18 +29,22 @@ except ImportError:
 from jinja2 import Environment, FileSystemLoader
 import yaml
 
+from backend.application.memory_service import MemoryService
+from backend.application.pipeline.context import NodeResult, PipelineContext
+from backend.application.pipeline.registry import NodeExecutorRegistry
 from backend.config import get_settings
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService
 from backend.core.prompt_versioning import archive_prompt
-from backend.policies.generation_output_policy import decide_output, is_dangerous_output, OutputDecision
+from backend.policies.generation_output_policy import (
+    OutputDecision,
+    decide_output,
+    is_dangerous_output,
+)
 from backend.schemas.candidate import CandidateAction
 from backend.schemas.pipeline import PipelineDef
-from backend.application.memory_service import MemoryService
-from backend.application.pipeline.context import PipelineContext, NodeResult
-from backend.application.pipeline.registry import NodeExecutorRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +73,15 @@ def _is_scaffold_placeholder(path: str | None, content: str) -> bool:
     if not path or not content.strip():
         return False
 
+    # Scaffold placeholders are always short (under 200 chars)
+    if len(content.strip()) > 200:
+        return False
+
     normalized_path = path.replace("\\", "/").rsplit("/", 1)[-1]
     stripped = content.strip()
     placeholder_markers = {
         "style-guide.md": ("# 文风指南", "在此描述写作风格"),
-        "outline.md": ("# 大纲", "在此编写故事大纲"),
+        "outline.md": ("大纲", "在此编写故事大纲"),
         "story-state.md": ("# 故事状态", "## 主角状态", "## 势力关系", "## 伏笔追踪", "## 主线进度"),
     }
     markers = placeholder_markers.get(normalized_path)
@@ -263,7 +271,7 @@ class PipelineRunner:
             data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
             return PipelineDef(**data)
         except Exception as e:
-            raise PipelineError(f"加载管线定义失败 {name}: {e}")
+            raise PipelineError(f"加载管线定义失败 {name}: {e}") from e
 
     def list_pipelines(self) -> list[PipelineDef]:
         """列出所有可用管线（系统预置 + 用户自定义）"""
@@ -691,7 +699,7 @@ class PipelineRunner:
                 )
                 file_has_content = _has_substantive_content(target_file, content)
             except Exception:
-                pass
+                logger.debug("文件内容检查失败", exc_info=True)
 
         decision = decide_output(
             action=pipeline_name,
@@ -720,9 +728,12 @@ class PipelineRunner:
         return _is_scene(path)
 
     async def _update_after_generation(self, project_id: str, target_file: str, content: str, original_content: str = "") -> None:
-        # — 更新 recent-context.md（委托 MemoryService）—
-        structured_summary = self.memory_service.build_scene_memory_prompt_output(target_file, content)
-        await self.memory_service.append_scene_memory(project_id, target_file, structured_summary)
+        # — 更新 recent-context.md（仅对场景文件）—
+        # 场景文件的 recent-context 追加由专门的场景记忆机制处理，
+        # 避免为非场景文件（如 style-guide.md, 书名与创意.md）生成无意义的摘要。
+        if "/sec-" in target_file:
+            structured_summary = self.memory_service.build_scene_memory_prompt_output(target_file, content)
+            await self.memory_service.append_scene_memory(project_id, target_file, structured_summary)
 
         # — 创建修改日志（仅当内容有变化且目标文件是章节文件） —
         if original_content and content != original_content and "/sec-" in target_file:
@@ -784,9 +795,7 @@ class PipelineRunner:
                         elif item.name == "ch-meta.json":
                             watched_files.append(f"{project_id}/{chapter_path}/ch-meta.json")
         except Exception:
-            pass
-
-        # 获取所有文件的修改时间
+            logger.debug("构建缓存键：读取文件元数据失败", exc_info=True)
         mtimes = []
         for file_path in watched_files:
             try:
@@ -922,7 +931,7 @@ class PipelineRunner:
                 enc = tiktoken.get_encoding("cl100k_base")
                 return len(enc.encode(text))
             except Exception:
-                pass
+                logger.debug("tiktoken 编码失败，回退到字符估算", exc_info=True)
         # 回退：字符估算
         from backend.utils.token_utils import estimate_tokens_fallback
         return estimate_tokens_fallback(text)

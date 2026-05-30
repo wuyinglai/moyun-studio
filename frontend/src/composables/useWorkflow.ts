@@ -563,6 +563,13 @@ export function useWorkflow() {
     story_state_length: number
     recent_context_length: number
     last_updated: number | null
+    story_engine_exists: boolean
+    story_engine_length: number
+    story_engine_mtime: number | null
+    style_guide_exists: boolean
+    style_guide_length: number
+    style_guide_mtime: number | null
+    recent_context_scene_limit: number
   }
 
   async function getMemoryStatus(projectId: string): Promise<MemoryStatus | null> {

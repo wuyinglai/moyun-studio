@@ -17,8 +17,8 @@ function createBackendSnapshot(projectId: string, filePath: string, label?: stri
   api.post(API_ROUTES.snapshot(projectId), {
     file_path: filePath,
     label: label || null,
-  }).catch(() => {
-    // 快照创建失败不应影响编辑体验。
+  }).catch((err: unknown) => {
+    console.error('快照创建失败:', err instanceof Error ? err.message : err)
   })
 }
 
@@ -30,8 +30,8 @@ function createRevisionLog(projectId: string, filePath: string, before: string, 
     description: '自动保存',
     content_before: before,
     content_after: after,
-  }).catch(() => {
-    // 修改日志不应阻断保存。
+  }).catch((err: unknown) => {
+    console.error('修改日志创建失败:', err instanceof Error ? err.message : err)
   })
 }
 

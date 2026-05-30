@@ -97,6 +97,23 @@ async function installRightPanelMocks(page: Page) {
       await ok({})
     } else if (path.startsWith('/prompts/') && method === 'GET') {
       await ok('')
+    } else if (/^\/memory\/status\//.test(path) && method === 'GET') {
+      await ok({
+        project_id: projectId,
+        story_state_exists: true,
+        recent_context_exists: true,
+        recent_entries_count: 3,
+        story_state_length: 1024,
+        recent_context_length: 2048,
+        last_updated: Date.now() / 1000,
+        story_engine_exists: true,
+        story_engine_length: 512,
+        story_engine_mtime: Date.now() / 1000,
+        style_guide_exists: true,
+        style_guide_length: 768,
+        style_guide_mtime: Date.now() / 1000,
+        recent_context_scene_limit: 15,
+      })
     } else {
       await ok({})
     }
@@ -112,9 +129,9 @@ test.describe('right panel tabs', () => {
     await dismissViteOverlay(page)
 
     const tabs = page.locator('.right-panel .panel-tab')
-    await expect(tabs).toHaveCount(9, { timeout: 10000 })
+    await expect(tabs).toHaveCount(10, { timeout: 10000 })
 
-    for (let index = 0; index < 9; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       await tabs.nth(index).click()
       await expect(tabs.nth(index)).toHaveClass(/active/)
       await expect(page.locator('.right-panel > .panel-content')).toBeVisible()

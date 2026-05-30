@@ -400,7 +400,9 @@ def _quality_one_line(summary: str, action: str) -> str:
 
 
 def _needs_quality_repair(review) -> bool:
-    scores = review.scores.model_dump() if review and review.scores else {}
+    if not review:
+        return False
+    scores = review.scores.model_dump() if review.scores else {}
     values = [v for v in scores.values() if isinstance(v, int)]
     avg = sum(values) / len(values) if values else 10
     has_serious_issue = any(issue.severity in ("critical", "major") for issue in review.issues)
@@ -709,14 +711,14 @@ async def _generate_chapter_plan(
         if not _is_blank_chapter(existing_plan):
             return existing_plan.strip()
     except Exception:
-        pass
+        logger.debug("读取已有章规划失败", exc_info=True)
     ch_title = ""
     try:
         meta_raw, _, _ = await file_service.read_file(f"{project_id}/{meta_path}")
         ch_meta = json.loads(meta_raw)
         ch_title = ch_meta.get("title", "")
     except Exception:
-        pass
+        logger.debug("读取章元数据失败", exc_info=True)
 
     prompt = "\n".join([
         "你是一位擅长规划爽文的编辑。请为下一章写一份章规划（200 字以内）。",
@@ -751,8 +753,7 @@ async def _generate_chapter_plan(
         await asyncio.to_thread(plan_dir.mkdir, parents=True, exist_ok=True)
         await file_service.write_file(plan_path, content)
     except Exception:
-        pass
-    return content
+        logger.debug("写入章规划文件失败", exc_info=True)
 
 
 async def _generate_ideas_via_llm(
@@ -761,7 +762,7 @@ async def _generate_ideas_via_llm(
 ) -> list[LiteIdeaCard] | None:
     """用 LLM 动态生成 5 张开局爽文卡，失败返回 None"""
     try:
-        llm_cfg = load_llm_config_from_workspace(settings)
+        llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
         svc = LLMService.from_workspace_config(llm_cfg)
         prompt = "\n".join([
             "你是一位网文爆款策划编辑。请为爽文模式设计5张不同的开局卡，每张对应一个题材。",
@@ -921,7 +922,7 @@ async def generate_next_options(
 
     cards = _fallback_next_cards(next_label, context_content, recent_context)
     try:
-        llm_cfg = load_llm_config_from_workspace(settings)
+        llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
         svc = LLMService.from_workspace_config(llm_cfg)
         prompt = "\n".join([
             "你是爽文连载编辑。请基于当前正文和故事状态，为下一节生成3张不同方向的爽点卡。",
@@ -1048,7 +1049,7 @@ async def write_lite_next(
         "pending_foreshadowing": pending_foreshadowing,
     })
 
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     svc = LLMService.from_workspace_config(llm_cfg)
     prefs_text = _prefs_to_text(req.prefs)
     used_fallback = False
@@ -1084,7 +1085,7 @@ async def write_lite_next(
                 quality.perform_review(req.project_id, target_file, req.selected_card.title),
                 timeout=75,
             )
-            quality.save_review_result(req.project_id, target_file, str(uuid.uuid4())[:8], review)
+            await asyncio.to_thread(quality.save_review_result, req.project_id, target_file, str(uuid.uuid4())[:8], review)
             quality_summary = _quality_one_line(review.summary, req.action)
             if _needs_quality_repair(review):
                 repair_goal = "\n".join([
@@ -1258,7 +1259,7 @@ async def write_lite_next_stream(
             "pending_foreshadowing": pending_foreshadowing,
             })
 
-            llm_cfg = load_llm_config_from_workspace(settings)
+            llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
             svc = LLMService.from_workspace_config(llm_cfg)
             content_parts: list[str] = []
             used_fallback = False
@@ -1303,7 +1304,7 @@ async def write_lite_next_stream(
                 try:
                     quality = QualityService(settings)
                     review = await quality.perform_review(req.project_id, target_file, req.selected_card.title)
-                    quality.save_review_result(req.project_id, target_file, str(uuid.uuid4())[:8], review)
+                    await asyncio.to_thread(quality.save_review_result, req.project_id, target_file, str(uuid.uuid4())[:8], review)
                 except Exception as e:
                     logger.warning("爽文模式后台质量审查失败: %s", e)
 

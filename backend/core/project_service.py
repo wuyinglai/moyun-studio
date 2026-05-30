@@ -81,6 +81,7 @@ class ProjectService:
         try:
             return datetime.fromisoformat(s)
         except Exception:
+            logger.debug("日期解析失败: %s", s, exc_info=True)
             return datetime.now(timezone.utc)
 
     def recalculate_stats(self, project_dir: Path) -> dict:
@@ -119,7 +120,7 @@ class ProjectService:
                     try:
                         ch_meta = json.loads(ch_meta_file.read_text(encoding="utf-8"))
                     except Exception:
-                        pass
+                        logger.debug("读取 ch-meta.json 失败: %s", ch_meta_file, exc_info=True)
 
                 # 废弃章不计入统计
                 if ch_meta.get("status") == "discarded":
@@ -134,7 +135,7 @@ class ProjectService:
                             completed_sections += 1
                             total_words += wc
                     except Exception:
-                        pass
+                        logger.debug("读取 sec 文件失败: %s", sec_file, exc_info=True)
 
         return {
             "total_sections": total_sections,
@@ -235,4 +236,4 @@ class ProjectService:
         try:
             shutil.rmtree(project_dir)
         except Exception as e:
-            raise ProjectError(f"删除项目失败: {e!s}")
+            raise ProjectError(f"删除项目失败: {e!s}") from e

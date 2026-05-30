@@ -8,6 +8,7 @@
   GET  /api/tasks            获取任务队列状态
 """
 
+import asyncio
 from collections.abc import AsyncGenerator
 import json
 import logging
@@ -104,7 +105,7 @@ async def chat(
                 settings.projects_path,
                 max_file_write_size=settings.max_file_write_size,
             )
-            llm_cfg = load_llm_config_from_workspace(settings)
+            llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
             svc = LLMService.from_workspace_config(llm_cfg)
             runner = PipelineRunner(settings.prompts_path, svc, file_service, system_prompts_path=settings.system_prompts_path)
 

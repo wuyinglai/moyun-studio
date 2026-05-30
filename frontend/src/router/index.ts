@@ -17,6 +17,20 @@ const routes: RouteRecordRaw[] = [
     name: 'home',
     component: AppLayout,
     children: [],
+    beforeEnter: async () => {
+      const projectStore = useProjectStore()
+      const fileStore = useFileStore()
+      const projectId = projectStore.currentProject?.id
+      if (projectId) {
+        try {
+          await projectStore.openProject(projectId)
+          await fileStore.loadTree(projectId)
+        } catch {
+          // 项目可能已被删除或后端不可用，清除过期数据
+          projectStore.closeProject()
+        }
+      }
+    },
   },
   {
     path: '/project/:projectId',

@@ -62,7 +62,7 @@ async def generate_book_idea(
 请直接返回JSON，不要添加任何前缀或解释。"""
 
     try:
-        llm_cfg = load_llm_config_from_workspace(settings)
+        llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
         svc = LLMService.from_workspace_config(llm_cfg)
 
         logger.info("Wizard LLM配置", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": svc.config.model, "has_key": bool(llm_cfg.get("apiKey"))})
@@ -124,7 +124,7 @@ async def generate_outline(
 """
 
     try:
-        llm_cfg = load_llm_config_from_workspace(settings)
+        llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
         svc = LLMService.from_workspace_config(llm_cfg)
 
         logger.info("Wizard LLM配置(大纲)", extra={"api_type": llm_cfg.get("apiType", "openai"), "model": svc.config.model, "has_key": bool(llm_cfg.get("apiKey"))})

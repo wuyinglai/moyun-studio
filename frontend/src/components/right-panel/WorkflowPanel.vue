@@ -7,6 +7,7 @@
         <div class="header-actions">
           <button
             class="btn-icon"
+            aria-label="刷新工作流列表"
             :disabled="isRunning"
             title="刷新"
             @click="refresh"
@@ -15,6 +16,7 @@
           </button>
           <button
             class="btn-icon"
+            aria-label="新建工作流"
             title="新建"
             @click="startNew"
           >
@@ -55,6 +57,7 @@
           <div class="wf-card-actions">
             <button
               class="btn-action"
+              aria-label="编辑工作流"
               title="编辑"
               @click="editWorkflow(wf.name)"
             >
@@ -62,6 +65,7 @@
             </button>
             <button
               class="btn-action btn-action--del"
+              aria-label="删除工作流"
               title="删除"
               @click="handleDelete(wf.name)"
             >
@@ -259,6 +263,7 @@
           <button
             v-if="!isRunning && !hasRun"
             class="btn-run"
+            aria-label="运行工作流"
             @click="handleRun"
           >
             <i class="fa-solid fa-play" /> 运行
@@ -266,6 +271,7 @@
           <button
             v-if="isRunning && !isPaused"
             class="btn-stop"
+            aria-label="停止工作流"
             @click="handleStop"
           >
             <i class="fa-solid fa-stop" /> 停止
@@ -273,12 +279,14 @@
           <button
             v-if="hasRun && !isRunning && !isPaused"
             class="btn-run"
+            aria-label="重新运行工作流"
             @click="handleRunAgain"
           >
             <i class="fa-solid fa-rotate" /> 重新运行
           </button>
           <button
             class="btn-ghost"
+            aria-label="编辑工作流"
             title="编辑"
             @click="editWorkflow(selectedName!)"
           >
@@ -519,7 +527,7 @@ function initSortable() {
     animation: 150,
     easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
     ghostClass: 'step-dragging',
-    onEnd: (evt: any) => {
+    onEnd: (evt: { oldIndex?: number; newIndex?: number }) => {
       const { oldIndex, newIndex } = evt
       if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
       const item = editData.steps.splice(oldIndex, 1)[0]

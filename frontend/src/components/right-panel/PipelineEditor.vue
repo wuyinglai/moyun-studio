@@ -6,7 +6,7 @@
         v-model:value="selectedPipelineName"
         style="flex: 1; min-width: 0;"
         size="small"
-        @change="(val: any) => onPipelineSelect(String(val))"
+        @change="(val) => onPipelineSelect(String(val))"
       >
         <a-select-option
           v-for="p in pipelineStore.pipelines"
@@ -179,7 +179,7 @@ function initSortable() {
     animation: 150,
     easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
     ghostClass: 'step-dragging',
-    onEnd: (evt: any) => {
+    onEnd: (evt: { oldIndex?: number; newIndex?: number }) => {
       const { oldIndex, newIndex } = evt
       if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
       const item = localSteps.value.splice(oldIndex, 1)[0]

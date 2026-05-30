@@ -54,7 +54,7 @@ async def _load_config(settings: Settings) -> dict:
 
 async def _save_config(settings: Settings, data: dict) -> None:
     cf = _config_file(settings)
-    cf.parent.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(cf.parent.mkdir, parents=True, exist_ok=True)
     content = json.dumps(data, ensure_ascii=False, indent=2)
     await asyncio.to_thread(cf.write_text, content, encoding="utf-8")
 

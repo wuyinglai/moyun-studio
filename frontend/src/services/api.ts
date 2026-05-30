@@ -122,15 +122,26 @@ rawApi.interceptors.response.use(
  * 拦截器返回 T（已解包），而非 AxiosResponse<T>
  */
 export interface TypedApi {
-  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>
-  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>
-  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>
-  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
+  post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>
+  put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>
+  patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>
+  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
 }
 
-// 默认导出：类型正确的实例（拦截器已解包响应，返回 T 而非 AxiosResponse<T>）
-const api = rawApi as unknown as TypedApi
+// 包装原始 axios 实例，将拦截器解包后的响应类型化
+const api: TypedApi = {
+  get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> =>
+    rawApi.get(url, config) as unknown as Promise<T>,
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
+    rawApi.post(url, data, config) as unknown as Promise<T>,
+  put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
+    rawApi.put(url, data, config) as unknown as Promise<T>,
+  patch: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
+    rawApi.patch(url, data, config) as unknown as Promise<T>,
+  delete: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> =>
+    rawApi.delete(url, config) as unknown as Promise<T>,
+}
 export default api
 
 // 如需访问原始 AxiosResponse，可导入 rawApi

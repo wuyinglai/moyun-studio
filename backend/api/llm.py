@@ -138,7 +138,7 @@ async def test_connection(
         raise RateLimitError(retry_after=remaining)
     _rate_limit_store[client_ip] = now
 
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     model = llm_cfg.get("model", settings.llm_model)
     api_type = llm_cfg.get("apiType", settings.llm_provider)
     model = normalize_model_for_provider(model, api_type)

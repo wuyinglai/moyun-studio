@@ -71,7 +71,7 @@ export const useUIStore = defineStore('ui', () => {
 
   // G0104 主题变更同步到后端 .config.json
   watch(theme, (val) => {
-    saveRemoteConfig({ theme: val }).catch(() => {})
+    saveRemoteConfig({ theme: val }).catch((err: unknown) => { console.error('主题配置保存失败:', err instanceof Error ? err.message : err) })
   })
 
   function setTheme(t: Theme) {

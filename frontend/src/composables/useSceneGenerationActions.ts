@@ -52,6 +52,7 @@ export function useSceneGenerationActions() {
   // L2 自动连续生成状态
   const _l2StopRequested = ref(false)
   const _l2AutoRunning = ref(false)
+  // @ts-expect-error TS6133 — used in L2 auto chain via closure
   let _chainIndex = -1
   let _nextConfirmQueued: string | null = null
 
@@ -148,7 +149,7 @@ export function useSceneGenerationActions() {
             rightPanelStore.updatePrompt(json.data.content)
           }
         })
-        .catch(() => {})
+        .catch((err: unknown) => { console.error('Prompt 加载失败:', err instanceof Error ? err.message : err) })
     }
   }
 
@@ -197,7 +198,6 @@ export function useSceneGenerationActions() {
 
       // 从当前文件路径推导下一个文件和 pipeline
       const next = getNextInChain(filePath)
-      console.log('[handleGenerateNext] currentFilePath:', filePath, '→ next:', next)
       if (!next) {
         notification.warning('已无下一个可生成的文件')
         return
@@ -206,14 +206,12 @@ export function useSceneGenerationActions() {
       // 检查管线的 confirm 标记（第一步是否需用户确认）
       await pipelineStore.fetchPipelineDetail(next.pipeline)
       const needConfirm = pipelineStore.currentDetail?.steps?.[0]?.confirm !== false
-      console.log('[handleGenerateNext] needConfirm:', needConfirm)
 
       if (needConfirm) {
         // confirm=true：打开文件到编辑器供流式输出
         const node = { name: next.path.split('/').pop() || '', path: next.path, type: 'file' as const }
         fileStore.openFile(node)
         editorStore.setCurrentFile(next.path)
-        console.log('[handleGenerateNext] opened file:', next.path)
 
         // 加载新文件的 prompt 到右侧面板
         loadFilePrompt(projectId, next.path)
@@ -230,12 +228,10 @@ export function useSceneGenerationActions() {
 
       // confirm=false：后台静默完成，自动继续下一步
       if (!needConfirm) {
-        console.log('[handleGenerateNext] silent step done, _chainIndex:', _chainIndex, 'next path:', next.path)
         // 用 _chainIndex 直接推进到链中下一项（不依赖 editorStore.currentFilePath）
         const nextIdx = PROJECT_CHAIN.findIndex(item => item.path === next.path)
         if (nextIdx >= 0 && nextIdx < PROJECT_CHAIN.length - 1) {
           const nextNext = PROJECT_CHAIN[nextIdx + 1]
-          console.log('[handleGenerateNext] auto-advancing to:', nextNext)
           // 打开下一文件（confirm=true 的正常流程）
           const node2 = { name: nextNext.path.split('/').pop() || '', path: nextNext.path, type: 'file' as const }
           fileStore.openFile(node2)

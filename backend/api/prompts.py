@@ -76,7 +76,7 @@ async def list_all_prompt_versions(
     settings: Settings = Depends(get_settings),
 ):
     """列出 prompt 归档版本。"""
-    versions = list_archives(settings.prompts_path, pipeline_name=pipeline_name)
+    versions = await asyncio.to_thread(list_archives, settings.prompts_path, pipeline_name=pipeline_name)
     return ApiResponse.ok({"versions": versions, "total": len(versions)})
 
 

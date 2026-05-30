@@ -210,6 +210,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useFileStore } from '@/stores/file'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide } from '@/composables/useWorkflowGuide'
+import { getPipelineForFile } from '@/utils/promptTypes'
 import type { FileNode } from '@/stores/file'
 import { API_ROUTES, API_BASE } from '@/shared/api/routes'
 
@@ -430,8 +431,18 @@ async function handleSendPrompt() {
   const projectId = projectStore.currentProject?.id
   const filePath = editorStore.currentFilePath
   if (!projectId || !filePath || !localPrompt.value.trim()) return
-  // 将编辑框中的 prompt 作为 user_prompt 传入 generate 管线
-  await fileGen.generateToFile(projectId, filePath, localPrompt.value.trim(), {}, 'generate/continuation')
+  // 检查是否有专用管线（如 style-guide, blueprint 等），有则走管线
+  const pipelineName = getPipelineForFile(filePath)
+  if (pipelineName && pipelineName !== 'title') {
+    await fileGen.runPipeline(
+      projectId, filePath, pipelineName,
+      { user_prompt: localPrompt.value.trim() },
+      'write_scene',
+    )
+  } else {
+    // 无专用管线的普通文件：走 generate 管线
+    await fileGen.generateToFile(projectId, filePath, localPrompt.value.trim(), {}, 'generate/continuation')
+  }
 }
 
 // 管线运行时，将每次生成的 prompt 实时显示到编辑框

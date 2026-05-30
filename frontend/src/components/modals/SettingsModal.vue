@@ -303,7 +303,7 @@ watch(autoMode, (val) => {
     localStorage.setItem('moyun-auto-mode', val)
   } catch { /* localStorage 不可用时忽略 */ }
   // G0104 同步到后端 .config.json
-  saveRemoteConfig({ autoMode: val }).catch(() => {})
+  saveRemoteConfig({ autoMode: val }).catch((err: unknown) => { console.error('自动化配置保存失败:', err instanceof Error ? err.message : err) })
 })
 
 watch(visible, (val) => {

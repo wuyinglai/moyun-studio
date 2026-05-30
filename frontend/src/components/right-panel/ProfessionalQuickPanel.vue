@@ -126,6 +126,7 @@ import { useRightPanelStore } from '@/stores/rightPanel'
 import { parseScenePath, buildChapterPlanPath } from '@/modules/scene/scenePath'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useSceneGenerationActions } from '@/composables/useSceneGenerationActions'
+import { getPipelineForFile } from '@/utils/promptTypes'
 
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
@@ -275,12 +276,27 @@ async function handleContinue() {
     // 场景文件：使用统一的 writeCurrentScene 动作
     await runAction('生成当前场景', () => sceneActions.writeCurrentScene())
   } else {
-    // 非场景文件：使用原有的续写逻辑
-    await runAction('续写当前文件', () => generationStore.continueWriting(
-      projectId.value,
-      currentFilePath.value,
-      '请基于故事引擎和前文记忆，继续写当前文件；优先推进人物欲望、冲突和读者期待，不需要依赖大纲。',
-    ))
+    // 非场景文件：检查是否有专用管线（如 style-guide, blueprint 等）
+    const pipelineName = getPipelineForFile(currentFilePath.value)
+    if (pipelineName && pipelineName !== 'title') {
+      // 有专用管线：通过 runPipeline 调用（走正确的管线，不生成正文）
+      await runAction(`生成${currentFileLabel.value}`, () =>
+        fileGen.runPipeline(
+          projectId.value,
+          currentFilePath.value,
+          pipelineName,
+          {},
+          'write_scene',
+        ),
+      )
+    } else {
+      // 无专用管线的普通文件：使用原有的续写逻辑
+      await runAction('续写当前文件', () => generationStore.continueWriting(
+        projectId.value,
+        currentFilePath.value,
+        '请基于故事引擎和前文记忆，继续写当前文件；优先推进人物欲望、冲突和读者期待，不需要依赖大纲。',
+      ))
+    }
   }
 }
 

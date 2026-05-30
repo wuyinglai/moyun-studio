@@ -29,18 +29,19 @@ export interface GuideStepItem {
 
 /** 展开 loop 步骤为单个 pipeline 步骤列表 */
 async function expandLoopStep(projectId: string, step: GuideStepItem): Promise<GuideStepItem[]> {
-  const res = await api.get<{ workflow: any }>(`/workflows/${_workflowName.value}`)
-  const loopDef = res?.workflow?.steps?.find((s: any) => s.id === step.id)
+  type WfStep = { id: string; type: string; pipeline?: string; output?: string; steps?: WfStep[] }
+  const res = await api.get<{ workflow: { steps: WfStep[] } }>(`/workflows/${_workflowName.value}`)
+  const loopDef = res?.workflow?.steps?.find((s) => s.id === step.id)
   if (!loopDef?.steps) return []
 
-  const chaptersLoop = loopDef.steps.find((s: any) => s.type === 'loop')
+  const chaptersLoop = loopDef.steps.find((s) => s.type === 'loop')
   if (!chaptersLoop?.steps) return []
 
-  const genStep = chaptersLoop.steps.find((s: any) => s.type === 'pipeline' && s.pipeline)
+  const genStep = chaptersLoop.steps.find((s) => s.type === 'pipeline' && s.pipeline)
   if (!genStep) return []
 
-  const extractStep = chaptersLoop.steps.find((s: any) => s.pipeline === 'extract')
-  const storyStateStep = chaptersLoop.steps.find((s: any) => s.pipeline === 'story-state')
+  const extractStep = chaptersLoop.steps.find((s) => s.pipeline === 'extract')
+  const storyStateStep = chaptersLoop.steps.find((s) => s.pipeline === 'story-state')
 
   // 从项目 target_word_count 计算卷/章数量（和后端 wizard.py 算法一致）
   const projectStore = useProjectStore()
@@ -142,7 +143,7 @@ export function useWorkflowGuide() {
   /** 从后端加载工作流定义 */
   async function loadWorkflow(name = 'full-novel') {
     try {
-      const res = await api.get<{ workflow: any }>(`/workflows/${name}`)
+      const res = await api.get<{ workflow: { name: string; label: string; steps: Array<{ id: string; label: string; type: string; pipeline?: string; output?: string | null }> } }>(`/workflows/${name}`)
       const wf = res?.workflow
       if (!wf) {
         _error.value = '未找到工作流'
@@ -152,7 +153,7 @@ export function useWorkflowGuide() {
       _workflowName.value = wf.name
       _workflowLabel.value = wf.label
 
-      _steps.value = wf.steps.map((s: any) => ({
+      _steps.value = (wf.steps as Array<{ id: string; label: string; type: string; pipeline?: string; output?: string | null }>).map((s) => ({
         id: s.id,
         label: s.label,
         type: s.type,
@@ -192,7 +193,6 @@ export function useWorkflowGuide() {
 
     try {
       if (step.type === 'pipeline' && step.pipeline) {
-        console.log('[DIAG] runFromCurrent: stepId=', step.id, 'step.output=', step.output, 'filePath=', filePath, 'currentStepIndex=', _currentStepIndex.value)
         taskStore.addLog('info', `执行: ${step.label}`)
         taskStore.addTask(wfTaskId, wfTaskName)
         taskStore.startTask(wfTaskId)

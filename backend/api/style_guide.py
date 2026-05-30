@@ -5,6 +5,7 @@
   POST /api/style-guide/{project_id}  保存文风指南内容
 """
 
+import asyncio
 from datetime import datetime
 import json
 import logging
@@ -119,7 +120,7 @@ async def generate_style_guide(
 
     # 调用 LLM
     prompt = _GENERATE_PROMPT.format(genre=genre, theme=theme, tone=tone, writing_style=writing_style)
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     svc = LLMService(llm_cfg)
     messages = [{"role": "user", "content": prompt}]
     try:

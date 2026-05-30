@@ -167,7 +167,7 @@ function createEditor(content: string) {
       history(),
       markdown(),
       moyunTheme,
-      keymap.of([...defaultKeymap, ...historyKeymap] as unknown as import('@codemirror/view').KeyBinding[]),
+      keymap.of([...defaultKeymap, ...historyKeymap]),
       semanticHighlight(),
       updateListener,
       EditorView.lineWrapping,

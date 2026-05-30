@@ -75,6 +75,8 @@ import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
+import { useFileGeneration } from '@/composables/useFileGeneration'
+import { getPipelineForFile } from '@/utils/promptTypes'
 import ChatMessages from './ChatMessages.vue'
 import ChatInput from './ChatInput.vue'
 
@@ -142,6 +144,17 @@ async function handleAIContinue() {
   const filePath = fileStore.currentFile?.path
   if (!projectId || !filePath) {
     notification.warning('请先打开项目和文件')
+    return
+  }
+  // 管线映射文件走专用管线，不走 generate/continuation
+  const pipelineName = getPipelineForFile(filePath)
+  if (pipelineName && pipelineName !== 'title') {
+    const fileGen = useFileGeneration()
+    try {
+      await fileGen.runPipeline(projectId, filePath, pipelineName, {}, 'write_scene')
+    } catch {
+      notification.error('AI 生成失败')
+    }
     return
   }
   try {

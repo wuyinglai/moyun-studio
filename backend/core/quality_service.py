@@ -92,7 +92,7 @@ class QualityService:
                 try:
                     parts.append(await asyncio.to_thread(f.read_text, encoding="utf-8"))
                 except Exception:
-                    pass
+                    logger.debug("读取审查结果失败", exc_info=True)
             if parts:
                 characters_text = "\n---\n".join(parts)
 

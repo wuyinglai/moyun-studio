@@ -4,6 +4,7 @@ import { useFileStore } from '@/stores/file'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { useNotificationStore } from '@/stores/notification'
 import { API_ROUTES } from '@/shared/api/routes'
+import { getPipelineForFile } from '@/utils/promptTypes'
 
 // Module-level singleton refs -- shared across all consumers
 const _isGenerating = ref(false)
@@ -50,6 +51,14 @@ export function useFileGeneration() {
     promptType?: string,
   ) {
     if (_isGenerating.value) return
+
+    // 管线映射文件不应走 generate/continuation，应使用 runPipeline()
+    const pipelineForFile = getPipelineForFile(filePath)
+    if (pipelineForFile && pipelineForFile !== 'title') {
+      const notification = useNotificationStore()
+      notification.error(`该文件属于 ${pipelineForFile} 管线，不支持直接生成。请使用专用管线。`)
+      return
+    }
 
     // 检测并发写入风险
     const fileStore = useFileStore()

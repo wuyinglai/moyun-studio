@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
@@ -36,14 +37,14 @@ router = APIRouter(tags=["workflow"])
 _active_stop_events: dict[str, asyncio.Event] = {}
 
 
-def _build_runner(settings: Settings) -> WorkflowRunner:
+async def _build_runner(settings: Settings) -> WorkflowRunner:
     """构建 WorkflowRunner 实例"""
     workflows_path = settings.workspace_path / "workflows"
     file_service = FileService(
         settings.projects_path,
         max_file_write_size=settings.max_file_write_size,
     )
-    llm_cfg = load_llm_config_from_workspace(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
     return WorkflowRunner(workflows_path, settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
@@ -68,7 +69,7 @@ async def list_workflows(
     settings: Settings = Depends(get_settings),
 ):
     """获取所有可用工作流"""
-    runner = _build_runner(settings)
+    runner = await _build_runner(settings)
     workflows = await asyncio.to_thread(runner.list_workflows)
     result = [
         {
@@ -89,7 +90,7 @@ async def get_workflow(
     settings: Settings = Depends(get_settings),
 ):
     """获取工作流详情"""
-    runner = _build_runner(settings)
+    runner = await _build_runner(settings)
     try:
         wf = await asyncio.to_thread(runner.load_workflow, name)
     except WorkflowError:
@@ -129,13 +130,13 @@ async def save_workflow(
     settings: Settings = Depends(get_settings),
 ):
     """保存（创建或更新）工作流"""
-    runner = _build_runner(settings)
+    runner = await _build_runner(settings)
     try:
         wf = await asyncio.to_thread(runner.save_workflow, req)
         return ApiResponse.ok({"workflow": {"name": wf.name, "label": wf.label}})
     except WorkflowError as e:
         from backend.core.exceptions import MoyunException
-        raise MoyunException(code="WORKFLOW_ERROR", message=str(e))
+        raise MoyunException(code="WORKFLOW_ERROR", message=str(e)) from e
 
 
 @router.delete("/workflows/{name}")
@@ -144,7 +145,7 @@ async def delete_workflow(
     settings: Settings = Depends(get_settings),
 ):
     """删除工作流"""
-    runner = _build_runner(settings)
+    runner = await _build_runner(settings)
     try:
         result = await asyncio.to_thread(runner.delete_workflow, name)
         return ApiResponse.ok({
@@ -171,7 +172,7 @@ async def run_workflow(
         from backend.core.exceptions import ProjectNotFoundError
         raise ProjectNotFoundError(req.project_id)
 
-    runner = _build_runner(settings)
+    runner = await _build_runner(settings)
 
     # 创建 stop_event 并注册
     stop_event = asyncio.Event()
@@ -194,7 +195,7 @@ async def run_workflow(
                         try:
                             await event_bus.publish("workflow-" + ev_type.replace("_", "-"), json.loads(event["data"]))
                         except Exception:
-                            pass
+                            logger.debug("SSE事件发布失败", exc_info=True)
 
                 # 运行完成/停止后清理
                 if event.get("event") in ("workflow_done", "workflow_error", "workflow_stopped"):
@@ -217,7 +218,7 @@ async def resume_workflow(
 ):
     """从暂停状态恢复工作流（SSE 流式输出进度）"""
     event_bus = getattr(request.app.state, "event_bus", None)
-    runner = _build_runner(settings)
+    runner = await _build_runner(settings)
 
     # 创建 stop_event 并注册
     stop_event = asyncio.Event()
@@ -239,7 +240,7 @@ async def resume_workflow(
                         try:
                             await event_bus.publish("workflow-" + ev_type.replace("_", "-"), json.loads(event["data"]))
                         except Exception:
-                            pass
+                            logger.debug("SSE事件发布失败", exc_info=True)
 
                 # 运行完成/停止后清理
                 if event.get("event") in ("workflow_done", "workflow_error", "workflow_stopped"):
@@ -271,7 +272,7 @@ async def get_workflow_run_status(
     settings: Settings = Depends(get_settings),
 ):
     """查询工作流执行状态（断点续跑用）"""
-    runner = _build_runner(settings)
+    runner = await _build_runner(settings)
     state = await asyncio.to_thread(runner._load_state, run_id)
     if not state:
         from backend.core.exceptions import ResourceNotFoundError
@@ -461,6 +462,28 @@ async def get_memory_status(
     # 统计近期上下文中最近的条目数
     recent_entries = recent_context.count("## ") if recent_context else 0
 
+    # 检查 story-engine.md
+    story_engine_exists = False
+    story_engine_length = 0
+    story_engine_mtime: Optional[float] = None
+    story_engine_rel = f"{project_id}/story-engine.md"
+    if await fs.exists(story_engine_rel):
+        story_engine_exists = True
+        content, _, mtime = await fs.read_file(story_engine_rel)
+        story_engine_length = len(content)
+        story_engine_mtime = mtime
+
+    # 检查 style-guide.md
+    style_guide_exists = False
+    style_guide_length = 0
+    style_guide_mtime: Optional[float] = None
+    style_guide_rel = f"{project_id}/style-guide.md"
+    if await fs.exists(style_guide_rel):
+        style_guide_exists = True
+        content, _, mtime = await fs.read_file(style_guide_rel)
+        style_guide_length = len(content)
+        style_guide_mtime = mtime
+
     return ApiResponse.ok({
         "project_id": project_id,
         "story_state_exists": story_state_exists,
@@ -469,4 +492,11 @@ async def get_memory_status(
         "story_state_length": len(story_state),
         "recent_context_length": len(recent_context),
         "last_updated": last_updated,
+        "story_engine_exists": story_engine_exists,
+        "story_engine_length": story_engine_length,
+        "story_engine_mtime": story_engine_mtime,
+        "style_guide_exists": style_guide_exists,
+        "style_guide_length": style_guide_length,
+        "style_guide_mtime": style_guide_mtime,
+        "recent_context_scene_limit": settings.recent_context_scene_limit,
     })

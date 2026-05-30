@@ -47,9 +47,9 @@ def _backup_dir(project_dir: Path) -> Path:
     return project_dir / "backup"
 
 
-def _ensure_backup_dir(project_dir: Path) -> Path:
+async def _ensure_backup_dir(project_dir: Path) -> Path:
     backup_dir = _backup_dir(project_dir)
-    backup_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(backup_dir.mkdir, parents=True, exist_ok=True)
     return backup_dir
 
 
@@ -161,7 +161,7 @@ async def create_backup(
         raise ProjectNotFoundError(req.project_id)
 
     backup_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
-    backup_path = _ensure_backup_dir(project_dir) / backup_id
+    backup_path = (await _ensure_backup_dir(project_dir)) / backup_id
     await asyncio.to_thread(backup_path.mkdir, parents=True, exist_ok=True)
     await asyncio.to_thread(_create_backup_snapshot, project_dir, backup_path)
 

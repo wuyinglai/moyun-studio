@@ -4,6 +4,7 @@
 使用依赖注入来解耦FileService。
 """
 
+import logging
 from pathlib import Path
 import re
 from typing import Any
@@ -14,6 +15,8 @@ except ImportError:
     tiktoken = None
 
 from jinja2 import Environment, FileSystemLoader
+
+logger = logging.getLogger(__name__)
 
 
 class PromptEngine:
@@ -143,7 +146,7 @@ class PromptEngine:
                 enc = tiktoken.encoding_for_model("gpt-4")
                 return len(enc.encode(text))
             except Exception:
-                pass
+                logger.debug("加载自定义过滤器失败", exc_info=True)
         from backend.utils.token_utils import estimate_tokens_fallback
         return estimate_tokens_fallback(text)
 

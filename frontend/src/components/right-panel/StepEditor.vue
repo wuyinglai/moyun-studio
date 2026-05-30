@@ -7,6 +7,7 @@
       <div class="step-drag-handle">
         <button
           class="btn-icon-sm"
+          aria-label="上移步骤"
           :disabled="!canMoveUp"
           title="上移"
           @click="$emit('move-up')"
@@ -15,6 +16,7 @@
         </button>
         <button
           class="btn-icon-sm"
+          aria-label="下移步骤"
           :disabled="!canMoveDown"
           title="下移"
           @click="$emit('move-down')"
@@ -49,6 +51,7 @@
       </select>
       <button
         class="btn-icon-sm btn-remove"
+        aria-label="删除步骤"
         title="删除"
         @click="$emit('remove')"
       >
@@ -129,6 +132,7 @@
             <span class="section-label">子步骤</span>
             <button
               class="btn-icon"
+              aria-label="添加子步骤"
               @click="addSubStep"
             >
               <i class="fa-solid fa-plus" />
@@ -142,7 +146,7 @@
             :index="si"
             :can-move-up="si > 0"
             :can-move-down="si < (local.steps?.length || 0) - 1"
-            @update="(s: any) => updateSubStep(si, s)"
+            @update="(s: WorkflowStep) => updateSubStep(si, s)"
             @remove="removeSubStep(si)"
             @move-up="moveSubStep(si, -1)"
             @move-down="moveSubStep(si, 1)"

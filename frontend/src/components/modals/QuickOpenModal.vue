@@ -48,7 +48,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Modal as AModal, InputSearch as AInputSearch } from 'ant-design-vue'
 import { useUIStore } from '@/stores/ui'
 import { useProjectStore } from '@/stores/project'
-import { useFileStore } from '@/stores/file'
+import { useFileStore, type FileNode } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 
 const uiStore = useUIStore()
@@ -86,7 +86,7 @@ async function loadFiles() {
   }
 }
 
-function _flattenTree(nodes: any[], prefix: string): FileItem[] {
+function _flattenTree(nodes: FileNode[], prefix: string): FileItem[] {
   const result: FileItem[] = []
   for (const node of nodes) {
     const path = node.path || (prefix ? `${prefix}/${node.name}` : node.name)

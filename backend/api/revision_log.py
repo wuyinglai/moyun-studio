@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from backend.config import Settings, get_settings
-from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError
+from backend.core.exceptions import ProjectNotFoundError, ResourceNotFoundError, ValidationError
 from backend.schemas.common import ApiResponse
 
 logger = logging.getLogger(__name__)
@@ -63,12 +63,16 @@ def _get_revision_log_dir(
     chapter_path: str,
     settings: Settings
 ) -> Path:
-    """获取修改日志目录路径"""
-    parts = chapter_path.split("/")
-    if len(parts) >= 2:
-        chapter_dir = "/".join(parts[:-1])
-    else:
-        chapter_dir = chapter_path
+    """获取修改日志目录路径
+
+    chapter_path 必须是章节目录路径（如 chapters/vol-01/ch-001），
+    不支持纯文件名（如 style-guide.md），防止将文件当作目录处理。
+    """
+    parts = chapter_path.replace("\\", "/").split("/")
+    # 单段路径（纯文件名）不是合法的章节目录路径
+    if len(parts) < 2:
+        raise ValidationError(f"chapter_path 必须是章节目录路径，不允许纯文件名: {chapter_path}")
+    chapter_dir = "/".join(parts[:-1])
 
     return settings.projects_path / project_id / chapter_dir / "revision-log"
 

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
-import { API_ROUTES } from '@/shared/api/routes'
+import { API_ROUTES, type FileContentResponse } from '@/shared/api/routes'
 
 export const useStyleGuideStore = defineStore('styleGuide', () => {
   const content = ref('')
@@ -10,7 +10,7 @@ export const useStyleGuideStore = defineStore('styleGuide', () => {
   async function load(projectId: string) {
     isLoading.value = true
     try {
-      const data = await api.get(API_ROUTES.file, {
+      const data = await api.get<FileContentResponse>(API_ROUTES.file, {
         params: { project_id: projectId, path: 'style-guide.md' },
       })
       content.value = data?.content || ''
