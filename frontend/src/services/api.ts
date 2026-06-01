@@ -80,6 +80,9 @@ function logErrorDetail(err: unknown) {
 // 格式2：直接返回数据（数组/对象/字符串等）
 rawApi.interceptors.response.use(
   (response) => {
+    if (!response || typeof response !== 'object' || !('data' in response)) {
+      return response
+    }
     const body = response.data
     if (body && typeof body === 'object' && 'success' in body) {
       if (!body.success) {
