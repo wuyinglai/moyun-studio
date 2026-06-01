@@ -209,6 +209,29 @@ class TestLLMService:
         svc = LLMService(config)
         assert svc.config is config
 
+    def test_from_workspace_config_custom_openai_compatible_base(self):
+        svc = LLMService.from_workspace_config({
+            "apiType": "custom",
+            "apiKey": "sk-test",
+            "apiBase": "https://apihub.agnes-ai.com/v1",
+            "model": "agnes-2.0-flash",
+        })
+
+        assert svc.config.provider == "openai"
+        assert svc.config.api_base == "https://apihub.agnes-ai.com/v1"
+        assert svc.config.model == "openai/agnes-2.0-flash"
+
+    def test_from_workspace_config_custom_non_openai_base_stays_custom(self):
+        svc = LLMService.from_workspace_config({
+            "apiType": "custom",
+            "apiKey": "sk-test",
+            "apiBase": "https://local.example.com/api",
+            "model": "local-model",
+        })
+
+        assert svc.config.provider == "custom"
+        assert svc.config.model == "local-model"
+
     def test_validate_config_with_api_key(self):
         config = LLMConfig(provider="openai", api_key="sk-test")
         svc = LLMService(config)

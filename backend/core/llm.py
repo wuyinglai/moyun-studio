@@ -107,6 +107,18 @@ def normalize_model_for_provider(model: str, api_type: str) -> str:
     return model
 
 
+def _is_openai_compatible_base_url(api_base: str | None) -> bool:
+    """Return True for custom providers that expose OpenAI-compatible /v1 APIs."""
+    if not api_base:
+        return False
+    normalized = api_base.rstrip("/").lower()
+    return (
+        normalized.endswith("/v1")
+        or "openai" in normalized
+        or "apihub.agnes-ai.com" in normalized
+    )
+
+
 def build_litellm_kwargs(llm_cfg: dict, model: str, messages: list, **kwargs) -> dict:
     """构建 litellm.acompletion() 的参数字典
 
@@ -276,13 +288,16 @@ class LLMService:
             model: 可选，覆盖模型名称
         """
         provider = config_dict.get("apiType", "openai")
+        api_base = config_dict.get("apiBase")
         model = model or config_dict.get("model", "gpt-4")
+        if provider == "custom" and _is_openai_compatible_base_url(api_base):
+            provider = "openai"
         model = normalize_model_for_provider(model, provider)
 
         config = LLMConfig(
             provider=provider,
             api_key=config_dict.get("apiKey"),
-            api_base=config_dict.get("apiBase"),
+            api_base=api_base,
             model=model,
         )
         return cls(config)

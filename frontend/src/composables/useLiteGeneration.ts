@@ -473,7 +473,10 @@ export function useLiteGeneration(deps: {
     await projectStore.openProject(projectId)
     await fileStore.loadTree(projectId)
     const { node: resume, hasWritten } = await findResumeChapter(projectId)
-    if (resume) await deps.openChapter(resume.path, { skipOptions: !hasWritten })
+    const hasActiveScene = deps.chapterFiles.value.some((node) => node.path === deps.currentFilePath.value)
+    if (resume && !hasActiveScene) {
+      await deps.openChapter(resume.path, { skipOptions: !hasWritten })
+    }
     if (resume && !hasWritten && !creating.value && isBlankChapter(deps.content.value)) {
       const openingCard = buildOpeningCardFromProject()
       nextTargetFile.value = resume.path
