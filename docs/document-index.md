@@ -49,6 +49,11 @@ Formal interface contracts that must be checked before cross-system changes:
 - [手动功能测试指南.md](手动功能测试指南.md) — Manual testing guide
 - [history/ux-audit-report-2026-05-14.md](history/ux-audit-report-2026-05-14.md) — UX audit report
 
+## Testing Docs
+
+- [testing/full-product-test-plan.md](testing/full-product-test-plan.md) - Product-level test matrix for Professional, Lite, Candidate, SSE, Memory, and LLM flows
+- [testing/e2e-human-flow-checklist.md](testing/e2e-human-flow-checklist.md) - Step-by-step human/AI browser testing checklist
+
 ## Archive
 
 Moved to [archive/](archive/). Do not rely on archived documents unless explicitly asked.
