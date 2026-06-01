@@ -165,7 +165,7 @@ def _story_engine_template(card: LiteIdeaCard, prefs_text: str) -> str:
 ## 场景直觉
 - 下一场景：选择能让人物正面碰撞、旁观者足够多、反馈足够快的场合。
 - 可碰撞人物：主角、直接羞辱者、旁观势力、潜在盟友或更高层对手。
-- 场景原则：每一节都要有明确行动、即时反馈、结尾钩子。
+- 场景原则：每个场景都要有明确行动、即时反馈、结尾钩子。
 
 ## 爽点账本
 - 已承诺爽点：{card.selling_point}
@@ -188,9 +188,9 @@ def _story_engine_template(card: LiteIdeaCard, prefs_text: str) -> str:
 - 期待边界：爽但不乱，胜利要有可感知的代价、证据或能力支撑。
 
 ## 阶段性目标
-- 当前 5-10 节目标：完成开局压迫到第一次漂亮反击，并抬出更高层级冲突。
+- 当前 5-10 个场景目标：完成开局压迫到第一次漂亮反击，并抬出更高层级冲突。
 - 完成标志：主角得到明确收益，旧秩序第一次松动。
-- 下一章规划触发：每完成 4 节，整理下一章 4 节方向。
+- 下一章规划触发：每完成 4 个场景，整理下一章 4 个场景方向。
 
 ## 用户口味
 {prefs_text}
@@ -338,7 +338,7 @@ def _next_section_path(current_file: str | None) -> str:
 
 def _section_label(file_path: str) -> str:
     vol, ch, sec = _path_parts(file_path)
-    return f"第{vol}卷 第{ch}章 第{sec}节"
+    return f"第{vol}卷 第{ch}章 第{sec}场景"
 
 
 def _ensure_section_heading(target_file: str, title: str, content: str) -> str:
@@ -383,7 +383,7 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
     for section_number in range(1, SECTIONS_PER_CHAPTER + 1):
         file_path = ch_dir / f"sec-{section_number:03d}.md"
         if not await asyncio.to_thread(file_path.exists):
-            await _write_text(file_path, f"# 第{volume_number}卷 第{chapter_number}章 {title} - 第{section_number}节\n\n")
+            await _write_text(file_path, f"# 第{volume_number}卷 第{chapter_number}章 {title} - 第{section_number}场景\n\n")
     return _section_path(volume_number, chapter_number, 1)
 
 
@@ -455,13 +455,29 @@ def _lite_stream_event(event: str, data: dict) -> dict:
     return {"event": event, "data": json.dumps(data, ensure_ascii=False)}
 
 
-def _parse_option_cards(raw: str, next_label: str) -> list[LiteNextOptionCard]:
+def _extract_json_payload(raw: str):
+    """Extract the first JSON object/array from occasionally chatty LLM output."""
     text = raw.strip()
     if "```json" in text:
         text = text.split("```json", 1)[1].split("```", 1)[0].strip()
     elif "```" in text:
         text = text.split("```", 1)[1].split("```", 1)[0].strip()
-    data = json.loads(text)
+
+    decoder = json.JSONDecoder()
+    for marker in ("[", "{"):
+        start = text.find(marker)
+        if start < 0:
+            continue
+        try:
+            data, _ = decoder.raw_decode(text[start:])
+            return data
+        except json.JSONDecodeError:
+            continue
+    return json.loads(text)
+
+
+def _parse_option_cards(raw: str, next_label: str) -> list[LiteNextOptionCard]:
+    data = _extract_json_payload(raw)
     if isinstance(data, dict):
         data = data.get("cards", [])
     cards: list[LiteNextOptionCard] = []
@@ -485,7 +501,7 @@ def _parse_option_cards(raw: str, next_label: str) -> list[LiteNextOptionCard]:
                 obstacle=obstacle[:90] or scene[:90],
                 payoff=payoff[:80],
                 hook=hook[:80],
-                advancement=advancement[:90] or "推动冲突升级，并让下一节有明确接力点。",
+                advancement=advancement[:90] or "推动冲突升级，并让下一场景有明确接力点。",
             ))
     return cards[:3]
 
@@ -502,7 +518,7 @@ def _fallback_next_cards(next_label: str, current_content: str, recent_context: 
     options = [
         ("当场反逼", f"对手借“{hint}”继续施压，把主角逼到众人面前。", "主角要当众守住尊严，并拿回被抢走的话语权。", "对手把旁观者和规矩都变成压力，逼主角低头认错。", "主角抓住对方话里的破绽，当众把主动权夺回来。", "幕后撑腰的人被迫露出一句关键口风。", "完成第一次正面反击，并把矛盾推向幕后人物。"),
         ("旧账翻面", "看似对主角不利的旧账，被对手拿来公开施压。", "主角要证明旧账另有隐情，洗掉眼前的污名。", "旧证据被对手抢先解释，旁观者暂时站在对面。", "主角顺势翻出被忽略的细节，让刚占上风的人反而失态。", "旧账牵出一个更大的交换条件。", "回收一条旧线索，同时制造新的利益交换。"),
-        ("战果藏钩", "冲突暂时收束，但旁观者开始重新站队。", "主角要把胜势落成实物奖励，而不是只赢口舌。", "奖励被人暗中设限，拿到它反而会引来更高层注意。", "主角拿到实在奖励，同时让羞辱者付出可见代价。", "奖励里藏着下一节必须打开的新线索。", "把本节爽点变成下一节冲突的燃料。"),
+        ("战果藏钩", "冲突暂时收束，但旁观者开始重新站队。", "主角要把胜势落成实物奖励，而不是只赢口舌。", "奖励被人暗中设限，拿到它反而会引来更高层注意。", "主角拿到实在奖励，同时让羞辱者付出可见代价。", "奖励里藏着下一场景必须打开的新线索。", "把本场景爽点变成下一场景冲突的燃料。"),
     ]
     return [
         LiteNextOptionCard(
@@ -564,13 +580,13 @@ async def _read_optional(file_service: FileService, project_id: str, rel_path: s
 
 
 async def _read_chapter_context(file_service: FileService, project_id: str, vol: int, ch: int, current_sec: int) -> str:
-    """读取当前章中所有已写的前序节内容，拼接为上下文，确保 LLM 感知前文。"""
+    """读取当前章中所有已写的前序场景内容，拼接为上下文，确保 LLM 感知前文。"""
     parts: list[str] = []
     for sec in range(1, current_sec):
         section_path = f"chapters/vol-{vol:02d}/ch-{ch:03d}/sec-{sec:03d}.md"
         content = await _read_optional(file_service, project_id, section_path)
         if content and not _is_blank_chapter(content):
-            parts.append(f"--- 第{sec}节 ---\n{content.strip()}")
+            parts.append(f"--- 第{sec}场景 ---\n{content.strip()}")
     if not parts:
         return ""
     return "\n\n".join(parts) + "\n\n"
@@ -598,13 +614,13 @@ async def _update_ch_meta(
     card_payoff: str,
     card_hook: str,
 ) -> None:
-    """写入一节完成后更新章节记忆和待回收伏笔。"""
+    """写入一个场景完成后更新章节记忆和待回收伏笔。"""
     ch_meta = await _read_ch_meta(file_service, project_id, vol, ch)
-    # 章节记忆：按节累积
+    # 章节记忆：按场景累积
     memory = ch_meta.get("memory", [])
     if isinstance(memory, str):
         memory = [] if not memory else [memory]
-    memory.append(f"第{sec}节「{card_title}」：{card_payoff}")
+    memory.append(f"第{sec}场景「{card_title}」：{card_payoff}")
     if len(memory) > 20:
         memory = memory[-20:]
     ch_meta["memory"] = memory
@@ -627,7 +643,7 @@ async def _next_writable_section_path(
     project_id: str,
     current_file: str | None,
 ) -> str:
-    """找到当前文件之后第一个空节，避免刷新后重复覆盖已写章节。"""
+    """找到当前文件之后第一个空场景，避免刷新后重复覆盖已写场景。"""
     candidate = _next_section_path(current_file)
     for _ in range(80):
         content = await _read_optional(file_service, project_id, candidate)
@@ -733,7 +749,7 @@ async def _generate_chapter_plan(
         "",
         "章规划格式：",
         "- 章名与核心冲突（一句话）",
-        "- 4 节梗概（每节 1 句，标注谁在什么场景做什么）",
+        "- 4 个场景梗概（每个场景 1 句，标注谁在什么场景做什么）",
         "- 本章必须兑现的爽点",
         "- 结尾钩子",
     ])
@@ -787,12 +803,7 @@ async def _generate_ideas_via_llm(
             max_tokens=2000,
             timeout=40,
         )
-        raw = raw.strip()
-        if "```json" in raw:
-            raw = raw.split("```json", 1)[1].split("```", 1)[0].strip()
-        elif "```" in raw:
-            raw = raw.split("```", 1)[1].split("```", 1)[0].strip()
-        data = json.loads(raw)
+        data = _extract_json_payload(raw)
         if isinstance(data, dict):
             data = data.get("cards", data.get("ideas", []))
         cards: list[LiteIdeaCard] = []
@@ -925,16 +936,16 @@ async def generate_next_options(
         llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
         svc = LLMService.from_workspace_config(llm_cfg)
         prompt = "\n".join([
-            "你是爽文连载编辑。请基于当前正文和故事状态，为下一节生成3张不同方向的爽点卡。",
+            "你是爽文连载编辑。请基于当前正文和故事状态，为下一场景生成3张不同方向的爽点卡。",
             "不要使用固定模板，不要重复“当众打脸/危机反杀/收获升级”这类泛化标题。",
             "每张卡必须贴合前文已经发生的角色、冲突、伏笔和读者期待。",
             "每张卡必须至少引用一个前文出现的人名、地点、物件、组织、称呼或伏笔。",
             "三张卡方向要明显不同：一张强硬反击，一张反转揭底，一张拿奖励并埋钩子；标题必须根据剧情改写，不要直接写这些模板名。",
             "不要写“围绕某某推进、保持快节奏、标准爽点”这类说明书句式。",
             "只返回 JSON 数组，每项包含 title, conflict_upgrade, protagonist_desire, obstacle, payoff, hook, advancement。",
-            "字段含义：conflict_upgrade=冲突升级，protagonist_desire=主角此刻想要什么，obstacle=谁/什么挡住他，payoff=爽点兑现，hook=结尾钩子，advancement=本节怎样推进故事。",
+            "字段含义：conflict_upgrade=冲突升级，protagonist_desire=主角此刻想要什么，obstacle=谁/什么挡住他，payoff=爽点兑现，hook=结尾钩子，advancement=本场景怎样推进故事。",
             "",
-            f"下一节：{next_label}",
+            f"下一场景：{next_label}",
             f"偏好：{_prefs_to_text(req.prefs)}",
             "当前正文或本章前文：",
             context_content[-2500:],
@@ -1077,7 +1088,7 @@ async def write_lite_next(
     if is_candidate:
         quality_summary = "候选稿已生成，确认满意后可采用替换原文。"
     elif used_fallback:
-        quality_summary = "模型生成超时，已先写入临时草稿；可点“重写这一章”补成正式正文。"
+        quality_summary = "模型生成超时，已先写入临时草稿；可点“重写当前场景”补成正式正文。"
     else:
         try:
             quality = QualityService(settings)
@@ -1131,7 +1142,7 @@ async def write_lite_next(
             recent_context.rstrip() + f"\n\n- {Path(target_file).parent.name}：{req.selected_card.title}，{req.selected_card.payoff}",
         )
 
-    # 完成第4节 → 整章写完，自动生成下一章章规划
+    # 完成第4场景 → 整章写完，自动生成下一章章规划
     chapter_plan_result = None
     if not is_candidate and _sec == SECTIONS_PER_CHAPTER:
         chapter_plan_result = await _generate_chapter_plan(
@@ -1153,7 +1164,7 @@ async def write_lite_next(
         quality_summary=quality_summary,
         story_engine_summary=_summarize_story_engine(updated_engine),
         chapter_plan=chapter_plan_result,
-    ), message="章节已生成")
+    ), message="场景已生成")
 
 
 @router.post("/lite/write-next-stream")
@@ -1298,7 +1309,7 @@ async def write_lite_next_stream(
                 # 更新章节记忆和待回收伏笔
                 await _update_ch_meta(file_service, req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
 
-            quality_summary = "候选稿已生成，确认满意后可采用替换原文。" if is_candidate else "模型生成超时，已先写入临时草稿；可点“重写这一章”补成正式正文。" if used_fallback else "正文已写入，审稿将在后台完成。"
+            quality_summary = "候选稿已生成，确认满意后可采用替换原文。" if is_candidate else "模型生成超时，已先写入临时草稿；可点“重写当前场景”补成正式正文。" if used_fallback else "正文已写入，审稿将在后台完成。"
 
             async def _review_in_background() -> None:
                 try:

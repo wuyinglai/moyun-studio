@@ -42,8 +42,12 @@ class PromptEngine:
 
         self.prompts_path = Path(prompts_path)
         self.file_service = file_service
+        system_prompts_path = Path(__file__).resolve().parents[2] / "prompts"
+        search_paths = [str(self.prompts_path)]
+        if system_prompts_path.exists() and system_prompts_path.resolve() != self.prompts_path.resolve():
+            search_paths.append(str(system_prompts_path))
         self.env = Environment(
-            loader=FileSystemLoader(str(self.prompts_path)),
+            loader=FileSystemLoader(search_paths),
             autoescape=False,
         )
 

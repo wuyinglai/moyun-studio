@@ -46,6 +46,11 @@ class TestPromptEngineLoadTemplate:
         with pytest.raises(Exception):  # jinja2 会抛 TemplateNotFound
             prompt_engine.load_template("nonexistent", "template")
 
+    def test_load_template_falls_back_to_system_prompts(self, tmp_path):
+        engine = PromptEngine(prompts_path=tmp_path / "empty-prompts", file_service=None)
+        template = engine.load_template("generate", "continuation")
+        assert template is not None
+
 
 class TestPromptEngineRender:
     """模板渲染测试"""
@@ -92,6 +97,24 @@ class TestPromptEngineRender:
     async def test_render_unknown_template(self, prompt_engine):
         with pytest.raises(Exception):
             await prompt_engine.render("generate/nonexistent", {})
+
+    @pytest.mark.asyncio
+    async def test_render_falls_back_to_system_prompts(self, tmp_path):
+        engine = PromptEngine(prompts_path=tmp_path / "empty-prompts", file_service=None)
+        result = await engine.render(
+            "generate/continuation",
+            {
+                "current_content": "前文",
+                "chapter_memory": "",
+                "continuation_goal": "写一个完整场景",
+                "story_state": "",
+                "style_guide": "",
+                "recent_context": "",
+                "pending_foreshadowing": "",
+            },
+        )
+        assert "前文" in result
+        assert "写一个完整场景" in result
 
 
 class TestPromptEngineReferenceResolution:

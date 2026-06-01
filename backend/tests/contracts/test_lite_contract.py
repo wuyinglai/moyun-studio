@@ -131,6 +131,35 @@ class TestLiteScenePathContract:
         assert info.chapter == 1
         assert info.scene == 3
 
+    def test_lite_section_label_uses_scene_wording(self):
+        from backend.api.lite import _section_label
+
+        assert _section_label("chapters/vol-01/ch-001/sec-003.md") == "第1卷 第1章 第3场景"
+
+    def test_lite_option_cards_parse_fenced_json_with_trailing_text(self):
+        from backend.api.lite import _parse_option_cards
+
+        raw = """```json
+[
+  {
+    "title": "当场反击",
+    "conflict_upgrade": "旧敌借前文线索继续施压",
+    "protagonist_desire": "主角要当众拿回主动权",
+    "obstacle": "旁观者暂时站在对面",
+    "payoff": "主角让对方当众露怯",
+    "hook": "后台人物被迫露面",
+    "advancement": "把冲突推向更高层"
+  }
+]
+```
+补充说明：以上 JSON 可直接使用。"""
+
+        cards = _parse_option_cards(raw, "第1卷 第1章 第2场景")
+
+        assert len(cards) == 1
+        assert cards[0].title == "当场反击"
+        assert "下一" + "节" not in cards[0].advancement
+
 
 class TestLiteWriteActionContract:
     """Lite 写入操作契约测试"""
