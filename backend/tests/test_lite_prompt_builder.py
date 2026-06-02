@@ -247,3 +247,98 @@ class TestLitePromptBuilder:
             assert content.count("X") == 2500
             # recent_context[-1500:] 应包含最后 1500 个 Y
             assert content.count("Y") == 1500
+
+    class TestFormatPreferences:
+        """测试 format_preferences 方法（Phase 3.4E 迁移自 _prefs_to_text）"""
+
+        def test_format_preferences_empty(self):
+            """空 genre_params 时输出完整 7 行结构"""
+            from backend.schemas.lite import LiteWritingPrefs
+
+            prefs = LiteWritingPrefs()
+            result = LitePromptBuilder.format_preferences(prefs)
+
+            lines = result.split("\n")
+            assert len(lines) == 7
+            assert lines[0] == "- 文风：热血"
+            assert lines[1] == "- 爽点强度：标准"
+            assert lines[2] == "- 节奏：快节奏"
+            assert lines[3] == "- 主角性格：张扬"
+            assert lines[4] == "- 喜欢的元素：未指定"
+            assert lines[5] == "- 不要写的内容：未指定"
+            assert lines[6] == "- 题材参数：未指定"
+
+        def test_format_preferences_full_values(self):
+            """所有字段都有值时正确格式化"""
+            from backend.schemas.lite import LiteWritingPrefs
+
+            prefs = LiteWritingPrefs(
+                style="冷峻",
+                intensity="高强度",
+                pace="稳扎稳打",
+                protagonist="隐忍",
+                likes="反转",
+                dislikes="降智",
+                genre_params={"修为": "筑基", "境界": "金丹"},
+            )
+            result = LitePromptBuilder.format_preferences(prefs)
+
+            lines = result.split("\n")
+            assert len(lines) == 7
+            assert lines[0] == "- 文风：冷峻"
+            assert lines[1] == "- 爽点强度：高强度"
+            assert lines[2] == "- 节奏：稳扎稳打"
+            assert lines[3] == "- 主角性格：隐忍"
+            assert lines[4] == "- 喜欢的元素：反转"
+            assert lines[5] == "- 不要写的内容：降智"
+            assert "修为：筑基" in lines[6]
+            assert "境界：金丹" in lines[6]
+            assert "；" in lines[6]
+            assert lines[6].startswith("- 题材参数：")
+
+        def test_format_preferences_preserves_original_format(self):
+            """完全等价于原 _prefs_to_text 行为（含换行/字段顺序/空值处理）"""
+            from backend.schemas.lite import LiteWritingPrefs
+
+            prefs = LiteWritingPrefs(
+                style="热血",
+                intensity="标准",
+                pace="快节奏",
+                protagonist="张扬",
+                likes="升级打脸",
+                dislikes="圣母",
+                genre_params={"流派": "玄幻", "体系": "修真"},
+            )
+            expected = "\n".join([
+                "- 文风：热血",
+                "- 爽点强度：标准",
+                "- 节奏：快节奏",
+                "- 主角性格：张扬",
+                "- 喜欢的元素：升级打脸",
+                "- 不要写的内容：圣母",
+                "- 题材参数：流派：玄幻；体系：修真",
+            ])
+            result = LitePromptBuilder.format_preferences(prefs)
+            assert result == expected
+
+        def test_format_preferences_filters_empty_genre_params(self):
+            """空字符串值的 genre_params 不应出现在结果中"""
+            from backend.schemas.lite import LiteWritingPrefs
+
+            prefs = LiteWritingPrefs(
+                style="热血",
+                genre_params={"流派": "玄幻", "空字段": "", "体系": "修真"},
+            )
+            result = LitePromptBuilder.format_preferences(prefs)
+
+            assert "流派：玄幻" in result
+            assert "体系：修真" in result
+            assert "空字段" not in result
+
+        def test_format_preferences_empty_genre_dict(self):
+            """空 dict 时显示 未指定"""
+            from backend.schemas.lite import LiteWritingPrefs
+
+            prefs = LiteWritingPrefs(genre_params={})
+            result = LitePromptBuilder.format_preferences(prefs)
+            assert "- 题材参数：未指定" in result

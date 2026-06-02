@@ -24,6 +24,7 @@ from backend.application.lite_scene_service import (
     section_path,
 )
 from backend.application.lite_story_metadata_service import LiteStoryMetadataService
+from backend.application.lite_candidate_policy import lite_action_to_candidate_action
 from backend.application.lite_option_cards_service import LiteOptionCardsService, GENRES
 from backend.application.lite_llm_service import LiteLLMService
 from backend.application.lite_prompt_builder import LitePromptBuilder
@@ -72,19 +73,6 @@ LITE_ACTION_ALIAS = {
 }
 
 
-def _lite_action_to_candidate_action(action: str) -> CandidateAction:
-    """将 Lite 动作名映射到标准 CandidateAction 枚举"""
-    mapping = {
-        "rewrite": CandidateAction.REWRITE,
-        "more_exciting": CandidateAction.REWRITE,
-        "more_reasonable": CandidateAction.REWRITE,
-        "rewrite_current_scene": CandidateAction.REWRITE,
-        "polish_current_scene": CandidateAction.POLISH,
-        "chat_edit_current_scene": CandidateAction.CHAT,
-    }
-    return mapping.get(action, CandidateAction.REWRITE)
-
-
 async def _create_lite_candidate(
     file_service: FileService,
     project_id: str,
@@ -94,7 +82,7 @@ async def _create_lite_candidate(
 ) -> "CandidateInfo":
     """通过 CandidateService 创建 Lite 候选稿，返回 CandidateInfo"""
     candidate_service = CandidateService(file_service)
-    cand_action = _lite_action_to_candidate_action(action)
+    cand_action = lite_action_to_candidate_action(action)
     return await candidate_service.create_candidate(
         project_id=project_id,
         source_path=source_path,
@@ -119,19 +107,6 @@ def _should_use_candidate(
         effective_action in HIGH_RISK_LITE_ACTIONS
         and should_create_candidate(effective_action, target_file, bool(requested_content), target_has_content)
     )
-
-
-def _prefs_to_text(prefs) -> str:
-    params = "；".join(f"{k}：{v}" for k, v in prefs.genre_params.items() if v)
-    return "\n".join([
-        f"- 文风：{prefs.style}",
-        f"- 爽点强度：{prefs.intensity}",
-        f"- 节奏：{prefs.pace}",
-        f"- 主角性格：{prefs.protagonist}",
-        f"- 喜欢的元素：{prefs.likes or '未指定'}",
-        f"- 不要写的内容：{prefs.dislikes or '未指定'}",
-        f"- 题材参数：{params or '未指定'}",
-    ])
 
 
 def _story_engine_template(card: LiteIdeaCard, prefs_text: str) -> str:
@@ -545,7 +520,7 @@ async def generate_next_options(
         lite_llm = LiteLLMService(llm_svc)
         messages = LitePromptBuilder.build_next_options_messages(
             next_label=next_label,
-            preferences_text=_prefs_to_text(req.prefs),
+            preferences_text=LitePromptBuilder.format_preferences(req.prefs),
             context_content=context_content,
             story_engine=story_engine,
             recent_context=recent_context,
@@ -624,7 +599,7 @@ async def write_lite_next(
         f"结尾钩子：{req.selected_card.hook}",
         f"故事推进：{req.selected_card.advancement}",
         "写作偏好：",
-        _prefs_to_text(req.prefs),
+        LitePromptBuilder.format_preferences(req.prefs),
         ("章规划：\n" + chapter_plan) if chapter_plan else "",
         "故事引擎：",
         story_engine,
@@ -659,7 +634,7 @@ async def write_lite_next(
     llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_svc = LLMService.from_workspace_config(llm_cfg)
     lite_llm = LiteLLMService(llm_svc)
-    prefs_text = _prefs_to_text(req.prefs)
+    prefs_text = LitePromptBuilder.format_preferences(req.prefs)
     used_fallback = False
     try:
         content = await lite_llm.complete_with_deadline(
@@ -856,7 +831,7 @@ async def write_lite_next_stream(
             else:
                 pending_foreshadowing = ""
 
-            prefs_text = _prefs_to_text(req.prefs)
+            prefs_text = LitePromptBuilder.format_preferences(req.prefs)
             goal = "\n".join([
                 f"本章爽点卡：{req.selected_card.title}",
                 f"剧情节拍：{req.selected_card.beat}",

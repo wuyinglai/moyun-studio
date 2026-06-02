@@ -18,6 +18,19 @@ class LitePromptBuilder:
     """Build Lite LLM messages for low-risk scenarios."""
 
     @staticmethod
+    def format_preferences(prefs) -> str:
+        params = "；".join(f"{k}：{v}" for k, v in prefs.genre_params.items() if v)
+        return "\n".join([
+            f"- 文风：{prefs.style}",
+            f"- 爽点强度：{prefs.intensity}",
+            f"- 节奏：{prefs.pace}",
+            f"- 主角性格：{prefs.protagonist}",
+            f"- 喜欢的元素：{prefs.likes or '未指定'}",
+            f"- 不要写的内容：{prefs.dislikes or '未指定'}",
+            f"- 题材参数：{params or '未指定'}",
+        ])
+
+    @staticmethod
     def build_chapter_plan_messages(
         *,
         vol: int,

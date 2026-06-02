@@ -5,9 +5,9 @@ from backend.api.lite import (
     SECTIONS_PER_CHAPTER,
     _ensure_chapter,
     _next_writable_section_path,
-    _prefs_to_text,
     _story_engine_template,
 )
+from backend.application.lite_prompt_builder import LitePromptBuilder
 from backend.application.lite_scene_service import path_parts
 from backend.application.lite_story_metadata_service import LiteStoryMetadataService
 from backend.core.file_ops import FileService
@@ -25,7 +25,7 @@ async def test_lite_mode_advances_eight_sections_without_outline(tmp_path):
     from backend.application.lite_option_cards_service import LiteOptionCardsService, FALLBACK_IDEA_BANK
     from backend.schemas.lite import LiteWritingPrefs
 
-    story_engine = _story_engine_template(FALLBACK_IDEA_BANK[0], _prefs_to_text(LiteWritingPrefs()))
+    story_engine = _story_engine_template(FALLBACK_IDEA_BANK[0], LitePromptBuilder.format_preferences(LiteWritingPrefs()))
     await file_service.write_file(f"{project_id}/story-engine.md", story_engine)
 
     current_file = None
