@@ -4,7 +4,8 @@
       <div class="header-title">
         <i class="fa-solid fa-network-wired" />
         <span class="title-text">创作流程</span>
-        <span class="title-badge">Mock</span>
+        <span v-if="currentView !== 'realtime'" class="title-badge">Mock</span>
+        <span v-else class="title-badge realtime">实时</span>
       </div>
       <div class="header-actions">
         <button
@@ -19,16 +20,40 @@
       </div>
     </div>
 
-    <div class="panel-intro">
-      <p>这是创作流程的可视化预览。点击节点可以展开查看详细信息。</p>
+    <div v-if="currentView === 'realtime' && !activeFlow" class="panel-intro">
+      <p>还没有运行中的创作流程。点击写下一场景后，这里会显示 AI 的处理步骤。</p>
     </div>
 
-    <div class="flow-container">
+    <div v-else class="panel-intro">
+      <p>这是创作流程的可视化预览。点击节点可以展开查看详细信息。</p>
+      <p v-if="currentView === 'realtime'" class="realtime-hint">
+        <i class="fa-solid fa-circle-info" />
+        此流程为前端根据现有事件推断，与实际后端执行可能不完全一致。
+      </p>
+    </div>
+
+    <div v-if="currentView === 'realtime' && activeFlow" class="flow-container">
+      <div class="flow-header">
+        <h3>{{ activeFlow.title }}</h3>
+        <p v-if="activeFlow.description" class="flow-description">{{ activeFlow.description }}</p>
+      </div>
+      <div class="flow-nodes">
+        <div
+          v-for="(node, index) in activeFlow.nodes"
+          :key="node.id"
+          class="node-wrapper"
+        >
+          <div class="node-number">{{ index + 1 }}</div>
+          <FlowNodeCard :node="node" />
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="currentView !== 'realtime'" class="flow-container">
       <div class="flow-header">
         <h3>{{ currentFlow.title }}</h3>
         <p v-if="currentFlow.description" class="flow-description">{{ currentFlow.description }}</p>
       </div>
-
       <div class="flow-nodes">
         <div
           v-for="(node, index) in currentFlow.nodes"
@@ -44,7 +69,8 @@
     <div class="panel-footer">
       <span class="footer-hint">
         <i class="fa-solid fa-info-circle" />
-        当前为演示模式，数据为模拟数据。
+        <span v-if="currentView === 'realtime'">实时模式，根据前端回调映射。</span>
+        <span v-else>当前为演示模式，数据为模拟数据。</span>
       </span>
     </div>
   </div>
@@ -56,9 +82,16 @@ import FlowNodeCard from './FlowNodeCard.vue'
 import { mockWriteNextFlow, mockErrorFlow } from './mockFlowData'
 import type { FlowRun } from './types'
 
-const currentView = ref<'success' | 'error'>('success')
+interface Props {
+  activeFlow?: FlowRun | null
+}
+
+const props = defineProps<Props>()
+
+const currentView = ref<'realtime' | 'success' | 'error'>('realtime')
 
 const viewOptions = [
+  { label: '实时流程', value: 'realtime' as const },
   { label: '成功示例', value: 'success' as const },
   { label: '失败示例', value: 'error' as const },
 ]
@@ -102,6 +135,10 @@ const currentFlow = computed<FlowRun>(() => {
   border-radius: 4px;
   background: rgba(234, 179, 8, 0.2);
   color: var(--accent-warning);
+  &.realtime {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--accent-success);
+  }
 }
 
 .header-actions {
@@ -140,6 +177,17 @@ const currentFlow = computed<FlowRun>(() => {
     font-size: 12px;
     color: var(--text-secondary);
     margin: 0;
+    &:not(:last-child) {
+      margin-bottom: 6px;
+    }
+  }
+
+  .realtime-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
   }
 }
 

@@ -80,7 +80,7 @@
           ref="recentPanelRef"
         />
         <ExecutionPanel v-show="activeTab === 'execution'" />
-        <FlowPanel v-show="activeTab === 'flow'" />
+        <FlowPanel v-show="activeTab === 'flow'" :activeFlow="flowStore.activeFlow" />
       </div>
     </template>
   </div>
@@ -90,6 +90,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useRightPanelStore } from '@/stores/rightPanel'
+import { useFlowStore } from '@/stores/flow'
 import ProfessionalQuickPanel from './ProfessionalQuickPanel.vue'
 import PromptPanel from './PromptPanel.vue'
 import PipelineEditor from './PipelineEditor.vue'
@@ -104,6 +105,7 @@ import FlowPanel from '../flow/FlowPanel.vue'
 
 const projectStore = useProjectStore()
 const rightPanelStore = useRightPanelStore()
+const flowStore = useFlowStore()
 
 const activeTab = computed(() => rightPanelStore.activeTab)
 

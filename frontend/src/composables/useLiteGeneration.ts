@@ -15,6 +15,15 @@ import {
 } from '@/services/liteService'
 import { consumeOrFetch } from '@/composables/useLitePrefetch'
 
+type FlowRunUpdater = {
+  startLiteWriteFlow: (payload: { sourcePath?: string; targetPath?: string; isCandidate?: boolean }) => void
+  markNodeRunning: (nodeId: string) => void
+  markNodeSuccess: (nodeId: string, outputs?: any[]) => void
+  markNodeError: (nodeId: string, error: string) => void
+  markNodeSkipped: (nodeId: string) => void
+  resetFlow: () => void
+}
+
 export function useLiteGeneration(deps: {
   content: Ref<string>
   currentFilePath: Ref<string>
@@ -25,6 +34,7 @@ export function useLiteGeneration(deps: {
   prefs: LiteWritingPrefs
   chapterFiles: Ref<FileNode[]>
   openChapter: (path: string, options?: { skipOptions?: boolean }) => Promise<void>
+  flow?: FlowRunUpdater
 }) {
   const projectStore = useProjectStore()
   const fileStore = useFileStore()
@@ -185,6 +195,16 @@ export function useLiteGeneration(deps: {
     qualitySummary.value = isCandidate
       ? `正在生成${candidateActionText(action)}候选稿，原文不会被覆盖。`
       : `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
+
+    // 启动流程可视化
+    if (deps.flow) {
+      deps.flow.startLiteWriteFlow({
+        sourcePath,
+        targetPath: nextTargetFile.value,
+        isCandidate,
+      })
+    }
+
     try {
       await streamLiteNext(projectId, targetFile || nextTargetFile.value || deps.currentFilePath.value || null, card, deps.prefs, action, {
         onMeta: (meta) => {
@@ -221,6 +241,14 @@ export function useLiteGeneration(deps: {
           editorStore.setCurrentFile(meta.file_path)
           editorStore.loadContent(meta.file_path, placeholder)
           void deps.scrollTextareaToBottom()
+
+          // 更新流程状态：推导路径成功，开始读取记忆
+          if (deps.flow) {
+            deps.flow.markNodeSuccess('infer_next_path', [
+              { id: 'target-file', label: '目标场景', kind: 'file', path: meta.file_path },
+            ])
+            deps.flow.markNodeRunning('read_story_memory')
+          }
         },
         onStatus: (message) => {
           if (message.includes('更新故事状态')) {
@@ -231,6 +259,25 @@ export function useLiteGeneration(deps: {
           qualitySummary.value = message === 'AI 正在写正文...'
             ? `正在写${pendingTargetLabel.value}，已生成的内容会自动保留。`
             : message
+
+          // 更新流程状态：根据状态文本推断
+          if (deps.flow) {
+            if (message.includes('AI 正在写正文') || message.includes('正在生成')) {
+              // LLM 正在运行
+              deps.flow.markNodeSuccess('read_story_memory')
+              deps.flow.markNodeRunning('build_prompt')
+              deps.flow.markNodeSuccess('build_prompt')
+              deps.flow.markNodeRunning('call_llm')
+            } else if (message.includes('审稿') || message.includes('质量')) {
+              // 质量检查
+              deps.flow.markNodeSuccess('call_llm')
+              deps.flow.markNodeRunning('quality_check')
+            } else if (message.includes('更新故事状态')) {
+              // 更新记忆
+              deps.flow.markNodeSuccess('quality_check')
+              deps.flow.markNodeRunning('update_memory')
+            }
+          }
         },
         onDelta: (delta) => {
           if (!generatedFilePath) return
@@ -298,6 +345,19 @@ export function useLiteGeneration(deps: {
             editorStore.setCurrentFile(result.file_path)
             void deps.scrollTextareaToBottom()
           }
+
+          // 完成流程可视化
+          if (deps.flow) {
+            deps.flow.markNodeSuccess('call_llm')
+            deps.flow.markNodeSuccess('quality_check', [
+              { id: 'quality-result', label: '质量检查结果', kind: 'text', preview: result.quality_summary },
+            ])
+            deps.flow.markNodeSuccess('save_or_candidate', [
+              { id: 'output-file', label: '生成结果', kind: 'file', path: result.file_path },
+            ])
+            deps.flow.markNodeSuccess('update_memory')
+            deps.flow.markNodeSuccess('refresh_ui')
+          }
         },
       }, { signal: abortController.signal }, outputFile)
       generating.value = false
@@ -324,7 +384,13 @@ export function useLiteGeneration(deps: {
           : `已停止生成${pendingTargetLabel.value}。`
         notification.success('已停止生成')
       } else {
-        notification.error((e instanceof Error ? e.message : '') || '生成失败')
+        const errorMsg = (e instanceof Error ? e.message : '') || '生成失败'
+        notification.error(errorMsg)
+
+        // 标记流程错误
+        if (deps.flow) {
+          deps.flow.markNodeError('call_llm', errorMsg)
+        }
       }
     } finally {
       generating.value = false

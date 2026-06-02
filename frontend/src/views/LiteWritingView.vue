@@ -388,6 +388,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
 import { defaultLitePrefs, type LiteIdeaCard, type LiteNextOptionCard } from '@/services/liteService'
 import { useLiteGeneration } from '@/composables/useLiteGeneration'
+import { useFlowRun } from '@/composables/useFlowRun'
 import { useLiteCandidateActions } from '@/composables/useLiteCandidateActions'
 
 const route = useRoute()
@@ -522,6 +523,8 @@ async function saveCurrent() {
 
 // ─── Composables ──────────────────────────────────────────
 
+const flow = useFlowRun()
+
 const gen = useLiteGeneration({
   content,
   currentFilePath,
@@ -532,6 +535,7 @@ const gen = useLiteGeneration({
   prefs,
   chapterFiles,
   openChapter,
+  flow,
 })
 
 const cand = useLiteCandidateActions({
