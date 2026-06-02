@@ -26,6 +26,7 @@ from backend.application.lite_scene_service import (
 )
 from backend.application.lite_story_metadata_service import LiteStoryMetadataService
 from backend.application.lite_option_cards_service import LiteOptionCardsService, GENRES
+from backend.application.lite_llm_service import LiteLLMService
 from backend.config import Settings, get_settings
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import ProjectNotFoundError
@@ -344,17 +345,7 @@ def _needs_quality_repair(review) -> bool:
     return avg < 6 or has_serious_issue
 
 
-async def _complete_with_deadline(
-    svc: LLMService,
-    messages: list[dict],
-    *,
-    deadline: int,
-    **kwargs,
-) -> str:
-    return (await asyncio.wait_for(
-        svc.complete_sync(messages, **kwargs),
-        timeout=deadline,
-    )).strip()
+
 
 
 def _fallback_section_content(
@@ -388,44 +379,6 @@ def _fallback_section_content(
 
 def _lite_stream_event(event: str, data: dict) -> dict:
     return {"event": event, "data": json.dumps(data, ensure_ascii=False)}
-
-
-
-
-
-async def _stream_llm_content(
-    svc: LLMService,
-    messages: list[dict],
-    *,
-    first_token_timeout: int = 90,
-    token_timeout: int = 45,
-    **kwargs,
-) -> AsyncGenerator[str, None]:
-    queue: asyncio.Queue[str | None] = asyncio.Queue()
-
-    async def _produce() -> None:
-        try:
-            async for chunk in svc.complete(messages, stream=True, **kwargs):
-                await queue.put(chunk)
-        finally:
-            await queue.put(None)
-
-    task = asyncio.create_task(_produce())
-    has_chunk = False
-    try:
-        while True:
-            timeout = token_timeout if has_chunk else first_token_timeout
-            item = await asyncio.wait_for(queue.get(), timeout=timeout)
-            if item is None:
-                break
-            has_chunk = True
-            yield item
-    except Exception:
-        task.cancel()
-        raise
-    finally:
-        if not task.done():
-            task.cancel()
 
 
 
@@ -521,7 +474,8 @@ async def _generate_ideas_via_llm(
     """用 LLM 动态生成 5 张开局爽文卡，失败返回 None"""
     try:
         llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
-        svc = LLMService.from_workspace_config(llm_cfg)
+        llm_svc = LLMService.from_workspace_config(llm_cfg)
+        lite_llm = LiteLLMService(llm_svc)
         prompt = "\n".join([
             "你是一位网文爆款策划编辑。请为爽文模式设计5张不同的开局卡，每张对应一个题材。",
             "要求：",
@@ -537,8 +491,7 @@ async def _generate_ideas_via_llm(
             "只返回 JSON 数组，不要多余文字，格式：",
             """[{"id": "xxx", "title": "...", "genre": "...", "one_liner": "...", "protagonist_hook": "...", "core_conflict": "...", "selling_point": "..."}]""",
         ])
-        raw = await _complete_with_deadline(
-            svc,
+        raw = await lite_llm.complete_with_deadline(
             [{"role": "user", "content": prompt}],
             deadline=45,
             temperature=0.9,
@@ -626,7 +579,8 @@ async def generate_next_options(
     cards = LiteOptionCardsService.fallback_next_cards(next_label, context_content, recent_context)
     try:
         llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
-        svc = LLMService.from_workspace_config(llm_cfg)
+        llm_svc = LLMService.from_workspace_config(llm_cfg)
+        lite_llm = LiteLLMService(llm_svc)
         prompt = "\n".join([
             "你是爽文连载编辑。请基于当前正文和故事状态，为下一场景生成3张不同方向的爽点卡。",
             "不要使用固定模板，不要重复“当众打脸/危机反杀/收获升级”这类泛化标题。",
@@ -648,8 +602,7 @@ async def generate_next_options(
             "章规划：",
             chapter_plan[-1500:],
         ])
-        raw = await _complete_with_deadline(
-            svc,
+        raw = await lite_llm.complete_with_deadline(
             [{"role": "user", "content": prompt}],
             deadline=20,
             temperature=0.85,
@@ -755,12 +708,12 @@ async def write_lite_next(
     })
 
     llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
-    svc = LLMService.from_workspace_config(llm_cfg)
+    llm_svc = LLMService.from_workspace_config(llm_cfg)
+    lite_llm = LiteLLMService(llm_svc)
     prefs_text = _prefs_to_text(req.prefs)
     used_fallback = False
     try:
-        content = await _complete_with_deadline(
-            svc,
+        content = await lite_llm.complete_with_deadline(
             [{"role": "user", "content": prompt}],
             deadline=90,
             temperature=0.75,
@@ -827,8 +780,7 @@ async def write_lite_next(
                     "recent_context": recent_context,
                     "pending_foreshadowing": pending_foreshadowing,
                 })
-                repaired = await _complete_with_deadline(
-                    svc,
+                repaired = await lite_llm.complete_with_deadline(
                     [{"role": "user", "content": repair_prompt}],
                     deadline=75,
                     temperature=0.65,
@@ -985,14 +937,14 @@ async def write_lite_next_stream(
             })
 
             llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
-            svc = LLMService.from_workspace_config(llm_cfg)
+            llm_svc = LLMService.from_workspace_config(llm_cfg)
+            lite_llm = LiteLLMService(llm_svc)
             content_parts: list[str] = []
             used_fallback = False
             yield _lite_stream_event("status", {"message": "AI 正在写正文..."})
 
             try:
-                async for chunk in _stream_llm_content(
-                    svc,
+                async for chunk in lite_llm.stream_llm_content(
                     [{"role": "user", "content": prompt}],
                     first_token_timeout=8,
                     token_timeout=12,
