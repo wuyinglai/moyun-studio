@@ -24,6 +24,7 @@ from backend.application.lite_scene_service import (
     section_label,
     section_path,
 )
+from backend.application.lite_story_metadata_service import LiteStoryMetadataService
 from backend.config import Settings, get_settings
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import ProjectNotFoundError
@@ -233,10 +234,6 @@ def _story_engine_template(card: LiteIdeaCard, prefs_text: str) -> str:
 ## 用户口味
 {prefs_text}
 """
-
-
-def _compact_line(value: str, limit: int = 90) -> str:
-    return re.sub(r"\s+", " ", (value or "").strip())[:limit]
 
 
 def _rotate_cards(seed: str) -> list[LiteIdeaCard]:
@@ -569,70 +566,7 @@ async def _stream_llm_content(
             task.cancel()
 
 
-async def _read_optional(file_service: FileService, project_id: str, rel_path: str) -> str:
-    try:
-        content, _, _ = await file_service.read_file(f"{project_id}/{rel_path}")
-        return content
-    except Exception:
-        return ""
 
-
-async def _read_chapter_context(file_service: FileService, project_id: str, vol: int, ch: int, current_sec: int) -> str:
-    """读取当前章中所有已写的前序场景内容，拼接为上下文，确保 LLM 感知前文。"""
-    parts: list[str] = []
-    for sec in range(1, current_sec):
-        section_path = f"chapters/vol-{vol:02d}/ch-{ch:03d}/sec-{sec:03d}.md"
-        content = await _read_optional(file_service, project_id, section_path)
-        if content and not _is_blank_chapter(content):
-            parts.append(f"--- 第{sec}场景 ---\n{content.strip()}")
-    if not parts:
-        return ""
-    return "\n\n".join(parts) + "\n\n"
-
-
-async def _read_ch_meta(file_service: FileService, project_id: str, vol: int, ch: int) -> dict:
-    """读取章元数据。"""
-    meta_path = f"chapters/vol-{vol:02d}/ch-{ch:03d}/ch-meta.json"
-    raw = await _read_optional(file_service, project_id, meta_path)
-    if not raw:
-        return {}
-    try:
-        return json.loads(raw)
-    except (json.JSONDecodeError, Exception):
-        return {}
-
-
-async def _update_ch_meta(
-    file_service: FileService,
-    project_id: str,
-    vol: int,
-    ch: int,
-    sec: int,
-    card_title: str,
-    card_payoff: str,
-    card_hook: str,
-) -> None:
-    """写入一个场景完成后更新章节记忆和待回收伏笔。"""
-    ch_meta = await _read_ch_meta(file_service, project_id, vol, ch)
-    # 章节记忆：按场景累积
-    memory = ch_meta.get("memory", [])
-    if isinstance(memory, str):
-        memory = [] if not memory else [memory]
-    memory.append(f"第{sec}场景「{card_title}」：{card_payoff}")
-    if len(memory) > 20:
-        memory = memory[-20:]
-    ch_meta["memory"] = memory
-
-    # 待回收伏笔
-    foreshadowing = ch_meta.get("pending_foreshadowing", [])
-    if isinstance(foreshadowing, list) and card_hook and card_hook not in foreshadowing:
-        foreshadowing.append(card_hook)
-        if len(foreshadowing) > 10:
-            foreshadowing = foreshadowing[-10:]
-    ch_meta["pending_foreshadowing"] = foreshadowing
-
-    meta_path = f"{project_id}/chapters/vol-{vol:02d}/ch-{ch:03d}/ch-meta.json"
-    await file_service.write_file(meta_path, json.dumps(ch_meta, ensure_ascii=False, indent=2))
 
 
 
@@ -643,61 +577,13 @@ async def _next_writable_section_path(
 ) -> str:
     """找到当前文件之后第一个空场景，避免刷新后重复覆盖已写场景。"""
     candidate = next_section_path(current_file)
+    metadata_svc = LiteStoryMetadataService(file_service)
     for _ in range(80):
-        content = await _read_optional(file_service, project_id, candidate)
-        if _is_blank_chapter(content):
+        content = await metadata_svc.read_optional(project_id, candidate)
+        if metadata_svc.is_blank_chapter(content):
             return candidate
         candidate = next_section_path(candidate)
     return candidate
-
-
-def _summarize_story_engine(text: str) -> dict[str, str]:
-    def section(name: str) -> str:
-        pattern = rf"## {re.escape(name)}\n(?P<body>.*?)(?=\n## |\Z)"
-        match = re.search(pattern, text, re.S)
-        if not match:
-            return "待更新"
-        line = next((ln.strip("- ").strip() for ln in match.group("body").splitlines() if ln.strip()), "")
-        return line or "待更新"
-
-    return {
-        "protagonist_goal": section("人物欲望"),
-        "current_conflict": section("冲突推进"),
-        "foreshadowing": section("前文记忆"),
-        "payoff_ledger": section("爽点账本"),
-        "reader_expectation": section("读者期待"),
-        "stage_goal": section("阶段性目标"),
-    }
-
-
-def _build_story_engine_update(
-    story_engine: str,
-    target_file: str,
-    selected_card: LiteNextOptionCard,
-    content: str,
-) -> str:
-    excerpt = _compact_line(" ".join(
-        line.strip()
-        for line in content.splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    ), 140)
-    update = "\n".join([
-        f"## 最近推进 {datetime.now(timezone.utc).date().isoformat()}",
-        f"- 章节：{target_file}",
-        f"- 选择：{selected_card.title}",
-        f"- 主角想要：{selected_card.protagonist_desire or '继续夺回主动权'}",
-        f"- 阻力：{selected_card.obstacle or selected_card.scene}",
-        f"- 兑现：{selected_card.payoff}",
-        f"- 推进：{selected_card.advancement or '把当前冲突推到下一层'}",
-        f"- 钩子：{selected_card.hook}",
-        f"- 正文记忆：{excerpt or selected_card.beat}",
-    ])
-    return story_engine.rstrip() + "\n\n" + update + "\n"
-
-
-def _is_blank_chapter(content: str) -> bool:
-    body_lines = [line.strip() for line in content.splitlines() if line.strip() and not line.strip().startswith("#")]
-    return len("\n".join(body_lines)) < 20
 
 
 async def _generate_chapter_plan(
@@ -860,19 +746,20 @@ async def generate_next_options(
         raise ProjectNotFoundError(req.project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-    current_content = await _read_optional(file_service, req.project_id, req.current_file or "")
+    metadata_svc = LiteStoryMetadataService(file_service)
+    current_content = await metadata_svc.read_optional(req.project_id, req.current_file or "")
     current_no = max(1, extract_chapter_number(req.current_file) or 1)
-    if req.current_file and _is_blank_chapter(current_content):
+    if req.current_file and metadata_svc.is_blank_chapter(current_content):
         next_file = req.current_file
     else:
         next_file = await _next_writable_section_path(file_service, req.project_id, req.current_file)
     next_label = section_label(next_file)
-    story_engine = await _read_optional(file_service, req.project_id, "story-engine.md")
-    recent_context = await _read_optional(file_service, req.project_id, "recent-context.md")
+    story_engine = await metadata_svc.read_optional(req.project_id, "story-engine.md")
+    recent_context = await metadata_svc.read_optional(req.project_id, "recent-context.md")
     vol, ch, _sec = path_parts(next_file)
-    chapter_plan = await _read_optional(file_service, req.project_id, f"chapters/vol-{vol:02d}/ch-{ch:03d}/ch-plan.md")
-    chapter_context = await _read_chapter_context(file_service, req.project_id, vol, ch, _sec)
-    context_content = current_content if not _is_blank_chapter(current_content) else chapter_context
+    chapter_plan = await metadata_svc.read_optional(req.project_id, f"chapters/vol-{vol:02d}/ch-{ch:03d}/ch-plan.md")
+    chapter_context = await metadata_svc.read_chapter_context(req.project_id, vol, ch, _sec)
+    context_content = current_content if not metadata_svc.is_blank_chapter(current_content) else chapter_context
 
     cards = _fallback_next_cards(next_label, context_content, recent_context)
     try:
@@ -934,8 +821,9 @@ async def write_lite_next(
         raise ProjectNotFoundError(req.project_id)
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-    requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
-    is_blank_requested = _is_blank_chapter(requested_content)
+    metadata_svc = LiteStoryMetadataService(file_service)
+    requested_content = await metadata_svc.read_optional(req.project_id, req.target_file or "") if req.target_file else ""
+    is_blank_requested = metadata_svc.is_blank_chapter(requested_content)
     effective_action = LITE_ACTION_ALIAS.get(req.action, req.action)
     if (effective_action != "write" and req.target_file) or (req.target_file and is_blank_requested):
         target_file = req.target_file
@@ -946,20 +834,20 @@ async def write_lite_next(
     vol, ch, _sec = path_parts(target_file)
     await _ensure_chapter(project_dir, vol, ch, req.selected_card.title)
 
-    prev_content = await _read_chapter_context(file_service, req.project_id, vol, ch, _sec)
-    target_content = await _read_optional(file_service, req.project_id, target_file)
+    prev_content = await metadata_svc.read_chapter_context(req.project_id, vol, ch, _sec)
+    target_content = await metadata_svc.read_optional(req.project_id, target_file)
     current_content = prev_content + target_content
-    story_engine = await _read_optional(file_service, req.project_id, "story-engine.md")
-    story_state = await _read_optional(file_service, req.project_id, "story-state.md")
-    style_guide = await _read_optional(file_service, req.project_id, "style-guide.md")
-    recent_context = await _read_optional(file_service, req.project_id, "recent-context.md")
+    story_engine = await metadata_svc.read_optional(req.project_id, "story-engine.md")
+    story_state = await metadata_svc.read_optional(req.project_id, "story-state.md")
+    style_guide = await metadata_svc.read_optional(req.project_id, "style-guide.md")
+    recent_context = await metadata_svc.read_optional(req.project_id, "recent-context.md")
 
     # 如果当前章有章规划，加入生成上下文
     chapter_plan = ""
     if ch and _sec:
         plan_path = f"chapters/vol-{vol:02d}/ch-{ch:03d}/ch-plan.md"
-        plan_content = await _read_optional(file_service, req.project_id, plan_path)
-        if plan_content and not _is_blank_chapter(plan_content):
+        plan_content = await metadata_svc.read_optional(req.project_id, plan_path)
+        if plan_content and not metadata_svc.is_blank_chapter(plan_content):
             chapter_plan = plan_content
 
     goal = "\n".join([
@@ -979,7 +867,7 @@ async def write_lite_next(
     ])
 
     # 读取章节记忆和待回收伏笔
-    ch_meta_data = await _read_ch_meta(file_service, req.project_id, vol, ch)
+    ch_meta_data = await metadata_svc.read_ch_meta(req.project_id, vol, ch)
     raw_memory = ch_meta_data.get("memory", [])
     if isinstance(raw_memory, list):
         chapter_memory = "\n".join(raw_memory)
@@ -1043,7 +931,7 @@ async def write_lite_next(
 
     if not is_candidate:
         # 更新章节记忆和待回收伏笔
-        await _update_ch_meta(file_service, req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
+        await metadata_svc.update_ch_meta(req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
 
     quality_summary = ""
     if is_candidate:
@@ -1096,7 +984,7 @@ async def write_lite_next(
     if is_candidate:
         updated_engine = story_engine
     else:
-        updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
+        updated_engine = metadata_svc.build_story_engine_update(story_engine, target_file, req.selected_card, content)
         await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
         await file_service.write_file(
             f"{req.project_id}/recent-context.md",
@@ -1123,7 +1011,7 @@ async def write_lite_next(
         file_path=output_file,
         content=content,
         quality_summary=quality_summary,
-        story_engine_summary=_summarize_story_engine(updated_engine),
+        story_engine_summary=metadata_svc.summarize_story_engine(updated_engine),
         chapter_plan=chapter_plan_result,
         candidate_id=candidate_info.id if candidate_info else None,
         source_file=target_file if candidate_info else None,
@@ -1152,8 +1040,9 @@ async def write_lite_next_stream(
             return
 
         file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
-        requested_content = await _read_optional(file_service, req.project_id, req.target_file or "") if req.target_file else ""
-        is_blank_requested = _is_blank_chapter(requested_content)
+        metadata_svc = LiteStoryMetadataService(file_service)
+        requested_content = await metadata_svc.read_optional(req.project_id, req.target_file or "") if req.target_file else ""
+        is_blank_requested = metadata_svc.is_blank_chapter(requested_content)
         effective_action = LITE_ACTION_ALIAS.get(req.action, req.action)
         if (effective_action in ("continue", "rewrite", "more_exciting", "more_reasonable") and req.target_file) or (req.target_file and is_blank_requested):
             target_file = req.target_file
@@ -1174,23 +1063,23 @@ async def write_lite_next_stream(
         })
 
         try:
-            prev_content = await _read_chapter_context(file_service, req.project_id, vol, ch, _sec)
-            target_content = await _read_optional(file_service, req.project_id, target_file)
+            prev_content = await metadata_svc.read_chapter_context(req.project_id, vol, ch, _sec)
+            target_content = await metadata_svc.read_optional(req.project_id, target_file)
             current_content = prev_content + target_content
-            story_engine = await _read_optional(file_service, req.project_id, "story-engine.md")
-            story_state = await _read_optional(file_service, req.project_id, "story-state.md")
-            style_guide = await _read_optional(file_service, req.project_id, "style-guide.md")
-            recent_context = await _read_optional(file_service, req.project_id, "recent-context.md")
+            story_engine = await metadata_svc.read_optional(req.project_id, "story-engine.md")
+            story_state = await metadata_svc.read_optional(req.project_id, "story-state.md")
+            style_guide = await metadata_svc.read_optional(req.project_id, "style-guide.md")
+            recent_context = await metadata_svc.read_optional(req.project_id, "recent-context.md")
 
             chapter_plan = ""
             if ch and _sec:
                 plan_path = f"chapters/vol-{vol:02d}/ch-{ch:03d}/ch-plan.md"
-                plan_content = await _read_optional(file_service, req.project_id, plan_path)
-                if plan_content and not _is_blank_chapter(plan_content):
+                plan_content = await metadata_svc.read_optional(req.project_id, plan_path)
+                if plan_content and not metadata_svc.is_blank_chapter(plan_content):
                     chapter_plan = plan_content
 
             # 读取章节记忆和待回收伏笔
-            ch_meta_data = await _read_ch_meta(file_service, req.project_id, vol, ch)
+            ch_meta_data = await metadata_svc.read_ch_meta(req.project_id, vol, ch)
             raw_memory = ch_meta_data.get("memory", [])
             if isinstance(raw_memory, list):
                 chapter_memory = "\n".join(raw_memory)
@@ -1287,7 +1176,7 @@ async def write_lite_next_stream(
 
             if not is_candidate:
                 # 更新章节记忆和待回收伏笔
-                await _update_ch_meta(file_service, req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
+                await metadata_svc.update_ch_meta(req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
 
             quality_summary = "候选稿已生成，确认满意后可采用替换原文。" if is_candidate else "模型生成超时，已先写入临时草稿；可点“重写当前场景”补成正式正文。" if used_fallback else "正文已写入，审稿将在后台完成。"
 
@@ -1306,7 +1195,7 @@ async def write_lite_next_stream(
                 updated_engine = story_engine
             else:
                 yield _lite_stream_event("status", {"message": "正在更新故事状态..."})
-                updated_engine = _build_story_engine_update(story_engine, target_file, req.selected_card, content)
+                updated_engine = metadata_svc.build_story_engine_update(story_engine, target_file, req.selected_card, content)
                 await file_service.write_file(f"{req.project_id}/story-engine.md", updated_engine)
                 await file_service.write_file(
                     f"{req.project_id}/recent-context.md",
@@ -1332,7 +1221,7 @@ async def write_lite_next_stream(
                 "file_path": output_file,
                 "content": content,  # AI_GUARDRAIL_ALLOW: lite generation result, not file.updated
                 "quality_summary": quality_summary,
-                "story_engine_summary": _summarize_story_engine(updated_engine),
+                "story_engine_summary": metadata_svc.summarize_story_engine(updated_engine),
                 "chapter_plan": chapter_plan_result,
                 "candidate_id": candidate_info.id if candidate_info else None,
                 "source_file": target_file if candidate_info else None,

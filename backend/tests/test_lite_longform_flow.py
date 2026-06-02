@@ -3,14 +3,13 @@ import pytest
 from backend.api.lite import (
     CHAPTERS_PER_VOLUME,
     SECTIONS_PER_CHAPTER,
-    _build_story_engine_update,
     _ensure_chapter,
     _next_writable_section_path,
     _prefs_to_text,
     _story_engine_template,
-    _summarize_story_engine,
 )
 from backend.application.lite_scene_service import path_parts
+from backend.application.lite_story_metadata_service import LiteStoryMetadataService
 from backend.core.file_ops import FileService
 from backend.schemas.lite import LiteNextOptionCard
 
@@ -48,7 +47,8 @@ async def test_lite_mode_advances_eight_sections_without_outline(tmp_path):
         )
         content = f"# 测试第{idx + 1}节\n\n这是第{idx + 1}节的有效正文，主角完成行动并留下后续钩子。"
         await file_service.write_file(f"{project_id}/{target_file}", content)
-        story_engine = _build_story_engine_update(story_engine, target_file, card, content)
+        metadata_svc = LiteStoryMetadataService(file_service)
+        story_engine = metadata_svc.build_story_engine_update(story_engine, target_file, card, content)
         await file_service.write_file(f"{project_id}/story-engine.md", story_engine)
         written_files.append(target_file)
         current_file = target_file
@@ -63,7 +63,8 @@ async def test_lite_mode_advances_eight_sections_without_outline(tmp_path):
     assert next_file.endswith("vol-01/ch-003/sec-001.md")
     assert CHAPTERS_PER_VOLUME == 12
 
-    summary = _summarize_story_engine(story_engine)
+    metadata_svc = LiteStoryMetadataService(file_service)
+    summary = metadata_svc.summarize_story_engine(story_engine)
     assert "protagonist_goal" in summary
     assert "payoff_ledger" in summary
     assert story_engine.count("## 最近推进") == SECTIONS_PER_CHAPTER * 2
