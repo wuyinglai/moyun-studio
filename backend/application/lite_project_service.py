@@ -8,14 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 import uuid
 
+from backend.application.lite_scene_service import section_path, SECTIONS_PER_CHAPTER as _SECTIONS_PER_CHAPTER
 from backend.config import Settings, get_settings
 from backend.core.project_service import ProjectService
 from backend.schemas.lite import LiteIdeaCard, LiteProjectCreateRequest, LiteProjectCreateResponse
 from backend.schemas.project import ProjectCreateRequest
 from backend.schemas.common import ApiResponse
-
-
-SECTIONS_PER_CHAPTER = 5
 
 
 def prefs_to_text(prefs) -> str:
@@ -93,11 +91,6 @@ async def write_text(path: Path, content: str) -> None:
     await asyncio.to_thread(path.write_text, content, "utf-8")
 
 
-def section_path(volume_number: int, chapter_number: int, section_number: int) -> str:
-    """生成场景文件路径"""
-    return f"chapters/vol-{volume_number:02d}/ch-{chapter_number:03d}/sec-{section_number:03d}.md"
-
-
 class LiteProjectService:
     """Lite 爽文模式项目服务"""
 
@@ -149,7 +142,7 @@ class LiteProjectService:
             "project_id": project_id,
             "stats": {
                 "total_words": 0,
-                "total_sections": SECTIONS_PER_CHAPTER,
+                "total_sections": _SECTIONS_PER_CHAPTER,
                 "completed_sections": 0,
                 "chapter_count": 1,
                 "volume_count": 1,
@@ -202,7 +195,7 @@ class LiteProjectService:
             await write_json(ch_meta, {
                 "chapter_number": chapter_number,
                 "title": title,
-                "section_count": SECTIONS_PER_CHAPTER,
+                "section_count": _SECTIONS_PER_CHAPTER,
                 "word_count": 0,
                 "status": "draft",
                 "memory": [],
@@ -212,7 +205,7 @@ class LiteProjectService:
                 "created_at": datetime.now(timezone.utc).isoformat(),
             })
 
-        for section_number in range(1, SECTIONS_PER_CHAPTER + 1):
+        for section_number in range(1, _SECTIONS_PER_CHAPTER + 1):
             file_path = ch_dir / f"sec-{section_number:03d}.md"
             if not await asyncio.to_thread(file_path.exists):
                 await write_text(file_path, f"# 第{volume_number}卷 第{chapter_number}章 {title} - 第{section_number}场景\n\n")

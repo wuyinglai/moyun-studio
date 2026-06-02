@@ -132,9 +132,9 @@ class TestLiteScenePathContract:
         assert info.scene == 3
 
     def test_lite_section_label_uses_scene_wording(self):
-        from backend.api.lite import _section_label
+        from backend.application.lite_scene_service import section_label
 
-        assert _section_label("chapters/vol-01/ch-001/sec-003.md") == "第1卷 第1章 第3场景"
+        assert section_label("chapters/vol-01/ch-001/sec-003.md") == "第1卷 第1章 第3场景"
 
     def test_lite_option_cards_parse_fenced_json_with_trailing_text(self):
         from backend.api.lite import _parse_option_cards

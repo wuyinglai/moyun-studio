@@ -6,11 +6,11 @@ from backend.api.lite import (
     _build_story_engine_update,
     _ensure_chapter,
     _next_writable_section_path,
-    _path_parts,
     _prefs_to_text,
     _story_engine_template,
     _summarize_story_engine,
 )
+from backend.application.lite_scene_service import path_parts
 from backend.core.file_ops import FileService
 from backend.schemas.lite import LiteNextOptionCard
 
@@ -33,7 +33,7 @@ async def test_lite_mode_advances_eight_sections_without_outline(tmp_path):
     written_files: list[str] = []
     for idx in range(SECTIONS_PER_CHAPTER * 2):
         target_file = await _next_writable_section_path(file_service, project_id, current_file)
-        vol, ch, sec = _path_parts(target_file)
+        vol, ch, sec = path_parts(target_file)
         await _ensure_chapter(project_dir, vol, ch, f"测试第{ch}章")
         card = LiteNextOptionCard(
             id=f"card-{idx + 1}",

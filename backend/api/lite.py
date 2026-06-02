@@ -13,6 +13,17 @@ from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
 from backend.application.lite_project_service import LiteProjectService
+from backend.application.lite_scene_service import (
+    CHAPTERS_PER_VOLUME,
+    SECTIONS_PER_CHAPTER,
+    chapter_path,
+    chapter_vol_label,
+    extract_chapter_number,
+    next_section_path,
+    path_parts,
+    section_label,
+    section_path,
+)
 from backend.config import Settings, get_settings
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import ProjectNotFoundError
@@ -328,49 +339,9 @@ async def _write_text(path: Path, content: str) -> None:
     await asyncio.to_thread(path.write_text, content, "utf-8")
 
 
-def _extract_chapter_number(file_path: str | None) -> int:
-    if not file_path:
-        return 0
-    match = re.search(r"/ch-(\d+)/", file_path)
-    return int(match.group(1)) if match else 0
-
-
-def _path_parts(file_path: str | None) -> tuple[int, int, int]:
-    if not file_path:
-        return 1, 1, 0
-    vol = int(re.search(r"vol-(\d+)", file_path).group(1)) if re.search(r"vol-(\d+)", file_path) else 1
-    ch = int(re.search(r"ch-(\d+)", file_path).group(1)) if re.search(r"ch-(\d+)", file_path) else 1
-    sec = int(re.search(r"sec-(\d+)", file_path).group(1)) if re.search(r"sec-(\d+)", file_path) else 0
-    return vol, ch, sec
-
-
-def _section_path(volume_number: int, chapter_number: int, section_number: int) -> str:
-    return f"chapters/vol-{volume_number:02d}/ch-{chapter_number:03d}/sec-{section_number:03d}.md"
-
-
-def _chapter_path(chapter_number: int) -> str:
-    return _section_path(1, chapter_number, 1)
-
-
-def _next_section_path(current_file: str | None) -> str:
-    vol, ch, sec = _path_parts(current_file)
-    if sec <= 0:
-        return _section_path(vol, ch, 1)
-    if sec < SECTIONS_PER_CHAPTER:
-        return _section_path(vol, ch, sec + 1)
-    if ch < CHAPTERS_PER_VOLUME:
-        return _section_path(vol, ch + 1, 1)
-    return _section_path(vol + 1, 1, 1)
-
-
-def _section_label(file_path: str) -> str:
-    vol, ch, sec = _path_parts(file_path)
-    return f"第{vol}卷 第{ch}章 第{sec}场景"
-
-
 def _ensure_section_heading(target_file: str, title: str, content: str) -> str:
     stripped = content.lstrip()
-    expected = f"# {_section_label(target_file)} {title}"
+    expected = f"# {section_label(target_file)} {title}"
     if stripped.startswith("#"):
         lines = stripped.splitlines()
         lines[0] = expected
@@ -411,7 +382,7 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
         file_path = ch_dir / f"sec-{section_number:03d}.md"
         if not await asyncio.to_thread(file_path.exists):
             await _write_text(file_path, f"# 第{volume_number}卷 第{chapter_number}章 {title} - 第{section_number}场景\n\n")
-    return _section_path(volume_number, chapter_number, 1)
+    return section_path(volume_number, chapter_number, 1)
 
 
 def _quality_one_line(summary: str, action: str) -> str:
@@ -455,7 +426,7 @@ def _fallback_section_content(
     prefs_text: str,
     story_engine: str,
 ) -> str:
-    label = _section_label(target_file)
+    label = section_label(target_file)
     _ = prefs_text
     desire_hint = next(
         (line.strip("- ").strip() for line in story_engine.splitlines() if line.strip().startswith("-")),
@@ -671,12 +642,12 @@ async def _next_writable_section_path(
     current_file: str | None,
 ) -> str:
     """找到当前文件之后第一个空场景，避免刷新后重复覆盖已写场景。"""
-    candidate = _next_section_path(current_file)
+    candidate = next_section_path(current_file)
     for _ in range(80):
         content = await _read_optional(file_service, project_id, candidate)
         if _is_blank_chapter(content):
             return candidate
-        candidate = _next_section_path(candidate)
+        candidate = next_section_path(candidate)
     return candidate
 
 
@@ -729,10 +700,6 @@ def _is_blank_chapter(content: str) -> bool:
     return len("\n".join(body_lines)) < 20
 
 
-def _chapter_vol_label(vol: int, ch: int) -> str:
-    return f"第{vol}卷第{ch}章"
-
-
 async def _generate_chapter_plan(
     file_service: FileService,
     llm_svc: LLMService,
@@ -766,7 +733,7 @@ async def _generate_chapter_plan(
     prompt = "\n".join([
         "你是一位擅长规划爽文的编辑。请为下一章写一份章规划（200 字以内）。",
         "",
-        f"已完成章节：《{_chapter_vol_label(vol, completed_ch)} {ch_title}》",
+        f"已完成章节：《{chapter_vol_label(vol, completed_ch)} {ch_title}》",
         "读者期待：",
         story_engine,
         "近期上下文：",
@@ -894,15 +861,15 @@ async def generate_next_options(
 
     file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
     current_content = await _read_optional(file_service, req.project_id, req.current_file or "")
-    current_no = max(1, _extract_chapter_number(req.current_file) or 1)
+    current_no = max(1, extract_chapter_number(req.current_file) or 1)
     if req.current_file and _is_blank_chapter(current_content):
         next_file = req.current_file
     else:
         next_file = await _next_writable_section_path(file_service, req.project_id, req.current_file)
-    next_label = _section_label(next_file)
+    next_label = section_label(next_file)
     story_engine = await _read_optional(file_service, req.project_id, "story-engine.md")
     recent_context = await _read_optional(file_service, req.project_id, "recent-context.md")
-    vol, ch, _sec = _path_parts(next_file)
+    vol, ch, _sec = path_parts(next_file)
     chapter_plan = await _read_optional(file_service, req.project_id, f"chapters/vol-{vol:02d}/ch-{ch:03d}/ch-plan.md")
     chapter_context = await _read_chapter_context(file_service, req.project_id, vol, ch, _sec)
     context_content = current_content if not _is_blank_chapter(current_content) else chapter_context
@@ -947,7 +914,7 @@ async def generate_next_options(
         logger.warning("动态生成爽点卡失败，使用上下文兜底卡: %s", e)
     return ApiResponse.ok(LiteNextOptionsResponse(
         cards=cards,
-        current_file=req.current_file or _chapter_path(current_no),
+        current_file=req.current_file or chapter_path(current_no),
         next_file=next_file,
     ))
 
@@ -976,7 +943,7 @@ async def write_lite_next(
         target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
     is_candidate = _should_use_candidate(req.action, target_file, requested_content, is_blank_requested)
     output_file = target_file
-    vol, ch, _sec = _path_parts(target_file)
+    vol, ch, _sec = path_parts(target_file)
     await _ensure_chapter(project_dir, vol, ch, req.selected_card.title)
 
     prev_content = await _read_chapter_context(file_service, req.project_id, vol, ch, _sec)
@@ -1197,13 +1164,13 @@ async def write_lite_next_stream(
         is_candidate = _should_use_candidate(req.action, target_file, requested_content, is_blank_requested)
         output_file = target_file
 
-        vol, ch, _sec = _path_parts(target_file)
+        vol, ch, _sec = path_parts(target_file)
         await _ensure_chapter(project_dir, vol, ch, req.selected_card.title)
         yield _lite_stream_event("meta", {
             "file_path": output_file,
             "source_file": target_file,
             "is_candidate": is_candidate,
-            "label": _section_label(target_file),
+            "label": section_label(target_file),
         })
 
         try:
