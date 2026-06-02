@@ -80,6 +80,7 @@
           ref="recentPanelRef"
         />
         <ExecutionPanel v-show="activeTab === 'execution'" />
+        <FlowPanel v-show="activeTab === 'flow'" />
       </div>
     </template>
   </div>
@@ -99,6 +100,7 @@ import ExecutionPanel from './ExecutionPanel.vue'
 import StoryStatePanel from '../global/StoryStatePanel.vue'
 import StyleGuidePanel from '../global/StyleGuidePanel.vue'
 import RecentContextPanel from '../global/RecentContextPanel.vue'
+import FlowPanel from '../flow/FlowPanel.vue'
 
 const projectStore = useProjectStore()
 const rightPanelStore = useRightPanelStore()
@@ -120,6 +122,7 @@ const tabs = [
   { id: 'style', label: '文风', icon: '🎨' },
   { id: 'recent', label: '上下文', icon: '🧭' },
   { id: 'execution', label: '执行', icon: '📊' },
+  { id: 'flow', label: '流程', icon: '🔄' },
 ]
 
 onMounted(() => {
