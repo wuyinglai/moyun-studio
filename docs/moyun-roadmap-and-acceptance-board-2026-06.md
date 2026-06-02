@@ -1,0 +1,243 @@
+# Moyun Studio 改造优化总清单与验收看板
+
+> 创建时间：2026-06-02
+> 最后更新：2026-06-02
+> 负责人：Solo / ChatGPT 联合维护
+
+---
+
+## 1. 总体目标
+
+Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标包括：
+
+| 方向 | 目标 |
+|------|------|
+| **后端 Lite 架构收口** | 逐步抽取后端服务，边界清晰，可测试，可替换 |
+| **候选稿安全机制统一** | 所有高风险修改必须生成候选稿，不直接覆盖正式正文 |
+| **数据流可视化** | 让用户直观看到 AI 写作的每一步（输入/处理/输出） |
+| **真实功能测试** | 确保生成、候选稿、回滚、长篇连续生成等核心功能可用 |
+| **右边栏产品化** | 流程/候选稿/记忆/视觉等信息架构清晰，用户友好 |
+| **视觉分镜/自动配图** | 未来支持文生图、视觉摘要、ComfyUI 接入 |
+
+---
+
+## 2. 状态标记说明
+
+| 标记 | 含义 | 说明 |
+|------|------|------|
+| ✅ | 已完成并验收 | 已通过 ChatGPT 核实 GitHub commit |
+| 🟡 | 已完成待验收 | Solo 已提交，等待 ChatGPT 核实 |
+| ⏳ | 待执行 | 尚未开始 |
+| 🧭 | 未来规划 | 方向明确，尚未排期 |
+| ⚠️ | 有风险需补丁 | 发现问题，需要后续修复 |
+| ❌ | 不通过/暂停 | 遇到障碍或被搁置 |
+
+---
+
+## 3. 后端 Lite 架构收口线
+
+### 3.1 核心服务抽取
+
+| Phase | 任务 | 状态 | 产出 | 验收方式 | 需补丁 |
+|-------|------|------|------|----------|--------|
+| Phase 1 | 场景契约统一 | ✅ | 场景路径命名规范、文件系统设计 | 代码审查 | - |
+| Phase 2 | 候选稿机制统一 | ✅ | CandidateService 统一，adopt 前不覆盖原文 | 功能测试 | - |
+| Phase 3.1 | 项目初始化服务抽取 | ✅ | ProjectService 独立 | 代码审查 | - |
+| Phase 3.2 | 场景路径服务抽取 | ✅ | SceneService 独立 | 代码审查 | - |
+| Phase 3.3A | Story metadata / memory 读写服务抽取 | ✅ | MemoryService 独立 | 代码审查 | - |
+| Phase 3.3B | Option cards / next-options 解析服务抽取 | ✅ | OptionCardsService 独立 | 代码审查 | - |
+| Phase 3.4A | Lite LLM 调用基础服务抽取 | ✅ | LiteLLMService 独立 | 代码审查 | - |
+| Phase 3.4B | Lite Prompt Builder 服务抽取 | ✅ | LitePromptBuilder 独立 | 代码审查 | - |
+| Phase 3.4C | Lite Quality Gate 服务抽取 | ✅ | LiteQualityService 独立 | 代码审查 | - |
+| Phase 3.4D | Generation Orchestration 拆分设计 | ✅ | 文档：generation-orchestration-design.md | 文档审查 | - |
+| Phase 3.4E | 低风险 helper 清理 | ✅ | 移除冗余 helper 函数 | 代码审查 | - |
+| Phase 3.4F | 路径安全边界审查 | ✅ | test_lite_path_safety.py 38个测试全通过 | 自动化测试 | - |
+
+**验收方式**：后端测试通过 + 代码审查
+
+### 3.2 Lite 后端服务清单
+
+当前已抽取的 Lite 相关服务：
+
+| 服务 | 状态 | 说明 |
+|------|------|------|
+| LiteSceneService | ✅ | 场景路径相关服务 |
+| LiteStoryMetadataService | ✅ | 故事元数据读写服务 |
+| LitePromptBuilder | ✅ | Prompt 构建服务 |
+| LiteLLMService | ✅ | LLM 调用服务 |
+| LiteQualityService | ✅ | 质量检查服务 |
+| LiteOptionCardsService | ✅ | 场景选项卡服务 |
+| LiteCandidatePolicy | ✅ | 候选稿策略服务 |
+| CandidateService | ✅ | 候选稿统一服务 |
+
+---
+
+## 4. 数据流可视化线
+
+| Phase | 任务 | 状态 | 产出 | 验收方式 | GitHub Commit |
+|-------|------|------|------|----------|---------------|
+| Phase 5A | 数据流可视化产品设计 | ✅ | docs/dataflow-visualization-design-2026-06.md | 文档审查 | 03671be |
+| Phase 5B | FlowPanel 静态 Mock 原型 | ✅ | FlowPanel.vue + FlowNodeCard.vue + mockFlowData.ts | UI 验收 | ce08475 |
+| Phase 5C | FlowPanel 接入 Lite 生成现有回调 | ✅ | useFlowRun.ts + flowStore + 回调集成 | 功能验收 | 116c9e7 |
+| Phase 5D | FlowPanel Artifact Preview 增强 | ✅ | FlowArtifactPreview.vue + 增强 mock 数据 | UI 验收 | cf8d16d |
+| Phase 5E | CandidatePanel 与 Flow artifact 联动 | ⏳ | - | - | - |
+| Phase 5F | 真实 flow.step SSE 设计文档 | 🧭 | - | - | - |
+| Phase 5G | 真实 flow.step SSE 后端最小实现 | 🧭 | - | - | - |
+| Phase 5H | FlowPanel 接真实后端 flow.step | 🧭 | - | - | - |
+| Phase 5I | 视觉分镜 Flow 节点设计 | 🧭 | - | - | - |
+
+**当前进度**：已完成 5A-5D，FlowPanel 已具备 Mock 展示 + 实时推断 + Artifact 预览能力
+
+---
+
+## 5. 真实功能测试 / 输出质量评估线
+
+| Phase | 任务 | 状态 | 产出 | 验收方式 |
+|-------|------|------|------|----------|
+| Phase T1 | 全功能人工测试计划 | ✅ | 测试计划文档 | 文档审查 |
+| Phase T2 | Agnes LLM 配置支持 | ✅ | 支持配置多种 LLM | 配置验证 |
+| Phase T3 | Lite 真实生成冒烟测试 | ⏳ | - | - |
+| Phase T4 | Professional 真实生成冒烟测试 | ⏳ | - | - |
+| Phase T5 | 输出质量评分表 | ⏳ | - | - |
+| Phase T6 | 候选稿采用/回滚测试 | ⏳ | - | - |
+| Phase T7 | 长篇连续 10 场生成测试 | ⏳ | - | - |
+| Phase T8 | 错误/超时/断流测试 | ⏳ | - | - |
+| Phase T9 | 真实用户视角测试报告 | ⏳ | - | - |
+
+**当前进度**：已完成测试计划和 LLM 配置支持，尚未进行真实生成测试
+
+---
+
+## 6. 右边栏产品体验优化线
+
+| Phase | 任务 | 状态 | 产出 | 验收方式 |
+|-------|------|------|------|----------|
+| Phase R1 | 右边栏信息架构设计 | ⏳ | - | - |
+| Phase R2 | 流程 Tab 原型 | ✅ | FlowPanel 已集成到 RightPanel | UI 验收 |
+| Phase R3 | CandidatePanel 体验增强 | ⏳ | - | - |
+| Phase R4 | MemoryPanel 用户化展示 | ⏳ | - | - |
+| Phase R5 | ExecutionPanel 简化 | ⏳ | - | - |
+| Phase R6 | 高级模式折叠 | ⏳ | - | - |
+| Phase R7 | 右边栏任务语言重命名 | ⏳ | - | - |
+
+**当前进度**：流程 Tab 已完成，其他 Tab 待优化
+
+---
+
+## 7. 视觉分镜/自动配图线
+
+| Phase | 任务 | 状态 | 产出 | 验收方式 |
+|-------|------|------|------|----------|
+| Phase V1 | 视觉分镜产品方案 | ⏳ | - | - |
+| Phase V2 | Visual Bible 数据结构设计 | 🧭 | - | - |
+| Phase V3 | 场景视觉摘要生成 | 🧭 | - | - |
+| Phase V4 | 文生图 workflow 设计 | 🧭 | - | - |
+| Phase V5 | 图生图/局部编辑 workflow 设计 | 🧭 | - | - |
+| Phase V6 | 图片候选稿机制 | 🧭 | - | - |
+| Phase V7 | ComfyUI 接入设计 | 🧭 | - | - |
+| Phase V8 | ComfyUI 最小后端适配 | 🧭 | - | - |
+| Phase V9 | FlowPanel 增加视觉节点 | 🧭 | - | - |
+
+**当前进度**：Phase 5A 设计文档中已有初步方向，尚未正式规划
+
+---
+
+## 8. 前端状态与稳定性线
+
+| Phase | 任务 | 状态 | 产出 | 验收方式 |
+|-------|------|------|------|----------|
+| Phase F1 | 正文真相源审查 | ⏳ | - | - |
+| Phase F2 | useLiteGeneration 状态边界审查 | ⏳ | - | - |
+| Phase F3 | SSE 处理统一设计 | ⏳ | - | - |
+| Phase F4 | FlowPanel 出错隔离测试 | ⏳ | - | - |
+| Phase F5 | 右边栏 Store 梳理 | 🧭 | - | - |
+
+**当前进度**：整体待审查
+
+---
+
+## 9. 当前最高优先级任务
+
+| 优先级 | Phase | 任务 | 状态 | 原因 |
+|--------|-------|------|------|------|
+| 1 | Phase T3 | Lite 真实生成冒烟测试 | ⏳ | 验证 Phase 5C 实时流程的准确性 |
+| 2 | Phase 5E | CandidatePanel 与 Flow 联动 | ⏳ | 增强数据流可视化完整性 |
+| 3 | Phase T5 | 输出质量评分表 | ⏳ | 建立质量评估体系 |
+| 4 | Phase R3 | CandidatePanel 体验增强 | ⏳ | 提升用户安全感 |
+| 5 | Phase V1 | 视觉分镜产品方案 | ⏳ | 探索未来方向 |
+
+---
+
+## 10. 每次 Solo 完成后的验收流程
+
+### 10.1 标准验收流程
+
+```
+1. Solo 提交最终报告
+   ↓
+2. 提供完整信息：branch / commit hash / commit URL / modified files / commands run
+   ↓
+3. ChatGPT 核实 GitHub commit
+   ↓
+4. 对照本路线图判断是否验收
+   ↓
+5. 如果通过 → 更新本路线图
+   ↓
+6. 如果不通过 → 追加补丁任务到对应 Phase
+   ↓
+7. 不允许未验收就进入下一阶段
+```
+
+### 10.2 验收必查项
+
+| 检查项 | 说明 |
+|--------|------|
+| branch | 当前分支名 |
+| commit hash | 必须来自 `git rev-parse HEAD` |
+| commit URL | 必须是真实可访问的 GitHub URL |
+| modified files | 列出新增/修改的文件 |
+| commands run | 列出 build、测试等验证命令 |
+| behavior compatibility | 逐项回答兼容性检查 |
+
+### 10.3 禁止事项
+
+- 不允许未验收就进入下一阶段
+- 不允许修改已验收的 commit
+- 不允许混入无关文件
+- 不允许修改本路线图以外的代码（除非明确授权）
+
+---
+
+## 11. 后续维护规则
+
+1. **每次完成一个任务，必须更新本路线图**
+2. **每个任务最好一个 commit**
+3. **不要混入无关文件**
+4. **commit hash 必须来自 `git rev-parse HEAD`**
+5. **push 后必须提供 GitHub URL**
+6. **ChatGPT 独立核实后才算完成**
+7. **更新时保持本路线图格式不变，只更新状态和 commit**
+
+---
+
+## 12. 验收历史
+
+| 日期 | Phase | 状态 | Commit | 验收人 |
+|------|-------|------|--------|--------|
+| 2026-06-02 | Phase 5A | ✅ | 03671be | ChatGPT |
+| 2026-06-02 | Phase 5B | ✅ | ce08475 | ChatGPT |
+| 2026-06-02 | Phase 5C | ✅ | 116c9e7 | ChatGPT |
+| 2026-06-02 | Phase 5D | ✅ | cf8d16d | ChatGPT |
+
+---
+
+## 附录：关键文档索引
+
+| 文档 | 用途 |
+|------|------|
+| docs/dataflow-visualization-design-2026-06.md | 数据流可视化产品设计 |
+| docs/moyun-roadmap-and-acceptance-board-2026-06.md | 本路线图（当前文档） |
+| docs/contracts/scene-path-contract.md | 场景路径契约 |
+| docs/contracts/candidate-contract.md | 候选稿契约 |
+| docs/contracts/api-contract.md | API 契约 |
+| docs/contracts/event-contract.md | SSE 事件契约 |
