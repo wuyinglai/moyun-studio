@@ -137,7 +137,7 @@ class TestLiteScenePathContract:
         assert section_label("chapters/vol-01/ch-001/sec-003.md") == "第1卷 第1章 第3场景"
 
     def test_lite_option_cards_parse_fenced_json_with_trailing_text(self):
-        from backend.api.lite import _parse_option_cards
+        from backend.application.lite_option_cards_service import LiteOptionCardsService
 
         raw = """```json
 [
@@ -154,7 +154,7 @@ class TestLiteScenePathContract:
 ```
 补充说明：以上 JSON 可直接使用。"""
 
-        cards = _parse_option_cards(raw, "第1卷 第1章 第2场景")
+        cards = LiteOptionCardsService.parse_option_cards(raw, "第1卷 第1章 第2场景")
 
         assert len(cards) == 1
         assert cards[0].title == "当场反击"

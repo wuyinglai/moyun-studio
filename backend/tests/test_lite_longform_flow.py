@@ -22,7 +22,7 @@ async def test_lite_mode_advances_eight_sections_without_outline(tmp_path):
     project_dir.mkdir(parents=True)
     file_service = FileService(projects_root)
 
-    from backend.api.lite import FALLBACK_IDEA_BANK
+    from backend.application.lite_option_cards_service import LiteOptionCardsService, FALLBACK_IDEA_BANK
     from backend.schemas.lite import LiteWritingPrefs
 
     story_engine = _story_engine_template(FALLBACK_IDEA_BANK[0], _prefs_to_text(LiteWritingPrefs()))
