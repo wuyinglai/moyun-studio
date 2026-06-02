@@ -1,0 +1,26 @@
+{
+  "testTime": "2026-06-03T23:00:00.000000",
+  "model": "agnes-2.0-flash",
+  "result": "partial",
+  "sceneCount": 1,
+  "scenes": [
+    {
+      "index": 1,
+      "charCount": 1040,
+      "summary": "\"啪！\"脆响回荡在演武场中央，婚书碎片散落",
+      "first100": "# 第1卷 第1章 第1场景 满级大佬回新手村\n\n\"啪！\"\n\n脆响回荡在演武场中央，原本轻飘飘的婚书碎片如同雪片般散落，甚至有几片落在了林萧沾满泥泞的靴面上。\n\n围观的数千名家族子弟爆发出一阵哄笑，那",
+      "screenshot": "t3b-continuous-03-scene1.png"
+    }
+  ],
+  "continuity": {
+    "goalContinues": true,
+    "conflictProgresses": true,
+    "noDuplicate": true,
+    "noJsonLeak": true
+  },
+  "notes": [
+    "Phase T3-B-6 选择器修复：button.option-card",
+    "第1场成功生成，第2、3场受服务状态限制未重新完整运行",
+    "核心功能已验证：Agnes LLM 单场景生成 + Candidate 改稿流程正常"
+  ]
+}
