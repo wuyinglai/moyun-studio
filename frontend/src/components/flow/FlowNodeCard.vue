@@ -17,6 +17,7 @@
         <button
           v-if="hasDetails"
           class="expand-btn"
+          :class="{ expanded: expanded }"
           @click.stop="toggleExpand"
         >
           <i :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'" />
@@ -34,40 +35,65 @@
     </div>
 
     <div v-if="expanded && hasDetails" class="node-details">
-      <div v-if="node.inputs?.length" class="details-section">
-        <span class="section-title">输入</span>
-        <div class="artifact-list">
-          <div
-            v-for="artifact in node.inputs"
-            :key="artifact.id"
-            class="artifact-item"
-          >
-            <i :class="artifactIconClass(artifact.kind)" />
-            <span class="artifact-label">{{ artifact.label }}</span>
-            <span v-if="artifact.path" class="artifact-path">{{ artifact.path }}</span>
-            <span v-if="artifact.preview" class="artifact-preview" :title="artifact.preview">
-              <i class="fa-solid fa-eye" />
-            </span>
-          </div>
+      <div v-if="hasInputs" class="details-section">
+        <span class="section-title">
+          <i class="fa-solid fa-arrow-right-to-bracket" />
+          输入
+        </span>
+        <div class="artifacts-list">
+          <template v-for="artifact in node.inputs" :key="artifact.id">
+            <div
+              class="artifact-item"
+              @click.stop="toggleArtifactPreview(artifact.id)"
+            >
+              <i :class="artifactIconClass(artifact.kind)" />
+              <div class="artifact-info">
+                <span class="artifact-label">{{ artifact.label }}</span>
+                <span v-if="artifact.path" class="artifact-path">{{ artifact.path }}</span>
+              </div>
+              <i class="fa-solid fa-chevron-down toggle-preview-icon" :class="{ flipped: artifactPreviewOpen === artifact.id }" />
+            </div>
+            <div
+              v-if="artifactPreviewOpen === artifact.id"
+              class="artifact-preview-wrapper"
+            >
+              <FlowArtifactPreview :artifact="artifact" />
+            </div>
+          </template>
         </div>
       </div>
 
-      <div v-if="node.outputs?.length" class="details-section">
-        <span class="section-title">输出</span>
-        <div class="artifact-list">
-          <div
-            v-for="artifact in node.outputs"
-            :key="artifact.id"
-            class="artifact-item"
-          >
-            <i :class="artifactIconClass(artifact.kind)" />
-            <span class="artifact-label">{{ artifact.label }}</span>
-            <span v-if="artifact.path" class="artifact-path">{{ artifact.path }}</span>
-            <span v-if="artifact.preview" class="artifact-preview" :title="artifact.preview">
-              <i class="fa-solid fa-eye" />
-            </span>
-          </div>
+      <div v-if="hasOutputs" class="details-section">
+        <span class="section-title">
+          <i class="fa-solid fa-arrow-right-from-bracket" />
+          输出
+        </span>
+        <div class="artifacts-list">
+          <template v-for="artifact in node.outputs" :key="artifact.id">
+            <div
+              class="artifact-item"
+              @click.stop="toggleArtifactPreview(artifact.id)"
+            >
+              <i :class="artifactIconClass(artifact.kind)" />
+              <div class="artifact-info">
+                <span class="artifact-label">{{ artifact.label }}</span>
+                <span v-if="artifact.path" class="artifact-path">{{ artifact.path }}</span>
+              </div>
+              <i class="fa-solid fa-chevron-down toggle-preview-icon" :class="{ flipped: artifactPreviewOpen === artifact.id }" />
+            </div>
+            <div
+              v-if="artifactPreviewOpen === artifact.id"
+              class="artifact-preview-wrapper"
+            >
+              <FlowArtifactPreview :artifact="artifact" />
+            </div>
+          </template>
         </div>
+      </div>
+
+      <div v-if="!hasInputs && !hasOutputs" class="empty-state">
+        <i class="fa-solid fa-circle-info" />
+        <span>该节点无输入输出信息</span>
       </div>
     </div>
   </div>
@@ -75,6 +101,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import FlowArtifactPreview from './FlowArtifactPreview.vue'
 import type { FlowNode } from './types'
 
 const props = defineProps<{
@@ -82,9 +109,18 @@ const props = defineProps<{
 }>()
 
 const expanded = ref(false)
+const artifactPreviewOpen = ref<string | null>(null)
 
 const hasDetails = computed(() => {
   return (props.node.inputs?.length || 0) > 0 || (props.node.outputs?.length || 0) > 0 || props.node.error
+})
+
+const hasInputs = computed(() => {
+  return props.node.inputs && props.node.inputs.length > 0
+})
+
+const hasOutputs = computed(() => {
+  return props.node.outputs && props.node.outputs.length > 0
 })
 
 const typeIconClass = computed(() => {
@@ -132,6 +168,17 @@ function formatDuration(ms: number): string {
 function toggleExpand() {
   if (hasDetails.value) {
     expanded.value = !expanded.value
+    if (!expanded.value) {
+      artifactPreviewOpen.value = null
+    }
+  }
+}
+
+function toggleArtifactPreview(artifactId: string) {
+  if (artifactPreviewOpen.value === artifactId) {
+    artifactPreviewOpen.value = null
+  } else {
+    artifactPreviewOpen.value = artifactId
   }
 }
 </script>
@@ -187,7 +234,7 @@ function toggleExpand() {
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   background: var(--bg-primary);
 
   .node-input & {
@@ -304,6 +351,11 @@ function toggleExpand() {
   align-items: center;
   justify-content: center;
   font-size: 12px;
+  transition: all 0.2s;
+
+  &.expanded {
+    color: var(--accent-primary);
+  }
 
   &:hover {
     background: var(--bg-hover);
@@ -344,7 +396,7 @@ function toggleExpand() {
 }
 
 .details-section {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 
   &:last-child {
     margin-bottom: 0;
@@ -355,11 +407,17 @@ function toggleExpand() {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
-  margin-bottom: 6px;
-  display: block;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  i {
+    font-size: 10px;
+  }
 }
 
-.artifact-list {
+.artifacts-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -368,11 +426,17 @@ function toggleExpand() {
 .artifact-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: 8px;
+  padding: 8px 10px;
   background: var(--bg-primary);
   border-radius: var(--radius-sm);
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--bg-hover);
+  }
 
   i {
     font-size: 11px;
@@ -381,27 +445,65 @@ function toggleExpand() {
   }
 }
 
+.artifact-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .artifact-label {
   color: var(--text-primary);
-  flex: 1;
+  font-size: 12px;
 }
 
 .artifact-path {
   color: var(--text-muted);
   font-size: 11px;
-  flex: 2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.artifact-preview {
-  color: var(--accent-primary);
-  cursor: pointer;
-  font-size: 11px;
+.toggle-preview-icon {
+  color: var(--text-muted);
+  font-size: 10px;
+  transition: transform 0.2s;
 
-  &:hover {
-    color: var(--accent-primary-dark);
+  &.flipped {
+    transform: rotate(180deg);
+  }
+}
+
+.artifact-preview-wrapper {
+  margin-bottom: 8px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+
+  i {
+    font-size: 11px;
   }
 }
 </style>

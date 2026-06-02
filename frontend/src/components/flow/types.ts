@@ -22,6 +22,9 @@ export interface FlowArtifact {
   path?: string
   preview?: string
   size?: number
+  sourcePath?: string
+  candidateId?: string
+  isMock?: boolean
 }
 
 export interface FlowNode {
