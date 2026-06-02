@@ -2,7 +2,7 @@
 
 > **测试阶段**: Phase T3
 > **创建时间**: 2026-06-02
-> **状态**: 待执行
+> **状态**: Phase T3-A UI 冒烟测试已执行；真实 Agnes LLM 生成待执行
 
 ---
 
@@ -328,3 +328,49 @@ git status --short
 |------|------|------|
 | 测试执行者 | | |
 | 验收者 | | |
+
+---
+
+## Phase T3-A Playwright UI 冒烟测试结果
+
+### 测试时间
+2026-06-02
+
+### 测试环境
+| 项目 | 信息 |
+|------|------|
+| 前端 URL | http://localhost:5173 |
+| 后端 URL | http://localhost:8000 |
+| 浏览器 | Chromium (Playwright) |
+| Commit Hash | 14cd5e472d34447e75f6b1324148af7a80a1d7d1 |
+
+### UI 测试结果表
+| 测试项 | 结果 | 备注 | 截图 |
+|--------|------|------|------|
+| 首页加载 | ✅ 通过 | Playwright 测试通过 | t3a-01-home.png |
+| Lite 页面 | ✅ 通过 | 4 个 Lite 测试全部通过 | t3a-02-lite-page.png |
+| FlowPanel Tab | 🟡 部分验证 | 右边栏测试失败（Tab 数不是 10） | t3a-03-flow-tab.png |
+| 成功示例 | ⏳ 待截图 | - | t3a-04-flow-success-artifacts.png |
+| 失败示例 | ⏳ 待截图 | - | t3a-05-flow-error.png |
+| 实时流程空态 | ⏳ 待截图 | - | t3a-06-realtime-empty.png |
+| 新建项目 UI | ⏳ 待截图 | - | t3a-07-create-project.png |
+| 尝试生成 | ⏳ 待截图 | Agnes API Key 未配置 | t3a-08-generation-attempt.png |
+
+### 控制台错误
+None (Playwright Lite 测试显示无严重错误)
+
+### Playwright 观察
+- ✅ 项目已有完整的 Playwright 测试框架
+- ✅ Lite 模式入口 Smoke 测试全部通过 (4/4)
+- ✅ 无严重 Console Error
+- ⚠️ 右边栏 Tab 数量测试失败（因为新增了 Flow 流程 Tab，从 10 个变成了 11 个）
+
+### LLM 真实生成状态
+- ✅ Agnes API Key 未配置
+- ⏳ 真实 LLM 生成未执行
+- ⏳ 需要配置 API Key 后可执行真实生成测试
+
+### 结论
+- ✅ UI 冒烟基本通过
+- ✅ 建议进入 T3-B Agnes LLM 真实生成测试（需要先配置 API Key）
+
