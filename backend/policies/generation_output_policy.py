@@ -22,11 +22,12 @@ OutputMode = Literal["write", "candidate", "append", "reject"]
 _SCENE_PATTERN = re.compile(r"^chapters/vol-\d+/ch-\d+/sec-\d+\.md$")
 
 # 安全路径前缀白名单
+# 注意：.lite-candidates/ 仅用于旧数据兼容，新生成统一写入 .candidates/
 _SAFE_PREFIXES = (
     "materials/extracted/",
     "materials/drafts/",
     ".candidates/",
-    ".lite-candidates/",
+    ".lite-candidates/",  # 旧数据兼容，不允许新写入
     "revision-log/",
     "logs/",
 )
