@@ -11,10 +11,12 @@
  * 7. 新建项目 UI
  * 8. 尝试生成
  */
-import { test, expect, chromium, Page } from '@playwright/test'
-import fs from 'fs'
+import { test, expect, chromium, type Page } from '@playwright/test'
+import { fileURLToPath } from 'url'
 import path from 'path'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 const screenshotDir = path.resolve(__dirname, '../../../docs/testing/screenshots')
 
 test.describe('Phase T3-A FlowPanel UI 冒烟测试', () => {

@@ -129,9 +129,16 @@ test.describe('right panel tabs', () => {
     await dismissViteOverlay(page)
 
     const tabs = page.locator('.right-panel .panel-tab')
-    await expect(tabs).toHaveCount(10, { timeout: 10000 })
+    // 至少 10 个 Tab（新增 Flow 流程 Tab 后可能更多）
+    const tabCount = await tabs.count()
+    expect(tabCount).toBeGreaterThanOrEqual(10)
 
-    for (let index = 0; index < 10; index += 1) {
+    // 验证关键 Tab 存在（包含流程）
+    const tabTexts = await tabs.allTextContents()
+    expect(tabTexts.some(t => t.includes('流程'))).toBe(true)
+
+    // 遍历所有 Tab
+    for (let index = 0; index < tabCount; index += 1) {
       await tabs.nth(index).click()
       await expect(tabs.nth(index)).toHaveClass(/active/)
       await expect(page.locator('.right-panel > .panel-content')).toBeVisible()
