@@ -38,7 +38,7 @@ def wait_for_generation_complete(page, max_wait=90000):
 
 def get_scene_content(page):
     try:
-        textarea = page.locator('textarea[data-testid="lite-output-panel"]')
+        textarea = page.locator('[data-testid="lite-editor-content"]')
         if textarea.count() > 0:
             content = textarea.first.input_value()
             return len(content), content
@@ -69,7 +69,7 @@ def test_continuous_scenes():
 
         try:
             print("=" * 70)
-            print("Phase T3-B-3: 连续生成 3 场真实补测 (正式版)")
+            print("Phase T3-B-7: 连续生成 3 场真实重测 (data-testid 稳定版)")
             print("=" * 70)
 
             # Step 1: Open Lite
@@ -109,10 +109,10 @@ def test_continuous_scenes():
                     # Scene 1: Wait auto-generate
                     print("  Waiting for auto-generation...")
                 else:
-                    # Scene 2, 3: Find button.option-card
-                    print(f"  Waiting for button.option-card...")
-                    page.wait_for_selector('button.option-card', timeout=60000)
-                    option_cards = page.locator('button.option-card')
+                    # Scene 2, 3: Find [data-testid="lite-option-card"]
+                    print(f"  Waiting for [data-testid=\"lite-option-card\"]...")
+                    page.wait_for_selector('[data-testid="lite-option-card"]', timeout=60000)
+                    option_cards = page.locator('[data-testid="lite-option-card"]')
                     count = option_cards.count()
                     print(f"  Found {count} option-cards")
 

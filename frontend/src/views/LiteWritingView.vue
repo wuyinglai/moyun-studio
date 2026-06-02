@@ -114,6 +114,7 @@
           v-model="content"
           class="chapter-textarea"
           data-testid="lite-output-panel"
+          data-testid="lite-editor-content"
           placeholder="选择右侧爽点卡开始生成，或在这里直接修改正文..."
           @input="dirty = true"
           @scroll="handleTextareaScroll"
@@ -205,13 +206,14 @@
         <div
           v-if="generating"
           class="generating-mask"
+          data-testid="lite-generating-status"
         >
           {{ activeWorkStatus?.detail || `正在写${pendingTargetLabel}，正文会实时出现在编辑器里...` }}
         </div>
         </ErrorBoundary>
       </main>
 
-      <aside class="lite-assistant">
+      <aside class="lite-assistant" data-testid="lite-next-options-panel">
         <section class="panel">
           <div
             v-if="chapterMilestone"
@@ -263,12 +265,14 @@
           </p>
           <template v-if="!generating">
           <button
-            v-for="card in nextCards"
-            :key="card.id"
-            class="option-card"
-            :disabled="generating"
-            @click="generateWithCard(card)"
-          >
+          v-for="(card, idx) in nextCards"
+          :key="card.id"
+          class="option-card"
+          :data-testid="`lite-option-card-${idx}`"
+          data-testid="lite-option-card"
+          :disabled="generating"
+          @click="generateWithCard(card)"
+        >
             <strong>{{ card.title }}</strong>
             <div class="option-beats">
               <p v-if="card.protagonist_desire">
