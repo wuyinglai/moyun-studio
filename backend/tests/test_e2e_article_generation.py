@@ -370,8 +370,8 @@ class TestQualityRepairTrigger:
 
     @staticmethod
     def _needs_repair(review):
-        from backend.api.lite import _needs_quality_repair
-        return _needs_quality_repair(review)
+        from backend.application.lite_quality_service import LiteQualityService
+        return LiteQualityService.needs_quality_repair(review)
 
     def test_needs_repair_avg_below_6(self):
         """6 维平均分 = 4.5, 无 critical/major → True"""
@@ -427,8 +427,8 @@ class TestQualityRepairTrigger:
 
     def test_no_repair_none_review(self):
         """review 为 None → 安全返回 False"""
-        from backend.api.lite import _needs_quality_repair
-        assert _needs_quality_repair(None) is False
+        from backend.application.lite_quality_service import LiteQualityService
+        assert LiteQualityService.needs_quality_repair(None) is False
 
 
 # ═══════════════════════════════════════════════════════════════════

@@ -27,6 +27,7 @@ from backend.application.lite_story_metadata_service import LiteStoryMetadataSer
 from backend.application.lite_option_cards_service import LiteOptionCardsService, GENRES
 from backend.application.lite_llm_service import LiteLLMService
 from backend.application.lite_prompt_builder import LitePromptBuilder
+from backend.application.lite_quality_service import LiteQualityService
 from backend.config import Settings, get_settings
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import ProjectNotFoundError
@@ -323,26 +324,7 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
     return section_path(volume_number, chapter_number, 1)
 
 
-def _quality_one_line(summary: str, action: str) -> str:
-    if summary:
-        return summary.splitlines()[0][:80]
-    if action == "continue":
-        return "已续写草稿，并更新故事状态。"
-    if action == "more_exciting":
-        return "已增强冲突、爽点和结尾钩子。"
-    if action == "more_reasonable":
-        return "已补充人物动机和前文衔接。"
-    return "已完成质量审查，并更新故事状态。"
 
-
-def _needs_quality_repair(review) -> bool:
-    if not review:
-        return False
-    scores = review.scores.model_dump() if review.scores else {}
-    values = [v for v in scores.values() if isinstance(v, int)]
-    avg = sum(values) / len(values) if values else 10
-    has_serious_issue = any(issue.severity in ("critical", "major") for issue in review.issues)
-    return avg < 6 or has_serious_issue
 
 
 
@@ -728,8 +710,8 @@ async def write_lite_next(
                 timeout=75,
             )
             await asyncio.to_thread(quality.save_review_result, req.project_id, target_file, str(uuid.uuid4())[:8], review)
-            quality_summary = _quality_one_line(review.summary, req.action)
-            if _needs_quality_repair(review):
+            quality_summary = LiteQualityService.quality_one_line(review.summary, req.action)
+            if LiteQualityService.needs_quality_repair(review):
                 repair_goal = "\n".join([
                     "请根据质量审查意见重写并补强当前章节，保留原本选卡方向。",
                     f"质量摘要：{review.summary}",
@@ -760,7 +742,7 @@ async def write_lite_next(
                     quality_summary = "已根据审稿意见自动补强逻辑、动机和爽点。"
         except Exception as e:
             logger.warning("爽文模式质量审查失败: %s", e)
-            quality_summary = _quality_one_line("", req.action)
+            quality_summary = LiteQualityService.quality_one_line("", req.action)
 
     if is_candidate:
         updated_engine = story_engine
