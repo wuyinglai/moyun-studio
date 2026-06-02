@@ -52,6 +52,7 @@ class CandidateInfo(BaseModel):
     model: str | None = Field(None, description="生成模型")
     pipeline_id: str | None = Field(None, description="管线ID")
     prompt_version: str | None = Field(None, description="Prompt 版本（可选）")
+    source_mode: str | None = Field(None, description="来源模式: lite 或 professional")
 
     @property
     def filename(self) -> str:
@@ -74,6 +75,7 @@ class CreateCandidateRequest(BaseModel):
     model: str | None = Field(None, description="生成模型")
     pipeline_id: str | None = Field(None, description="管线ID")
     prompt_version: str | None = Field(None, description="Prompt 版本")
+    source_mode: str | None = Field(None, description="来源模式: lite 或 professional")
 
 
 class AdoptCandidateRequest(BaseModel):

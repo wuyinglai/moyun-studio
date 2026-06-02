@@ -494,8 +494,8 @@ class TestCandidatePolicy:
         ) is True
 
     def test_resolve_lite_output_file_polish_returns_candidate_path(self):
-        """polish → 输出路径 = .lite-candidates/..."""
-        from backend.api.lite import _resolve_lite_output_file
+        """polish → 使用候选稿"""
+        from backend.api.lite import _should_use_candidate
 
         req = LiteWriteNextRequest(
             project_id="test",
@@ -503,18 +503,17 @@ class TestCandidatePolicy:
             selected_card=LiteNextOptionCard(id="c1", title="测试", beat="拍", scene="场景", payoff="兑现", hook="钩子"),
             action="polish_current_scene",
         )
-        output = _resolve_lite_output_file(
-            req,
+        should_use = _should_use_candidate(
+            "polish_current_scene",
             target_file="chapters/vol-01/ch-001/sec-001.md",
             requested_content="已有内容",
             is_blank_requested=False,
         )
-        assert ".lite-candidates/" in output
-        assert output != "chapters/vol-01/ch-001/sec-001.md"
+        assert should_use is True
 
     def test_resolve_lite_output_file_write_empty_returns_direct_path(self):
-        """write + 空目标 → 输出路径 = 原路径（直接写入）"""
-        from backend.api.lite import _resolve_lite_output_file
+        """write + 空目标 → 直接写入"""
+        from backend.api.lite import _should_use_candidate
 
         req = LiteWriteNextRequest(
             project_id="test",
@@ -522,13 +521,13 @@ class TestCandidatePolicy:
             selected_card=LiteNextOptionCard(id="c1", title="测试", beat="拍", scene="场景", payoff="兑现", hook="钩子"),
             action="write",
         )
-        output = _resolve_lite_output_file(
-            req,
+        should_use = _should_use_candidate(
+            "write",
             target_file="chapters/vol-01/ch-001/sec-099.md",
             requested_content="",
             is_blank_requested=True,
         )
-        assert output == "chapters/vol-01/ch-001/sec-099.md"
+        assert should_use is False
 
 
 # ═══════════════════════════════════════════════════════════════════

@@ -4,6 +4,9 @@ import { useFileStore } from '@/stores/file'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
 import type { LiteWriteAction, LiteNextOptionCard, LiteWritingPrefs } from '@/services/liteService'
+import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
+import type { CandidateAdoptResult } from '@/shared/api/types'
 
 export interface CandidateDraft {
   sourcePath: string
@@ -11,6 +14,7 @@ export interface CandidateDraft {
   action: LiteWriteAction
   title: string
   content: string
+  candidateId?: string | null
 }
 
 export function useLiteCandidateActions(deps: {
@@ -25,8 +29,6 @@ export function useLiteCandidateActions(deps: {
   formatChapterLabel: (path: string) => string
   isBlankChapter: (text: string) => boolean
   normalizeChapterHeading: (path: string, text: string) => string
-  buildCandidatePath: (sourcePath: string, action: LiteWriteAction) => string
-  buildChatRevisionPath: (sourcePath: string) => string
   refreshOptions: (baseFile?: string | null) => Promise<void>
   setWorkStatus: (title: string, detail: string) => void
   clearWorkStatus: () => void
@@ -46,13 +48,17 @@ export function useLiteCandidateActions(deps: {
   async function acceptCandidate() {
     const draft = candidateDraft.value
     const projectId = projectStore.currentProject?.id
-    if (!draft || !projectId) return
+    if (!draft || !projectId || !draft.candidateId) return
     deps.saving.value = true
-    deps.setWorkStatus('正在采用候选稿', '正在覆盖原场景、清理候选文件，并刷新下一场景方向。')
+    deps.setWorkStatus('正在采用候选稿', '正在通过统一候选稿接口覆盖原场景。')
     try {
-      await fileStore.saveFile(projectId, draft.sourcePath, deps.content.value)
-      deps.setWorkStatus('正在清理候选稿', '候选稿已经写入原场景，正在删除临时文件。')
-      await fileStore.deleteFile(projectId, draft.path)
+      const result = await api.post<CandidateAdoptResult>(
+        API_ROUTES.candidateAdopt(projectId, draft.candidateId),
+      )
+      if (result?.conflict || result?.success === false) {
+        notification.error(result?.message || '源文件已被其他操作修改，请重新生成候选稿后再采用。')
+        return
+      }
       candidateDraft.value = null
       delete deps.streamingBuffers.value[draft.path]
       deps.currentFilePath.value = draft.sourcePath
@@ -66,6 +72,13 @@ export function useLiteCandidateActions(deps: {
       deps.setWorkStatus('正在刷新下一场景方向', '正在根据采用后的正文重新生成下一场景爽点卡。')
       await deps.refreshOptions(draft.sourcePath)
       notification.success('已采用候选稿并替换原文')
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } }).response?.status
+      if (status === 409) {
+        notification.error('源文件已被其他操作修改，请重新生成候选稿后再采用。')
+      } else {
+        notification.error((error instanceof Error ? error.message : '') || '采用候选稿失败')
+      }
     } finally {
       deps.saving.value = false
       if (!deps.loadingOptions.value) deps.clearWorkStatus()
@@ -77,7 +90,9 @@ export function useLiteCandidateActions(deps: {
     const projectId = projectStore.currentProject?.id
     if (!draft || !projectId) return
     try {
-      await fileStore.deleteFile(projectId, draft.path)
+      if (draft.candidateId) {
+        await api.delete(API_ROUTES.candidateDetail(projectId, draft.candidateId))
+      }
     } catch {
       // 候选稿已经不存在时也允许回到原文。
     }
@@ -94,7 +109,7 @@ export function useLiteCandidateActions(deps: {
     if (deps.generating.value) return
     const card = nextCards[0]
     if (card && currentFilePath) {
-      await deps.runGeneration(card, 'rewrite', currentFilePath, deps.buildCandidatePath(currentFilePath, 'rewrite'), candidateDraft)
+      await deps.runGeneration(card, 'rewrite', currentFilePath, null, candidateDraft)
     }
   }
 
@@ -106,7 +121,7 @@ export function useLiteCandidateActions(deps: {
     if (deps.generating.value) return
     const card = nextCards[0]
     if (card && currentFilePath) {
-      await deps.runGeneration(card, action, currentFilePath, deps.buildCandidatePath(currentFilePath, action), candidateDraft)
+      await deps.runGeneration(card, action, currentFilePath, null, candidateDraft)
     }
   }
 
@@ -130,7 +145,7 @@ export function useLiteCandidateActions(deps: {
       advancement: '生成一版可采用的候选稿，供用户确认后替换原文。',
     }
     chatRevisionNote.value = `正在根据"${instruction}"生成候选稿。`
-    await deps.runGeneration(card, 'rewrite', sourcePath, deps.buildChatRevisionPath(sourcePath), candidateDraft)
+    await deps.runGeneration(card, 'rewrite', sourcePath, null, candidateDraft)
     chatRevisionNote.value = '候选稿已生成，可以在编辑器中查看并决定是否采用。'
   }
 

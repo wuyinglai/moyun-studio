@@ -26,6 +26,7 @@ _SAFE_PREFIXES = (
     "materials/extracted/",
     "materials/drafts/",
     ".candidates/",
+    ".lite-candidates/",
     "revision-log/",
     "logs/",
 )

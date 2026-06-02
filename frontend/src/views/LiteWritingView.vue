@@ -546,8 +546,6 @@ const cand = useLiteCandidateActions({
   formatChapterLabel: gen.formatChapterLabel,
   isBlankChapter: gen.isBlankChapter,
   normalizeChapterHeading: gen.normalizeChapterHeading,
-  buildCandidatePath: gen.buildCandidatePath,
-  buildChatRevisionPath: gen.buildChatRevisionPath,
   refreshOptions: gen.refreshOptions,
   setWorkStatus: gen.setWorkStatus,
   clearWorkStatus: gen.clearWorkStatus,
@@ -579,7 +577,7 @@ const currentChapterProgress = computed(() => {
 
 const completionSummary = computed(() => {
   if (cand.candidateDraft.value && currentFilePath.value === cand.candidateDraft.value.path) {
-    return `候选稿：${gen.candidateActionText(cand.candidateDraft.value.action, cand.candidateDraft.value.path)}，满意后再采用替换原文`
+    return `候选稿：${gen.candidateActionText(cand.candidateDraft.value.action)}，满意后再采用替换原文`
   }
   if (gen.generating.value && gen.pendingTargetLabel.value) {
     return `正在写${gen.pendingTargetLabel.value} · ${currentChapterProgress.value || '本章进度更新中'}`

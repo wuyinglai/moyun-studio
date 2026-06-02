@@ -13,13 +13,16 @@ from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
 from backend.config import Settings, get_settings
+from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import ProjectNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.project_service import ProjectService
 from backend.core.prompt_engine import PromptEngine
 from backend.core.quality_service import QualityService
+from backend.domain.events import make_candidate_created_event
 from backend.policies.candidate_policy import should_create_candidate
+from backend.schemas.candidate import CandidateAction
 from backend.schemas.common import ApiResponse
 from backend.schemas.lite import (
     LiteIdeaCard,
@@ -98,8 +101,8 @@ FALLBACK_IDEA_BANK: list[LiteIdeaCard] = [
 
 GENRES = ["玄幻", "武侠", "言情", "都市", "仙侠"]
 
-SECTIONS_PER_CHAPTER = 4
-CHAPTERS_PER_VOLUME = 10
+SECTIONS_PER_CHAPTER = 5
+CHAPTERS_PER_VOLUME = 12
 HIGH_RISK_LITE_ACTIONS = {"rewrite", "more_exciting", "more_reasonable", "rewrite_current_scene", "polish_current_scene", "chat_edit_current_scene"}
 
 # Map new action names to existing behavior
@@ -111,29 +114,53 @@ LITE_ACTION_ALIAS = {
 }
 
 
-def _lite_candidate_path(source_path: str, action: str) -> str:
-    safe_source = source_path.removesuffix(".md").replace("\\", "/").replace("/", "__")
-    return f".lite-candidates/{safe_source}.{action}.md"
+def _lite_action_to_candidate_action(action: str) -> CandidateAction:
+    """将 Lite 动作名映射到标准 CandidateAction 枚举"""
+    mapping = {
+        "rewrite": CandidateAction.REWRITE,
+        "more_exciting": CandidateAction.REWRITE,
+        "more_reasonable": CandidateAction.REWRITE,
+        "rewrite_current_scene": CandidateAction.REWRITE,
+        "polish_current_scene": CandidateAction.POLISH,
+        "chat_edit_current_scene": CandidateAction.CHAT,
+    }
+    return mapping.get(action, CandidateAction.REWRITE)
 
 
-def _resolve_lite_output_file(
-    req: LiteWriteNextRequest,
+async def _create_lite_candidate(
+    file_service: FileService,
+    project_id: str,
+    source_path: str,
+    action: str,
+    content: str,
+) -> "CandidateInfo":
+    """通过 CandidateService 创建 Lite 候选稿，返回 CandidateInfo"""
+    candidate_service = CandidateService(file_service)
+    cand_action = _lite_action_to_candidate_action(action)
+    return await candidate_service.create_candidate(
+        project_id=project_id,
+        source_path=source_path,
+        action=cand_action,
+        content=content,
+        source_mode="lite",
+    )
+
+
+def _should_use_candidate(
+    action: str,
     target_file: str,
     requested_content: str,
     is_blank_requested: bool,
-) -> str:
-    if req.output_file:
-        _validate_rel_path(req.output_file)
-        return req.output_file
-    effective_action = LITE_ACTION_ALIAS.get(req.action, req.action)
+) -> bool:
+    """判断是否应该使用候选稿机制"""
+    if not target_file:
+        return False
+    effective_action = LITE_ACTION_ALIAS.get(action, action)
     target_has_content = bool(requested_content and not is_blank_requested)
-    if (
+    return (
         effective_action in HIGH_RISK_LITE_ACTIONS
-        and req.target_file
         and should_create_candidate(effective_action, target_file, bool(requested_content), target_has_content)
-    ):
-        return _lite_candidate_path(target_file, req.action)
-    return target_file
+    )
 
 
 def _prefs_to_text(prefs) -> str:
@@ -749,7 +776,7 @@ async def _generate_chapter_plan(
         "",
         "章规划格式：",
         "- 章名与核心冲突（一句话）",
-        "- 4 个场景梗概（每个场景 1 句，标注谁在什么场景做什么）",
+        f"- {SECTIONS_PER_CHAPTER} 个场景梗概（每个场景 1 句，标注谁在什么场景做什么）",
         "- 本章必须兑现的爽点",
         "- 结尾钩子",
     ])
@@ -979,6 +1006,7 @@ async def generate_next_options(
 @router.post("/lite/write-next", response_model=ApiResponse[LiteWriteNextResponse])
 async def write_lite_next(
     req: LiteWriteNextRequest,
+    request: Request,
     settings: Settings = Depends(get_settings),
 ):
     """选卡生成章节，自动审稿并更新故事引擎"""
@@ -997,8 +1025,8 @@ async def write_lite_next(
         target_file = req.target_file
     else:
         target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
-    output_file = _resolve_lite_output_file(req, target_file, requested_content, is_blank_requested)
-    is_candidate = output_file != target_file
+    is_candidate = _should_use_candidate(req.action, target_file, requested_content, is_blank_requested)
+    output_file = target_file
     vol, ch, _sec = _path_parts(target_file)
     await _ensure_chapter(project_dir, vol, ch, req.selected_card.title)
 
@@ -1078,7 +1106,24 @@ async def write_lite_next(
         content = _fallback_section_content(target_file, req.selected_card, prefs_text, story_engine)
         used_fallback = True
     content = _ensure_section_heading(target_file, req.selected_card.title, content)
-    await file_service.write_file(f"{req.project_id}/{output_file}", content)
+    candidate_info = None
+    if is_candidate:
+        candidate_info = await _create_lite_candidate(
+            file_service, req.project_id, target_file, req.action, content,
+        )
+        output_file = candidate_info.candidate_path
+        event_bus = getattr(request.app.state, "event_bus", None)
+        if event_bus:
+            evt = make_candidate_created_event(
+                project_id=req.project_id,
+                candidate_id=candidate_info.id,
+                source_path=target_file,
+                action=candidate_info.action,
+                source="api/lite",
+            )
+            await event_bus.publish(evt.type, evt.to_sse_dict())
+    else:
+        await file_service.write_file(f"{req.project_id}/{output_file}", content)
 
     if not is_candidate:
         # 更新章节记忆和待回收伏笔
@@ -1142,7 +1187,7 @@ async def write_lite_next(
             recent_context.rstrip() + f"\n\n- {Path(target_file).parent.name}：{req.selected_card.title}，{req.selected_card.payoff}",
         )
 
-    # 完成第4场景 → 整章写完，自动生成下一章章规划
+    # 完成最后一场景（sec == SECTIONS_PER_CHAPTER）→ 整章写完，自动生成下一章章规划
     chapter_plan_result = None
     if not is_candidate and _sec == SECTIONS_PER_CHAPTER:
         chapter_plan_result = await _generate_chapter_plan(
@@ -1164,6 +1209,8 @@ async def write_lite_next(
         quality_summary=quality_summary,
         story_engine_summary=_summarize_story_engine(updated_engine),
         chapter_plan=chapter_plan_result,
+        candidate_id=candidate_info.id if candidate_info else None,
+        source_file=target_file if candidate_info else None,
     ), message="场景已生成")
 
 
@@ -1196,10 +1243,10 @@ async def write_lite_next_stream(
             target_file = req.target_file
         else:
             target_file = await _next_writable_section_path(file_service, req.project_id, req.target_file)
-        output_file = _resolve_lite_output_file(req, target_file, requested_content, is_blank_requested)
         # 候选稿策略：高风险操作（rewrite/more_exciting/more_reasonable/continue）对已有内容的场景生成 candidate
         # 详见 backend/policies/candidate_policy.py
-        is_candidate = output_file != target_file
+        is_candidate = _should_use_candidate(req.action, target_file, requested_content, is_blank_requested)
+        output_file = target_file
 
         vol, ch, _sec = _path_parts(target_file)
         await _ensure_chapter(project_dir, vol, ch, req.selected_card.title)
@@ -1303,7 +1350,24 @@ async def write_lite_next_stream(
             yield _lite_stream_event("replace", {"content": content.strip()})  # AI_GUARDRAIL_ALLOW: lite streaming event, not file.updated
 
             content = _ensure_section_heading(target_file, req.selected_card.title, content.strip())
-            await file_service.write_file(f"{req.project_id}/{output_file}", content)
+            candidate_info = None
+            if is_candidate:
+                candidate_info = await _create_lite_candidate(
+                    file_service, req.project_id, target_file, req.action, content,
+                )
+                output_file = candidate_info.candidate_path
+                event_bus = getattr(request.app.state, "event_bus", None)
+                if event_bus:
+                    evt = make_candidate_created_event(
+                        project_id=req.project_id,
+                        candidate_id=candidate_info.id,
+                        source_path=target_file,
+                        action=candidate_info.action,
+                        source="api/lite",
+                    )
+                    await event_bus.publish(evt.type, evt.to_sse_dict())
+            else:
+                await file_service.write_file(f"{req.project_id}/{output_file}", content)
 
             if not is_candidate:
                 # 更新章节记忆和待回收伏笔
@@ -1354,6 +1418,8 @@ async def write_lite_next_stream(
                 "quality_summary": quality_summary,
                 "story_engine_summary": _summarize_story_engine(updated_engine),
                 "chapter_plan": chapter_plan_result,
+                "candidate_id": candidate_info.id if candidate_info else None,
+                "source_file": target_file if candidate_info else None,
             })
         except Exception as e:
             logger.exception("爽文流式生成异常: %s", e)

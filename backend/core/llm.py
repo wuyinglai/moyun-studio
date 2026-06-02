@@ -186,6 +186,8 @@ class LLMConfig:
         "claude-3-opus": 200000,
         "claude-3-5-sonnet": 200000,
         "claude-2": 100000,
+        # Agnes AI
+        "agnes-2.0-flash": 262144,
     }
 
     def __init__(

@@ -149,22 +149,11 @@ export function useLiteGeneration(deps: {
     return lines.join('\n')
   }
 
-  function candidateActionText(action: LiteWriteAction, candidatePath?: string) {
-    if (candidatePath?.endsWith('.chat.md')) return '聊天改稿'
+  function candidateActionText(action: LiteWriteAction) {
     if (action === 'rewrite') return '重写当前场景'
     if (action === 'more_exciting') return '让当前场景更爽'
     if (action === 'more_reasonable') return '让当前场景更合理'
     return '候选稿'
-  }
-
-  function buildCandidatePath(sourcePath: string, action: LiteWriteAction) {
-    const safeSource = sourcePath.replace(/\.md$/, '').replace(/[\\/]/g, '__')
-    return `.lite-candidates/${safeSource}.${action}.md`
-  }
-
-  function buildChatRevisionPath(sourcePath: string) {
-    const safeSource = sourcePath.replace(/\.md$/, '').replace(/[\\/]/g, '__')
-    return `.lite-candidates/${safeSource}.chat.md`
   }
 
   // Core generation
@@ -173,12 +162,12 @@ export function useLiteGeneration(deps: {
     action: LiteWriteAction,
     targetFile: string | null,
     outputFile: string | null = null,
-    candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string } | null>,
+    candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string; candidateId?: string | null } | null>,
   ) {
     const projectId = projectStore.currentProject?.id
     if (!projectId || generating.value) return
-    const isCandidate = Boolean(outputFile && outputFile !== targetFile)
-    const candidateLabel = outputFile?.endsWith('.chat.md') ? '聊天改稿' : candidateActionText(action)
+    let isCandidate = Boolean(outputFile && outputFile !== targetFile)
+    const candidateLabel = candidateActionText(action)
     const sourcePath = targetFile || nextTargetFile.value || deps.currentFilePath.value || ''
     generating.value = true
     const abortController = new AbortController()
@@ -199,6 +188,7 @@ export function useLiteGeneration(deps: {
     try {
       await streamLiteNext(projectId, targetFile || nextTargetFile.value || deps.currentFilePath.value || null, card, deps.prefs, action, {
         onMeta: (meta) => {
+          isCandidate = Boolean(meta.is_candidate)
           generatedFilePath = meta.file_path
           streamingFilePath.value = meta.file_path
           const displayPath = meta.source_file || meta.file_path
@@ -222,6 +212,7 @@ export function useLiteGeneration(deps: {
               action,
               title: card.title,
               content: placeholder,
+              candidateId: meta.candidate_id || null,
             }
           }
           deps.content.value = placeholder
@@ -286,6 +277,9 @@ export function useLiteGeneration(deps: {
           streamingBuffers.value[result.file_path] = result.content
           if (candidateDraft.value?.path === result.file_path) {
             candidateDraft.value.content = result.content
+            if (!candidateDraft.value.candidateId && result.candidate_id) {
+              candidateDraft.value.candidateId = result.candidate_id
+            }
           }
           deps.chapterStatus.value[result.file_path] = isBlankChapter(result.content) ? 'blank' : 'done'
           qualitySummary.value = result.quality_summary
@@ -346,7 +340,7 @@ export function useLiteGeneration(deps: {
   }
 
   async function continueDraft(
-    candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string } | null>,
+    candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string; candidateId?: string | null } | null>,
   ) {
     if (generating.value || !deps.currentFilePath.value || !lastGenerationCard.value) return
     streamingBuffers.value[deps.currentFilePath.value] = deps.content.value
@@ -400,7 +394,7 @@ export function useLiteGeneration(deps: {
     }
   }
 
-  async function startProject(card: LiteIdeaCard, router: { push: (path: string) => Promise<unknown> }, candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string } | null>) {
+  async function startProject(card: LiteIdeaCard, router: { push: (path: string) => Promise<unknown> }, candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string; candidateId?: string | null } | null>) {
     creating.value = true
     try {
       const created = await createLiteProject(card, deps.prefs)
@@ -469,7 +463,7 @@ export function useLiteGeneration(deps: {
     return { node: lastWritten, hasWritten }
   }
 
-  async function openProject(projectId: string, candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string } | null>) {
+  async function openProject(projectId: string, candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string; candidateId?: string | null } | null>) {
     await projectStore.openProject(projectId)
     await fileStore.loadTree(projectId)
     const { node: resume, hasWritten } = await findResumeChapter(projectId)
@@ -487,7 +481,7 @@ export function useLiteGeneration(deps: {
     }
   }
 
-  async function generateWithCard(card: LiteNextOptionCard, candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string } | null>) {
+  async function generateWithCard(card: LiteNextOptionCard, candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string; candidateId?: string | null } | null>) {
     if (generating.value) return
     await runGeneration(card, 'write', nextTargetFile.value || null, null, candidateDraft)
   }
@@ -519,8 +513,6 @@ export function useLiteGeneration(deps: {
     isBlankChapter,
     normalizeChapterHeading,
     candidateActionText,
-    buildCandidatePath,
-    buildChatRevisionPath,
     setWorkStatus,
     clearWorkStatus,
     // Actions

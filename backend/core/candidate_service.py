@@ -101,6 +101,7 @@ class CandidateService:
         model: str | None = None,
         pipeline_id: str | None = None,
         prompt_version: str | None = None,
+        source_mode: str | None = None,
     ) -> CandidateInfo:
         """创建候选稿
 
@@ -145,6 +146,7 @@ class CandidateService:
             model=model,
             pipeline_id=pipeline_id,
             prompt_version=prompt_version,
+            source_mode=source_mode,
         )
 
         metadata = await self._load_metadata(project_id)

@@ -119,7 +119,7 @@ class TestValidateRelPath:
             _validate_rel_path(".config.json")
 
     def test_candidate_path_allowed(self):
-        assert _validate_rel_path(".lite-candidates/abc.rewrite.md") == ".lite-candidates/abc.rewrite.md"
+        assert _validate_rel_path(".candidates/abc.rewrite.md") == ".candidates/abc.rewrite.md"
 
     def test_chapters_path_allowed(self):
         assert _validate_rel_path("chapters/vol-01/ch-001/sec-001.md") == "chapters/vol-01/ch-001/sec-001.md"

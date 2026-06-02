@@ -55,16 +55,17 @@ async def test_lite_mode_advances_eight_sections_without_outline(tmp_path):
 
     assert written_files[0].endswith("vol-01/ch-001/sec-001.md")
     assert written_files[3].endswith("vol-01/ch-001/sec-004.md")
-    assert written_files[4].endswith("vol-01/ch-002/sec-001.md")
-    assert written_files[7].endswith("vol-01/ch-002/sec-004.md")
+    assert written_files[4].endswith("vol-01/ch-001/sec-005.md")
+    assert written_files[5].endswith("vol-01/ch-002/sec-001.md")
+    assert written_files[9].endswith("vol-01/ch-002/sec-005.md")
 
     next_file = await _next_writable_section_path(file_service, project_id, current_file)
     assert next_file.endswith("vol-01/ch-003/sec-001.md")
-    assert CHAPTERS_PER_VOLUME == 10
+    assert CHAPTERS_PER_VOLUME == 12
 
     summary = _summarize_story_engine(story_engine)
     assert "protagonist_goal" in summary
     assert "payoff_ledger" in summary
-    assert story_engine.count("## 最近推进") == 8
+    assert story_engine.count("## 最近推进") == SECTIONS_PER_CHAPTER * 2
     assert written_files[-1] in story_engine
-    assert story_engine.count("- ") >= 8
+    assert story_engine.count("- ") >= SECTIONS_PER_CHAPTER * 2
