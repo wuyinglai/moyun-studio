@@ -12,6 +12,7 @@ import uuid
 from fastapi import APIRouter, Depends, Request
 from sse_starlette.sse import EventSourceResponse
 
+from backend.application.lite_project_service import LiteProjectService
 from backend.config import Settings, get_settings
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import ProjectNotFoundError
@@ -36,7 +37,6 @@ from backend.schemas.lite import (
     LiteWriteNextRequest,
     LiteWriteNextResponse,
 )
-from backend.schemas.project import ProjectCreateRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["lite"])
@@ -873,61 +873,10 @@ async def create_lite_project(
     settings: Settings = Depends(get_settings),
 ):
     """根据开局卡创建无大纲爽文项目"""
-    project_req = ProjectCreateRequest(
-        name=req.card.title,
-        genre=req.card.genre,
-        theme=req.card.selling_point,
-        tone="爽文",
-        background=req.card.core_conflict,
-        writing_style=req.prefs.style,
-        target_word_count=50000,
-        author="",
-    )
-    project_id = str(uuid.uuid4())[:8]
-    now = datetime.now(timezone.utc).isoformat()
-    project_dir = settings.projects_path / project_id
-    svc = ProjectService(settings)
+    svc = LiteProjectService(settings)
+    result = await svc.create_project(req)
 
-    await asyncio.to_thread(project_dir.mkdir, parents=True, exist_ok=True)
-    meta = svc.create_project_meta(project_id, project_req.name, project_req)
-    meta["lite_mode"] = True
-    await asyncio.to_thread(svc.write_meta, project_dir, meta)
-    await asyncio.to_thread(svc.write_context, project_dir, {
-        "project_id": project_id,
-        "stats": {
-            "total_words": 0,
-            "total_sections": SECTIONS_PER_CHAPTER,
-            "completed_sections": 0,
-            "chapter_count": 1,
-            "volume_count": 1,
-            "character_count": 0,
-        },
-        "updated_at": now,
-    })
-
-    for subdir in ["chapters/vol-01", "characters", "materials/extracted", "backup", "revision-log", "feedback"]:
-        await asyncio.to_thread((project_dir / subdir).mkdir, parents=True, exist_ok=True)
-    await _write_json(project_dir / "chapters" / "vol-01" / "vol-meta.json", {
-        "volume_number": 1,
-        "chapter_range": "001-001",
-        "total_chapters": 1,
-        "created_at": now,
-    })
-
-    prefs_text = _prefs_to_text(req.prefs)
-    story_engine = _story_engine_template(req.card, prefs_text)
-    await _write_text(project_dir / "style-guide.md", f"# 文风指南\n\n{prefs_text}\n")
-    await _write_text(project_dir / "story-state.md", "# 故事状态\n\n由故事引擎自动维护。\n")
-    await _write_text(project_dir / "recent-context.md", "# 近期上下文\n\n（最近5章摘要，由系统自动维护）\n")
-    await _write_text(project_dir / "story-engine.md", story_engine)
-    await _write_text(project_dir / "outline.md", f"# {req.card.title} - 可选大纲\n\n本项目默认使用故事引擎驱动，不要求大纲。\n")
-    first_file = await _ensure_chapter(project_dir, 1, 1, req.card.title)
-
-    return ApiResponse.ok(LiteProjectCreateResponse(
-        project_id=project_id,
-        first_file=first_file,
-        story_engine=story_engine,
-    ), message="爽文项目创建成功")
+    return ApiResponse.ok(result, message="爽文项目创建成功")
 
 
 @router.post("/lite/next-options", response_model=ApiResponse[LiteNextOptionsResponse])
