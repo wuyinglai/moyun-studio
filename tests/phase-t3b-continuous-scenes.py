@@ -74,7 +74,7 @@ def test_continuous_scenes():
 
             # Step 1: Open Lite
             print("\n1. 打开 Lite 页面...")
-            page.goto("http://127.0.0.1:5174/lite")
+            page.goto("http://127.0.0.1:5173/lite")
             page.wait_for_timeout(8000)
             screenshot(page, "01-lite-page")
 
@@ -105,28 +105,34 @@ def test_continuous_scenes():
                     page.wait_for_timeout(3000)
 
                 # Find the correct option card (long text with "选这个")
-                option_cards = page.locator('.lite-assistant button, section button').all()
-                clickable = [c for c in option_cards if not c.is_disabled() and c.is_visible()]
-                print(f"  Found {len(clickable)} clickable buttons")
+                if scene_idx == 0:
+                    # Scene 1: Wait auto-generate
+                    print("  Waiting for auto-generation...")
+                else:
+                    # Scene 2, 3: Find button.option-card
+                    print(f"  Waiting for button.option-card...")
+                    page.wait_for_selector('button.option-card', timeout=60000)
+                    option_cards = page.locator('button.option-card')
+                    count = option_cards.count()
+                    print(f"  Found {count} option-cards")
 
-                clicked = False
-                for card in clickable[:10]:
-                    try:
-                        text = card.inner_text()
-                        if len(text) > 50 and "选这个" in text:
-                            print(f"  Clicking option: {text[:70]}...")
-                            card.click()
-                            clicked = True
-                            break
-                    except:
-                        continue
+                    clicked = False
+                    for i in range(count):
+                        card = option_cards.nth(i)
+                        try:
+                            if not card.is_visible() or card.is_disabled():
+                                continue
+                            text = card.inner_text()
+                            if len(text) > 50:
+                                print(f"  Clicking option-card: {text[:70]}...")
+                                card.click()
+                                clicked = True
+                                break
+                        except:
+                            continue
 
-                if not clicked:
-                    # Fallback for scene 1 auto-generate case
-                    if scene_idx == 0:
-                        print("  Waiting for auto-generation...")
-                    else:
-                        results["notes"].append(f"第 {scene_idx+1} 场没找到选这个按钮")
+                    if not clicked:
+                        results["notes"].append(f"第 {scene_idx+1} 场没找到可用的 option-card")
                         screenshot(page, f"03-scene{scene_idx+1}-no-option")
                         continue
 
