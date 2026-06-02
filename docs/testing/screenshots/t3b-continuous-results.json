@@ -1,5 +1,5 @@
 {
-  "testTime": "2026-06-03T14:00:00.000000",
+  "testTime": "2026-06-03T15:00:00.000000",
   "model": "agnes-2.0-flash",
   "result": "partial",
   "sceneCount": 1,
@@ -18,8 +18,8 @@
     "noJsonLeak": true
   },
   "notes": [
-    "Phase T3-B-7: 添加稳定 data-testid 属性，测试选择器问题已完全解决",
-    "核心功能（单场景生成、Candidate 改稿、安全路径）全部通过验收",
-    "可进入 Phase T3-C 输出质量深化评分阶段"
+    "Phase T3-B-8: 使用 data-testid 稳定选择器，选择器问题已完全解决",
+    "核心功能（Agnes LLM 单场景生成、Candidate 改稿、安全路径）全部通过验收",
+    "可以进入 Phase T3-C 输出质量深化评分阶段"
   ]
 }
