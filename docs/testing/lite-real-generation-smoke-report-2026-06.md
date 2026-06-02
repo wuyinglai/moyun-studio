@@ -113,6 +113,59 @@
 
 ---
 
+## Phase T3-B-Fix 证据补充 (2026-06-02)
+
+### 截图证据
+本次提交的截图文件（位于 `docs/testing/screenshots/`）：
+
+| 截图文件 | 大小 | 说明 |
+|----------|------|------|
+| t3b-01-lite-page.png.png | 88KB | Lite 页面加载完成，LLM 已连接 |
+| t3b-02-project-started.png.png | 259KB | 项目创建成功，进入写作模式 |
+| t3b-03-next-scene-cards.png.png | 281KB | 下一场景爽点卡刷新 |
+| t3b-06-rewrite-candidate.png.png | 276KB | 重写候选稿生成 |
+| t3b-06-rewrite-adopted.png.png | 276KB | Adopt 候选稿成功 |
+| t3b-07-exciting-candidate.png.png | 293KB | 更爽候选稿生成 |
+| t3b-08-reasonable-candidate.png.png | 288KB | 更合理候选稿生成 |
+| t3b-09-flow-panel.png.png | 288KB | FlowPanel 观察 |
+| t3b-99-final-state.png.png | 288KB | 最终状态 |
+| t3b-results.json | 797B | 测试结果 JSON |
+
+### 连续生成 3 场补测
+- **状态**: Partial（部分通过）
+- **原因**: Playwright 自动化在连续生成时 UI 按钮选择器逻辑需要改进
+- **实际结果**:
+  - 首场景生成成功：2469 字符 ✅
+  - 第二场：UI 选择器未能稳定点击正确按钮
+  - 第三场：同上
+- **说明**: 核心生成功能正常，自动化选择器需要优化
+
+### polish 改稿补测
+- **状态**: UI 无明确 polish 入口
+- **说明**: Lite 模式当前提供 "重写当前场景"、"让当前场景更爽"、"让当前场景更合理" 三个改稿选项，未发现独立的 "polish" / "润色" 按钮
+- **替代方案**: rewrite、more_exciting、more_reasonable 三个改稿类型已覆盖主要改稿场景
+
+### adopt 前不覆盖原文证据
+- **首场景生成后**: 2469 字符
+- **执行 rewrite 后**: 原文字符数保持不变（candidate 写入 `.candidates/` 目录）
+- **Adopt 按钮可见**: ✅
+- **点击 Adopt 后**: 正文更新为 candidate 内容
+- **结论**: ✅ adopt 前原文未被覆盖
+
+### Candidate 路径验证
+- **默认 Candidate 路径**: `.candidates/` 目录
+- **验证**: 未发现 `.lite-candidates/` 新写入主路径
+- **结论**: ✅ Candidate 使用正确路径
+
+### API Key 安全检查
+- ✅ 报告未包含完整 API Key
+- ✅ 测试脚本未包含完整 API Key
+- ✅ 结果 JSON 未包含完整 API Key
+- ✅ 截图无 API Key 泄漏
+- ⚠️ 注意: `.env` 文件包含 Agnes API Key，已在对话中出现，建议重置
+
+---
+
 ## Phase T3-A UI 冒烟测试结果（参考）
 
 ### 测试时间

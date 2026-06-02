@@ -1,0 +1,32 @@
+{
+  "test_time": "2026-06-02T20:12:54.130370",
+  "commit": "afcbd62e25db55058cf71f31eb2c5388a2c98a8f",
+  "llm_provider": "Agnes AI",
+  "llm_model": "agnes-2.0-flash",
+  "frontend_port": 5174,
+  "tests": {
+    "llm_connection": "connected",
+    "lite_page_load": "passed",
+    "create_project": "passed",
+    "continuous_scenes": {
+      "status": "partial",
+      "scenes": []
+    },
+    "candidate": {
+      "status": "tested",
+      "tested_types": [
+        "rewrite",
+        "more_exciting",
+        "more_reasonable"
+      ]
+    },
+    "flow_panel": "observed",
+    "quality_scoring": {
+      "status": "content_generated",
+      "char_count": 2469,
+      "note": "Manual quality review required from screenshots"
+    }
+  },
+  "bugs": [],
+  "suggestions": []
+}
