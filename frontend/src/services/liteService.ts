@@ -35,11 +35,12 @@ export interface LiteWriteNextResponse {
   chapter_plan?: string | null
   candidate_id?: string | null
   source_file?: string | null
+  fallback_used?: boolean
 }
 
 /** UI-only: 流式回调 */
 export interface LiteWriteStreamCallbacks {
-  onMeta?: (data: { file_path: string; label: string; source_file?: string; is_candidate?: boolean; candidate_id?: string | null }) => void
+  onMeta?: (data: { file_path: string; label: string; source_file?: string; is_candidate?: boolean; candidate_id?: string | null; fallback_used?: boolean }) => void
   onDelta?: (delta: string) => void
   onReplace?: (content: string) => void
   onStatus?: (message: string) => void

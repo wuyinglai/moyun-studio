@@ -753,6 +753,7 @@ async def write_lite_next(
         chapter_plan=chapter_plan_result,
         candidate_id=candidate_info.id if candidate_info else None,
         source_file=target_file if candidate_info else None,
+        fallback_used=used_fallback,
     ), message="场景已生成")
 
 
@@ -963,6 +964,7 @@ async def write_lite_next_stream(
                 "chapter_plan": chapter_plan_result,
                 "candidate_id": candidate_info.id if candidate_info else None,
                 "source_file": target_file if candidate_info else None,
+                "fallback_used": used_fallback,
             })
         except Exception as e:
             logger.exception("爽文流式生成异常: %s", e)

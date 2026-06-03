@@ -93,3 +93,4 @@ class LiteWriteNextResponse(BaseModel):
     chapter_plan: str | None = Field(default=None, description="完成一章后生成的下一章规划，为空表示不到章末")
     candidate_id: str | None = Field(default=None, description="候选稿 ID，非候选稿时为 None")
     source_file: str | None = Field(default=None, description="候选稿对应的源文件路径，非候选稿时为 None")
+    fallback_used: bool = Field(default=False, description="是否使用了 fallback 草稿")

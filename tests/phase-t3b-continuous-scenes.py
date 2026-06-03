@@ -43,12 +43,21 @@ def get_scene_info(page):
         "title": "",
         "charCount": 0,
         "first100": "",
+        "fallbackUsed": False,
     }
     try:
         # 获取当前文件路径
         path_hint = page.locator('.path-hint')
         if path_hint.count() > 0:
             info["currentFilePath"] = path_hint.first.inner_text().strip()
+    except:
+        pass
+
+    try:
+        # 检查是否有 fallback 警告
+        fallback_warning = page.locator('[data-testid="lite-fallback-warning"]')
+        if fallback_warning.count() > 0:
+            info["fallbackUsed"] = True
     except:
         pass
 
@@ -89,8 +98,9 @@ def test_continuous_scenes():
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
 
-        # 用于存储每场生成后的响应 file_path
+        # 用于存储每场生成后的响应 file_path 和 fallback_used
         generated_file_paths = []
+        fallback_used_in_response = False
 
         # 拦截 /lite/write-next-stream 响应
         def handle_response(response):
@@ -100,7 +110,8 @@ def test_continuous_scenes():
                     # 响应格式是 event: meta\\ndata: {...}\\n\\n
                     text = response.text()
                     print(f"  [DEBUG] write-next-stream response: {text[:200]}...")
-                    # 提取 file_path
+                    # 提取 file_path 和 fallback_used
+                    nonlocal fallback_used_in_response
                     for line in text.split('\n'):
                         if line.startswith('data: '):
                             try:
@@ -108,6 +119,9 @@ def test_continuous_scenes():
                                 if 'file_path' in data:
                                     generated_file_paths.append(data['file_path'])
                                     print(f"  [DEBUG] Captured file_path: {data['file_path']}")
+                                if 'fallback_used' in data:
+                                    fallback_used_in_response = bool(data['fallback_used'])
+                                    print(f"  [DEBUG] Captured fallback_used: {fallback_used_in_response}")
                             except:
                                 pass
                 except Exception as e:
@@ -170,9 +184,10 @@ def test_continuous_scenes():
             for scene_idx in range(3):
                 print(f"\n--- 生成第 {scene_idx+1} 场 ---")
 
-                # 清空上一场捕获的文件路径
+                # 清空上一场捕获的文件路径和 fallback_used
                 if scene_idx > 0:
                     generated_file_paths.clear()
+                    fallback_used_in_response = False
 
                 if scene_idx > 0:
                     page.wait_for_timeout(3000)
@@ -266,7 +281,8 @@ def test_continuous_scenes():
                     "currentFilePath": scene_info['currentFilePath'],
                     "generatedFilePath": generated_file_paths[-1] if generated_file_paths else "",
                     "first100": scene_info['first100'],
-                    "screenshot": f"03-scene{scene_idx+1}.png"
+                    "screenshot": f"03-scene{scene_idx+1}.png",
+                    "fallbackUsed": scene_info['fallbackUsed'] or fallback_used_in_response
                 })
 
             results["scenes"] = scenes

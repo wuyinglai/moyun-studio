@@ -593,3 +593,64 @@ Phase T3-B-12 已通过 ChatGPT 验收，next-options 前端不渲染的问题�
 | Phase T3-D-2 | Fallback 自动重试机制 | 高 |
 | Phase T3-D-3 | LLM timeout 调优 | 中 |
 | Phase T3-D-4 | Prompt 最小优化（字数约束） | 中 |
+
+---
+
+## Phase T3-D-1: 实现 fallback_used 标记
+
+### 任务说明
+为了让用户和测试脚本能够区分真实 LLM 生成和 fallback 模板内容，我们添加了 `fallback_used` 标记。
+
+### 实现内容
+
+#### 1. 后端响应修改
+- **Sync 响应 (`/lite/write-next`)**: 在 `LiteWriteNextResponse` 中新增 `fallback_used` 字段 (boolean)
+- **Stream 响应 (`/lite/write-next-stream`)**: 在 `done` 事件中新增 `fallback_used` 字段
+- **触发逻辑**:
+  - 当 LLM 调用失败或超时时，`used_fallback` 标记为 `true`
+  - 正常 LLM 生成时，`fallback_used` 为 `false`
+
+#### 2. 前端状态管理
+- **`useLiteGeneration.ts`**:
+  - 新增 `fallbackUsed` 响应式状态 (ref)
+  - 在 `onMeta` 回调中接收 `fallback_used` 字段
+  - 在 `onDone` 回调中更新 `fallbackUsed` 状态
+
+#### 3. 前端 UI 显示
+- **`LiteWritingView.vue`**:
+  - 当 `fallbackUsed` 为 `true` 时，显示醒目的警告提示
+  - 警告内容: "⚠️ 本场为应急草稿，建议重写或扩写。"
+  - 使用 `data-testid="lite-fallback-warning"` 便于测试脚本定位
+  - 添加红色/橙色样式突出显示
+
+#### 4. 测试脚本更新
+- **`tests/phase-t3b-continuous-scenes.py`**:
+  - 在 `get_scene_info()` 中新增 `fallbackUsed` 字段
+  - 检查 `data-testid="lite-fallback-warning"` 是否存在
+  - 在响应拦截器中捕获 `fallback_used` 字段
+  - 在结果 JSON 中记录每个场次的 `fallbackUsed`
+
+### 新增文件/修改内容
+| 文件 | 修改类型 | 内容 |
+|------|----------|------|
+| `backend/schemas/lite.py` | 新增 | `LiteWriteNextResponse` 添加 `fallback_used` 字段 |
+| `backend/api/lite.py` | 修改 | sync 响应和 stream done 事件添加 `fallback_used` |
+| `frontend/src/services/liteService.ts` | 修改 | TypeScript 类型添加 `fallback_used` |
+| `frontend/src/composables/useLiteGeneration.ts` | 修改 | 添加 `fallbackUsed` 状态和接收逻辑 |
+| `frontend/src/views/LiteWritingView.vue` | 修改 | 添加 fallback 警告 UI 和样式 |
+| `tests/phase-t3b-continuous-scenes.py` | 修改 | 添加 fallback 记录逻辑 |
+
+### 使用流程
+1. 用户点击生成选项卡
+2. 如果 LLM 调用失败 → 显示 fallback 内容和红色警告
+3. 如果 LLM 调用成功 → 正常显示生成内容，无警告
+4. 测试脚本可以通过检查 `fallback_used` 字段来判断是否为真实生成
+
+### 结论
+- **Phase T3-D-1**: ✅ **已完成！**
+  - 后端 fallback_used 标记已添加
+  - 前端 UI 警告已显示
+  - 测试脚本记录功能已就绪
+  - 类型定义已更新
+- **下一阶段**: Phase T3-D-2 (Fallback 自动重试)
+- **是否可以进入下阶段**: ✅ **是！可以进入 Phase T3-D-2**

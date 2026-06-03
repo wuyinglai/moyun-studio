@@ -108,7 +108,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-B-13 | 连续生成目标文件推进验证 | ✅ 功能通过，质量待优化 | 三场分别写入不同文件，功能通过 | 功能验收 |
 | Phase T3-C | 输出质量深化评分与 Prompt 优化建议 | ✅ | 完成质量评分，发现 Fallback 问题 | 文档审查 |
 | Phase T3-D | Fallback/自动重试/Prompt 优化方案设计 | ✅ | 方案文档已完成 | 文档审查 |
-| Phase T3-D1 | Fallback 显式标记 | ⏳ | - | - |
+| Phase T3-D1 | Fallback 显式标记 | ✅ | 后端响应添加 fallback_used 字段，前端显示警告 UI，测试脚本支持记录 | 功能验收 |
 | Phase T3-D2 | Fallback 自动重试 | ⏳ | - | - |
 | Phase T3-D3 | Fallback candidate 化 | ⏳ | - | - |
 | Phase T3-D4 | 低质量检测 | ⏳ | - | - |
@@ -215,8 +215,8 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 
 | 优先级 | Phase | 任务 | 状态 | 原因 |
 |--------|-------|------|------|------|
-| 1 | Phase T3-D1 | Fallback 显式标记 | ⏳ | 让用户明确知道这是 fallback |
-| 2 | Phase T3-D2 | Fallback 自动重试 | ⏳ | 减少 fallback 触发 |
+| 1 | Phase T3-D2 | Fallback 自动重试 | ⏳ | 减少 fallback 触发，提升用户体验 |
+| 2 | Phase T3-D3 | Fallback candidate 化 | ⏳ | 不让 fallback 内容直接覆盖正式正文 |
 | 3 | Phase 5E | CandidatePanel 与 Flow 联动 | ⏳ | 增强数据流可视化完整性 |
 | 4 | Phase T5 | 输出质量评分表 | ⏳ | 建立质量评估体系 |
 | 5 | Phase R3 | CandidatePanel 体验增强 | ⏳ | 提升用户安全感 |
@@ -283,6 +283,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | 2026-06-02 | Phase 5B | ✅ | ce08475 | ChatGPT |
 | 2026-06-02 | Phase 5C | ✅ | 116c9e7 | ChatGPT |
 | 2026-06-02 | Phase 5D | ✅ | cf8d16d | ChatGPT |
+| 2026-06-03 | Phase T3-D1 | ✅ | (待 commit) | ChatGPT |
 
 ---
 

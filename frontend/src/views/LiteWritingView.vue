@@ -102,6 +102,13 @@
               {{ completionSummary }}
             </p>
             <p
+              v-if="fallbackUsed"
+              class="fallback-warning"
+              data-testid="lite-fallback-warning"
+            >
+              ⚠️ 本场为应急草稿，建议重写或扩写。
+            </p>
+            <p
               v-if="currentFilePath"
               class="path-hint"
             >
@@ -622,6 +629,8 @@ const isViewingCandidate = computed(() => {
   return Boolean(cand.candidateDraft.value && currentFilePath.value === cand.candidateDraft.value.path)
 })
 
+const fallbackUsed = computed(() => gen.fallbackUsed.value)
+
 const canRunChatRevision = computed(() => {
   return Boolean(
     cand.chatRevisionInput.value.trim()
@@ -790,6 +799,16 @@ function refreshOptions() { gen.refreshOptions() }
 
 .chapter-progress-text {
   color: var(--text-muted-ink);
+}
+
+.fallback-warning {
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(220, 84, 64, 0.12);
+  border: 1px solid rgba(220, 84, 64, 0.3);
+  border-radius: 6px;
+  color: #ffb6a9;
+  font-size: 13px;
 }
 
 .next-target-hint {
