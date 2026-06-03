@@ -1,0 +1,71 @@
+{
+  "testTime": "2026-06-03T17:26:14.069580",
+  "model": "agnes-2.0-flash",
+  "result": "unknown",
+  "observations": [
+    "Lite 页面已打开",
+    "已选择开局卡，项目已创建",
+    "第 1 场生成完成: 1374 字符",
+    "已点击'生成下一场景爽点卡'按钮",
+    "next-options 请求已发送，状态: 200",
+    "API 返回 3 张卡片",
+    "未找到爽点卡"
+  ],
+  "network": {
+    "nextOptionsRequest": {
+      "url": "http://127.0.0.1:5174/api/lite/next-options",
+      "method": "POST",
+      "headers": {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "origin": "http://127.0.0.1:5174",
+        "referer": "http://127.0.0.1:5174/project/ea6d606e/lite",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Chromium\";v=\"145\", \"Not:A-Brand\";v=\"99\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Windows\""
+      },
+      "timestamp": "2026-06-03T17:27:05.702718",
+      "status": 200,
+      "responseHeaders": {
+        "access-control-allow-origin": "http://127.0.0.1:5174",
+        "content-length": "2059",
+        "date": "Wed, 03 Jun 2026 09:27:05 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "server": "uvicorn",
+        "connection": "close"
+      },
+      "response": {
+        "status": null,
+        "message": "操作成功",
+        "cardsCount": 3,
+        "cardsSample": [
+          {
+            "id": "next-第1卷 第1章 第2场景-1",
+            "title": "当场反逼"
+          },
+          {
+            "id": "next-第1卷 第1章 第2场景-2",
+            "title": "旧账翻面"
+          },
+          {
+            "id": "next-第1卷 第1章 第2场景-3",
+            "title": "战果藏钩"
+          }
+        ]
+      }
+    },
+    "otherRequests": []
+  },
+  "frontend": {
+    "refreshOptionsCalled": false,
+    "loadingOptionsShown": false,
+    "optionErrorShown": false,
+    "optionErrorText": "",
+    "nextCardsCount": 0,
+    "optionCardsVisible": false,
+    "consoleErrors": []
+  },
+  "conclusion": "E"
+}

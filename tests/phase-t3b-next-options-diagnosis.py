@@ -114,7 +114,7 @@ def test_next_options_diagnosis():
 
             # Step 1: Open Lite
             print("\n1. 打开 Lite 页面...")
-            page.goto("http://127.0.0.1:5173/lite")
+            page.goto("http://127.0.0.1:5174/lite")
             page.wait_for_timeout(8000)
             screenshot(page, "01-lite-page")
             results["observations"].append("Lite 页面已打开")
@@ -188,10 +188,17 @@ def test_next_options_diagnosis():
             else:
                 results["observations"].append("第 1 场未找到编辑器内容")
 
-            # Step 4: Find and click "生成下一场景爽点卡" button
+            # Step 4: Find and click "生成下一场景爽点卡" button or check current state
             print("\n4. 查找并点击'生成下一场景爽点卡'按钮...")
             generate_btn = page.locator('[data-testid="lite-generate-next-options"]')
-            if generate_btn.count() > 0 and generate_btn.first.is_visible():
+            
+            # Check if option cards already exist (auto-generated after scene 1)
+            option_cards = page.locator('[data-testid="lite-option-card"]')
+            if option_cards.count() > 0:
+                print(f"  发现已有 {option_cards.count()} 张爽点卡，系统可能已自动生成")
+                screenshot(page, "04-cards-already-exist")
+                results["observations"].append(f"发现已有 {option_cards.count()} 张爽点卡")
+            elif generate_btn.count() > 0 and generate_btn.first.is_visible():
                 print("  找到按钮，准备点击...")
                 screenshot(page, "04-before-click")
                 
@@ -204,10 +211,26 @@ def test_next_options_diagnosis():
                 page.wait_for_timeout(15000)
                 screenshot(page, "05-after-click")
             else:
-                print("  Error: 未找到'生成下一场景爽点卡'按钮")
-                results["observations"].append("未找到'生成下一场景爽点卡'按钮")
-                results["conclusion"] = "failed"
-                return results
+                print("  未找到'生成下一场景爽点卡'按钮，检查是否有错误或加载状态...")
+                screenshot(page, "04-no-button")
+                
+                # Check for loading state
+                loading_selector = page.locator('.option-loading')
+                if loading_selector.count() > 0:
+                    loading_text = loading_selector.first.inner_text()
+                    print(f"  Loading text: {loading_text}")
+                    results["observations"].append(f"显示加载状态: {loading_text}")
+                
+                # Check for error
+                error_selector = page.locator('.option-loading')
+                if error_selector.count() > 0:
+                    error_text = error_selector.first.inner_text()
+                    if "失败" in error_text or "没有生成出" in error_text:
+                        print(f"  Error text: {error_text}")
+                        results["observations"].append(f"显示错误: {error_text}")
+                
+                # Continue analysis without clicking button
+                results["observations"].append("未找到'生成下一场景爽点卡'按钮，但继续分析")
 
             # Step 5: Analyze network requests
             print("\n5. 分析网络请求...")

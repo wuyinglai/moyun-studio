@@ -246,3 +246,47 @@ if not cards:
 1. 首先运行诊断脚本获取实际网络和响应数据
 2. 根据诊断结果进行针对性修复
 3. 修复后重新运行连续生成测试
+
+## 11. 实测诊断结果
+
+### 运行时间
+2026-06-03 17:26:14
+
+### 诊断脚本
+`tests/phase-t3b-next-options-diagnosis.py`
+
+### Network 结果
+| 项目 | 结果 |
+|------|------|
+| 是否看到 /lite/next-options 请求 | 是 |
+| method | POST |
+| status | 200 |
+| cards 数量 | 3 |
+
+### UI 结果
+| 项目 | 结果 |
+|------|------|
+| 是否点击 lite-generate-next-options | 是 |
+| 是否出现 lite-option-card | 否 |
+| optionError | 空 |
+| console errors | 空 |
+
+### 返回的卡片样本
+| ID | 标题 |
+|----|------|
+| next-第1卷 第1章 第2场景-1 | 当场反逼 |
+| next-第1卷 第1章 第2场景-2 | 旧账翻面 |
+| next-第1卷 第1章 第2场景-3 | 战果藏钩 |
+
+### 根因结论
+
+**E. API 成功返回 cards，但前端没有渲染**
+
+### 证据文件
+`docs/testing/screenshots/t3b-next-options-diagnosis.json`
+
+### 是否进入 T3-B-12
+
+**是**
+
+原因：已明确定位问题。API 成功返回 3 张卡片，但前端没有渲染。需要检查前端响应式更新或渲染逻辑问题。
