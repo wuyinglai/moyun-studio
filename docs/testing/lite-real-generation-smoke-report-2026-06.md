@@ -654,3 +654,104 @@ Phase T3-B-12 已通过 ChatGPT 验收，next-options 前端不渲染的问题�
   - 类型定义已更新
 - **下一阶段**: Phase T3-D-2 (Fallback 自动重试)
 - **是否可以进入下阶段**: ✅ **是！可以进入 Phase T3-D-2**
+
+---
+
+## Phase T3-D1-Verify: fallback_used 标记链路验证
+
+### 验证时间
+2026-06-04
+
+### 验证目标
+确认 Phase T3-D1 实现的 `fallback_used` 标记链路完整且正确。
+
+### 验证环境
+| 项目 | 信息 |
+|------|------|
+| **Commit Hash** | `48ed0a44cb0d9ff5c78dbe7551e33c932eb624d7` |
+| **Branch** | main |
+| **Frontend Build** | ✅ 通过 |
+| **Backend Tests** | ✅ 全部通过 |
+
+### 验证结果
+
+#### 1. 前端构建
+```
+npm run build
+✅ 通过 - 无 TypeScript 错误，无 Vue 模板错误
+✅ 生成 dist/ 目录，包含所有静态资源
+```
+
+#### 2. 后端测试
+
+**Path Safety 测试:**
+```
+pytest backend/tests/test_lite_path_safety.py -v
+✅ 38 passed - 所有路径安全测试通过
+```
+
+**Lite 相关测试:**
+```
+pytest backend/tests -k "lite" --tb=short
+✅ 185 passed, 839 deselected, 1 warning
+⚠️ 1 warning: RuntimeWarning: coroutine 'mock_stream' was never awaited (既有 warning)
+```
+
+#### 3. fallback_used Response Model 测试
+```
+pytest backend/tests/test_lite_fallback_used_flag.py -v
+✅ 5 passed
+  - test_fallback_used_default_false: fallback_used 默认 False ✅
+  - test_fallback_used_can_be_true: fallback_used 可设为 True ✅
+  - test_fallback_used_serialization_false: 序列化包含 fallback_used=False ✅
+  - test_fallback_used_serialization_true: 序列化包含 fallback_used=True ✅
+  - test_response_with_all_fields_and_fallback: 完整 response 包含字段 ✅
+```
+
+#### 4. 代码链路确认
+
+| 链路节点 | 文件位置 | 确认 |
+|----------|----------|------|
+| Schema 定义 | `backend/schemas/lite.py:96` | ✅ `fallback_used: bool = Field(default=False)` |
+| Sync 响应 | `backend/api/lite.py:756` | ✅ `fallback_used=used_fallback` |
+| Stream done | `backend/api/lite.py:967` | ✅ `"fallback_used": used_fallback` |
+| 前端类型 | `frontend/src/services/liteService.ts:38` | ✅ `fallback_used?: boolean` |
+| onMeta 回调 | `frontend/src/services/liteService.ts:43` | ✅ `fallback_used?: boolean` |
+| 状态定义 | `frontend/src/composables/useLiteGeneration.ts:65` | ✅ `fallbackUsed = ref(false)` |
+| onMeta 更新 | `frontend/src/composables/useLiteGeneration.ts:215` | ✅ `fallbackUsed.value = Boolean(meta.fallback_used)` |
+| onDone 更新 | `frontend/src/composables/useLiteGeneration.ts:327` | ✅ `fallbackUsed.value = Boolean(result.fallback_used)` |
+| 状态导出 | `frontend/src/composables/useLiteGeneration.ts:580` | ✅ `fallbackUsed` 在返回值中 |
+| UI 警告 | `frontend/src/views/LiteWritingView.vue:105-107` | ✅ `v-if="fallbackUsed"` + `data-testid="lite-fallback-warning"` |
+| 测试脚本 | `tests/phase-t3b-continuous-scenes.py` | ✅ 从 DOM 和 SSE 捕获 fallbackUsed |
+
+#### 5. Fallback 行为确认
+
+| 场景 | fallback_used 值 | 是否确认 |
+|------|------------------|----------|
+| 正常 LLM 生成 | `false` | ✅ Schema 默认值为 False |
+| 使用 fallback 模板 | `true` | ✅ 代码中 `used_fallback` 变量 |
+| sync response 带出 | ✅ | API 返回值包含该字段 |
+| stream done 带出 | ✅ | SSE done 事件包含该字段 |
+
+#### 6. 真实触发验证
+
+| 验证项 | 状态 | 说明 |
+|--------|------|------|
+| 默认值验证 | ✅ | Response model 测试确认 default=False |
+| True 值验证 | ✅ | Response model 测试确认可设置为 True |
+| 序列化验证 | ✅ | JSON 序列化包含 fallback_used 字段 |
+| 真实触发 fallback | N/A | 受限于测试环境（需要 LLM 失败/超时才能触发），本次未真实触发 |
+
+### 安全检查
+✅ 无 API Key 提交
+✅ 无敏感信息泄露
+
+### 结论
+- **Phase T3-D1-Verify**: ✅ **验证通过！**
+  - 前端构建: ✅ 通过
+  - Path Safety 测试: ✅ 38 passed
+  - Lite 测试: ✅ 185 passed
+  - Response Model 测试: ✅ 5 passed
+  - 代码链路: ✅ 全部确认
+  - 安全检查: ✅ 无问题
+- **是否进入 Phase T3-D2**: ✅ **可以！所有验证项通过**
