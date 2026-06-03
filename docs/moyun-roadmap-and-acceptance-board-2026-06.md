@@ -110,7 +110,8 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D | Fallback/自动重试/Prompt 优化方案设计 | ✅ | 方案文档已完成 | 文档审查 |
 | Phase T3-D1 | Fallback 显式标记 | ✅ | 后端响应添加 fallback_used 字段，前端显示警告 UI，测试脚本支持记录 | 功能验收 |
 | Phase T3-D1-Verify | fallback_used 标记链路验证 | ✅ | 前端构建通过，后端测试 185 passed，Response Model 测试 5 passed | 功能验收 |
-| Phase T3-D2 | Fallback 自动重试 | ⏳ | - | - |
+| Phase T3-D2 | 前端 fallback 警告增强 | ✅ | 增强 UI 警告，添加重写入口，明确提示文案 | 功能验收 |
+| Phase T3-D3 | Fallback 自动重试 | ⏳ | - | - |
 | Phase T3-D3 | Fallback candidate 化 | ⏳ | - | - |
 | Phase T3-D4 | 低质量检测 | ⏳ | - | - |
 | Phase T3-D5 | Prompt 优化 | ⏳ | - | - |
@@ -160,7 +161,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D-4 | 低质量检测 | 中 |
 | Phase T3-D-5 | Prompt 优化 | 低 |
 
-**当前进度**：Phase T3-C 输出质量深化评分完成！Phase T3-D1 实现和验证完成！可以进入 Phase T3-D2 自动重试设计！
+**当前进度**：Phase T3-C 输出质量深化评分完成！Phase T3-D1 实现和验证完成！Phase T3-D2 前端 fallback 警告增强完成！可以进入 Phase T3-D3 自动重试设计！
 
 ---
 
@@ -286,6 +287,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | 2026-06-02 | Phase 5D | ✅ | cf8d16d | ChatGPT |
 | 2026-06-03 | Phase T3-D1 | ✅ | (待 commit) | ChatGPT |
 | 2026-06-04 | Phase T3-D1-Verify | ✅ | 48ed0a4 | Solo |
+| 2026-06-04 | Phase T3-D2 | ✅ | (待 commit) | Solo |
 
 ---
 

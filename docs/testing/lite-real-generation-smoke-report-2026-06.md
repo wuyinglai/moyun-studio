@@ -755,3 +755,84 @@ pytest backend/tests/test_lite_fallback_used_flag.py -v
   - 代码链路: ✅ 全部确认
   - 安全检查: ✅ 无问题
 - **是否进入 Phase T3-D2**: ✅ **可以！所有验证项通过**
+
+---
+
+## Phase T3-D2：前端 fallback 警告增强
+
+### 实现内容
+
+在 Lite 写作页面，当 fallbackUsed = true 时，显示增强的警告提示：
+
+1. **更醒目的 UI 设计**
+   - 使用更明显的红色背景和边框
+   - 添加标题区域，突出显示 "本场为应急草稿"
+   - 增加图标，提高辨识度
+
+2. **明确的提示文案**
+   - 说明这是临时草稿，非真实 AI 生成
+   - 建议使用右侧候选稿或重写按钮
+
+3. **便捷的重写入口**
+   - 在警告区域直接提供"重写当前场景"按钮
+   - 按钮带有 data-testid，便于测试
+
+4. **新增的 data-testid**
+   - `lite-fallback-warning` (整体容器)
+   - `lite-fallback-rewrite-hint` (提示文案)
+   - `lite-fallback-rewrite-action` (重写按钮)
+
+### 修改文件
+
+| 文件 | 修改 |
+|------|------|
+| `frontend/src/views/LiteWritingView.vue` | 替换原有单行提示为增强的警告区域 |
+
+### 实现细节
+
+#### UI 结构
+```vue
+<div v-if="fallbackUsed" class="fallback-warning-box" data-testid="lite-fallback-warning">
+  <div class="fallback-warning-header">
+    <span class="fallback-warning-icon">⚠️</span>
+    <strong>本场为应急草稿</strong>
+  </div>
+  <p class="fallback-warning-text" data-testid="lite-fallback-rewrite-hint">
+    AI 正文生成失败后，系统写入了临时草稿。建议点击右侧候选稿功能进行重写，或使用下方按钮重新生成本场。
+  </p>
+  <div class="fallback-warning-actions">
+    <button data-testid="lite-fallback-rewrite-action" ...>重写当前场景</button>
+  </div>
+</div>
+```
+
+#### 样式
+- 使用红色主题背景色
+- 清晰的层级和间距
+- 按钮复用现有样式
+
+### 未做的改动
+
+1. **没有做自动重试** - 符合要求
+2. **没有改 Prompt** - 符合要求
+3. **没有改后端生成逻辑** - 符合要求
+4. **没有大规模重构** - 仅增强现有提示
+
+### 测试结果
+
+| 测试项 | 结果 |
+|--------|------|
+| 前端构建 | ✅ 通过 |
+| TypeScript 类型 | ✅ 无错误 |
+| Vue 模板编译 | ✅ 无错误 |
+| 后端 Path Safety | ✅ 38 passed |
+| 后端 Lite 测试 | ✅ 185 passed |
+| Response Model 测试 | ✅ 5 passed |
+
+### 安全检查
+✅ 无 API Key 提交
+✅ 无敏感信息泄露
+
+### 结论
+- **Phase T3-D2**: ✅ **前端 fallback 警告增强完成！**
+- **是否进入下一阶段**: ✅ **可以**

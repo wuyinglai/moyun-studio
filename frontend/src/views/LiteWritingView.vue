@@ -101,13 +101,29 @@
             >
               {{ completionSummary }}
             </p>
-            <p
+            <div
               v-if="fallbackUsed"
-              class="fallback-warning"
+              class="fallback-warning-box"
               data-testid="lite-fallback-warning"
             >
-              ⚠️ 本场为应急草稿，建议重写或扩写。
-            </p>
+              <div class="fallback-warning-header">
+                <span class="fallback-warning-icon">⚠️</span>
+                <strong>本场为应急草稿</strong>
+              </div>
+              <p class="fallback-warning-text" data-testid="lite-fallback-rewrite-hint">
+                AI 正文生成失败后，系统写入了临时草稿。建议点击右侧候选稿功能进行重写，或使用下方按钮重新生成本场。
+              </p>
+              <div class="fallback-warning-actions">
+                <button
+                  class="ghost-btn danger-btn"
+                  data-testid="lite-fallback-rewrite-action"
+                  :disabled="!currentFilePath || generating || !nextCards.length"
+                  @click="rewriteCurrent"
+                >
+                  重写当前场景
+                </button>
+              </div>
+            </div>
             <p
               v-if="currentFilePath"
               class="path-hint"
@@ -799,6 +815,39 @@ function refreshOptions() { gen.refreshOptions() }
 
 .chapter-progress-text {
   color: var(--text-muted-ink);
+}
+
+.fallback-warning-box {
+  margin: 8px 0 0;
+  padding: 12px;
+  background: rgba(220, 84, 64, 0.1);
+  border: 1px solid rgba(220, 84, 64, 0.4);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+}
+
+.fallback-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffb6a9;
+}
+
+.fallback-warning-icon {
+  font-size: 18px;
+}
+
+.fallback-warning-text {
+  margin: 0;
+  color: #ffd8d0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fallback-warning-actions {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .fallback-warning {
