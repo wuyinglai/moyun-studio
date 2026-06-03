@@ -276,7 +276,6 @@
           :key="card.id"
           class="option-card"
           :data-testid="`lite-option-card-${idx}`"
-          data-testid="lite-option-card"
           :disabled="generating"
           @click="generateWithCard(card)"
         >

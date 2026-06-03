@@ -425,9 +425,11 @@ export function useLiteGeneration(deps: {
       const data = await fetchLiteNextOptions(projectId, baseFile, overridePrefs || deps.prefs)
       if (requestId !== optionRequestId.value) return
       setWorkStatus('爽点卡已生成', '下一场景方向已经准备好，可以选择一张卡继续写。')
-      nextCards.value = data.cards
-      nextTargetFile.value = data.next_file
-      if (!data.cards.length) {
+      // Use splice to trigger Vue reactivity properly
+      const newCards = data?.cards ? [...data.cards] : []
+      nextCards.value.splice(0, nextCards.value.length, ...newCards)
+      nextTargetFile.value = data?.next_file || ''
+      if (!data?.cards?.length) {
         optionError.value = '这次没有生成出爽点卡，点"刷新"再试一次。'
         nextTargetFile.value = ''
       }

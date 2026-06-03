@@ -95,16 +95,21 @@ def test_next_options_diagnosis():
         page.route("**/*", log_request)
         page.on("response", log_response)
 
-        # Console error capture
+        # Console capture (all types including debug logs)
         console_errors = []
+        console_logs = []
         def on_console(message):
+            log_entry = {
+                "type": message.type,
+                "text": message.text,
+                "timestamp": datetime.now().isoformat()
+            }
+            console_logs.append(log_entry)
             if message.type == "error":
-                console_errors.append({
-                    "type": message.type,
-                    "text": message.text,
-                    "timestamp": datetime.now().isoformat()
-                })
+                console_errors.append(log_entry)
                 print(f"  Console Error: {message.text}")
+            else:
+                print(f"  Console [{message.type}]: {message.text[:200]}")
         page.on("console", on_console)
 
         try:
@@ -207,8 +212,8 @@ def test_next_options_diagnosis():
                 results["observations"].append("已点击'生成下一场景爽点卡'按钮")
                 print("  按钮已点击")
                 
-                # Wait for network and UI changes
-                page.wait_for_timeout(15000)
+                # Wait for network and UI changes (increased to 30s for slower responses)
+                page.wait_for_timeout(30000)
                 screenshot(page, "05-after-click")
             else:
                 print("  未找到'生成下一场景爽点卡'按钮，检查是否有错误或加载状态...")
@@ -254,6 +259,14 @@ def test_next_options_diagnosis():
             # Step 6: Check frontend state
             print("\n6. 检查前端状态...")
             
+            # Check generating state
+            generating_mask = page.locator('[data-testid="lite-generating-status"]')
+            if generating_mask.count() > 0 and generating_mask.first.is_visible():
+                print("  generating 状态: true (有遮罩)")
+                results["observations"].append("generating 状态为 true")
+            else:
+                print("  generating 状态: false (无遮罩)")
+            
             # Check loading state
             loading_selector = page.locator('.option-loading')
             if loading_selector.count() > 0:
@@ -272,11 +285,45 @@ def test_next_options_diagnosis():
                     results["frontend"]["optionErrorText"] = error_text
                     results["observations"].append(f"显示错误: {error_text}")
             
-            # Check option cards
-            option_cards = page.locator('[data-testid="lite-option-card"]')
+            # Check option cards (use class selector since data-testid pattern changed)
+            option_cards = page.locator('button.option-card')
             card_count = option_cards.count()
             print(f"  Option cards found: {card_count}")
             results["frontend"]["nextCardsCount"] = card_count
+            
+            # Debug: check DOM structure
+            panel = page.locator('[data-testid="lite-next-options-panel"]')
+            if panel.count() > 0:
+                panel_html = panel.first.inner_html()
+                print(f"  Panel HTML length: {len(panel_html)}")
+                results["observations"].append(f"Panel HTML 长度: {len(panel_html)}")
+                # Print first 500 chars of panel HTML for debugging
+                print(f"  Panel HTML preview: {panel_html[:500]}")
+            
+            # Debug: check Vue state via page state
+            try:
+                vue_state = page.evaluate('''() => {
+                    // Try to find the Vue app instance
+                    const app = document.querySelector('#app').__vue_app__
+                    if (app) {
+                        // Get the root component
+                        const instance = app._instance
+                        if (instance && instance.setupState) {
+                            return {
+                                nextCards: instance.setupState.nextCards?.value?.length || 0,
+                                generating: instance.setupState.generating?.value || false,
+                                loadingOptions: instance.setupState.loadingOptions?.value || false
+                            }
+                        }
+                    }
+                    return null
+                }''')
+                if vue_state:
+                    print(f"  Vue state: {vue_state}")
+                    results["observations"].append(f"Vue state: {vue_state}")
+            except Exception as e:
+                print(f"  Could not read Vue state: {e}")
+                results["observations"].append(f"Vue state 读取失败: {e}")
             
             if card_count > 0:
                 results["frontend"]["optionCardsVisible"] = True
