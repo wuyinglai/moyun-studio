@@ -107,7 +107,12 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-B-10 | 使用新入口连续生成 3 场真实重跑 | 🟡 | 🟡 | 功能验收 |
 | Phase T3-B-13 | 连续生成目标文件推进验证 | ✅ 功能通过，质量待优化 | 三场分别写入不同文件，功能通过 | 功能验收 |
 | Phase T3-C | 输出质量深化评分与 Prompt 优化建议 | ✅ | 完成质量评分，发现 Fallback 问题 | 文档审查 |
-| Phase T3-D | Prompt 优化方案设计 | ⏳ | - | - |
+| Phase T3-D | Fallback/自动重试/Prompt 优化方案设计 | ✅ | 方案文档已完成 | 文档审查 |
+| Phase T3-D1 | Fallback 显式标记 | ⏳ | - | - |
+| Phase T3-D2 | Fallback 自动重试 | ⏳ | - | - |
+| Phase T3-D3 | Fallback candidate 化 | ⏳ | - | - |
+| Phase T3-D4 | 低质量检测 | ⏳ | - | - |
+| Phase T3-D5 | Prompt 优化 | ⏳ | - | - |
 | Phase T4 | Professional 真实生成冒烟测试 | ⏳ | - | - |
 | Phase T5 | 输出质量评分表 | ⏳ | - | - |
 | Phase T6 | 候选稿采用/回滚测试 | ⏳ | - | - |
@@ -120,7 +125,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | 真实功能测试线 Phase T3-B 子任务状态更新：
 
 | 子任务 | 状态 | 日期 | 说明 |
-|--------|------|------|
+|--------|------|------|------|
 | Phase T3-B-1 | ✅ | 2026-06-02 | 首场景生成测试 |
 | Phase T3-B-2 | ✅ | 2026-06-02 | Candidate 改稿测试 |
 | Phase T3-B-3 | 🟡 | 2026-06-02 | 连续生成 3 场真实补测 |
@@ -148,12 +153,13 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 **后续建议**：
 | Phase | 任务 | 优先级 |
 |-------|------|--------|
-| Phase T3-D-1 | Fallback 明确标记 UI | 高 |
-| Phase T3-D-2 | Fallback 自动重试机制 | 高 |
-| Phase T3-D-3 | LLM timeout 调优 | 中 |
-| Phase T3-D-4 | Prompt 最小优化（字数约束） | 中 |
+| Phase T3-D-1 | Fallback 显式标记 | 高 |
+| Phase T3-D-2 | Fallback 自动重试 | 高 |
+| Phase T3-D-3 | Fallback candidate 化 | 中 |
+| Phase T3-D-4 | 低质量检测 | 中 |
+| Phase T3-D-5 | Prompt 优化 | 低 |
 
-**当前进度**：Phase T3-C 输出质量深化评分完成！可以进入 Phase T3-D！
+**当前进度**：Phase T3-C 输出质量深化评分完成！Phase T3-D 方案设计完成！可以进入 Phase T3-D1 实现！
 
 ---
 
@@ -209,11 +215,11 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 
 | 优先级 | Phase | 任务 | 状态 | 原因 |
 |--------|-------|------|------|------|
-| 1 | Phase T3-D | Prompt 优化方案设计 | ⏳ | Fallback 问题需先解决 |
-| 2 | Phase 5E | CandidatePanel 与 Flow 联动 | ⏳ | 增强数据流可视化完整性 |
-| 3 | Phase T5 | 输出质量评分表 | ⏳ | 建立质量评估体系 |
-| 4 | Phase R3 | CandidatePanel 体验增强 | ⏳ | 提升用户安全感 |
-| 5 | Phase V1 | 视觉分镜产品方案 | ⏳ | 探索未来方向 |
+| 1 | Phase T3-D1 | Fallback 显式标记 | ⏳ | 让用户明确知道这是 fallback |
+| 2 | Phase T3-D2 | Fallback 自动重试 | ⏳ | 减少 fallback 触发 |
+| 3 | Phase 5E | CandidatePanel 与 Flow 联动 | ⏳ | 增强数据流可视化完整性 |
+| 4 | Phase T5 | 输出质量评分表 | ⏳ | 建立质量评估体系 |
+| 5 | Phase R3 | CandidatePanel 体验增强 | ⏳ | 提升用户安全感 |
 
 ---
 
@@ -284,6 +290,8 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 
 | 文档 | 用途 |
 |------|------|
+| docs/testing/lite-output-quality-review-2026-06.md | Lite 输出质量深化评分报告 |
+| docs/testing/lite-fallback-retry-prompt-optimization-plan-2026-06.md | Fallback/重试/Prompt 优化方案 |
 | docs/dataflow-visualization-design-2026-06.md | 数据流可视化产品设计 |
 | docs/moyun-roadmap-and-acceptance-board-2026-06.md | 本路线图（当前文档） |
 | docs/contracts/scene-path-contract.md | 场景路径契约 |
