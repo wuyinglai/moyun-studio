@@ -1,4 +1,4 @@
-# Lite 真实生成冒烟测试报告
+﻿# Lite 真实生成冒烟测试报告
 
 > **测试阶段**: Phase T3-B
 > **创建时间**: 2026-06-02
@@ -565,7 +565,7 @@ Phase T3-B-12 已通过 ChatGPT 验收，next-options 前端不渲染的问题�
 
 证据：`sec-002.md` 第 3 行包含 `"对手借"（最近5章摘要，由系统自动维护）"` 占位符，这是 `_fallback_section_content` 函数的硬编码模板。
 
-详见：`docs/testing/lite-outputquality-review-2026-06.md`
+详见：`docs/testing/lite-output-quality-review-2026-06.md`
 
 ### 评分结果
 
