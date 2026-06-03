@@ -163,8 +163,8 @@ def test_continuous_scenes():
 
                     # Now wait for option cards to appear
                     print("  Waiting for lite-option-card...")
-                    page.wait_for_selector('[data-testid="lite-option-card"]', timeout=90000)
-                    option_cards = page.locator('[data-testid="lite-option-card"]')
+                    page.wait_for_selector('button.option-card', timeout=90000)
+                    option_cards = page.locator('button.option-card')
                     count = option_cards.count()
                     print(f"  Found {count} option-cards")
 

@@ -290,3 +290,39 @@ if not cards:
 **是**
 
 原因：已明确定位问题。API 成功返回 3 张卡片，但前端没有渲染。需要检查前端响应式更新或渲染逻辑问题。
+
+## 12. Phase T3-B-12 修复验证结果
+
+### 修复内容
+
+1. **修复 Vue 响应式更新问题**：在 `useLiteGeneration.ts` 中，将 `nextCards.value = data.cards` 改为使用 splice 方法确保 Vue 响应式更新：
+   ```typescript
+   const newCards = data?.cards ? [...data.cards] : []
+   nextCards.value.splice(0, nextCards.value.length, ...newCards)
+   ```
+
+2. **修复重复 data-testid 属性**：在 `LiteWritingView.vue` 中，删除了重复的 `data-testid="lite-option-card"` 属性，只保留动态的 `:data-testid="`lite-option-card-${idx}`"`
+
+3. **修复诊断脚本选择器**：在诊断脚本中，将选择器从 `[data-testid="lite-option-card"]` 更新为 `button.option-card`
+
+### 修复后 Network 结果
+
+| 项目 | 结果 |
+|------|------|
+| /lite/next-options status | 200 |
+| cards 数量 | 3 |
+| 是否渲染 lite-option-card | 是 |
+| optionError | 空 |
+| console errors | 空 |
+
+### 结论
+
+**passed**
+
+## 13. 实际根因
+
+问题有两个：
+
+1. **Vue 响应式更新问题**：直接赋值 `nextCards.value = data.cards` 有时不会触发 Vue 响应式更新，改用 splice 可以确保更新。
+
+2. **重复 data-testid 属性**：按钮上同时有动态绑定的 `:data-testid="`lite-option-card-${idx}"` 和静态的 `data-testid="lite-option-card"`，这导致 Vue 编译警告和诊断脚本选择器失效。
