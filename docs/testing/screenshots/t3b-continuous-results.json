@@ -1,25 +1,34 @@
 {
-  "testTime": "2026-06-03T18:29:17.702183",
+  "testTime": "2026-06-03T20:18:48.433804",
   "model": "agnes-2.0-flash",
   "result": "partial",
   "sceneCount": 3,
   "scenes": [
     {
       "index": 1,
-      "charCount": 632,
-      "first100": "# 第1卷 第1章 第1场景 满级大佬重开\n\n青石广场上，人声鼎沸。\n\n阳光刺眼，照在中央那方巨大的测灵碑上，折射出冷冽的光。\n\n林萧站在人群边缘，衣衫朴素，甚至带着几分洗不掉的陈旧感。周围的目光像针",
+      "charCount": 1701,
+      "title": "# 第1卷 第1章 第1场景 满级大佬重生虐渣",
+      "currentFilePath": "chapters/vol-01/ch-001/sec-001.md",
+      "generatedFilePath": "",
+      "first100": "# 第1卷 第1章 第1场景 满级大佬重生虐渣\n\n“咔嚓。”\n\n清脆的骨裂声，在死寂的大殿中显得格外刺耳。\n\n林渊感觉自己的胸口像是被生生挖去了一块，剧痛之后，是一股彻骨的冰凉。那根伴随他前世修炼三十",
       "screenshot": "03-scene1.png"
     },
     {
       "index": 2,
-      "charCount": 1045,
-      "first100": "# 第1卷 第1章 第2场景 当场反逼\n\n那股吸力并非来自石碑，而是来自林萧体内。\n\n【因果斩断程序完成。】\n【前世记忆封存中……】\n【警告：检测到“天命之子”气运反扑，建议宿主立即夺取测灵碑核心权限",
+      "charCount": 702,
+      "title": "# 第1卷 第1章 第2场景 当场反逼",
+      "currentFilePath": "chapters/vol-01/ch-001/sec-002.md",
+      "generatedFilePath": "chapters/vol-01/ch-001/sec-002.md",
+      "first100": "# 第1卷 第1章 第2场景 当场反逼\n\n对手借“（最近5章摘要，由系统自动维护）”继续施压，把主角逼到众人面前。里，人声原本很稳。直到门口那道身影出现，所有目光才像被一只看不见的手拨动，同时转了过去",
       "screenshot": "03-scene2.png"
     },
     {
       "index": 3,
-      "charCount": 2342,
-      "first100": "# 第1卷 第1章 第2场景 当场反逼\n\n那身影并未现身，但一股无形的威压已如千钧巨石，沉沉压下。\n\n广场上的空气瞬间凝固。\n\n原本还在窃窃私语的宾客们，此刻一个个噤若寒蝉。他们感受到了那股来自高位者",
+      "charCount": 2163,
+      "title": "# 第1卷 第1章 第3场景 当场反逼",
+      "currentFilePath": "chapters/vol-01/ch-001/sec-003.md",
+      "generatedFilePath": "chapters/vol-01/ch-001/sec-003.md",
+      "first100": "# 第1卷 第1章 第3场景 当场反逼\n\n那黑影落地，尘土未扬。\n\n他身上的血腥味混杂着一种诡异的甜香，那是外门禁药“血煞丹”过量服用后的余韵。这人林渊认识，外门执事，王虎。筑基初期，平时仗着赵无极的",
       "screenshot": "03-scene3.png"
     }
   ],

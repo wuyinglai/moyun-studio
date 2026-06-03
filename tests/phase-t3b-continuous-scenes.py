@@ -36,15 +36,37 @@ def wait_for_generation_complete(page, max_wait=90000):
     return False
 
 
-def get_scene_content(page):
+def get_scene_info(page):
+    """获取场景详细信息"""
+    info = {
+        "currentFilePath": "",
+        "title": "",
+        "charCount": 0,
+        "first100": "",
+    }
     try:
+        # 获取当前文件路径
+        path_hint = page.locator('.path-hint')
+        if path_hint.count() > 0:
+            info["currentFilePath"] = path_hint.first.inner_text().strip()
+    except:
+        pass
+
+    try:
+        # 获取编辑器内容
         textarea = page.locator('[data-testid="lite-editor-content"]')
         if textarea.count() > 0:
             content = textarea.first.input_value()
-            return len(content), content
+            info["charCount"] = len(content)
+            info["first100"] = content[:100] if content else ""
+            # 提取标题（第一行）
+            if content:
+                first_line = content.split('\n')[0].strip()
+                info["title"] = first_line
     except:
         pass
-    return 0, ""
+
+    return info
 
 
 def test_continuous_scenes():
@@ -67,9 +89,35 @@ def test_continuous_scenes():
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
 
+        # 用于存储每场生成后的响应 file_path
+        generated_file_paths = []
+
+        # 拦截 /lite/write-next-stream 响应
+        def handle_response(response):
+            if "/lite/write-next-stream" in response.url:
+                try:
+                    # SSE 响应，需要从 events 中提取 file_path
+                    # 响应格式是 event: meta\\ndata: {...}\\n\\n
+                    text = response.text()
+                    print(f"  [DEBUG] write-next-stream response: {text[:200]}...")
+                    # 提取 file_path
+                    for line in text.split('\n'):
+                        if line.startswith('data: '):
+                            try:
+                                data = json.loads(line[6:])
+                                if 'file_path' in data:
+                                    generated_file_paths.append(data['file_path'])
+                                    print(f"  [DEBUG] Captured file_path: {data['file_path']}")
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"  [DEBUG] Failed to capture response: {e}")
+
+        page.on("response", handle_response)
+
         try:
             print("=" * 70)
-            print("Phase T3-B-9: 连续生成 3 场真实重测 (修复产品链路)")
+            print("Phase T3-B-13: 连续生成 3 场真实重测 (验证文件推进)")
             print("=" * 70)
 
             # Step 1: Open Lite
@@ -89,11 +137,11 @@ def test_continuous_scenes():
 
             # Step 2: Wait idea cards and select one
             print("\n2. 等待开局卡...")
-            
+
             # Wait for idea cards or refresh button
             idea_cards = page.locator('button.idea-card')
             refresh_btn = page.locator('button:has-text("换一批")')
-            
+
             # Wait up to 60 seconds for idea cards
             start_time = time.time()
             while time.time() - start_time < 60:
@@ -104,13 +152,13 @@ def test_continuous_scenes():
                     refresh_btn.first.click()
                     page.wait_for_timeout(10000)
                 page.wait_for_timeout(2000)
-            
+
             if idea_cards.count() == 0:
                 print("  Error: No idea cards found!")
                 screenshot(page, "02-no-idea-cards")
                 results["notes"].append("未找到开局卡")
                 return results
-            
+
             card_count = idea_cards.count()
             print(f"  Found {card_count} idea cards")
             idea_cards.first.click()
@@ -122,6 +170,10 @@ def test_continuous_scenes():
             for scene_idx in range(3):
                 print(f"\n--- 生成第 {scene_idx+1} 场 ---")
 
+                # 清空上一场捕获的文件路径
+                if scene_idx > 0:
+                    generated_file_paths.clear()
+
                 if scene_idx > 0:
                     page.wait_for_timeout(3000)
 
@@ -132,10 +184,10 @@ def test_continuous_scenes():
                 else:
                     # Scene 2, 3: Wait for option cards or generate button
                     print(f"  Waiting for next scene options...")
-                    
+
                     # Wait a bit for state to settle
                     page.wait_for_timeout(5000)
-                    
+
                     # Debug: show current state
                     try:
                         generate_btn = page.locator('[data-testid="lite-generate-next-options"]')
@@ -193,16 +245,27 @@ def test_continuous_scenes():
                 if not wait_success:
                     print(f"  Warning: 第 {scene_idx+1} 场等待超长时间")
 
+                # 等待一下让 UI 更新
+                page.wait_for_timeout(2000)
+
                 # Save screenshot
                 screenshot(page, f"03-scene{scene_idx+1}")
 
-                # Get content
-                char_count, content = get_scene_content(page)
-                print(f"  第 {scene_idx+1} 场: {char_count} 字符")
+                # Get scene info
+                scene_info = get_scene_info(page)
+                print(f"  第 {scene_idx+1} 场:")
+                print(f"    - currentFilePath: {scene_info['currentFilePath']}")
+                print(f"    - title: {scene_info['title']}")
+                print(f"    - charCount: {scene_info['charCount']}")
+                print(f"    - generatedFilePath from API: {generated_file_paths[-1] if generated_file_paths else 'N/A'}")
+
                 scenes.append({
                     "index": scene_idx+1,
-                    "charCount": char_count,
-                    "first100": content[:100] if char_count > 0 else "",
+                    "charCount": scene_info['charCount'],
+                    "title": scene_info['title'],
+                    "currentFilePath": scene_info['currentFilePath'],
+                    "generatedFilePath": generated_file_paths[-1] if generated_file_paths else "",
+                    "first100": scene_info['first100'],
                     "screenshot": f"03-scene{scene_idx+1}.png"
                 })
 
@@ -211,15 +274,36 @@ def test_continuous_scenes():
 
             # Check continuity
             all_long = all(s["charCount"] > 800 for s in scenes)
+            # 检查标题是否推进（场景编号递增）
+            titles = [s["title"] for s in scenes if s["title"]]
+            scene_nums = []
+            for t in titles:
+                # 提取 "第X场景"
+                import re
+                m = re.search(r'第(\d+)场景', t)
+                if m:
+                    scene_nums.append(int(m.group(1)))
+            scene_nums_progress = scene_nums == sorted(scene_nums) and len(set(scene_nums)) == len(scene_nums) if scene_nums else False
+
+            # 检查文件路径是否推进
+            file_paths = [s["currentFilePath"] for s in scenes if s["currentFilePath"]]
+            sec_nums = []
+            for fp in file_paths:
+                import re
+                m = re.search(r'sec-(\d+)', fp)
+                if m:
+                    sec_nums.append(int(m.group(1)))
+            file_paths_progress = sec_nums == sorted(sec_nums) and len(set(sec_nums)) == len(sec_nums) if sec_nums else False
+
             unique = len(set(s["first100"][:30] for s in scenes)) == len(scenes) if scenes else False
             no_json = all("{" not in s["first100"] for s in scenes)
 
             results["continuity"]["noJsonLeak"] = no_json
             results["continuity"]["noDuplicate"] = unique
-            results["continuity"]["goalContinues"] = True if len(scenes) == 3 else None
-            results["continuity"]["conflictProgresses"] = True if len(scenes) == 3 else None
+            results["continuity"]["goalContinues"] = file_paths_progress
+            results["continuity"]["conflictProgresses"] = scene_nums_progress
 
-            if len(scenes) == 3 and all_long and no_json:
+            if len(scenes) == 3 and all_long and no_json and file_paths_progress:
                 results["result"] = "passed"
             elif len(scenes) >= 1:
                 results["result"] = "partial"
