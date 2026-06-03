@@ -113,7 +113,6 @@
           ref="textareaRef"
           v-model="content"
           class="chapter-textarea"
-          data-testid="lite-output-panel"
           data-testid="lite-editor-content"
           placeholder="选择右侧爽点卡开始生成，或在这里直接修改正文..."
           @input="dirty = true"

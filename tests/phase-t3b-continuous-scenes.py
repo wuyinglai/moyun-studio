@@ -89,10 +89,31 @@ def test_continuous_scenes():
 
             # Step 2: Wait idea cards and select one
             print("\n2. 等待开局卡...")
-            page.wait_for_selector('button.idea-card', timeout=40000)
-            idea_cards = page.locator('button.idea-card').all()
-            print(f"  Found {len(idea_cards)} idea cards")
-            idea_cards[0].click()
+            
+            # Wait for idea cards or refresh button
+            idea_cards = page.locator('button.idea-card')
+            refresh_btn = page.locator('button:has-text("换一批")')
+            
+            # Wait up to 60 seconds for idea cards
+            start_time = time.time()
+            while time.time() - start_time < 60:
+                if idea_cards.count() > 0:
+                    break
+                if refresh_btn.count() > 0 and refresh_btn.first.is_visible():
+                    print("  Clicking refresh button to load idea cards...")
+                    refresh_btn.first.click()
+                    page.wait_for_timeout(10000)
+                page.wait_for_timeout(2000)
+            
+            if idea_cards.count() == 0:
+                print("  Error: No idea cards found!")
+                screenshot(page, "02-no-idea-cards")
+                results["notes"].append("未找到开局卡")
+                return results
+            
+            card_count = idea_cards.count()
+            print(f"  Found {card_count} idea cards")
+            idea_cards.first.click()
             page.wait_for_timeout(10000)
             screenshot(page, "02-project-started")
 
@@ -111,6 +132,16 @@ def test_continuous_scenes():
                 else:
                     # Scene 2, 3: Wait for option cards or generate button
                     print(f"  Waiting for next scene options...")
+                    
+                    # Wait a bit for state to settle
+                    page.wait_for_timeout(5000)
+                    
+                    # Debug: show current state
+                    try:
+                        generate_btn = page.locator('[data-testid="lite-generate-next-options"]')
+                        print(f"  Generate button count: {generate_btn.count()}, visible: {generate_btn.first.is_visible() if generate_btn.count() > 0 else 'N/A'}")
+                    except:
+                        print("  Generate button check failed")
 
                     # First try to find and click "generate next options" button if present
                     try:
@@ -118,12 +149,21 @@ def test_continuous_scenes():
                         if generate_btn.count() > 0 and generate_btn.first.is_visible():
                             print("  Found '生成下一场景爽点卡' button, clicking...")
                             generate_btn.first.click()
-                            page.wait_for_timeout(5000)
+                            page.wait_for_timeout(10000)
+                        else:
+                            print("  Generate button not visible, trying refresh button...")
+                            # Try the refresh button if available
+                            refresh_btn = page.locator('button:has-text("换个方向")')
+                            if refresh_btn.count() > 0 and refresh_btn.first.is_visible():
+                                print("  Found '换个方向' button, clicking...")
+                                refresh_btn.first.click()
+                                page.wait_for_timeout(10000)
                     except Exception as e:
                         print(f"  No generate button found or error: {e}")
 
                     # Now wait for option cards to appear
-                    page.wait_for_selector('[data-testid="lite-option-card"]', timeout=60000)
+                    print("  Waiting for lite-option-card...")
+                    page.wait_for_selector('[data-testid="lite-option-card"]', timeout=90000)
                     option_cards = page.locator('[data-testid="lite-option-card"]')
                     count = option_cards.count()
                     print(f"  Found {count} option-cards")
