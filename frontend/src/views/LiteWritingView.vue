@@ -263,6 +263,14 @@
           >
             打开一个场景后生成下一场景方向。
           </p>
+          <button
+            v-if="!nextCards.length && !loadingOptions && !generating"
+            class="primary-btn full"
+            data-testid="lite-generate-next-options"
+            @click="refreshOptions"
+          >
+            生成下一场景爽点卡
+          </button>
           <template v-if="!generating">
           <button
           v-for="(card, idx) in nextCards"

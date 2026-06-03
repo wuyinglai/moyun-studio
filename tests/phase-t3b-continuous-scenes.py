@@ -69,7 +69,7 @@ def test_continuous_scenes():
 
         try:
             print("=" * 70)
-            print("Phase T3-B-7: 连续生成 3 场真实重测 (data-testid 稳定版)")
+            print("Phase T3-B-9: 连续生成 3 场真实重测 (修复产品链路)")
             print("=" * 70)
 
             # Step 1: Open Lite
@@ -109,8 +109,20 @@ def test_continuous_scenes():
                     # Scene 1: Wait auto-generate
                     print("  Waiting for auto-generation...")
                 else:
-                    # Scene 2, 3: Find [data-testid="lite-option-card"]
-                    print(f"  Waiting for [data-testid=\"lite-option-card\"]...")
+                    # Scene 2, 3: Wait for option cards or generate button
+                    print(f"  Waiting for next scene options...")
+
+                    # First try to find and click "generate next options" button if present
+                    try:
+                        generate_btn = page.locator('[data-testid="lite-generate-next-options"]')
+                        if generate_btn.count() > 0 and generate_btn.first.is_visible():
+                            print("  Found '生成下一场景爽点卡' button, clicking...")
+                            generate_btn.first.click()
+                            page.wait_for_timeout(5000)
+                    except Exception as e:
+                        print(f"  No generate button found or error: {e}")
+
+                    # Now wait for option cards to appear
                     page.wait_for_selector('[data-testid="lite-option-card"]', timeout=60000)
                     option_cards = page.locator('[data-testid="lite-option-card"]')
                     count = option_cards.count()
