@@ -38,11 +38,12 @@ export interface LiteWriteNextResponse {
   fallback_used?: boolean
   retry_used?: boolean
   retry_count?: number
+  fallback_candidate_id?: string | null
 }
 
 /** UI-only: 流式回调 */
 export interface LiteWriteStreamCallbacks {
-  onMeta?: (data: { file_path: string; label: string; source_file?: string; is_candidate?: boolean; candidate_id?: string | null; fallback_used?: boolean; retry_used?: boolean; retry_count?: number }) => void
+  onMeta?: (data: { file_path: string; label: string; source_file?: string; is_candidate?: boolean; candidate_id?: string | null; fallback_used?: boolean; retry_used?: boolean; retry_count?: number; fallback_candidate_id?: string | null }) => void
   onDelta?: (delta: string) => void
   onReplace?: (content: string) => void
   onStatus?: (message: string) => void

@@ -96,3 +96,4 @@ class LiteWriteNextResponse(BaseModel):
     fallback_used: bool = Field(default=False, description="是否使用了 fallback 草稿")
     retry_used: bool = Field(default=False, description="是否触发了自动重试")
     retry_count: int = Field(default=0, description="实际重试次数")
+    fallback_candidate_id: str | None = Field(default=None, description="fallback 候选稿 ID，未使用 fallback 时为 None")

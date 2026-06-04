@@ -676,6 +676,7 @@ async def write_lite_next(
     used_fallback = False
     retry_used = False
     retry_count = 0
+    fallback_candidate_info = None
     try:
         content, retry_used, retry_count = await _complete_with_single_retry(
             lite_llm,
@@ -712,6 +713,25 @@ async def write_lite_next(
     if not is_candidate:
         # 更新章节记忆和待回收伏笔
         await metadata_svc.update_ch_meta(req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
+    
+    # 如果使用了 fallback，创建 fallback candidate 但不改变现有行为
+    if used_fallback:
+        try:
+            fallback_candidate_info = await _create_lite_candidate(
+                file_service, req.project_id, target_file, "fallback_draft", content,
+            )
+            event_bus = getattr(request.app.state, "event_bus", None)
+            if event_bus:
+                evt = make_candidate_created_event(
+                    project_id=req.project_id,
+                    candidate_id=fallback_candidate_info.id,
+                    source_path=target_file,
+                    action=fallback_candidate_info.action,
+                    source="api/lite",
+                )
+                await event_bus.publish(evt.type, evt.to_sse_dict())
+        except Exception as e:
+            logger.warning("创建 fallback candidate 失败: %s", e)
 
     quality_summary = ""
     if is_candidate:
@@ -797,6 +817,7 @@ async def write_lite_next(
         fallback_used=used_fallback,
         retry_used=retry_used,
         retry_count=retry_count,
+        fallback_candidate_id=fallback_candidate_info.id if fallback_candidate_info else None,
     ), message="场景已生成")
 
 
@@ -911,6 +932,7 @@ async def write_lite_next_stream(
             used_fallback = False
             retry_used = False
             retry_count = 0
+            fallback_candidate_info = None
             yield _lite_stream_event("status", {"message": "AI 正在写正文..."})
 
             try:
@@ -976,6 +998,25 @@ async def write_lite_next_stream(
                     await event_bus.publish(evt.type, evt.to_sse_dict())
             else:
                 await file_service.write_file(f"{req.project_id}/{output_file}", content)
+            
+            # 如果使用了 fallback，创建 fallback candidate 但不改变现有行为
+            if used_fallback:
+                try:
+                    fallback_candidate_info = await _create_lite_candidate(
+                        file_service, req.project_id, target_file, "fallback_draft", content,
+                    )
+                    event_bus = getattr(request.app.state, "event_bus", None)
+                    if event_bus:
+                        evt = make_candidate_created_event(
+                            project_id=req.project_id,
+                            candidate_id=fallback_candidate_info.id,
+                            source_path=target_file,
+                            action=fallback_candidate_info.action,
+                            source="api/lite",
+                        )
+                        await event_bus.publish(evt.type, evt.to_sse_dict())
+                except Exception as e:
+                    logger.warning("创建 fallback candidate 失败: %s", e)
 
             if not is_candidate:
                 # 更新章节记忆和待回收伏笔
@@ -1031,6 +1072,7 @@ async def write_lite_next_stream(
                 "fallback_used": used_fallback,
                 "retry_used": retry_used,
                 "retry_count": retry_count,
+                "fallback_candidate_id": fallback_candidate_info.id if fallback_candidate_info else None,
             })
         except Exception as e:
             logger.exception("爽文流式生成异常: %s", e)

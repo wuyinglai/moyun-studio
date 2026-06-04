@@ -65,6 +65,7 @@ export function useLiteGeneration(deps: {
   const fallbackUsed = ref(false)
   const retryUsed = ref(false)
   const retryCount = ref(0)
+  const fallbackCandidateId = ref<string | null>(null)
 
   // Helper functions
   function setWorkStatus(title: string, detail: string) {
@@ -217,6 +218,7 @@ export function useLiteGeneration(deps: {
           fallbackUsed.value = Boolean(meta.fallback_used)
           retryUsed.value = Boolean(meta.retry_used)
           retryCount.value = Number(meta.retry_count || 0)
+          fallbackCandidateId.value = meta.fallback_candidate_id || null
           const displayPath = meta.source_file || meta.file_path
           setWorkStatus(
             meta.is_candidate ? `正在生成${candidateLabel}候选稿` : `正在写${formatChapterLabel(displayPath)}`,
@@ -331,6 +333,7 @@ export function useLiteGeneration(deps: {
           fallbackUsed.value = Boolean(result.fallback_used)
           retryUsed.value = Boolean(result.retry_used)
           retryCount.value = Number(result.retry_count || 0)
+          fallbackCandidateId.value = result.fallback_candidate_id || null
           if (candidateDraft.value?.path === result.file_path) {
             candidateDraft.value.content = result.content
             if (!candidateDraft.value.candidateId && result.candidate_id) {
@@ -586,6 +589,7 @@ export function useLiteGeneration(deps: {
     fallbackUsed,
     retryUsed,
     retryCount,
+    fallbackCandidateId,
     // Helpers
     formatChapterLabel,
     parseSectionPath,

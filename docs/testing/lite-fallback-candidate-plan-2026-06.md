@@ -358,3 +358,63 @@ D4.2 将：
 **Phase T3-D4.1 ✅ 完成！**
 
 可以进入 Phase T3-D4.2。
+
+---
+
+## 16. Phase T3-D4.2 fallback 同步创建 candidate
+
+**实施日期：** 2026-06-04
+
+### 16.1 完成内容
+
+在保持现有写正文行为不变的前提下：
+- ✅ 新增 `CandidateAction.FALLBACK_DRAFT` 枚举值
+- ✅ 当 `fallback_used=True` 时，同步创建 fallback candidate
+- ✅ 在 sync response 中返回 `fallback_candidate_id`
+- ✅ 在 stream done 事件中返回 `fallback_candidate_id`
+- ✅ 前端类型支持接收 `fallback_candidate_id`
+- ✅ `useLiteGeneration` 添加 `fallbackCandidateId` 状态变量
+- ✅ 保留原有写正文行为，连续生成不受影响
+
+### 16.2 当前行为（与旧版保持一致）
+
+当 LLM 失败时：
+1. 仍然写入 fallback 内容到正文文件
+2. 仍然更新 story_engine.md、recent-context.md 等
+3. 仍然继续生成下一场景
+4. 仍然显示 fallback_used 警告
+
+### 16.3 新增行为（候选稿保存）
+
+在保持上述行为的同时：
+1. 当 `fallback_used=True` 时，额外调用 `_create_lite_candidate` 创建候选稿
+2. 使用 `action="fallback_draft"` 和 `source_mode="lite"`
+3. 在 response 中添加 `fallback_candidate_id` 字段
+4. 候选稿保存到 `.candidates/` 目录下
+
+### 16.4 测试覆盖
+
+新增测试文件 `backend/tests/test_lite_fallback_candidate_creation.py`：
+- ✅ 测试 `CandidateAction.FALLBACK_DRAFT` 枚举存在
+- ✅ 测试 lite action "fallback_draft" 映射正确
+- ✅ 测试其他 action 仍然正常工作
+- ✅ 测试 fallback candidate metadata 结构正确
+
+### 16.5 下一阶段计划
+
+**Phase T3-D4.3：** fallback 不覆盖正文
+- 修改 fallback 分支，不直接写正文文件
+- 只创建 fallback candidate
+- 用户需要手动采用 fallback candidate 或重写
+
+### 16.6 风险评估
+
+- ✅ **低风险：** 保持现有行为完全不变，只是额外添加候选稿保存
+- ✅ **向后兼容：** 所有现有功能继续正常工作
+- ✅ **易于回滚：** 如果发现问题，可以简单禁用 fallback candidate 创建
+
+### 16.7 结论
+
+**Phase T3-D4.2 ✅ 完成！**
+
+可以进入 Phase T3-D4.3。
