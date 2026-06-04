@@ -24,6 +24,7 @@ class CandidateAction(str, Enum):
     EXPAND = "expand"             # 扩写
     SHRINK = "shrink"             # 缩写
     POLISH = "polish"             # 润色
+    FALLBACK_DRAFT = "fallback_draft"  # 应急草稿（LLM 失败后 fallback 生成）
 
 
 class CandidateStatus(str, Enum):

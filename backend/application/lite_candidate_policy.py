@@ -20,5 +20,6 @@ def lite_action_to_candidate_action(action: str) -> CandidateAction:
         "rewrite_current_scene": CandidateAction.REWRITE,
         "polish_current_scene": CandidateAction.POLISH,
         "chat_edit_current_scene": CandidateAction.CHAT,
+        "fallback_draft": CandidateAction.FALLBACK_DRAFT,  # 应急草稿
     }
     return mapping.get(action, CandidateAction.REWRITE)
