@@ -368,11 +368,29 @@ export function useLiteGeneration(deps: {
             deps.flow.markNodeSuccess('quality_check', [
               { id: 'quality-result', label: '质量检查结果', kind: 'text', preview: result.quality_summary },
             ])
-            deps.flow.markNodeSuccess('save_or_candidate', [
-              { id: 'output-file', label: '生成结果', kind: 'file', path: result.file_path },
-            ])
-            deps.flow.markNodeSuccess('update_memory')
-            deps.flow.markNodeSuccess('refresh_ui')
+            
+            if (result.write_skipped) {
+              // fallback 触发，只创建 candidate，不写入文件，暂停流程
+              // 先标记 save_or_candidate 为 skipped，然后用 success 来设置 outputs
+              deps.flow.markNodeSuccess('save_or_candidate', result.fallback_candidate_id ? [
+                { 
+                  id: 'fallback-candidate', 
+                  label: '应急候选稿', 
+                  kind: 'candidate', 
+                  path: result.file_path,
+                  candidateId: result.fallback_candidate_id,
+                }
+              ] : [])
+              deps.flow.markNodeSkipped('update_memory')
+              deps.flow.markNodeSkipped('refresh_ui')
+            } else {
+              // 正常流程
+              deps.flow.markNodeSuccess('save_or_candidate', [
+                { id: 'output-file', label: '生成结果', kind: 'file', path: result.file_path },
+              ])
+              deps.flow.markNodeSuccess('update_memory')
+              deps.flow.markNodeSuccess('refresh_ui')
+            }
           }
         },
       }, { signal: abortController.signal }, outputFile)

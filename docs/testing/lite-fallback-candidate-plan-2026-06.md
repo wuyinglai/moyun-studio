@@ -550,4 +550,54 @@ D4.2 将：
 
 **Phase T3-D4.4 ✅ 完成！**
 
+---
+
+## 19. Phase T3-D4.5 UI/FlowPanel 联动优化
+
+**实施日期：** 2026-06-04
+
+### 19.1 目标
+
+- 在 FlowPanel 中更清楚地显示 fallback 状态
+- 让用户直观地看到流程卡在哪里，候选稿在哪里
+- 提供更直观的用户交互指导
+- 不修改后端，只做前端 UI 优化
+
+### 19.2 完成内容
+
+**前端变更：
+1. `frontend/src/composables/useLiteGeneration.ts` - 更新 flow 可视化：
+   - 当 `write_skipped=true` 时：
+     - mark `save_or_candidate`, `update_memory`, `refresh_ui` 为 skipped
+     - 在 `save_or_candidate` 的 outputs 中记录 fallback candidate 信息
+   - 当正常完成时保持原有行为
+
+2. `frontend/src/views/LiteWritingView.vue` - 已实现完整的暂停状态显示（已在 Phase T3-D4.4 中完成）
+
+### 19.3 新的 UI/Flow 行为
+
+当 fallback 触发后：
+1. **FlowPanel 状态：
+   - 显示调用 LLM 成功（fallback）
+   - 显示质量检查完成
+   - 显示保存/候选稿、更新记忆、刷新编辑器为 skipped
+   - 保存节点的 output 中显示应急候选稿
+2. **用户可见性：
+   - 在 LiteWritingView 的编辑器顶部有醒目的暂停提示
+   - 在候选稿面板中可以查看、采用、放弃
+   - 在 FlowPanel 中可以看到清晰的流程断点
+
+### 19.4 下阶段计划
+
+**Phase T3-D5：** 低质量检测
+- 对生成内容进行质量评估
+- 自动建议重写低质量场景
+- 完善生成后审核流程
+
+### 19.5 结论
+
+**Phase T3-D4.5 ✅ 完成！**
+
+**Phase T3-D4.4 ✅ 完成！**
+
 Fallback 现在不会再污染正式正文，用户有完全的控制权。可以进入下一个阶段。
