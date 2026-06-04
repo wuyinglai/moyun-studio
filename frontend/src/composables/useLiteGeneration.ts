@@ -565,6 +565,13 @@ export function useLiteGeneration(deps: {
     }
   }
 
+  function clearFallbackPauseStatus() {
+    writeSkipped.value = false
+    writeSkipReason.value = null
+    fallbackUsed.value = false
+    fallbackCandidateId.value = null
+  }
+
   async function generateWithCard(card: LiteNextOptionCard, candidateDraft: Ref<{ sourcePath: string; path: string; action: LiteWriteAction; title: string; content: string; candidateId?: string | null } | null>) {
     if (generating.value) return
     await runGeneration(card, 'write', nextTargetFile.value || null, null, candidateDraft)
@@ -596,6 +603,7 @@ export function useLiteGeneration(deps: {
     fallbackCandidateId,
     writeSkipped,
     writeSkipReason,
+    clearFallbackPauseStatus,
     // Helpers
     formatChapterLabel,
     parseSectionPath,

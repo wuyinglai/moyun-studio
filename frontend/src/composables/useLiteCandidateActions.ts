@@ -35,6 +35,7 @@ export function useLiteCandidateActions(deps: {
   runGeneration: (card: LiteNextOptionCard, action: LiteWriteAction, targetFile: string | null, outputFile: string | null, candidateDraft: Ref<CandidateDraft | null>) => Promise<void>
   openChapter: (path: string, options?: { skipOptions?: boolean }) => Promise<void>
   loadingOptions: Ref<boolean>
+  clearFallbackPauseStatus?: () => void
 }) {
   const projectStore = useProjectStore()
   const fileStore = useFileStore()
@@ -71,6 +72,7 @@ export function useLiteCandidateActions(deps: {
       await fileStore.loadTree(projectId)
       deps.setWorkStatus('正在刷新下一场景方向', '正在根据采用后的正文重新生成下一场景爽点卡。')
       await deps.refreshOptions(draft.sourcePath)
+      if (deps.clearFallbackPauseStatus) deps.clearFallbackPauseStatus()
       notification.success('已采用候选稿并替换原文')
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } }).response?.status
@@ -99,6 +101,7 @@ export function useLiteCandidateActions(deps: {
     candidateDraft.value = null
     delete deps.streamingBuffers.value[draft.path]
     await deps.openChapter(draft.sourcePath, { skipOptions: true })
+    if (deps.clearFallbackPauseStatus) deps.clearFallbackPauseStatus()
     notification.success('已放弃候选稿')
   }
 

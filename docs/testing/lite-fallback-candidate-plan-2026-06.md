@@ -484,4 +484,70 @@ D4.2 将：
 
 **Phase T3-D4.3 ✅ 完成！**
 
+---
+
+## 18. Phase T3-D4.4 连续生成 fallback 暂停策略
+
+**实施日期：** 2026-06-04
+
+### 18.1 目标
+
+- 当 write_skipped=true 时，明确暂停连续生成流程
+- 防止用户在未处理 fallback candidate 时继续生成下一场景
+- 提供清晰的 UI 提示
+- 完善测试脚本支持
+
+### 18.2 完成内容
+
+**前端变更：
+1. `frontend/src/composables/useLiteGeneration.ts` - 新增 `clearFallbackPauseStatus` 函数
+2. `frontend/src/views/LiteWritingView.vue` - 实现：
+   - 当 writeSkipped=true 时：
+     - 禁用 "换个方向" 按钮
+     - 禁用 "生成下一场景爽点卡" 按钮
+     - 禁用所有 option card
+     - 显示 "本场未写入正式正文" 提示
+     - 显示候选稿 ID（如果有）
+   - 当采用或放弃候选稿后，自动清除暂停状态
+3. `frontend/src/composables/useLiteCandidateActions.ts` - 更新：
+   - 支持接收 `clearFallbackPauseStatus` 作为依赖
+   - 当 acceptCandidate 和 discardCandidate 时调用
+
+**新增 data-testid：**
+1. `lite-fallback-write-skipped` - 用于标识 write_skipped 的提示
+2. `lite-fallback-pause-notice` - 暂停提示
+3. `lite-fallback-candidate-id` - 候选稿 ID
+
+**测试更新：**
+1. `tests/phase-t3b-continuous-scenes.py` - 更新：
+   - 新增对 write_skipped 的检测和记录
+   - 当检测到 write_skipped 时停止继续生成
+   - 新增记录 fallbackCandidateId
+
+### 18.3 新的暂停行为
+
+当遇到 fallback 触发后：
+1. **UI 状态：
+   - 显示："本场未写入正式正文，已保存为应急候选稿"
+   - 显示："系统已保存为应急候选稿。请先采用候选稿或重写本场，再继续生成下一场"
+   - 如果有候选稿 ID，也显示
+   - 所有继续生成的按钮和选项卡均禁用
+2. **用户决策：
+   - 用户必须采用候选稿替换正文
+   - 用户放弃候选稿并重写
+   - 用户使用重写当前场景
+3. **状态清除：
+   - 一旦用户采取上述任一操作后，暂停状态自动清除
+   - 可以继续生成
+
+### 18.4 下阶段计划
+
+**Phase T3-D4.5：** UI/FlowPanel 联动优化
+- 在 FlowPanel 中显示 fallback 状态
+- 提供更直观的用户交互
+
+### 18.5 结论
+
+**Phase T3-D4.4 ✅ 完成！**
+
 Fallback 现在不会再污染正式正文，用户有完全的控制权。可以进入下一个阶段。

@@ -61,6 +61,7 @@
         </div>
         <button
           class="primary-btn full"
+          :disabled="writeSkipped"
           @click="() => refreshOptions()"
         >
           换个方向
@@ -108,12 +109,16 @@
             >
               <div class="fallback-warning-header">
                 <span class="fallback-warning-icon">⚠️</span>
-                <strong v-if="writeSkipped">本场未写入正式正文，已保存为应急候选稿</strong>
+                <strong v-if="writeSkipped" data-testid="lite-fallback-write-skipped">本场未写入正式正文，已保存为应急候选稿</strong>
                 <strong v-else>本场为应急草稿</strong>
               </div>
               <p class="fallback-warning-text" data-testid="lite-fallback-rewrite-hint">
-                <span v-if="writeSkipped" data-testid="lite-fallback-candidate-id">
-                  请在右侧候选稿面板中查看并采用应急草稿，或使用下方按钮重写当前场景。
+                <span v-if="writeSkipped">
+                  <span data-testid="lite-fallback-pause-notice">系统已保存为应急候选稿。请先采用候选稿或重写本场，再继续生成下一场。</span>
+                  <span v-if="fallbackCandidateId" data-testid="lite-fallback-candidate-id">
+                    <br><br>
+                    候选稿 ID：{{ fallbackCandidateId }}
+                  </span>
                 </span>
                 <span v-else>
                   AI 正文生成失败后，系统写入了临时草稿。建议点击右侧候选稿功能进行重写，或使用下方按钮重新生成本场。
@@ -255,7 +260,7 @@
             <span>下一场景爽点卡</span>
             <button
               class="link-btn"
-              :disabled="loadingOptions"
+              :disabled="loadingOptions || writeSkipped"
               @click="() => refreshOptions()"
             >
               刷新
@@ -295,6 +300,7 @@
             v-if="!nextCards.length && !loadingOptions && !generating"
             class="primary-btn full"
             data-testid="lite-generate-next-options"
+            :disabled="writeSkipped"
             @click="refreshOptions"
           >
             生成下一场景爽点卡
@@ -305,7 +311,7 @@
           :key="card.id"
           class="option-card"
           :data-testid="`lite-option-card-${idx}`"
-          :disabled="generating"
+          :disabled="generating || writeSkipped"
           @click="generateWithCard(card)"
         >
             <strong>{{ card.title }}</strong>
@@ -595,6 +601,7 @@ const cand = useLiteCandidateActions({
   runGeneration: gen.runGeneration,
   openChapter,
   loadingOptions: gen.loadingOptions,
+  clearFallbackPauseStatus: gen.clearFallbackPauseStatus,
 })
 
 // ─── UI Computed ──────────────────────────────────────────
@@ -653,6 +660,7 @@ const isViewingCandidate = computed(() => {
 
 const fallbackUsed = computed(() => gen.fallbackUsed.value)
 const writeSkipped = computed(() => gen.writeSkipped.value)
+const fallbackCandidateId = computed(() => gen.fallbackCandidateId.value)
 
 const canRunChatRevision = computed(() => {
   return Boolean(

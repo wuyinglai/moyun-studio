@@ -44,6 +44,9 @@ def get_scene_info(page):
         "charCount": 0,
         "first100": "",
         "fallbackUsed": False,
+        "writeSkipped": False,
+        "writeSkipReason": None,
+        "fallbackCandidateId": None,
     }
     try:
         # 获取当前文件路径
@@ -58,6 +61,26 @@ def get_scene_info(page):
         fallback_warning = page.locator('[data-testid="lite-fallback-warning"]')
         if fallback_warning.count() > 0:
             info["fallbackUsed"] = True
+            # 检查是否有 write-skipped
+            try:
+                write_skipped = page.locator('[data-testid="lite-fallback-write-skipped"]')
+                if write_skipped.count() > 0:
+                    info["writeSkipped"] = True
+            except:
+                pass
+            # 获取 fallback candidate id
+            try:
+                candidate_id = page.locator('[data-testid="lite-fallback-candidate-id"]')
+                if candidate_id.count() > 0:
+                    text = candidate_id.first.inner_text()
+                    if "候选稿 ID" in text:
+                        # 提取 ID
+                        import re
+                        m = re.search(r'候选稿 ID：(.+)', text)
+                        if m:
+                            info["fallbackCandidateId"] = m.group(1).strip()
+            except:
+                pass
     except:
         pass
 
@@ -101,6 +124,9 @@ def test_continuous_scenes():
         # 用于存储每场生成后的响应 file_path 和 fallback_used
         generated_file_paths = []
         fallback_used_in_response = False
+        write_skipped_in_response = False
+        write_skip_reason_in_response = None
+        fallback_candidate_id_in_response = None
 
         # 拦截 /lite/write-next-stream 响应
         def handle_response(response):
@@ -112,6 +138,9 @@ def test_continuous_scenes():
                     print(f"  [DEBUG] write-next-stream response: {text[:200]}...")
                     # 提取 file_path 和 fallback_used
                     nonlocal fallback_used_in_response
+                    nonlocal write_skipped_in_response
+                    nonlocal write_skip_reason_in_response
+                    nonlocal fallback_candidate_id_in_response
                     for line in text.split('\n'):
                         if line.startswith('data: '):
                             try:
@@ -122,6 +151,15 @@ def test_continuous_scenes():
                                 if 'fallback_used' in data:
                                     fallback_used_in_response = bool(data['fallback_used'])
                                     print(f"  [DEBUG] Captured fallback_used: {fallback_used_in_response}")
+                                if 'write_skipped' in data:
+                                    write_skipped_in_response = bool(data['write_skipped'])
+                                    print(f"  [DEBUG] Captured write_skipped: {write_skipped_in_response}")
+                                if 'write_skip_reason' in data:
+                                    write_skip_reason_in_response = data['write_skip_reason']
+                                    print(f"  [DEBUG] Captured write_skip_reason: {write_skip_reason_in_response}")
+                                if 'fallback_candidate_id' in data:
+                                    fallback_candidate_id_in_response = data['fallback_candidate_id']
+                                    print(f"  [DEBUG] Captured fallback_candidate_id: {fallback_candidate_id_in_response}")
                             except:
                                 pass
                 except Exception as e:
@@ -188,6 +226,9 @@ def test_continuous_scenes():
                 if scene_idx > 0:
                     generated_file_paths.clear()
                     fallback_used_in_response = False
+                    write_skipped_in_response = False
+                    write_skip_reason_in_response = None
+                    fallback_candidate_id_in_response = None
 
                 if scene_idx > 0:
                     page.wait_for_timeout(3000)
@@ -274,7 +315,9 @@ def test_continuous_scenes():
                 print(f"    - charCount: {scene_info['charCount']}")
                 print(f"    - generatedFilePath from API: {generated_file_paths[-1] if generated_file_paths else 'N/A'}")
 
-                scenes.append({
+                # 检查是否需要停止（write_skipped）
+                need_stop = scene_info['writeSkipped'] or write_skipped_in_response
+                scene_info_to_save = {
                     "index": scene_idx+1,
                     "charCount": scene_info['charCount'],
                     "title": scene_info['title'],
@@ -282,8 +325,21 @@ def test_continuous_scenes():
                     "generatedFilePath": generated_file_paths[-1] if generated_file_paths else "",
                     "first100": scene_info['first100'],
                     "screenshot": f"03-scene{scene_idx+1}.png",
-                    "fallbackUsed": scene_info['fallbackUsed'] or fallback_used_in_response
-                })
+                    "fallbackUsed": scene_info['fallbackUsed'] or fallback_used_in_response,
+                    "writeSkipped": scene_info['writeSkipped'] or write_skipped_in_response,
+                    "writeSkipReason": scene_info['writeSkipReason'] or write_skip_reason_in_response,
+                    "fallbackCandidateId": scene_info['fallbackCandidateId'] or fallback_candidate_id_in_response,
+                    "stoppedBecauseFallback": need_stop
+                }
+                scenes.append(scene_info_to_save)
+                print(f"    - writeSkipped: {scene_info_to_save['writeSkipped']}")
+                print(f"    - fallbackCandidateId: {scene_info_to_save['fallbackCandidateId']}")
+                
+                # 如果遇到 write_skipped，停止继续生成
+                if need_stop:
+                    print("  检测到 fallback write_skipped，停止连续生成")
+                    results["stoppedReason"] = "fallback_write_skipped"
+                    break
 
             results["scenes"] = scenes
             results["sceneCount"] = len(scenes)
