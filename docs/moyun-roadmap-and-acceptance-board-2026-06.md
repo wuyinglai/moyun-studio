@@ -298,6 +298,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | 2026-06-04 | Phase T3-D4.1 | ✅ | c9ba95e | Solo |
 | 2026-06-04 | Phase T3-D4.2 | ✅ | 44a0592 | Solo |
 | 2026-06-04 | Phase T3-D4.3 | ✅ | 2959beb | Solo |
+| 2026-06-04 | Phase T3-D4.4 | ✅ | 8bea106 | Solo |
 
 ---
 
