@@ -305,6 +305,44 @@ async def _ensure_chapter(project_dir: Path, volume_number: int, chapter_number:
 
 
 
+async def _complete_with_single_retry(
+    lite_llm,
+    messages,
+    deadline,
+    temperature,
+    max_tokens,
+    timeout,
+) -> tuple[str, bool, int]:
+    """调用 LLM，失败后自动重试一次，返回 (content, retry_used, retry_count)"""
+    retry_used = False
+    retry_count = 0
+    try:
+        content = await lite_llm.complete_with_deadline(
+            messages,
+            deadline=deadline,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+        )
+        return content, retry_used, retry_count
+    except Exception as first_e:
+        logger.warning("LLM 首次调用失败，开始重试: %s", first_e)
+        retry_used = True
+        retry_count = 1
+        try:
+            content = await lite_llm.complete_with_deadline(
+                messages,
+                deadline=deadline,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=timeout,
+            )
+            return content, retry_used, retry_count
+        except Exception as retry_e:
+            logger.warning("LLM 重试也失败: %s", retry_e)
+            raise first_e
+
+
 def _fallback_section_content(
     target_file: str,
     selected_card: LiteNextOptionCard,
@@ -636,8 +674,11 @@ async def write_lite_next(
     lite_llm = LiteLLMService(llm_svc)
     prefs_text = LitePromptBuilder.format_preferences(req.prefs)
     used_fallback = False
+    retry_used = False
+    retry_count = 0
     try:
-        content = await lite_llm.complete_with_deadline(
+        content, retry_used, retry_count = await _complete_with_single_retry(
+            lite_llm,
             [{"role": "user", "content": prompt}],
             deadline=90,
             temperature=0.75,
@@ -754,6 +795,8 @@ async def write_lite_next(
         candidate_id=candidate_info.id if candidate_info else None,
         source_file=target_file if candidate_info else None,
         fallback_used=used_fallback,
+        retry_used=retry_used,
+        retry_count=retry_count,
     ), message="场景已生成")
 
 
@@ -866,6 +909,8 @@ async def write_lite_next_stream(
             lite_llm = LiteLLMService(llm_svc)
             content_parts: list[str] = []
             used_fallback = False
+            retry_used = False
+            retry_count = 0
             yield _lite_stream_event("status", {"message": "AI 正在写正文..."})
 
             try:
@@ -881,11 +926,30 @@ async def write_lite_next_stream(
                         return
                     content_parts.append(chunk)
                     yield _lite_stream_event("delta", {"delta": chunk})
-            except Exception as e:
-                logger.warning("爽文模式流式正文生成超时或失败，使用临时草稿: %s", e)
-                fallback = _fallback_section_content(target_file, req.selected_card, prefs_text, story_engine)
-                content_parts = [fallback]
-                used_fallback = True
+            except Exception as first_e:
+                logger.warning("爽文模式流式正文生成首次超时或失败，开始重试: %s", first_e)
+                retry_used = True
+                retry_count = 1
+                try:
+                    content_parts = []
+                    yield _lite_stream_event("status", {"message": "AI 正在重试..."})
+                    async for chunk in lite_llm.stream_llm_content(
+                        [{"role": "user", "content": prompt}],
+                        first_token_timeout=8,
+                        token_timeout=12,
+                        temperature=0.75,
+                        max_tokens=6000,
+                        timeout=60,
+                    ):
+                        if await request.is_disconnected():
+                            return
+                        content_parts.append(chunk)
+                        yield _lite_stream_event("delta", {"delta": chunk})
+                except Exception as retry_e:
+                    logger.warning("爽文模式流式正文生成重试也失败，使用临时草稿: %s", retry_e)
+                    fallback = _fallback_section_content(target_file, req.selected_card, prefs_text, story_engine)
+                    content_parts = [fallback]
+                    used_fallback = True
             generated_text = "".join(content_parts).strip()
             if effective_action == "continue" and target_content.strip():
                 content = target_content.rstrip() + "\n\n" + generated_text
@@ -965,6 +1029,8 @@ async def write_lite_next_stream(
                 "candidate_id": candidate_info.id if candidate_info else None,
                 "source_file": target_file if candidate_info else None,
                 "fallback_used": used_fallback,
+                "retry_used": retry_used,
+                "retry_count": retry_count,
             })
         except Exception as e:
             logger.exception("爽文流式生成异常: %s", e)

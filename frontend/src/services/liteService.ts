@@ -36,11 +36,13 @@ export interface LiteWriteNextResponse {
   candidate_id?: string | null
   source_file?: string | null
   fallback_used?: boolean
+  retry_used?: boolean
+  retry_count?: number
 }
 
 /** UI-only: 流式回调 */
 export interface LiteWriteStreamCallbacks {
-  onMeta?: (data: { file_path: string; label: string; source_file?: string; is_candidate?: boolean; candidate_id?: string | null; fallback_used?: boolean }) => void
+  onMeta?: (data: { file_path: string; label: string; source_file?: string; is_candidate?: boolean; candidate_id?: string | null; fallback_used?: boolean; retry_used?: boolean; retry_count?: number }) => void
   onDelta?: (delta: string) => void
   onReplace?: (content: string) => void
   onStatus?: (message: string) => void

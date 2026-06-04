@@ -836,3 +836,72 @@ pytest backend/tests/test_lite_fallback_used_flag.py -v
 ### 结论
 - **Phase T3-D2**: ✅ **前端 fallback 警告增强完成！**
 - **是否进入下一阶段**: ✅ **可以**
+
+---
+
+## Phase T3-D3: Lite fallback 自动重试最小实现
+
+### 实现内容
+
+在 Lite 写作页面，增加 LLM 调用失败后的单次自动重试功能：
+
+1. **sync 请求的重试**：新增 `_complete_with_single_retry` helper 函数，在 sync 请求中实现自动重试一次
+2. **stream 请求的重试**：在 stream 请求中实现先尝试一次，失败后再自动重试一次
+3. **字段传递**：新增 `retry_used`（是否发生过重试）和 `retry_count`（实际重试次数，当前最大为 1）字段
+4. **后端 schema 更新**：在 `LiteWriteNextResponse` 中新增 `retry_used` 和 `retry_count` 字段
+5. **前端类型和状态更新**：前端同步更新类型，接收和存储 retry 相关状态
+
+### 新增 helper
+
+#### `_complete_with_single_retry` (sync)
+```python
+async def _complete_with_single_retry(lite_llm, messages, deadline, temperature, max_tokens, timeout) -> tuple[str, bool, int]
+```
+- 第一次正常调用 LLM
+- 若失败，记录 warning 并自动重试一次
+- 重试成功则返回 `retry_used=True, retry_count=1`
+- 重试也失败则抛出异常
+
+### 字段含义
+
+| 字段 | 类型 | 含义 |
+|------|------|------|
+| `retry_used` | boolean | 是否发生了至少一次重试 |
+| `retry_count` | number | 实际重试次数（当前最大为 1） |
+
+#### 场景组合
+- 一次成功：`retry_used=false, retry_count=0, fallback_used=false`
+- 第一次失败、重试成功：`retry_used=true, retry_count=1, fallback_used=false`
+- 两次都失败，fallback：`retry_used=true, retry_count=1, fallback_used=true`
+
+### 修改文件
+- `backend/schemas/lite.py`：新增 `retry_used` 和 `retry_count` 字段
+- `backend/api/lite.py`：新增 retry helper，修改 sync 和 stream 链路
+- `frontend/src/services/liteService.ts`：更新类型
+- `frontend/src/composables/useLiteGeneration.ts`：更新状态接收
+- `backend/tests/test_lite_fallback_retry_flags.py`：新增测试
+
+### 严格遵守的要求
+1. ✅ 仅重试 1 次，没有多次无限重试
+2. ✅ 没有修改 Prompt 文案
+3. ✅ 没有大规模重构
+4. ✅ 保留了 `fallback_used` 标记
+5. ✅ 没有把 fallback 改成 candidate
+6. ✅ 没有吞掉异常，都有 logger.warning 记录
+
+### 测试结果
+| 测试项 | 结果 |
+|--------|------|
+| 前端构建 | ✅ 通过 |
+| TypeScript 类型 | ✅ 无错误 |
+| Response Model 测试 | ✅ 6 passed |
+| Lite 相关测试 | ✅ 185+ passed |
+| Path Safety | ✅ 38 passed |
+
+### 安全检查
+✅ 无 API Key 提交
+✅ 无敏感信息泄露
+
+### 结论
+- **Phase T3-D3**: ✅ **Lite fallback 自动重试最小实现完成！**
+- **是否进入下一阶段**: ✅ **可以进入 Phase T3-D4：低质量检测**
