@@ -692,7 +692,33 @@ async def write_lite_next(
         used_fallback = True
     content = _ensure_section_heading(target_file, req.selected_card.title, content)
     candidate_info = None
-    if is_candidate:
+    write_skipped = False
+    write_skip_reason = None
+    
+    # 如果使用了 fallback，只创建 fallback_draft candidate，不写正式文件，不更新 metadata
+    if used_fallback:
+        try:
+            fallback_candidate_info = await _create_lite_candidate(
+                file_service, req.project_id, target_file, "fallback_draft", content,
+            )
+            event_bus = getattr(request.app.state, "event_bus", None)
+            if event_bus:
+                evt = make_candidate_created_event(
+                    project_id=req.project_id,
+                    candidate_id=fallback_candidate_info.id,
+                    source_path=target_file,
+                    action=fallback_candidate_info.action,
+                    source="api/lite",
+                )
+                await event_bus.publish(evt.type, evt.to_sse_dict())
+            write_skipped = True
+            write_skip_reason = "fallback_candidate_requires_review"
+        except Exception as e:
+            logger.warning("创建 fallback candidate 失败: %s", e)
+            fallback_candidate_info = None
+            write_skipped = True
+            write_skip_reason = "fallback_candidate_create_failed"
+    elif is_candidate:
         candidate_info = await _create_lite_candidate(
             file_service, req.project_id, target_file, req.action, content,
         )
@@ -710,34 +736,15 @@ async def write_lite_next(
     else:
         await file_service.write_file(f"{req.project_id}/{output_file}", content)
 
-    if not is_candidate:
-        # 更新章节记忆和待回收伏笔
+    if not is_candidate and not used_fallback:
+        # 更新章节记忆和待回收伏笔（只有正常生成时才更新）
         await metadata_svc.update_ch_meta(req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
-    
-    # 如果使用了 fallback，创建 fallback candidate 但不改变现有行为
-    if used_fallback:
-        try:
-            fallback_candidate_info = await _create_lite_candidate(
-                file_service, req.project_id, target_file, "fallback_draft", content,
-            )
-            event_bus = getattr(request.app.state, "event_bus", None)
-            if event_bus:
-                evt = make_candidate_created_event(
-                    project_id=req.project_id,
-                    candidate_id=fallback_candidate_info.id,
-                    source_path=target_file,
-                    action=fallback_candidate_info.action,
-                    source="api/lite",
-                )
-                await event_bus.publish(evt.type, evt.to_sse_dict())
-        except Exception as e:
-            logger.warning("创建 fallback candidate 失败: %s", e)
 
     quality_summary = ""
     if is_candidate:
         quality_summary = "候选稿已生成，确认满意后可采用替换原文。"
     elif used_fallback:
-        quality_summary = "模型生成超时，已先写入临时草稿；可点“重写当前场景”补成正式正文。"
+        quality_summary = "模型生成超时，已保存为应急候选稿；请在候选稿中采用或重写。"
     else:
         try:
             quality = QualityService(settings)
@@ -780,7 +787,7 @@ async def write_lite_next(
             logger.warning("爽文模式质量审查失败: %s", e)
             quality_summary = LiteQualityService.quality_one_line("", req.action)
 
-    if is_candidate:
+    if is_candidate or used_fallback:
         updated_engine = story_engine
     else:
         updated_engine = metadata_svc.build_story_engine_update(story_engine, target_file, req.selected_card, content)
@@ -790,9 +797,9 @@ async def write_lite_next(
             recent_context.rstrip() + f"\n\n- {Path(target_file).parent.name}：{req.selected_card.title}，{req.selected_card.payoff}",
         )
 
-    # 完成最后一场景（sec == SECTIONS_PER_CHAPTER）→ 整章写完，自动生成下一章章规划
+    # 完成最后一场景（sec == SECTIONS_PER_CHAPTER）→ 整章写完，自动生成下一章章规划（只有正常生成时才做）
     chapter_plan_result = None
-    if not is_candidate and _sec == SECTIONS_PER_CHAPTER:
+    if not is_candidate and not used_fallback and _sec == SECTIONS_PER_CHAPTER:
         chapter_plan_result = await _generate_chapter_plan(
             file_service=file_service,
             llm_svc=svc,
@@ -818,6 +825,8 @@ async def write_lite_next(
         retry_used=retry_used,
         retry_count=retry_count,
         fallback_candidate_id=fallback_candidate_info.id if fallback_candidate_info else None,
+        write_skipped=write_skipped,
+        write_skip_reason=write_skip_reason,
     ), message="场景已生成")
 
 
@@ -981,7 +990,33 @@ async def write_lite_next_stream(
 
             content = _ensure_section_heading(target_file, req.selected_card.title, content.strip())
             candidate_info = None
-            if is_candidate:
+            write_skipped = False
+            write_skip_reason = None
+            
+            # 如果使用了 fallback，只创建 fallback_draft candidate，不写正式文件，不更新 metadata
+            if used_fallback:
+                try:
+                    fallback_candidate_info = await _create_lite_candidate(
+                        file_service, req.project_id, target_file, "fallback_draft", content,
+                    )
+                    event_bus = getattr(request.app.state, "event_bus", None)
+                    if event_bus:
+                        evt = make_candidate_created_event(
+                            project_id=req.project_id,
+                            candidate_id=fallback_candidate_info.id,
+                            source_path=target_file,
+                            action=fallback_candidate_info.action,
+                            source="api/lite",
+                        )
+                        await event_bus.publish(evt.type, evt.to_sse_dict())
+                    write_skipped = True
+                    write_skip_reason = "fallback_candidate_requires_review"
+                except Exception as e:
+                    logger.warning("创建 fallback candidate 失败: %s", e)
+                    fallback_candidate_info = None
+                    write_skipped = True
+                    write_skip_reason = "fallback_candidate_create_failed"
+            elif is_candidate:
                 candidate_info = await _create_lite_candidate(
                     file_service, req.project_id, target_file, req.action, content,
                 )
@@ -998,31 +1033,12 @@ async def write_lite_next_stream(
                     await event_bus.publish(evt.type, evt.to_sse_dict())
             else:
                 await file_service.write_file(f"{req.project_id}/{output_file}", content)
-            
-            # 如果使用了 fallback，创建 fallback candidate 但不改变现有行为
-            if used_fallback:
-                try:
-                    fallback_candidate_info = await _create_lite_candidate(
-                        file_service, req.project_id, target_file, "fallback_draft", content,
-                    )
-                    event_bus = getattr(request.app.state, "event_bus", None)
-                    if event_bus:
-                        evt = make_candidate_created_event(
-                            project_id=req.project_id,
-                            candidate_id=fallback_candidate_info.id,
-                            source_path=target_file,
-                            action=fallback_candidate_info.action,
-                            source="api/lite",
-                        )
-                        await event_bus.publish(evt.type, evt.to_sse_dict())
-                except Exception as e:
-                    logger.warning("创建 fallback candidate 失败: %s", e)
 
-            if not is_candidate:
-                # 更新章节记忆和待回收伏笔
+            if not is_candidate and not used_fallback:
+                # 更新章节记忆和待回收伏笔（只有正常生成时才更新）
                 await metadata_svc.update_ch_meta(req.project_id, vol, ch, _sec, req.selected_card.title, req.selected_card.payoff, req.selected_card.hook)
 
-            quality_summary = "候选稿已生成，确认满意后可采用替换原文。" if is_candidate else "模型生成超时，已先写入临时草稿；可点“重写当前场景”补成正式正文。" if used_fallback else "正文已写入，审稿将在后台完成。"
+            quality_summary = "候选稿已生成，确认满意后可采用替换原文。" if is_candidate else "模型生成超时，已保存为应急候选稿；请在候选稿中采用或重写。" if used_fallback else "正文已写入，审稿将在后台完成。"
 
             async def _review_in_background() -> None:
                 try:
@@ -1035,7 +1051,7 @@ async def write_lite_next_stream(
             if not used_fallback and not is_candidate:
                 asyncio.create_task(_review_in_background())
 
-            if is_candidate:
+            if is_candidate or used_fallback:
                 updated_engine = story_engine
             else:
                 yield _lite_stream_event("status", {"message": "正在更新故事状态..."})
@@ -1047,7 +1063,7 @@ async def write_lite_next_stream(
                     )
 
             chapter_plan_result = None
-            if not is_candidate and _sec == SECTIONS_PER_CHAPTER:
+            if not is_candidate and not used_fallback and _sec == SECTIONS_PER_CHAPTER:
                 chapter_plan_result = await _generate_chapter_plan(
                     file_service=file_service,
                     llm_svc=svc,
@@ -1073,6 +1089,8 @@ async def write_lite_next_stream(
                 "retry_used": retry_used,
                 "retry_count": retry_count,
                 "fallback_candidate_id": fallback_candidate_info.id if fallback_candidate_info else None,
+                "write_skipped": write_skipped,
+                "write_skip_reason": write_skip_reason,
             })
         except Exception as e:
             logger.exception("爽文流式生成异常: %s", e)

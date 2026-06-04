@@ -97,3 +97,5 @@ class LiteWriteNextResponse(BaseModel):
     retry_used: bool = Field(default=False, description="是否触发了自动重试")
     retry_count: int = Field(default=0, description="实际重试次数")
     fallback_candidate_id: str | None = Field(default=None, description="fallback 候选稿 ID，未使用 fallback 时为 None")
+    write_skipped: bool = Field(default=False, description="是否跳过了写正式文件，比如 fallback 只创建候选稿时")
+    write_skip_reason: str | None = Field(default=None, description="跳过写正式文件的原因，比如 'fallback_candidate_requires_review' 或 'fallback_candidate_create_failed'")

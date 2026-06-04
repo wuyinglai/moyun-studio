@@ -115,7 +115,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D4 | Fallback candidate 化方案设计 | ✅ | 完成方案设计和边界评估，推荐分 5 阶段实施 | 文档审查 |
 | Phase T3-D4.1 | fallback candidate 元数据设计 | ✅ | 确定新增字段和数据结构 | 功能验收 |
 | Phase T3-D4.2 | fallback 同步创建 candidate | ✅ | 但仍写正文，风险低 | 功能验收 |
-| Phase T3-D4.3 | fallback 不直接覆盖正文 | ⏳ | 进入待确认状态 | 功能验收 |
+| Phase T3-D4.3 | fallback 不直接覆盖正文 | ✅ | 只创建 candidate，不污染正文 | 功能验收 |
 | Phase T3-D4.4 | 连续生成 fallback 暂停策略 | ⏳ | 遇到 fallback 时等待用户决策 | 功能验收 |
 | Phase T3-D4.5 | UI/FlowPanel 联动优化 | ⏳ | 完善用户体验 | 功能验收 |
 | Phase T3-D5 | 低质量检测 | ⏳ | - | - |
@@ -297,6 +297,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | 2026-06-04 | Phase T3-D4 | ✅ | c826d08 | Solo |
 | 2026-06-04 | Phase T3-D4.1 | ✅ | c9ba95e | Solo |
 | 2026-06-04 | Phase T3-D4.2 | ✅ | 44a0592 | Solo |
+| 2026-06-04 | Phase T3-D4.3 | ✅ | (待 commit) | Solo |
 
 ---
 

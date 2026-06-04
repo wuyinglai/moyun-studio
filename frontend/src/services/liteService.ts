@@ -39,6 +39,8 @@ export interface LiteWriteNextResponse {
   retry_used?: boolean
   retry_count?: number
   fallback_candidate_id?: string | null
+  write_skipped?: boolean
+  write_skip_reason?: string | null
 }
 
 /** UI-only: 流式回调 */

@@ -66,6 +66,8 @@ export function useLiteGeneration(deps: {
   const retryUsed = ref(false)
   const retryCount = ref(0)
   const fallbackCandidateId = ref<string | null>(null)
+  const writeSkipped = ref(false)
+  const writeSkipReason = ref<string | null>(null)
 
   // Helper functions
   function setWorkStatus(title: string, detail: string) {
@@ -325,8 +327,8 @@ export function useLiteGeneration(deps: {
         },
         onDone: (result) => {
           setWorkStatus(
-            isCandidate ? '候选稿已生成' : '场景已写入',
-            isCandidate ? '候选稿已保存，可以采用或放弃。' : '正文已经保存，正在准备后续爽点卡。',
+            isCandidate ? "候选稿已生成" : (result.write_skipped ? "候选稿已保存" : "场景已写入"),
+            isCandidate ? "候选稿已保存，可以采用或放弃。" : (result.write_skipped ? "本场未写入正式正文，已保存为应急候选稿，请在候选稿中采用或重写。" : "正文已经保存，正在准备后续爽点卡。"),
           )
           generatedFilePath = result.file_path
           streamingBuffers.value[result.file_path] = result.content
@@ -334,6 +336,8 @@ export function useLiteGeneration(deps: {
           retryUsed.value = Boolean(result.retry_used)
           retryCount.value = Number(result.retry_count || 0)
           fallbackCandidateId.value = result.fallback_candidate_id || null
+          writeSkipped.value = Boolean(result.write_skipped)
+          writeSkipReason.value = result.write_skip_reason || null
           if (candidateDraft.value?.path === result.file_path) {
             candidateDraft.value.content = result.content
             if (!candidateDraft.value.candidateId && result.candidate_id) {
@@ -590,6 +594,8 @@ export function useLiteGeneration(deps: {
     retryUsed,
     retryCount,
     fallbackCandidateId,
+    writeSkipped,
+    writeSkipReason,
     // Helpers
     formatChapterLabel,
     parseSectionPath,

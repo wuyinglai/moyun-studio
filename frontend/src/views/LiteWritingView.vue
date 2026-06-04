@@ -108,10 +108,16 @@
             >
               <div class="fallback-warning-header">
                 <span class="fallback-warning-icon">⚠️</span>
-                <strong>本场为应急草稿</strong>
+                <strong v-if="writeSkipped">本场未写入正式正文，已保存为应急候选稿</strong>
+                <strong v-else>本场为应急草稿</strong>
               </div>
               <p class="fallback-warning-text" data-testid="lite-fallback-rewrite-hint">
-                AI 正文生成失败后，系统写入了临时草稿。建议点击右侧候选稿功能进行重写，或使用下方按钮重新生成本场。
+                <span v-if="writeSkipped" data-testid="lite-fallback-candidate-id">
+                  请在右侧候选稿面板中查看并采用应急草稿，或使用下方按钮重写当前场景。
+                </span>
+                <span v-else>
+                  AI 正文生成失败后，系统写入了临时草稿。建议点击右侧候选稿功能进行重写，或使用下方按钮重新生成本场。
+                </span>
               </p>
               <div class="fallback-warning-actions">
                 <button
@@ -646,6 +652,7 @@ const isViewingCandidate = computed(() => {
 })
 
 const fallbackUsed = computed(() => gen.fallbackUsed.value)
+const writeSkipped = computed(() => gen.writeSkipped.value)
 
 const canRunChatRevision = computed(() => {
   return Boolean(

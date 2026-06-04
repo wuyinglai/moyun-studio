@@ -418,3 +418,70 @@ D4.2 将：
 **Phase T3-D4.2 ✅ 完成！**
 
 可以进入 Phase T3-D4.3。
+
+---
+
+## 17. Phase T3-D4.3 fallback 不覆盖正文
+
+**实施日期：** 2026-06-04
+
+### 17.1 目标
+
+- 当 fallback_used=true 时，**不再**直接写入正式正文文件
+- fallback 内容只保存为 fallback_draft candidate
+- 不更新 story engine、recent-context、chapter plan 等
+- 返回 write_skipped=true 和 write_skip_reason
+- 前端不自动继续下一场景
+
+### 17.2 完成内容
+
+**后端变更：**
+1. `backend/schemas/lite.py` - 添加 `write_skipped` 和 `write_skip_reason` 字段
+2. `backend/api/lite.py` - 当 `used_fallback=true` 时：
+   - 优先创建 `fallback_draft` candidate
+   - **不再**调用 `file_service.write_file` 写入正式文件
+   - **不再**调用 `update_ch_meta` 更新章记忆
+   - **不再**更新 `story-engine.md` 和 `recent-context.md`
+   - **不再**生成下一章规划
+   - 返回 `write_skipped=true` 和 `write_skip_reason`
+
+**前端变更：**
+1. `frontend/src/services/liteService.ts` - 更新类型，添加 `write_skipped` 和 `write_skip_reason`
+2. `frontend/src/composables/useLiteGeneration.ts` - 新增 `writeSkipped` 和 `writeSkipReason` 状态
+3. `frontend/src/views/LiteWritingView.vue` - 更新 fallback 警告 UI，显示新提示
+
+**测试更新：**
+1. `backend/tests/test_lite_fallback_candidate_creation.py` - 添加响应 schema 测试
+
+### 17.3 新的 fallback 行为
+
+1. **用户体验：**
+   - 用户看到 "本场未写入正式正文，已保存为应急候选稿"
+   - 用户必须手动在候选稿面板中采用或重写
+   - 不会自动继续下一场景
+
+2. **文件安全：**
+   - Fallback 内容永远不会污染正式正文
+   - Story engine 和记忆只在正常生成时才更新
+
+3. **候选稿功能：**
+   - Fallback 候选稿作为正式候选稿保存
+   - 用户可以查看、采用或放弃
+   - 提供了明确的 fallback 来源记录
+
+### 17.4 下阶段计划
+
+**Phase T3-D4.4：** 连续生成 fallback 暂停策略
+- 完善连续生成流程
+- 当遇到 fallback 时清晰地提示用户
+- 提供手动继续的入口
+
+**Phase T3-D4.5：** UI/FlowPanel 联动优化
+- 在 FlowPanel 中显示 fallback 状态
+- 提供更直观的用户交互
+
+### 17.5 结论
+
+**Phase T3-D4.3 ✅ 完成！**
+
+Fallback 现在不会再污染正式正文，用户有完全的控制权。可以进入下一个阶段。
