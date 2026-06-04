@@ -99,3 +99,6 @@ class LiteWriteNextResponse(BaseModel):
     fallback_candidate_id: str | None = Field(default=None, description="fallback 候选稿 ID，未使用 fallback 时为 None")
     write_skipped: bool = Field(default=False, description="是否跳过了写正式文件，比如 fallback 只创建候选稿时")
     write_skip_reason: str | None = Field(default=None, description="跳过写正式文件的原因，比如 'fallback_candidate_requires_review' 或 'fallback_candidate_create_failed'")
+    quality_flags: list[str] = Field(default_factory=list, description="低质量检测标记，如 ['too_short', 'template_leak']")
+    quality_warning: str | None = Field(default=None, description="面向用户的质量警告")
+    quality_score: int | None = Field(default=None, description="1-5 质量评分")

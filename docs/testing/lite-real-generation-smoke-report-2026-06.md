@@ -905,3 +905,142 @@ async def _complete_with_single_retry(lite_llm, messages, deadline, temperature,
 ### 结论
 - **Phase T3-D3**: ✅ **Lite fallback 自动重试最小实现完成！**
 - **是否进入下一阶段**: ✅ **可以进入 Phase T3-D4：低质量检测**
+
+---
+
+## Phase T3-D5: Lite 生成低质量检测与质量标记
+
+### 任务目标
+
+即使不是 fallback，只要生成内容明显低质量，也要被系统标记出来，避免低质量正文悄悄进入长篇链路。
+
+### 实现内容
+
+#### 1. 新增低质量检测规则
+
+基于规则的检测机制，不调用 LLM：
+
+| 规则 | 条件 | 处理 |
+|------|------|------|
+| `too_short` | 正文字符数 < 800 | 添加到 `quality_flags` |
+| `template_leak` | 正文包含模板关键词 | 添加到 `quality_flags` |
+
+**模板关键词列表**：
+- 最近5章摘要
+- 系统自动维护
+- 占位
+- TODO
+- `{{`
+- `}}`
+
+#### 2. 新增质量字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `quality_flags` | `list[str]` | 低质量标记，如 `["too_short", "template_leak"]` |
+| `quality_warning` | `str \| None` | 面向用户的简短警告 |
+| `quality_score` | `int \| None` | 1-5 质量评分 |
+
+**评分规则**：
+- 无 flags: 5
+- 只有 too_short: 3
+- template_leak: 1
+- 多个 flags: 1
+
+#### 3. 重要设计决策
+
+**fallback_used / write_skipped 不参与普通低质量检测**：
+- fallback 和 write_skipped 场景走独立链路
+- 由 fallback 专用警告处理，不误报普通低质量
+
+#### 4. 后端实现
+
+**`_detect_lite_quality_flags` helper 函数**：
+```python
+def _detect_lite_quality_flags(
+    content: str,
+    *,
+    fallback_used: bool = False,
+    write_skipped: bool = False,
+) -> tuple[list[str], str | None, int | None]:
+    """检测低质量标记，返回 (quality_flags, quality_warning, quality_score)"""
+```
+
+**响应位置**：
+- sync 响应: `LiteWriteNextResponse`
+- stream done 事件: SSE done payload
+
+#### 5. 前端实现
+
+**状态管理 (`useLiteGeneration.ts`)**：
+```typescript
+const qualityFlags = ref<string[]>([])
+const qualityWarning = ref<string | null>(null)
+const qualityScore = ref<number | null>(null)
+```
+
+**UI 显示 (`LiteWritingView.vue`)**：
+- 当 `qualityFlags` 非空且不是 fallback 时显示警告
+- 使用 data-testid 便于测试定位:
+  - `lite-quality-warning`
+  - `lite-quality-flag-too-short`
+  - `lite-quality-flag-template-leak`
+
+#### 6. 测试覆盖
+
+**新增测试文件**: `backend/tests/test_lite_quality_flags.py`
+
+| 测试用例 | 场景 |
+|----------|------|
+| `test_normal_long_text_no_flags` | 正常长文本无 flags |
+| `test_short_text_adds_too_short_flag` | 短文本添加 too_short |
+| `test_template_leak_adds_flag` | 模板泄漏添加 template_leak |
+| `test_fallback_used_skips_short_check` | fallback 不触发普通 too_short |
+| `test_write_skipped_skips_short_check` | write_skipped 不触发普通 too_short |
+
+### 修改文件
+
+| 文件 | 修改类型 |
+|------|----------|
+| `backend/schemas/lite.py` | 新增 quality_flags, quality_warning, quality_score 字段 |
+| `backend/api/lite.py` | 新增 `_detect_lite_quality_flags` helper |
+| `frontend/src/services/liteService.ts` | 更新 TypeScript 类型 |
+| `frontend/src/composables/useLiteGeneration.ts` | 新增质量状态和 onDone 更新 |
+| `frontend/src/views/LiteWritingView.vue` | 新增质量警告 UI |
+| `backend/tests/test_lite_quality_flags.py` | 新增测试文件 |
+| `tests/phase-t3b-continuous-scenes.py` | 新增质量字段记录 |
+| `docs/testing/lite-real-generation-smoke-report-2026-06.md` | 新增本章节 |
+| `docs/testing/lite-output-quality-review-2026-06.md` | 新增规则说明 |
+| `docs/moyun-roadmap-and-acceptance-board-2026-06.md` | 更新状态 |
+
+### 严格禁止
+
+1. ❌ 禁止修改 Prompt 文案
+2. ❌ 禁止修改 LLM 参数
+3. ❌ 禁止自动重写正文
+4. ❌ 禁止自动覆盖正文
+5. ❌ 禁止把低质量检测做成阻断所有生成
+6. ❌ 禁止大规模重构后端
+7. ❌ 禁止大规模重构前端
+
+### 测试结果
+
+| 测试项 | 结果 |
+|--------|------|
+| 前端构建 | ✅ 通过 |
+| TypeScript 类型 | ✅ 无错误 |
+| Vue 模板编译 | ✅ 无错误 |
+| 后端 Path Safety | ✅ 38 passed |
+| 后端 Lite 测试 | ✅ 185+ passed |
+| Response Model 测试 | ✅ 5 passed |
+| 质量检测测试 | ✅ 14 passed |
+
+### 安全检查
+
+✅ 无 API Key 提交
+✅ 无敏感信息泄露
+
+### 结论
+
+- **Phase T3-D5**: ✅ **Lite 生成低质量检测与质量标记完成！**
+- **是否进入下一阶段**: ⏳ **等待验收后可进入 Phase T3-D6：Prompt 优化实验**

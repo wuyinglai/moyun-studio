@@ -41,6 +41,9 @@ export interface LiteWriteNextResponse {
   fallback_candidate_id?: string | null
   write_skipped?: boolean
   write_skip_reason?: string | null
+  quality_flags?: string[]
+  quality_warning?: string | null
+  quality_score?: number | null
 }
 
 /** UI-only: 流式回调 */

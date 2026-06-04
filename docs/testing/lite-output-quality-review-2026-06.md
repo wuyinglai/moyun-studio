@@ -296,7 +296,63 @@ Phase T3-B-13 结论：`functional_passed / quality_partial`
 | Phase T3-D-2 | Fallback 自动重试机制 | 高 |
 | Phase T3-D-3 | LLM timeout 调优 | 中 |
 | Phase T3-D-4 | Prompt 最小优化（字数约束、场景结构） | 中 |
-| Phase T3-D-5 | 连续 5 场回归测试 | 中 |
+| Phase T3-D-5 | 低质量检测与质量标记 | 高 |
+
+---
+
+## 11. Phase T3-D5 低质量检测规则
+
+### 规则定义
+
+| 规则 | 检测条件 | 返回值 |
+|------|----------|--------|
+| `too_short` | `len(content.strip()) < 800` | 添加到 `quality_flags` |
+| `template_leak` | 包含模板关键词列表 | 添加到 `quality_flags` |
+
+### 模板关键词列表
+
+- 最近5章摘要
+- 系统自动维护
+- 占位
+- TODO
+- `{{`
+- `}}`
+
+### 质量评分规则
+
+| 情况 | score |
+|------|-------|
+| 无 flags | 5 |
+| 只有 too_short | 3 |
+| template_leak | 1 |
+| 多个 flags | 1 |
+
+### 特殊处理
+
+**fallback_used / write_skipped 场景**：
+- 不参与普通 too_short 检测
+- 由 fallback 专用警告处理，避免误报
+- template_leak 仍应被检测（因为模板泄漏是独立的质量问题）
+
+### 响应字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `quality_flags` | `list[str]` | 低质量标记列表 |
+| `quality_warning` | `str \| None` | 用户友好的警告文本 |
+| `quality_score` | `int \| None` | 1-5 质量评分 |
+
+### 实现位置
+
+| 组件 | 位置 |
+|------|------|
+| Schema | `backend/schemas/lite.py` |
+| Helper | `backend/api/lite.py` - `_detect_lite_quality_flags` |
+| Sync 响应 | `backend/api/lite.py` - `/lite/write-next` |
+| Stream 响应 | `backend/api/lite.py` - `/lite/write-next-stream` done 事件 |
+| 前端类型 | `frontend/src/services/liteService.ts` |
+| 状态管理 | `frontend/src/composables/useLiteGeneration.ts` |
+| UI 显示 | `frontend/src/views/LiteWritingView.vue` |
 
 ### 最终结论
 

@@ -109,6 +109,41 @@ def _should_use_candidate(
     )
 
 
+def _detect_lite_quality_flags(content: str, *, fallback_used: bool, write_skipped: bool) -> tuple[list[str], str | None, int | None]:
+    """检测低质量标记，返回 (quality_flags, quality_warning, quality_score)"""
+    quality_flags: list[str] = []
+    quality_warning: str | None = None
+    quality_score: int | None = 5
+
+    if fallback_used or write_skipped:
+        return quality_flags, quality_warning, None
+
+    stripped = content.strip()
+
+    if len(stripped) < 800:
+        quality_flags.append("too_short")
+        quality_score = 3
+
+    template_keywords = ["最近5章摘要", "系统自动维护", "占位", "TODO", "{{", "}}"]
+    for keyword in template_keywords:
+        if keyword in content:
+            quality_flags.append("template_leak")
+            if quality_score is None or quality_score > 1:
+                quality_score = 1
+            break
+
+    if quality_flags:
+        if len(quality_flags) > 1:
+            quality_score = 1
+            quality_warning = "本场质量需要检查：字数偏短且可能包含模板文本。"
+        elif "too_short" in quality_flags:
+            quality_warning = "本场质量需要检查：字数偏短。"
+        elif "template_leak" in quality_flags:
+            quality_warning = "本场质量需要检查：可能包含模板文本。"
+
+    return quality_flags, quality_warning, quality_score
+
+
 def _story_engine_template(card: LiteIdeaCard, prefs_text: str) -> str:
     return f"""# 故事引擎
 
@@ -813,6 +848,12 @@ async def write_lite_next(
             prefs_text=prefs_text,
         )
 
+    quality_flags, quality_warning, quality_score = _detect_lite_quality_flags(
+        content,
+        fallback_used=used_fallback,
+        write_skipped=write_skipped,
+    )
+
     return ApiResponse.ok(LiteWriteNextResponse(
         file_path=output_file,
         content=content,
@@ -827,6 +868,9 @@ async def write_lite_next(
         fallback_candidate_id=fallback_candidate_info.id if fallback_candidate_info else None,
         write_skipped=write_skipped,
         write_skip_reason=write_skip_reason,
+        quality_flags=quality_flags,
+        quality_warning=quality_warning,
+        quality_score=quality_score,
     ), message="场景已生成")
 
 
@@ -1077,6 +1121,12 @@ async def write_lite_next_stream(
                     prefs_text=prefs_text,
                 )
 
+            quality_flags, quality_warning, quality_score = _detect_lite_quality_flags(
+                content,
+                fallback_used=used_fallback,
+                write_skipped=write_skipped,
+            )
+
             yield _lite_stream_event("done", {
                 "file_path": output_file,
                 "content": content,  # AI_GUARDRAIL_ALLOW: lite generation result, not file.updated
@@ -1091,6 +1141,9 @@ async def write_lite_next_stream(
                 "fallback_candidate_id": fallback_candidate_info.id if fallback_candidate_info else None,
                 "write_skipped": write_skipped,
                 "write_skip_reason": write_skip_reason,
+                "quality_flags": quality_flags,
+                "quality_warning": quality_warning,
+                "quality_score": quality_score,
             })
         except Exception as e:
             logger.exception("爽文流式生成异常: %s", e)

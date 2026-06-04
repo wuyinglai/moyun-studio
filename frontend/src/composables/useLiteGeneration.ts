@@ -68,6 +68,9 @@ export function useLiteGeneration(deps: {
   const fallbackCandidateId = ref<string | null>(null)
   const writeSkipped = ref(false)
   const writeSkipReason = ref<string | null>(null)
+  const qualityFlags = ref<string[]>([])
+  const qualityWarning = ref<string | null>(null)
+  const qualityScore = ref<number | null>(null)
 
   // Helper functions
   function setWorkStatus(title: string, detail: string) {
@@ -338,6 +341,9 @@ export function useLiteGeneration(deps: {
           fallbackCandidateId.value = result.fallback_candidate_id || null
           writeSkipped.value = Boolean(result.write_skipped)
           writeSkipReason.value = result.write_skip_reason || null
+          qualityFlags.value = result.quality_flags || []
+          qualityWarning.value = result.quality_warning || null
+          qualityScore.value = result.quality_score ?? null
           if (candidateDraft.value?.path === result.file_path) {
             candidateDraft.value.content = result.content
             if (!candidateDraft.value.candidateId && result.candidate_id) {
@@ -621,6 +627,9 @@ export function useLiteGeneration(deps: {
     fallbackCandidateId,
     writeSkipped,
     writeSkipReason,
+    qualityFlags,
+    qualityWarning,
+    qualityScore,
     clearFallbackPauseStatus,
     // Helpers
     formatChapterLabel,

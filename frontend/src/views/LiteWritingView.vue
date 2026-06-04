@@ -135,6 +135,28 @@
                 </button>
               </div>
             </div>
+            <div
+              v-else-if="qualityFlags.length > 0"
+              class="quality-warning-box"
+              data-testid="lite-quality-warning"
+            >
+              <div class="quality-warning-header">
+                <span class="quality-warning-icon">⚠️</span>
+                <strong>本场质量需要检查</strong>
+              </div>
+              <p class="quality-warning-text">
+                可能存在：
+                <span
+                  v-if="qualityFlags.includes('too_short')"
+                  data-testid="lite-quality-flag-too-short"
+                >字数偏短</span>
+                <span v-if="qualityFlags.includes('too_short') && qualityFlags.includes('template_leak')"> / </span>
+                <span
+                  v-if="qualityFlags.includes('template_leak')"
+                  data-testid="lite-quality-flag-template-leak"
+                >模板文本泄漏</span>
+              </p>
+            </div>
             <p
               v-if="currentFilePath"
               class="path-hint"
@@ -751,6 +773,7 @@ const loadingOptions = gen.loadingOptions
 const optionError = gen.optionError
 const creating = gen.creating
 const qualitySummary = gen.qualitySummary
+const qualityFlags = gen.qualityFlags
 const engineSummary = gen.engineSummary
 const chapterMilestone = gen.chapterMilestone
 const candidateDraft = cand.candidateDraft
@@ -863,6 +886,34 @@ function refreshOptions() { gen.refreshOptions() }
 .fallback-warning-actions {
   display: flex;
   justify-content: flex-start;
+}
+
+.quality-warning-box {
+  margin: 8px 0 0;
+  padding: 12px;
+  background: rgba(201, 169, 110, 0.1);
+  border: 1px solid rgba(201, 169, 110, 0.4);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.quality-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e8c87a;
+}
+
+.quality-warning-icon {
+  font-size: 18px;
+}
+
+.quality-warning-text {
+  margin: 0;
+  color: #f0ddb0;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .fallback-warning {

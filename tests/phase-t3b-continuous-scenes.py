@@ -127,6 +127,9 @@ def test_continuous_scenes():
         write_skipped_in_response = False
         write_skip_reason_in_response = None
         fallback_candidate_id_in_response = None
+        quality_flags_in_response = []
+        quality_warning_in_response = None
+        quality_score_in_response = None
 
         # 拦截 /lite/write-next-stream 响应
         def handle_response(response):
@@ -141,6 +144,9 @@ def test_continuous_scenes():
                     nonlocal write_skipped_in_response
                     nonlocal write_skip_reason_in_response
                     nonlocal fallback_candidate_id_in_response
+                    nonlocal quality_flags_in_response
+                    nonlocal quality_warning_in_response
+                    nonlocal quality_score_in_response
                     for line in text.split('\n'):
                         if line.startswith('data: '):
                             try:
@@ -160,6 +166,15 @@ def test_continuous_scenes():
                                 if 'fallback_candidate_id' in data:
                                     fallback_candidate_id_in_response = data['fallback_candidate_id']
                                     print(f"  [DEBUG] Captured fallback_candidate_id: {fallback_candidate_id_in_response}")
+                                if 'quality_flags' in data:
+                                    quality_flags_in_response = data['quality_flags'] or []
+                                    print(f"  [DEBUG] Captured quality_flags: {quality_flags_in_response}")
+                                if 'quality_warning' in data:
+                                    quality_warning_in_response = data['quality_warning']
+                                    print(f"  [DEBUG] Captured quality_warning: {quality_warning_in_response}")
+                                if 'quality_score' in data:
+                                    quality_score_in_response = data['quality_score']
+                                    print(f"  [DEBUG] Captured quality_score: {quality_score_in_response}")
                             except:
                                 pass
                 except Exception as e:
@@ -329,11 +344,16 @@ def test_continuous_scenes():
                     "writeSkipped": scene_info['writeSkipped'] or write_skipped_in_response,
                     "writeSkipReason": scene_info['writeSkipReason'] or write_skip_reason_in_response,
                     "fallbackCandidateId": scene_info['fallbackCandidateId'] or fallback_candidate_id_in_response,
-                    "stoppedBecauseFallback": need_stop
+                    "stoppedBecauseFallback": need_stop,
+                    "quality_flags": quality_flags_in_response or [],
+                    "quality_warning": quality_warning_in_response,
+                    "quality_score": quality_score_in_response,
                 }
                 scenes.append(scene_info_to_save)
                 print(f"    - writeSkipped: {scene_info_to_save['writeSkipped']}")
                 print(f"    - fallbackCandidateId: {scene_info_to_save['fallbackCandidateId']}")
+                print(f"    - quality_flags: {scene_info_to_save['quality_flags']}")
+                print(f"    - quality_score: {scene_info_to_save['quality_score']}")
                 
                 # 如果遇到 write_skipped，停止继续生成
                 if need_stop:
