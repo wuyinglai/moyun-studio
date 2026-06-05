@@ -108,6 +108,7 @@
 | Phase T4.2 | ⚠️ | 2026-06-05 | Lite / Professional 共存与切换基线验收 |
 | Phase T4.3 | ⚠️ | 2026-06-05 | 原专业版编辑能力验收 |
 | Phase T4.4 | ⚠️ | 2026-06-05 | Workflow / Pipeline / Prompt 模块验收 |
+| Phase T4.5 | ⚠️ | 2026-06-05 | Story State / Materials / 文件系统验收 |
 
 ---
 
