@@ -1,0 +1,83 @@
+{
+  "phase": "T3-D7.6",
+  "engine": "rewrite_engine",
+  "source_scene": "scene_with_new_settings.md",
+  "generated_from": {
+    "snapshot_json": "state-snapshot-mvp-sample.json",
+    "plot_debt_json": "plot-debt-mvp-sample.json",
+    "reviews_json": "review-engine-real-llm-full-output.json"
+  },
+  "llm_called": false,
+  "auto_write_scene": false,
+  "summary": {
+    "total_suggestions": 5,
+    "needs_user_confirmation": 5
+  },
+  "suggestions": [
+    {
+      "suggestion_id": "rewrite-suggestion-001",
+      "source_debt_id": "debt-snap-001",
+      "target_line": 0,
+      "issue_type": "unresolved_setting",
+      "entity": "沈鹤年",
+      "original_text": "",
+      "rewrite_goal": "补充设定细节，解释或建立设定",
+      "suggested_revision": "可考虑在后续段落中补充或修订相关内容",
+      "risk_note": "此为自动建议，请人工审阅后再决定是否采纳",
+      "needs_user_confirmation": true,
+      "status": "candidate"
+    },
+    {
+      "suggestion_id": "rewrite-suggestion-002",
+      "source_debt_id": "debt-snap-002",
+      "target_line": 0,
+      "issue_type": "unresolved_setting",
+      "entity": "玄黄秘录",
+      "original_text": "",
+      "rewrite_goal": "补充设定细节，解释或建立设定",
+      "suggested_revision": "可在附近段落简要提及《玄黄秘录》的来历或特殊之处",
+      "risk_note": "此为自动建议，请人工审阅后再决定是否采纳",
+      "needs_user_confirmation": true,
+      "status": "candidate"
+    },
+    {
+      "suggestion_id": "rewrite-suggestion-003",
+      "source_debt_id": "debt-snap-003",
+      "target_line": 0,
+      "issue_type": "unresolved_setting",
+      "entity": "玄铁令牌",
+      "original_text": "",
+      "rewrite_goal": "补充设定细节，解释或建立设定",
+      "suggested_revision": "可在黑衣客出现时暗示令牌的特殊身份或作用",
+      "risk_note": "此为自动建议，请人工审阅后再决定是否采纳",
+      "needs_user_confirmation": true,
+      "status": "candidate"
+    },
+    {
+      "suggestion_id": "rewrite-suggestion-004",
+      "source_debt_id": "debt-snap-004",
+      "target_line": 0,
+      "issue_type": "unresolved_setting",
+      "entity": "青铜灯",
+      "original_text": "",
+      "rewrite_goal": "补充设定细节，解释或建立设定",
+      "suggested_revision": "可在描述青铜灯时暗示其不寻常的特性或用途",
+      "risk_note": "此为自动建议，请人工审阅后再决定是否采纳",
+      "needs_user_confirmation": true,
+      "status": "candidate"
+    },
+    {
+      "suggestion_id": "rewrite-suggestion-005",
+      "source_debt_id": "debt-snap-005",
+      "target_line": 0,
+      "issue_type": "unresolved_setting",
+      "entity": "五曜珠",
+      "original_text": "",
+      "rewrite_goal": "补充设定细节，解释或建立设定",
+      "suggested_revision": "可在沈鹤年提到五曜珠时简要补充相关背景",
+      "risk_note": "此为自动建议，请人工审阅后再决定是否采纳",
+      "needs_user_confirmation": true,
+      "status": "candidate"
+    }
+  ]
+}

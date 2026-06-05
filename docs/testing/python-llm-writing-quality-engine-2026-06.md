@@ -497,10 +497,29 @@ Python 负责：
 - **专业版 Prompt 设计准备**：约 35%
 - **说明**：Plot Debt 降噪完成后，可进入局部 Rewrite Engine MVP
 
-### Phase T3-D7.6：局部 Rewrite Engine MVP ⏳
-- 对 confirmed issues 提供改写建议
-- 生成 candidate 而非直接覆盖
-- 展示改写前后 diff
+### Phase T3-D7.6：局部 Rewrite Engine MVP ✅
+- **优化内容**：从 Plot Debt 生成重写建议（dry-run 版本）
+- **输入**：场景、state snapshot、plot debt、review output
+- **输出**：rewrite suggestions JSON + Markdown 报告
+- **关键设计原则**：
+  - 不调用 LLM（dry-run）
+  - 不修改正文
+  - 不自动入库
+  - 所有建议状态为 candidate
+  - 需要用户确认
+- **建议字段**：
+  - suggestion_id
+  - source_debt_id
+  - target_line
+  - issue_type
+  - entity
+  - original_text
+  - rewrite_goal
+  - suggested_revision
+  - risk_note
+- **选取策略**：优先选取有 entity 的 debt，按优先级（P1>P2>P3）排序
+- **质量引擎进度**：约 56%
+- **专业版 Prompt 设计准备**：约 40%
 
 ---
 
