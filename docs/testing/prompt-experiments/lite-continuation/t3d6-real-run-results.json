@@ -1,0 +1,244 @@
+{
+  "phase": "T3-D6.3.1a",
+  "mode": "dry_run",
+  "llm_called": false,
+  "production_prompt_modified": false,
+  "variants": [
+    {
+      "name": "baseline",
+      "runs": [
+        {
+          "run_id": "baseline-run-001",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "baseline-run-002",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "baseline-run-003",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        }
+      ]
+    },
+    {
+      "name": "variant-a-length",
+      "runs": [
+        {
+          "run_id": "variant-a-length-run-001",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-a-length-run-002",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-a-length-run-003",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        }
+      ]
+    },
+    {
+      "name": "variant-b-length-action-chain",
+      "runs": [
+        {
+          "run_id": "variant-b-length-action-chain-run-001",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-b-length-action-chain-run-002",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-b-length-action-chain-run-003",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        }
+      ]
+    },
+    {
+      "name": "variant-c-action-conflict-hook",
+      "runs": [
+        {
+          "run_id": "variant-c-action-conflict-hook-run-001",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-c-action-conflict-hook-run-002",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-c-action-conflict-hook-run-003",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        }
+      ]
+    },
+    {
+      "name": "variant-d-full-constraints",
+      "runs": [
+        {
+          "run_id": "variant-d-full-constraints-run-001",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-d-full-constraints-run-002",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        },
+        {
+          "run_id": "variant-d-full-constraints-run-003",
+          "status": "pending",
+          "word_count": null,
+          "too_short": null,
+          "template_leak": null,
+          "fallback_used": null,
+          "retry_count": null,
+          "write_skipped": null,
+          "quality_flags": [],
+          "quality_score": null,
+          "output_excerpt": "",
+          "failure_reason": ""
+        }
+      ]
+    }
+  ],
+  "fixture_status": "ok"
+}

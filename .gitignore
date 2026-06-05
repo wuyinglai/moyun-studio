@@ -69,3 +69,6 @@ playwright-report/
 frontend/playwright-report/
 frontend/test-results/
 .worktrees/
+
+# 临时安全检查脚本
+check_security.py

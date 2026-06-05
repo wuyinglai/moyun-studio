@@ -71,7 +71,9 @@
 
 4. **准备 Variant Prompt 补丁**：
    - 读取 docs/testing/prompt-experiments/lite-continuation/*.md
-   - 动态注入到 prompts/generate/continuation/main.md
+   - 运行时临时合成实验 Prompt
+   - **严禁写回 prompts/generate/continuation/main.md**
+   - **Variant patch 只用于实验请求上下文或临时 prompt renderer，不落盘到生产 Prompt**
 
 ### 3.2 实验执行步骤
 
@@ -90,15 +92,17 @@ test_project = {
 }
 ```
 
-#### 步骤 2：修改 Prompt（仅用于实验）
+#### 步骤 2：合成实验 Prompt（仅用于实验，不写回生产）
 
 ```python
 # 读取 variant 文件
 variant_c_patch = Path("docs/testing/prompt-experiments/lite-continuation/variant-c-action-conflict-hook.md").read_text()
 
-# 追加到生产 Prompt
-production_prompt = Path("prompts/generate/continuation/main.md").read_text()
-modified_prompt = production_prompt + "\n\n" + variant_c_patch
+# 运行时临时合成实验 Prompt
+# **不修改、不覆盖、不写入生产 Prompt 文件**
+# 只在实验请求内存中或临时 prompt renderer 使用
+production_prompt_content = Path("prompts/generate/continuation/main.md").read_text()
+experimental_prompt = production_prompt_content + "\n\n" + variant_c_patch
 ```
 
 #### 步骤 3：调用 Lite API
@@ -268,7 +272,7 @@ record = {
    ```
 
 3. **执行 Variant 对比实验**：
-   - 修改 prompts/generate/continuation/main.md
+   - 使用实验 harness 合成实验 Prompt（不修改生产文件）
    - 调用 /api/lite/write-next
    - 记录结果
 

@@ -125,6 +125,8 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D6.2 | 实验脚本 dry-run 完成 | ✅ | 新增 dry-run 脚本和记录模板，验证所有 variant 文件有效，Variant C recommended=true | 文档验收 |
 | Phase T3-D6.3 | 真实实验对比分析模板 | ✅ | 新增分析框架文档，明确 Variant C 为优先候选而非最优，待真实实验验证 | 文档验收 |
 | Phase T3-D6.3.1 | 真实实验采集 | ⚠️ | 环境限制：缺少测试项目，后端未启动。创建实验记录占位文档，如实记录环境限制，不伪造结果 | 待环境就绪 |
+| Phase T3-D6.3.1a | 真实实验执行器 dry-run 完成 | ✅ | 新增可重复运行的实验 harness，默认 dry-run 不调用 LLM，新增最小测试项目 fixture | 文档验收 |
+| Phase T3-D6.3.1b | 真实 LLM 实验采集 | ⏳ | 待环境就绪（后端启动、测试项目可用），运行真实 LLM 对比 | 待环境就绪 |
 | Phase T3-D6.3.2 | 去 AI 化与叙事质量规则提炼 | ✅ | 已形成参考文档，区分 Lite 和专业版可用规则，暂不接入生产 Prompt | 文档验收 |
 | Phase T3-D6.4 | 小范围接入生产 Prompt | ⏳ | 最小改动 | 功能验收 |
 | Phase T4 | Professional 真实生成冒烟测试 | ⏳ | - | - |
