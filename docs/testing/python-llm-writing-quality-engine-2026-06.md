@@ -336,6 +336,24 @@ Python 负责：
 - 契约验证报告：`docs/testing/prompt-experiments/review-engine-prompt-contract-sample.md`
 - 重要：真实 LLM Review 前必须先通过 prompt contract 和 validator
 
+### Phase T3-D7.3c：真实 LLM Review 小冒烟 ✅
+- 新增真实 LLM Review 小冒烟脚本：`tests/prompt_experiments/review_engine_real_llm_smoke.py`
+- 默认 --dry-run 模式，不调用 LLM
+- 只有显式 --real-run 才允许真实调用
+- 使用 3-item candidates fixture：`llm_review_prompt_candidates_3items.json`
+- Dry-run 输出通过 validator 验证
+- 安全要求：不打印 API Key，不提交 .env
+- 失败时记录 failure_reason，不伪造结果
+- 不自动入库，不自动改正文
+- 不修改生产 Prompt
+
+**本阶段完成说明**：
+- Smoke 脚本：`tests/prompt_experiments/review_engine_real_llm_smoke.py`
+- Dry-run 输出：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-output.json`
+- Dry-run 报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-report.md`
+- Validator 报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-validator.md`
+- 重要：真实 LLM Review 只跑 3 条 candidates，全量 14 条留到后续 D7.3d
+
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema
 - Python 调用 LLM 对 candidates 做判断

@@ -1,0 +1,78 @@
+# Review Engine 真实 LLM Review 小冒烟报告
+
+- **Phase**: T3-D7.3c
+- **Status**: ✅ SUCCESS
+- **Mode**: dry_run_smoke
+- **LLM Called**: No
+- **Note**: DRY-RUN: 使用预设 mock output
+
+## 统计
+
+- Total Candidates: 3
+
+## 输出 JSON
+
+```json
+{
+  "phase": "T3-D7.3c",
+  "engine": "review_engine",
+  "mode": "dry_run_smoke",
+  "llm_called": false,
+  "auto_write_settings": false,
+  "review_metadata": {
+    "prompt_version": "T3-D7.3b-v1",
+    "items_source": "llm_review_prompt_input_sample.json",
+    "total_items": 3,
+    "reviewed_items": 3,
+    "note": "DRY-RUN: Mock output for smoke test"
+  },
+  "reviews": [
+    {
+      "candidate_id": "scene-line007-new_character-沈鹤年",
+      "confirmed": true,
+      "confidence": 0.92,
+      "severity": "P1",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "正文明确出现角色名，设定库无记录，符合新角色特征，建议加入角色设定库",
+      "suggested_target": "settings/characters.md",
+      "suggested_entry": {
+        "name": "沈鹤年",
+        "type": "character",
+        "role": "墨香阁掌柜",
+        "description": "深夜书店的掌柜，与主角李玄有交流"
+      }
+    },
+    {
+      "candidate_id": "scene-line009-new_item-玄黄秘录",
+      "confirmed": true,
+      "confidence": 0.95,
+      "severity": "P1",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "书名出现在引号中，是重要道具，设定库无记录，建议加入道具设定库",
+      "suggested_target": "settings/items.md",
+      "suggested_entry": {
+        "name": "玄黄秘录",
+        "type": "book",
+        "description": "镇店之宝，古籍，传说中与玄黄秘境相关"
+      }
+    },
+    {
+      "candidate_id": "scene-line025-new_term-五曜珠",
+      "confirmed": true,
+      "confidence": 0.94,
+      "severity": "P1",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "重要术语，与玄黄秘境相关，设定库无记录，建议加入术语设定库",
+      "suggested_target": "settings/terms.md",
+      "suggested_entry": {
+        "name": "五曜珠",
+        "type": "artifact",
+        "description": "传说中能开启玄黄秘境的钥匙"
+      }
+    }
+  ]
+}
+```

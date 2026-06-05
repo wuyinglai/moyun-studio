@@ -136,6 +136,8 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D7.2 | Candidate JSON + Markdown report | ✅ | 已随 D7.1/D7.1.1 一起实现，支持 JSON schema、Markdown 报告、噪声过滤统计 | 功能验收 |
 | Phase T3-D7.3a | Review Engine schema + 覆盖校验 dry-run | ✅ | 定义 review schema、实现 Python 覆盖校验、新增 4 个 fixture，所有测试通过 | 功能验收 |
 | Phase T3-D7.3b | Review Prompt 模板 + mock 输出契约 | ✅ | 定义 Prompt 模板、新增 mock fixtures、mock output 通过 validator | 文档验收 |
+| Phase T3-D7.3c | 真实 LLM Review 小冒烟 | ✅ | 新增 smoke 脚本、默认 --dry-run、mock 输出通过 validator、不调用真实 LLM | 功能验收 |
+| Phase T3-D7.3d | 真实 LLM Review 全量 14 条 | ⏳ | 环境就绪后运行真实 LLM 全量 Review | 功能验收 |
 | Phase T3-D7.3 | LLM Review + 覆盖校验 | ⏳ | 定义 review schema、校验覆盖率 | 功能验收 |
 | Phase T3-D7.4 | State Snapshot MVP | ⏳ | 提取事实、生成 snapshot | 功能验收 |
 | Phase T3-D7.5 | Plot Debt 表 MVP | ⏳ | 记录伏笔、到期提醒 | 功能验收 |
