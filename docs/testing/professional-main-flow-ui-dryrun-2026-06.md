@@ -182,4 +182,10 @@ LiteWritingView 是完全独立的页面，有自己的 composables：
 
 ---
 
+## 10. 补充报告
+
+ChatPanel 触发缺口详见：`docs/testing/chat-panel-trigger-contract-2026-06.md
+
+---
+
 **文档完成日期**：2026-06-05

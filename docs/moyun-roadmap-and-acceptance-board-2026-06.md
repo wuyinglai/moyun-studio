@@ -56,6 +56,7 @@
 | Phase T4.0 | 原专业版现有功能总盘点 | ✅ | 盘点原专业版功能，为验收做准备 | 文档验收 |
 | Phase T4.1 | 原专业版用户主流程端到端验收 | ⚠️ | 静态链路验收完成，部分 UI 入口未确认 | 文档验收 |
 | Phase T4.1.1 | Professional 主流程真实 dry-run / UI 入口补验 | ⚠️ | 静态 UI 链路确认，部分 Chat 入口未确认 | 文档验收 |
+| Phase T4.1.2 | ChatPanel 触发契约与缺口确认 | ⚠️ | 静态 UI 链路确认，部分 Chat 入口未确认 | 文档验收 |
 | Phase T4.2 | Lite / Professional 共存与切换基线验收 | ⏳ | - | - |
 | Phase T4.3 | 原专业版编辑能力验收 | ⏳ | - |
 | Phase T4.4 | Workflow / Pipeline / Prompt 模块验收 | ⏳ | - |
@@ -101,6 +102,7 @@
 | Phase T4.0 | ✅ | 2026-06-05 | 原专业版现有功能总盘点 |
 | Phase T4.1 | ⚠️ | 2026-06-05 | 原专业版用户主流程端到端验收（静态链路验收） |
 | Phase T4.1.1 | ⚠️ | 2026-06-05 | Professional 主流程真实 dry-run / UI 入口补验 |
+| Phase T4.1.2 | ⚠️ | 2026-06-05 | ChatPanel 触发契约与缺口确认 |
 
 ---
 
