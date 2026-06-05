@@ -113,19 +113,16 @@ Rewrite Engine Suggestions
 
 ## T4 过渡
 
-D7 Pipeline 已完成 MVP 收口，下一阶段进入 T4 Professional Prompt 架构设计。
+D7 Pipeline 已完成 MVP 收口，下一阶段进入 T4。
 
-* **T4 将以 D7 Pipeline 作为生成后质量审查基础**
-* **T4 将设计 Scene Plan 验收机制**
-* **T4 将设计 Professional Draft Prompt 模板**
-* **T4 将实现 Professional 生成与 D7 Pipeline 的连接**
+**T4 正确顺序：先验收原专业版现有功能，再扩展新专业能力。**
 
-建议新增：
+* **T4.0**（已完成）：原专业版现有功能总盘点
+* **T4.1**：原专业版用户主流程端到端验收
+* **T4.2–T4.7**：原专业版各模块验收
+* **T4.8–T4.12**：扩展新专业能力
 
-- Phase T3-D7.9：用户确认清单 MVP
-- Phase T4.0：Professional Prompt 架构设计 ✅
-- Phase T4.1：Scene Plan schema + validator dry-run
-- Phase T4.2：Professional Draft Prompt 模板
+**D7 Pipeline 后续会作为 Professional 生成后的质量审查基础，但不会在原功能未验收前强行接入。**
 
 ---
 
