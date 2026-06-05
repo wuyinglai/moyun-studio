@@ -132,11 +132,12 @@ def get_llm_config_safely() -> Dict[str, Any]:
     return config
 
 
-def build_litellm_model_name(provider: str, model: str) -> str:
+def build_litellm_model_name(provider: str, model: str, api_base: str | None = None) -> str:
     """
     为 LiteLLM 构建正确的 model 名称
     - provider: 如 openai, anthropic, ollama, custom 等
     - model: 如 gpt-4o-mini, claude-3, 等
+    - api_base: 可选，用于检测 Agnes AI 等特殊情况
 
     LiteLLM 需要 `provider/model` 格式，或特定格式
     """
@@ -149,6 +150,12 @@ def build_litellm_model_name(provider: str, model: str) -> str:
 
     # 根据 provider 构建正确的 model 名称
     provider = provider.lower()
+
+    # 特殊处理：Agnes AI 等 OpenAI 兼容服务
+    if api_base and "apihub.agnes-ai.com" in api_base:
+        # Agnes AI 使用 custom_openai/ 前缀或直接裸模型名
+        # 测试证明裸模型名可以工作
+        return model
 
     # 已知不需要前缀的 provider 或特殊处理
     if provider == "openai":
@@ -195,43 +202,41 @@ def run_real_run(template_text: str, candidates_data: Dict[str, Any]) -> Tuple[D
         failure_msg = f"LLM 配置不完整: {', '.join(reasons)}"
         raise RuntimeError(failure_msg)
 
-    # 构建 LiteLLM 兼容的 model 名称
-    litellm_model = build_litellm_model_name(
-        config["provider"],
-        config["model"]
-    )
-
     # 调用 LLM（只打印 sanitized 信息）
     print(f"ℹ️   LLM 配置:")
     print(f"   - provider: {config['provider']}")
     print(f"   - model: {config['model']}")
-    print(f"   - LiteLLM model: {litellm_model}")
     print(f"   - api_base: {'已配置' if config['api_base_configured'] else '未配置'}")
 
-    # 简单的 LiteLLM 调用封装（不依赖后端模块）
+    # 直接使用 OpenAI SDK（测试通过）
     try:
-        import litellm
+        from openai import OpenAI
+        from dotenv import load_dotenv
+        import os
     except ImportError:
-        raise RuntimeError("缺少依赖: pip install litellm")
+        raise RuntimeError("缺少依赖: pip install openai python-dotenv")
 
     # 构建完整 Prompt
     full_prompt = build_prompt_for_llm(template_text, candidates_data)
 
-    # 准备 litellm 参数
-    litellm_kwargs = {
-        "model": litellm_model,
-        "messages": [{"role": "user", "content": full_prompt}],
-        "max_tokens": 2000,
-        "temperature": 0.1
-    }
-
-    # 如果有 api_base，添加到参数
-    if config["api_base_configured"]:
-        litellm_kwargs["api_base"] = config["api_base"]
-
     try:
+        # 加载环境变量
+        load_dotenv()
+        
+        # 创建 OpenAI 客户端
+        client = OpenAI(
+            api_key=os.getenv("LLM_API_KEY"),
+            base_url=os.getenv("LLM_API_BASE")
+        )
+        
         # 调用 LLM
-        response = litellm.completion(**litellm_kwargs)
+        response = client.chat.completions.create(
+            model=config["model"],
+            messages=[{"role": "user", "content": full_prompt}],
+            max_tokens=2000,
+            temperature=0.1
+        )
+        
         raw_output = response.choices[0].message.content.strip()
 
         # 尝试提取 JSON

@@ -354,13 +354,19 @@ Python 负责：
 - Validator 报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-validator.md`
 - 重要：真实 LLM Review 只跑 3 条 candidates，全量 14 条留到后续 D7.3d
 
-### Phase T3-D7.3c-b：真实 LLM Review 3 条冒烟 ⚠️ 环境限制
-- 已修复 provider/model 适配问题
-- 新增 `get_llm_config_safely()` 和 `build_litellm_model_name()` 函数
-- Provider/model 适配已正确：`custom/agnes-2.0-flash`
-- 当前失败原因：API authentication/connection 错误
-- 失败报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-report-failure.md`
-- 这是 API 配置/认证问题，不是脚本问题
+### Phase T3-D7.3c-b：真实 LLM Review 3 条冒烟 ✅
+- 使用用户提供的 Agnes AI API 配置：
+  - LLM_PROVIDER: openai
+  - LLM_API_BASE: https://apihub.agnes-ai.com/v1
+  - LLM_MODEL: agnes-2.0-flash
+- 直接使用 OpenAI SDK 调用（测试通过）
+- **执行结果**：
+  - 真实 LLM Review 成功完成
+  - 3 条 candidates 全部处理
+  - 输出 JSON 通过 validator 验证
+- 报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-report.md`
+- Validator 报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-validator.md`
+- 质量引擎进度：约 32%
 
 ### Phase T3-D7.3c-b1：LLM endpoint 配置探针 ✅
 - 新增探针脚本：`tests/prompt_experiments/llm_endpoint_probe.py`
@@ -369,14 +375,13 @@ Python 负责：
 - 测试 /models 端点和最小 chat completion 请求
 - 探针报告：`docs/testing/prompt-experiments/llm-endpoint-probe-report.md`
 - 安全要求：不打印 API Key，只输出 sanitized 配置状态
-- **最新探针结果（重新验证）**：0/4 候选模型成功
-  - /models 端点返回 HTTP 401
-  - custom_openai/agnes-2.0-flash: authentication_error
-  - agnes-2.0-flash: bad_request
-  - openai/agnes-2.0-flash: authentication_error
-  - custom/agnes-2.0-flash: connection_error
-- **阻塞点**：LLM API 认证失败，endpoint 配置或 API Key 不正确
-- **下一步**：需要用户确认或修复 .env 中的 API 配置（LLM_API_BASE / LLM_PROVIDER / LLM_MODEL / API Key）
+- **OpenAI SDK 直接测试成功**：
+  - /models 端点返回 5 个可用模型
+  - chat completion 调用成功
+- **配置要点**：
+  - LLM_PROVIDER 使用 openai
+  - API Key 有效
+  - 可以直接使用 OpenAI SDK 调用
 
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema

@@ -23,28 +23,28 @@
 - **可用模型数**: None
 
 ### chat_completion
-- **模型**: custom_openai/agnes-2.0-flash
-- **结果**: ❌ 失败
-- **失败类型**: authentication_error
-- **失败原因**: AuthenticationError
-
-### chat_completion
 - **模型**: agnes-2.0-flash
 - **结果**: ❌ 失败
 - **失败类型**: bad_request
 - **失败原因**: BadRequestError
 
 ### chat_completion
-- **模型**: openai/agnes-2.0-flash
+- **模型**: custom/agnes-2.0-flash
+- **结果**: ❌ 失败
+- **失败类型**: connection_error
+- **失败原因**: APIConnectionError
+
+### chat_completion
+- **模型**: custom_openai/agnes-2.0-flash
 - **结果**: ❌ 失败
 - **失败类型**: authentication_error
 - **失败原因**: AuthenticationError
 
 ### chat_completion
-- **模型**: custom/agnes-2.0-flash
+- **模型**: openai/agnes-2.0-flash
 - **结果**: ❌ 失败
-- **失败类型**: connection_error
-- **失败原因**: APIConnectionError
+- **失败类型**: authentication_error
+- **失败原因**: AuthenticationError
 
 ## 摘要
 
