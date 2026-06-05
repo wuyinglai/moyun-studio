@@ -311,6 +311,31 @@ Python 负责：
 - 示例报告：`docs/testing/prompt-experiments/review-engine-validator-sample.md`
 - 重要：防止 LLM 漏判是 Review Engine 的核心能力，必须先通过 validator 才能认为 review 有效
 
+### Phase T3-D7.3b：Review Prompt 模板 + mock 输出契约 ✅
+- 定义 LLM Review Prompt 模板
+- 明确角色：候选项审查器，不是自由审稿人
+- 明确输入/输出格式
+- 明确硬性规则：
+  - 必须逐条处理
+  - candidate_id 必须原样返回
+  - 禁止跳过/合并/拆分
+  - 禁止自动入库/改正文
+  - candidate 不等于 confirmed issue
+  - 只输出 JSON
+- 新增 mock input/fixtures：
+  - llm_review_prompt_input_sample.json
+  - llm_review_prompt_output_sample.json
+  - llm_review_prompt_candidates_3items.json
+- mock output 通过 validator 验证
+- 不调用真实 LLM
+
+**本阶段完成说明**：
+- Prompt 模板：`docs/testing/prompt-experiments/review-engine-llm-review-prompt-template.md`
+- Mock input：`tests/fixtures/review_engine_validator/llm_review_prompt_input_sample.json`
+- Mock output：`tests/fixtures/review_engine_validator/llm_review_prompt_output_sample.json`
+- 契约验证报告：`docs/testing/prompt-experiments/review-engine-prompt-contract-sample.md`
+- 重要：真实 LLM Review 前必须先通过 prompt contract 和 validator
+
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema
 - Python 调用 LLM 对 candidates 做判断

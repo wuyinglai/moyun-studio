@@ -1,0 +1,69 @@
+{
+  "phase": "T3-D7.1.1",
+  "engine": "diff_engine",
+  "compare_type": "existence",
+  "mode": "candidates_only",
+  "llm_called": false,
+  "auto_write_settings": false,
+  "noise_reduction": {
+    "raw_candidates": 3,
+    "filtered_by_noise": 0,
+    "filtered_by_dedup": 0,
+    "filtered_candidates": 0,
+    "final_candidates": 3
+  },
+  "summary": {
+    "items_found": 3,
+    "types_found": {
+      "new_character_candidate": 1,
+      "new_location_candidate": 0,
+      "new_item_candidate": 1,
+      "new_faction_candidate": 0,
+      "new_term_candidate": 1
+    }
+  },
+  "items": [
+    {
+      "candidate_id": "scene-line007-new_character-沈鹤年",
+      "compare_type": "existence",
+      "source_file": "scene_with_new_settings.md",
+      "reference_file": "settings/characters.md",
+      "line": 7,
+      "entity": "沈鹤年",
+      "entity_type": "character",
+      "type": "new_character_candidate",
+      "text": "掌柜沈鹤年放下手中的账本，抬头笑了笑：\"李公子，这么晚了还来买书？\"",
+      "reason": "正文出现疑似角色名，但角色设定库未记录",
+      "review_instruction": "请判断是否为新角色；若是，建议加入角色设定库。",
+      "priority": "P1"
+    },
+    {
+      "candidate_id": "scene-line009-new_item-玄黄秘录",
+      "compare_type": "existence",
+      "source_file": "scene_with_new_settings.md",
+      "reference_file": "settings/items.md",
+      "line": 9,
+      "entity": "玄黄秘录",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "text": "\"沈掌柜，我找本古籍，名叫《玄黄秘录》。\"李玄说着，目光扫过书架。",
+      "reason": "正文出现疑似道具/书籍，但道具设定库未记录",
+      "review_instruction": "请判断是否为新道具；若是，建议加入道具设定库。",
+      "priority": "P2"
+    },
+    {
+      "candidate_id": "scene-line025-new_term-五曜珠",
+      "compare_type": "existence",
+      "source_file": "scene_with_new_settings.md",
+      "reference_file": "settings/terms.md",
+      "line": 25,
+      "entity": "五曜珠",
+      "entity_type": "term",
+      "type": "new_term_candidate",
+      "text": "五曜珠？传说中能开启玄黄秘境的钥匙。李玄心中暗自思量。",
+      "reason": "正文出现疑似术语/特殊物品，但术语设定库未记录",
+      "review_instruction": "请判断是否为新术语；若是，建议加入术语设定库。",
+      "priority": "P2"
+    }
+  ]
+}
