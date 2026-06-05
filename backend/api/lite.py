@@ -109,7 +109,7 @@ def _should_use_candidate(
     )
 
 
-def _detect_lite_quality_flags(content: str, *, fallback_used: bool, write_skipped: bool) -> tuple[list[str], str | None, int | None]:
+def _detect_lite_quality_flags(content: str, *, fallback_used: bool = False, write_skipped: bool = False) -> tuple[list[str], str | None, int | None]:
     """检测低质量标记，返回 (quality_flags, quality_warning, quality_score)"""
     quality_flags: list[str] = []
     quality_warning: str | None = None

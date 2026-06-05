@@ -330,9 +330,8 @@ Phase T3-B-13 结论：`functional_passed / quality_partial`
 ### 特殊处理
 
 **fallback_used / write_skipped 场景**：
-- 不参与普通 too_short 检测
-- 由 fallback 专用警告处理，避免误报
-- template_leak 仍应被检测（因为模板泄漏是独立的质量问题）
+- 不参与普通低质量检测（包括 too_short 和 template_leak）
+- 由 fallback 专用 warning / candidate 链路处理，避免重复误报
 
 ### 响应字段
 

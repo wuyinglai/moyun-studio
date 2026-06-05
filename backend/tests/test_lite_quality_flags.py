@@ -4,41 +4,6 @@ import pytest
 from backend.api.lite import _detect_lite_quality_flags
 
 
-def _detect_lite_quality_flags(content: str, *, fallback_used: bool = False, write_skipped: bool = False) -> tuple[list[str], str | None, int | None]:
-    """检测低质量标记，返回 (quality_flags, quality_warning, quality_score)"""
-    quality_flags: list[str] = []
-    quality_warning: str | None = None
-    quality_score: int | None = 5
-
-    if fallback_used or write_skipped:
-        return quality_flags, quality_warning, None
-
-    stripped = content.strip()
-
-    if len(stripped) < 800:
-        quality_flags.append("too_short")
-        quality_score = 3
-
-    template_keywords = ["最近5章摘要", "系统自动维护", "占位", "TODO", "{{", "}}"]
-    for keyword in template_keywords:
-        if keyword in content:
-            quality_flags.append("template_leak")
-            if quality_score is None or quality_score > 1:
-                quality_score = 1
-            break
-
-    if quality_flags:
-        if len(quality_flags) > 1:
-            quality_score = 1
-            quality_warning = "本场质量需要检查：字数偏短且可能包含模板文本。"
-        elif "too_short" in quality_flags:
-            quality_warning = "本场质量需要检查：字数偏短。"
-        elif "template_leak" in quality_flags:
-            quality_warning = "本场质量需要检查：可能包含模板文本。"
-
-    return quality_flags, quality_warning, quality_score
-
-
 class TestDetectLiteQualityFlags:
     """测试 _detect_lite_quality_flags 函数"""
 
@@ -92,28 +57,27 @@ class TestDetectLiteQualityFlags:
         assert "字数偏短" in warning
         assert "模板文本" in warning
 
-    def test_fallback_used_skips_short_check(self):
-        """fallback_used=True 时不触发普通 too_short"""
+    def test_fallback_used_skips_all_checks(self):
+        """fallback_used=True 时跳过所有普通质量检测"""
         content = "短文本。"  # < 800 字符
         flags, warning, score = _detect_lite_quality_flags(
             content,
             fallback_used=True,
         )
 
-        assert "too_short" not in flags
-        # template_leak 仍应检测（因为模板泄漏是独立的质量问题）
+        assert flags == []
         assert warning is None
         assert score is None  # fallback 时 score 为 None
 
-    def test_write_skipped_skips_short_check(self):
-        """write_skipped=True 时不触发普通 too_short"""
+    def test_write_skipped_skips_all_checks(self):
+        """write_skipped=True 时跳过所有普通质量检测"""
         content = "短文本。"  # < 800 字符
         flags, warning, score = _detect_lite_quality_flags(
             content,
             write_skipped=True,
         )
 
-        assert "too_short" not in flags
+        assert flags == []
         assert warning is None
         assert score is None  # write_skipped 时 score 为 None
 
