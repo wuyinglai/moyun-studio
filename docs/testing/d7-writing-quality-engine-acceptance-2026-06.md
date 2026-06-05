@@ -111,11 +111,21 @@ Rewrite Engine Suggestions
 - Phase T3-D7.8：D7 Pipeline 一键 dry-run ✅
 - Phase T3-D7.8.1：Pipeline summary 统计修正 + Diff 噪声记录 ✅
 
+## T4 过渡
+
+D7 Pipeline 已完成 MVP 收口，下一阶段进入 T4 Professional Prompt 架构设计。
+
+* **T4 将以 D7 Pipeline 作为生成后质量审查基础**
+* **T4 将设计 Scene Plan 验收机制**
+* **T4 将设计 Professional Draft Prompt 模板**
+* **T4 将实现 Professional 生成与 D7 Pipeline 的连接**
+
 建议新增：
 
 - Phase T3-D7.9：用户确认清单 MVP
-- Phase T4.0：Professional Prompt 架构设计
-- Phase T4.1：Professional 生成前 Scene Plan 验收
+- Phase T4.0：Professional Prompt 架构设计 ✅
+- Phase T4.1：Scene Plan schema + validator dry-run
+- Phase T4.2：Professional Draft Prompt 模板
 
 ---
 

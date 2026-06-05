@@ -149,7 +149,11 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D7.7 | D7 总体验收与流水线收口 | ✅ | 全链路总体验收，不新增功能，准备进入下一阶段 | 文档验收 |
 | Phase T3-D7.8 | D7 Pipeline 一键 dry-run | ✅ | 整合已有脚本，一条命令跑通 D7 全链路，不调用新 LLM | 功能验收 |
 | Phase T3-D7.8.1 | Pipeline summary 统计修正 + Diff 噪声记录 | ✅ | 修正 candidates 统计为 14，添加 known_diff_noise 字段，记录已知噪声实体 | 功能验收 |
-| Phase T4 | Professional 真实生成冒烟测试 | ⏳ | - | - |
+| Phase T4 | Professional Prompt 专业版写作流程 | ⏳ | - | - |
+| Phase T4.0 | Professional Prompt 架构设计 | ✅ | 设计专业版写作流程架构，明确 Scene Plan 验收和 D7 Pipeline 集成 | 文档验收 |
+| Phase T4.1 | Scene Plan schema + validator dry-run | ⏳ | - | - |
+| Phase T4.2 | Professional Draft Prompt 模板 | ⏳ | - | - |
+| Phase T4.3 | Professional 生成 dry-run / mock | ⏳ | - | - |
 | Phase T5 | 输出质量评分表 | ⏳ | - | - |
 | Phase T6 | 候选稿采用/回滚测试 | ⏳ | - | - |
 | Phase T7 | 长篇连续 10 场生成测试 | ⏳ | - | - |
