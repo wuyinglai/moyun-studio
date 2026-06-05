@@ -119,7 +119,12 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D4.4 | 连续生成 fallback 暂停策略 | ✅ | 遇到 fallback 时暂停，禁用继续生成按钮，提示用户决策 | 功能验收 |
 | Phase T3-D4.5 | UI/FlowPanel 联动优化 | ✅ | 在 FlowPanel 中清晰显示 fallback 状态，提供直观交互 | 功能验收 |
 | Phase T3-D5 | 低质量检测 | ✅ | 基于规则的质量检测，quality_flags/quality_warning/quality_score 字段，前端 UI 警告 | 功能验收 |
-| Phase T3-D6 | Prompt 优化 | ⏳ | - | - |
+| Phase T3-D5-Fix | 低质量检测测试修复 | ✅ | 修复测试 shadow 问题，删除重复 helper，确保测试真正调用后端实现 | 功能验收 |
+| Phase T3-D6 | Prompt 优化实验方案 | ✅ | 实验方案文档 + 样例文档，未修改生产 Prompt | 文档验收 |
+| Phase T3-D6.1 | 新增实验 Prompt 文件 | ⏳ | 不接生产 | 文档验收 |
+| Phase T3-D6.2 | 实验脚本运行 variants | ⏳ | Baseline / Variant A-D | 功能验收 |
+| Phase T3-D6.3 | 选择最优约束 | ⏳ | 对比报告 | 文档验收 |
+| Phase T3-D6.4 | 小范围接入生产 Prompt | ⏳ | 最小改动 | 功能验收 |
 | Phase T4 | Professional 真实生成冒烟测试 | ⏳ | - | - |
 | Phase T5 | 输出质量评分表 | ⏳ | - | - |
 | Phase T6 | 候选稿采用/回滚测试 | ⏳ | - | - |
