@@ -397,17 +397,34 @@ Python 负责：
   - API Key 有效
   - 可以直接使用 OpenAI SDK 调用
 
-### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
+### Phase T3-D7.3：LLM Review + 覆盖校验 ✅
 - 定义 LLM review JSON schema
 - Python 调用 LLM 对 candidates 做判断
 - Python 校验 LLM 是否覆盖所有 candidates
 - 生成 review report
+- 已完成全量 14 条真实 LLM Review 并通过 validator
 
-### Phase T3-D7.4：State Snapshot MVP ⏳
-- 定义 snapshot JSON schema
-- Python 扫描正文提取事实
-- 生成 snapshot.md
-- 记录 snapshot 历史
+### Phase T3-D7.4：State Snapshot MVP ✅
+- **新增脚本**：`tests/prompt_experiments/state_snapshot_mvp.py`
+- **输入**：场景 markdown、diff-engine candidates JSON、review-engine output JSON
+- **输出**：结构化状态快照 JSON + Markdown 报告
+- **核心功能**：
+  - 将 Review Engine 的结果整理成结构化状态
+  - 分类实体：角色、地点、道具、势力、术语
+  - 标记需要用户确认的候选
+  - 提取开放线程/潜在伏笔
+  - 生成建议的设置更新列表
+- **关键设计**：
+  - `llm_called`: false（不调用新的 LLM）
+  - `auto_write_settings`: false（不自动入库）
+  - 只做状态沉淀，不修改设定库
+- **输出文件**：
+  - `docs/testing/prompt-experiments/state-snapshot-mvp-sample.json`
+  - `docs/testing/prompt-experiments/state-snapshot-mvp-sample.md`
+- **测试**：`tests/prompt_experiments/test_state_snapshot_mvp.py`（所有测试通过）
+- **质量引擎进度**：约 42%
+- **专业版 Prompt 设计准备**：约 30%
+- **说明**：Snapshot 是 Memory Engine 的第一步，为后续连续性检查、剧情债务表、局部 Rewrite Engine 提供基础数据
 
 ### Phase T3-D7.5：Plot Debt 表 MVP ⏳
 - 定义 plot debt JSON schema

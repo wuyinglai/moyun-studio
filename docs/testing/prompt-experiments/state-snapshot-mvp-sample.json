@@ -1,0 +1,435 @@
+{
+  "phase": "T3-D7.4",
+  "engine": "memory_engine",
+  "artifact": "state_snapshot",
+  "source_scene": "第一章：深夜书店",
+  "generated_from": {
+    "candidates_json": "diff-engine-existence-mvp-sample.json",
+    "reviews_json": "review-engine-real-llm-full-output.json"
+  },
+  "llm_called": false,
+  "auto_write_settings": false,
+  "summary": {
+    "confirmed_candidates": 6,
+    "ignored_candidates": 8,
+    "needs_user_confirmation": 6,
+    "suggested_settings_updates": 6
+  },
+  "entities": {
+    "characters": [
+      {
+        "name": "沈鹤年",
+        "type": "character",
+        "role": "墨香阁掌柜"
+      }
+    ],
+    "locations": [],
+    "items": [
+      {
+        "name": "玄黄秘录",
+        "type": "item",
+        "role": "古籍"
+      },
+      {
+        "name": "玄铁令牌",
+        "type": "item",
+        "role": "身份信物"
+      },
+      {
+        "name": "青铜灯",
+        "type": "item",
+        "role": "室内陈设"
+      }
+    ],
+    "factions": [],
+    "terms": [
+      {
+        "name": "五曜珠",
+        "type": "term",
+        "role": "开启玄黄秘境的钥匙"
+      },
+      {
+        "name": "开启玄黄秘境",
+        "type": "term",
+        "role": "事件/目标"
+      }
+    ]
+  },
+  "confirmed_candidates": [
+    {
+      "candidate_id": "scene-line007-new_character-沈鹤年",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现角色名，设定库无记录，符合新角色特征",
+      "severity": "P1",
+      "confidence": 0.95,
+      "entity": "沈鹤年",
+      "entity_type": "character",
+      "type": "new_character_candidate",
+      "line": 7
+    },
+    {
+      "candidate_id": "scene-line009-new_item-玄黄秘录",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似道具/书籍，但道具设定库未记录",
+      "severity": "P2",
+      "confidence": 0.9,
+      "entity": "玄黄秘录",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 9
+    },
+    {
+      "candidate_id": "scene-line011-new_item-一枚玄铁令牌",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似道具，但道具设定库未记录",
+      "severity": "P2",
+      "confidence": 0.85,
+      "entity": "一枚玄铁令牌",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 11
+    },
+    {
+      "candidate_id": "scene-line015-new_item-一盏青铜灯",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似道具，但道具设定库未记录",
+      "severity": "P2",
+      "confidence": 0.8,
+      "entity": "一盏青铜灯",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 15
+    },
+    {
+      "candidate_id": "scene-line025-new_term-五曜珠",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似术语/特殊物品，但术语设定库未记录",
+      "severity": "P2",
+      "confidence": 0.9,
+      "entity": "五曜珠",
+      "entity_type": "term",
+      "type": "new_term_candidate",
+      "line": 25
+    },
+    {
+      "candidate_id": "scene-line025-new_term-开启玄黄秘境",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似术语/特殊物品，但术语设定库未记录",
+      "severity": "P2",
+      "confidence": 0.85,
+      "entity": "开启玄黄秘境",
+      "entity_type": "term",
+      "type": "new_term_candidate",
+      "line": 25
+    }
+  ],
+  "ignored_candidates": [
+    {
+      "candidate_id": "scene-line003-new_item-着昏黄的灯",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'着昏黄的灯'是描述性短语而非道具名称",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "着昏黄的灯",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 3
+    },
+    {
+      "candidate_id": "scene-line005-new_faction-李玄推阁",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'李玄推阁'是动作描述（李玄推开阁门），非势力名称",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "李玄推阁",
+      "entity_type": "faction",
+      "type": "new_faction_candidate",
+      "line": 5
+    },
+    {
+      "candidate_id": "scene-line009-new_term-叫《玄黄秘录",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'叫《玄黄秘录'是语法片段，非术语",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "叫《玄黄秘录",
+      "entity_type": "term",
+      "type": "new_term_candidate",
+      "line": 9
+    },
+    {
+      "candidate_id": "scene-line011-new_item-着一枚玄铁",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'着一枚玄铁'是描述性短语，非道具名称",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "着一枚玄铁",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 11
+    },
+    {
+      "candidate_id": "scene-line015-new_item-淡的龙涎香",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'淡的龙涎香'是描述性短语，非道具名称",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "淡的龙涎香",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 15
+    },
+    {
+      "candidate_id": "scene-line021-new_faction-知道天机阁",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'知道天机阁'是动作描述，非势力名称",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "知道天机阁",
+      "entity_type": "faction",
+      "type": "new_faction_candidate",
+      "line": 21
+    },
+    {
+      "candidate_id": "scene-line025-new_term-黄秘境的钥匙",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'黄秘境的钥匙'是描述性短语，非术语",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "黄秘境的钥匙",
+      "entity_type": "term",
+      "type": "new_term_candidate",
+      "line": 25
+    },
+    {
+      "candidate_id": "scene-line027-new_faction-墨香阁的阁",
+      "confirmed": false,
+      "action": "suggest_ignore",
+      "reason": "提取噪声，'墨香阁的阁'是语法片段，非势力名称",
+      "severity": "P3",
+      "confidence": 0.1,
+      "entity": "墨香阁的阁",
+      "entity_type": "faction",
+      "type": "new_faction_candidate",
+      "line": 27
+    }
+  ],
+  "needs_user_confirmation": [
+    {
+      "candidate_id": "scene-line007-new_character-沈鹤年",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现角色名，设定库无记录，符合新角色特征",
+      "severity": "P1",
+      "confidence": 0.95,
+      "entity": "沈鹤年",
+      "entity_type": "character",
+      "type": "new_character_candidate",
+      "line": 7
+    },
+    {
+      "candidate_id": "scene-line009-new_item-玄黄秘录",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似道具/书籍，但道具设定库未记录",
+      "severity": "P2",
+      "confidence": 0.9,
+      "entity": "玄黄秘录",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 9
+    },
+    {
+      "candidate_id": "scene-line011-new_item-一枚玄铁令牌",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似道具，但道具设定库未记录",
+      "severity": "P2",
+      "confidence": 0.85,
+      "entity": "一枚玄铁令牌",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 11
+    },
+    {
+      "candidate_id": "scene-line015-new_item-一盏青铜灯",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似道具，但道具设定库未记录",
+      "severity": "P2",
+      "confidence": 0.8,
+      "entity": "一盏青铜灯",
+      "entity_type": "item",
+      "type": "new_item_candidate",
+      "line": 15
+    },
+    {
+      "candidate_id": "scene-line025-new_term-五曜珠",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似术语/特殊物品，但术语设定库未记录",
+      "severity": "P2",
+      "confidence": 0.9,
+      "entity": "五曜珠",
+      "entity_type": "term",
+      "type": "new_term_candidate",
+      "line": 25
+    },
+    {
+      "candidate_id": "scene-line025-new_term-开启玄黄秘境",
+      "confirmed": true,
+      "action": "suggest_add_to_settings",
+      "reason": "正文出现疑似术语/特殊物品，但术语设定库未记录",
+      "severity": "P2",
+      "confidence": 0.85,
+      "entity": "开启玄黄秘境",
+      "entity_type": "term",
+      "type": "new_term_candidate",
+      "line": 25
+    }
+  ],
+  "suggested_settings_updates": [
+    {
+      "candidate_id": "scene-line007-new_character-沈鹤年",
+      "target_file": "settings/characters.md",
+      "entry": {
+        "name": "沈鹤年",
+        "type": "character",
+        "role": "墨香阁掌柜"
+      },
+      "reason": "正文出现角色名，设定库无记录，符合新角色特征"
+    },
+    {
+      "candidate_id": "scene-line009-new_item-玄黄秘录",
+      "target_file": "settings/items.md",
+      "entry": {
+        "name": "玄黄秘录",
+        "type": "item",
+        "role": "古籍"
+      },
+      "reason": "正文出现疑似道具/书籍，但道具设定库未记录"
+    },
+    {
+      "candidate_id": "scene-line011-new_item-一枚玄铁令牌",
+      "target_file": "settings/items.md",
+      "entry": {
+        "name": "玄铁令牌",
+        "type": "item",
+        "role": "身份信物"
+      },
+      "reason": "正文出现疑似道具，但道具设定库未记录"
+    },
+    {
+      "candidate_id": "scene-line015-new_item-一盏青铜灯",
+      "target_file": "settings/items.md",
+      "entry": {
+        "name": "青铜灯",
+        "type": "item",
+        "role": "室内陈设"
+      },
+      "reason": "正文出现疑似道具，但道具设定库未记录"
+    },
+    {
+      "candidate_id": "scene-line025-new_term-五曜珠",
+      "target_file": "settings/terms.md",
+      "entry": {
+        "name": "五曜珠",
+        "type": "term",
+        "role": "开启玄黄秘境的钥匙"
+      },
+      "reason": "正文出现疑似术语/特殊物品，但术语设定库未记录"
+    },
+    {
+      "candidate_id": "scene-line025-new_term-开启玄黄秘境",
+      "target_file": "settings/terms.md",
+      "entry": {
+        "name": "开启玄黄秘境",
+        "type": "term",
+        "role": "事件/目标"
+      },
+      "reason": "正文出现疑似术语/特殊物品，但术语设定库未记录"
+    }
+  ],
+  "open_threads": [
+    {
+      "line": 9,
+      "content": "\"沈掌柜，我找本古籍，名叫《玄黄秘录》。\"李玄说着，目光扫过书架。",
+      "type": "potential_plot_thread",
+      "keyword": "秘录"
+    },
+    {
+      "line": 11,
+      "content": "角落里有个黑衣客，正低头翻看着一本残破的道书，腰间挂着一枚玄铁令牌，刻着\"天机阁\"三个字。",
+      "type": "potential_plot_thread",
+      "keyword": "令牌"
+    },
+    {
+      "line": 11,
+      "content": "角落里有个黑衣客，正低头翻看着一本残破的道书，腰间挂着一枚玄铁令牌，刻着\"天机阁\"三个字。",
+      "type": "potential_plot_thread",
+      "keyword": "天机"
+    },
+    {
+      "line": 13,
+      "content": "沈鹤年指了指内堂：\"《玄黄秘录》在里面，不过这书是镇店之宝，非卖品。\"",
+      "type": "potential_plot_thread",
+      "keyword": "秘录"
+    },
+    {
+      "line": 15,
+      "content": "李玄跟着他走进内堂，看到墙上挂着一幅山水古画，画中似乎藏着什么玄机。案上放着一盏青铜灯，灯油散发着淡淡的龙涎香。",
+      "type": "potential_plot_thread",
+      "keyword": "古画"
+    },
+    {
+      "line": 15,
+      "content": "李玄跟着他走进内堂，看到墙上挂着一幅山水古画，画中似乎藏着什么玄机。案上放着一盏青铜灯，灯油散发着淡淡的龙涎香。",
+      "type": "potential_plot_thread",
+      "keyword": "玄机"
+    },
+    {
+      "line": 21,
+      "content": "\"沈掌柜，你知道天机阁最近在查什么吗？\"李玄状似随意地问。",
+      "type": "potential_plot_thread",
+      "keyword": "天机"
+    },
+    {
+      "line": 23,
+      "content": "沈鹤年脸色微变，低声道：\"天机阁的事，还是少问为妙。听说他们在找'五曜珠'。\"",
+      "type": "potential_plot_thread",
+      "keyword": "天机"
+    },
+    {
+      "line": 23,
+      "content": "沈鹤年脸色微变，低声道：\"天机阁的事，还是少问为妙。听说他们在找'五曜珠'。\"",
+      "type": "potential_plot_thread",
+      "keyword": "珠"
+    },
+    {
+      "line": 25,
+      "content": "五曜珠？传说中能开启玄黄秘境的钥匙。李玄心中暗自思量。",
+      "type": "potential_plot_thread",
+      "keyword": "秘境"
+    },
+    {
+      "line": 25,
+      "content": "五曜珠？传说中能开启玄黄秘境的钥匙。李玄心中暗自思量。",
+      "type": "potential_plot_thread",
+      "keyword": "珠"
+    }
+  ],
+  "warnings": []
+}
