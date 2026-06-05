@@ -295,6 +295,22 @@ Python 负责：
 - 支持 JSON schema 和 Markdown 报告
 - 包含噪声过滤统计
 
+### Phase T3-D7.3a：Review Engine schema + 覆盖校验 dry-run ✅
+- 定义 LLM review JSON schema（candidate_id, confirmed, confidence, severity, action 等）
+- 实现 Python 覆盖校验机制
+- 校验 candidate_id 全覆盖、无重复、无多余
+- 校验必填字段齐全、字段类型合法
+- 校验 action 枚举值、confidence 范围
+- 不调用真实 LLM，只使用 mock fixture 验证
+- 新增 4 个 fixture（valid, missing_id, duplicate_id, invalid_action）
+- 新增断言测试，验证 validator 正确性
+
+**本阶段完成说明**：
+- Validator 脚本：`tests/prompt_experiments/review_engine_validator.py`
+- 测试脚本：`tests/prompt_experiments/test_review_engine_validator.py`
+- 示例报告：`docs/testing/prompt-experiments/review-engine-validator-sample.md`
+- 重要：防止 LLM 漏判是 Review Engine 的核心能力，必须先通过 validator 才能认为 review 有效
+
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema
 - Python 调用 LLM 对 candidates 做判断

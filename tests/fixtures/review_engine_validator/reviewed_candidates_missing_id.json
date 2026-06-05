@@ -1,0 +1,138 @@
+{
+  "phase": "T3-D7.3a",
+  "engine": "review_engine",
+  "mode": "mock_review",
+  "llm_called": false,
+  "auto_write_settings": false,
+  "review_metadata": {
+    "candidates_source": "diff-engine-existence-mvp-sample.json",
+    "total_candidates": 14,
+    "reviewed_candidates": 13
+  },
+  "reviews": [
+    {
+      "candidate_id": "scene-line003-new_item-着昏黄的灯",
+      "confirmed": false,
+      "confidence": 0.15,
+      "severity": "P3",
+      "action": "suggest_ignore",
+      "needs_user_confirmation": false,
+      "reason": "提取噪声"
+    },
+    {
+      "candidate_id": "scene-line005-new_faction-李玄推阁",
+      "confirmed": false,
+      "confidence": 0.2,
+      "severity": "P3",
+      "action": "suggest_ignore",
+      "needs_user_confirmation": false,
+      "reason": "提取噪声"
+    },
+    {
+      "candidate_id": "scene-line007-new_character-沈鹤年",
+      "confirmed": true,
+      "confidence": 0.92,
+      "severity": "P1",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "有效新角色",
+      "suggested_target": "settings/characters.md"
+    },
+    {
+      "candidate_id": "scene-line009-new_item-玄黄秘录",
+      "confirmed": true,
+      "confidence": 0.95,
+      "severity": "P1",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "有效书籍",
+      "suggested_target": "settings/items.md"
+    },
+    {
+      "candidate_id": "scene-line009-new_term-叫《玄黄秘录",
+      "confirmed": false,
+      "confidence": 0.1,
+      "severity": "P3",
+      "action": "suggest_ignore",
+      "needs_user_confirmation": false,
+      "reason": "提取噪声"
+    },
+    {
+      "candidate_id": "scene-line011-new_item-一枚玄铁令牌",
+      "confirmed": true,
+      "confidence": 0.88,
+      "severity": "P2",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "有效道具",
+      "suggested_target": "settings/items.md"
+    },
+    {
+      "candidate_id": "scene-line011-new_item-着一枚玄铁",
+      "confirmed": false,
+      "confidence": 0.12,
+      "severity": "P3",
+      "action": "suggest_ignore",
+      "needs_user_confirmation": false,
+      "reason": "提取噪声"
+    },
+    {
+      "candidate_id": "scene-line015-new_item-一盏青铜灯",
+      "confirmed": true,
+      "confidence": 0.85,
+      "severity": "P2",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "有效道具",
+      "suggested_target": "settings/items.md"
+    },
+    {
+      "candidate_id": "scene-line015-new_item-淡的龙涎香",
+      "confirmed": true,
+      "confidence": 0.78,
+      "severity": "P2",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "有效物品",
+      "suggested_target": "settings/items.md"
+    },
+    {
+      "candidate_id": "scene-line021-new_faction-知道天机阁",
+      "confirmed": false,
+      "confidence": 0.15,
+      "severity": "P3",
+      "action": "suggest_ignore",
+      "needs_user_confirmation": false,
+      "reason": "提取噪声"
+    },
+    {
+      "candidate_id": "scene-line025-new_term-五曜珠",
+      "confirmed": true,
+      "confidence": 0.94,
+      "severity": "P1",
+      "action": "suggest_add_to_settings",
+      "needs_user_confirmation": true,
+      "reason": "重要术语",
+      "suggested_target": "settings/terms.md"
+    },
+    {
+      "candidate_id": "scene-line025-new_term-开启玄黄秘境",
+      "confirmed": true,
+      "confidence": 0.8,
+      "severity": "P2",
+      "action": "suggest_user_confirm",
+      "needs_user_confirmation": true,
+      "reason": "需要确认",
+      "suggested_target": "settings/terms.md"
+    },
+    {
+      "candidate_id": "scene-line025-new_term-黄秘境的钥匙",
+      "confirmed": false,
+      "confidence": 0.18,
+      "severity": "P3",
+      "action": "suggest_ignore",
+      "needs_user_confirmation": false,
+      "reason": "提取噪声"
+    }
+  ]
+}
