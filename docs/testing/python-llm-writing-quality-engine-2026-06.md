@@ -275,10 +275,25 @@ Python 负责：
 - 示例报告：`docs/testing/prompt-experiments/diff-engine-existence-mvp-sample.json` 和 `diff-engine-existence-mvp-sample.md`
 - 下一阶段：Phase T3-D7.2 可以基于此做更完善的 candidate 格式化，然后 Phase T3-D7.3 接入 LLM review
 
-### Phase T3-D7.2：Candidate JSON + Markdown report ⏳
-- 定义 candidate JSON schema
-- 生成 Markdown 格式报告
-- 支持 diff 展示
+### Phase T3-D7.1.1：候选提取降噪与断言测试 ✅
+- 增加候选清洗函数，过滤明显无效候选
+- 过滤包含标点、过短、过长、包含半截引号/冒号/逗号的候选
+- 按 entity_type + entity 去重
+- 增加噪声过滤统计（raw / filtered_by_noise / filtered_by_dedup / final）
+- 新增断言测试脚本，验证 expected entities 存在、forbidden fragments 不存在
+- 不调用 LLM
+- 不自动入库
+
+**本阶段完成说明**：
+- 脚本位置：`tests/prompt_experiments/diff_engine_existence_mvp.py`（已更新）
+- 测试脚本：`tests/prompt_experiments/test_diff_engine_existence_mvp.py`
+- 测试结果：所有期望实体已识别，所有禁止片段已过滤
+- 重要：Diff Engine candidates 必须先经过降噪，才能进入 LLM Review（Phase T3-D7.3）
+
+### Phase T3-D7.2：Candidate JSON + Markdown report ✅
+- 已随 D7.1/D7.1.1 一起实现
+- 支持 JSON schema 和 Markdown 报告
+- 包含噪声过滤统计
 
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema
