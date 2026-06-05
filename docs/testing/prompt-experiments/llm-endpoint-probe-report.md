@@ -29,12 +29,6 @@
 - **失败原因**: AuthenticationError
 
 ### chat_completion
-- **模型**: custom/agnes-2.0-flash
-- **结果**: ❌ 失败
-- **失败类型**: connection_error
-- **失败原因**: APIConnectionError
-
-### chat_completion
 - **模型**: agnes-2.0-flash
 - **结果**: ❌ 失败
 - **失败类型**: bad_request
@@ -45,6 +39,12 @@
 - **结果**: ❌ 失败
 - **失败类型**: authentication_error
 - **失败原因**: AuthenticationError
+
+### chat_completion
+- **模型**: custom/agnes-2.0-flash
+- **结果**: ❌ 失败
+- **失败类型**: connection_error
+- **失败原因**: APIConnectionError
 
 ## 摘要
 

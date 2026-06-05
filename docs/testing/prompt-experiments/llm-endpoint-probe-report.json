@@ -29,14 +29,6 @@
       "test_type": "chat_completion",
       "success": false,
       "status_code": null,
-      "failure_type": "connection_error",
-      "sanitized_failure_reason": "APIConnectionError",
-      "model": "custom/agnes-2.0-flash"
-    },
-    {
-      "test_type": "chat_completion",
-      "success": false,
-      "status_code": null,
       "failure_type": "bad_request",
       "sanitized_failure_reason": "BadRequestError",
       "model": "agnes-2.0-flash"
@@ -48,6 +40,14 @@
       "failure_type": "authentication_error",
       "sanitized_failure_reason": "AuthenticationError",
       "model": "openai/agnes-2.0-flash"
+    },
+    {
+      "test_type": "chat_completion",
+      "success": false,
+      "status_code": null,
+      "failure_type": "connection_error",
+      "sanitized_failure_reason": "APIConnectionError",
+      "model": "custom/agnes-2.0-flash"
     }
   ],
   "recommended_provider_model": null,

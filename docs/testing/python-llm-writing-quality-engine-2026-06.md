@@ -369,8 +369,14 @@ Python 负责：
 - 测试 /models 端点和最小 chat completion 请求
 - 探针报告：`docs/testing/prompt-experiments/llm-endpoint-probe-report.md`
 - 安全要求：不打印 API Key，只输出 sanitized 配置状态
-- 探针结果：0/4 候选模型成功，主要失败类型为 authentication_error 和 connection_error
-- 阻塞点：API 认证或密钥配置不正确
+- **最新探针结果（重新验证）**：0/4 候选模型成功
+  - /models 端点返回 HTTP 401
+  - custom_openai/agnes-2.0-flash: authentication_error
+  - agnes-2.0-flash: bad_request
+  - openai/agnes-2.0-flash: authentication_error
+  - custom/agnes-2.0-flash: connection_error
+- **阻塞点**：LLM API 认证失败，endpoint 配置或 API Key 不正确
+- **下一步**：需要用户确认或修复 .env 中的 API 配置（LLM_API_BASE / LLM_PROVIDER / LLM_MODEL / API Key）
 
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema
