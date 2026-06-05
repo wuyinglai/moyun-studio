@@ -3,6 +3,7 @@
 > **创建时间**：2026-06-05
 > **阶段**：桥接任务 - Lite Prompt 与专业版 Prompt 准备
 > **状态**：规则整理完成，暂不接入生产 Prompt
+> **注意**：去 AI 化只是 Python + LLM 写作质量与一致性引擎的一部分，专业版应重点建设该引擎体系（详见 `python-llm-writing-quality-engine-2026-06.md`）
 
 ---
 
