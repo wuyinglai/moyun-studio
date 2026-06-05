@@ -138,6 +138,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D7.3b | Review Prompt 模板 + mock 输出契约 | ✅ | 定义 Prompt 模板、新增 mock fixtures、mock output 通过 validator | 文档验收 |
 | Phase T3-D7.3c-a | Review smoke 脚本 dry-run | ✅ | 新增 smoke 脚本、默认 --dry-run、mock 输出通过 validator | 功能验收 |
 | Phase T3-D7.3c-b | 真实 LLM Review 3 条冒烟 | ⏳ | 环境就绪后运行真实 LLM 3 条 Review | 功能验收 |
+| Phase T3-D7.3c-b1 | LLM endpoint 配置探针 | ✅ | 新增探针脚本、测试多种 provider/model 格式、输出 sanitized 报告 | 功能验收 |
 | Phase T3-D7.3d | 真实 LLM Review 全量 14 条 | ⏳ | 环境就绪后运行真实 LLM 全量 Review | 功能验收 |
 | Phase T3-D7.3 | LLM Review + 覆盖校验 | ⏳ | 定义 review schema、校验覆盖率 | 功能验收 |
 | Phase T3-D7.4 | State Snapshot MVP | ⏳ | 提取事实、生成 snapshot | 功能验收 |

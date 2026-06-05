@@ -358,10 +358,19 @@ Python 负责：
 - 已修复 provider/model 适配问题
 - 新增 `get_llm_config_safely()` 和 `build_litellm_model_name()` 函数
 - Provider/model 适配已正确：`custom/agnes-2.0-flash`
-- 当前失败原因：APIConnectionError - 404 Not Found for https://apihub.agnes-ai.com/v1
+- 当前失败原因：API authentication/connection 错误
 - 失败报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-report-failure.md`
-- 这是 API URL 配置问题，不是脚本问题
-- 待修复：检查 .env 中的 LLM_API_BASE 是否正确
+- 这是 API 配置/认证问题，不是脚本问题
+
+### Phase T3-D7.3c-b1：LLM endpoint 配置探针 ✅
+- 新增探针脚本：`tests/prompt_experiments/llm_endpoint_probe.py`
+- 默认 --dry-run 模式，不发送请求
+- 支持测试多种 provider/model 格式：openai/<model>, custom_openai/<model>, custom/<model>, 裸模型名
+- 测试 /models 端点和最小 chat completion 请求
+- 探针报告：`docs/testing/prompt-experiments/llm-endpoint-probe-report.md`
+- 安全要求：不打印 API Key，只输出 sanitized 配置状态
+- 探针结果：0/4 候选模型成功，主要失败类型为 authentication_error 和 connection_error
+- 阻塞点：API 认证或密钥配置不正确
 
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema
