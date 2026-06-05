@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Phase T3-D7.5 / T3-D7.5.1: Plot Debt 表 MVP
+Phase T3-D7.5 / T3-D7.5.1 / T3-D7.5.2: Plot Debt 表 MVP
 
 - 从场景文本、state snapshot、review output 中提取剧情债务候选
 - 增强实体提取：书名号、道具后缀、设定后缀
+- 实体降噪：优先已知实体，限制长度，过滤动词短语
 - 不调用 LLM
 - 不自动入库
 - 只生成候选，不自动确认
@@ -38,7 +39,7 @@ DEBT_KEYWORDS = {
         "没有人知道", "无人知晓", "不解之谜", "迷雾"
     ],
     "unexplained_item": [
-        "钥匙", "令牌", "密信", "信物", "珠", "玉", "剑",
+        "令牌", "密信", "信物", "珠", "玉", "剑",
         "古画", "卷轴", "盒子", "匣子", "锦囊", "宝箱",
         "神器", "法宝", "秘录", "天书", "符咒", "丹药",
         "灯", "香", "匕首", "残卷", "图", "书"
@@ -54,11 +55,37 @@ DEBT_KEYWORDS = {
     ]
 }
 
+# 已知有效实体列表（用于优先匹配）
+KNOWN_ENTITIES = {
+    "玄黄秘录", "玄铁令牌", "青铜灯", "龙涎香", "五曜珠", 
+    "玄黄秘境", "天机阁", "墨香阁", "匕首", "山水古画"
+}
+
+# 动词列表（用于过滤包含动词的短语）
+VERBS = {
+    "推", "走", "进", "看", "翻", "说", "问", "答", "找", 
+    "放", "挂", "握", "想", "思", "说", "道", "笑", "指",
+    "照", "亮", "变", "低", "暗", "下", "来", "去", "在"
+}
+
+# 禁止的实体模式（噪声）
+FORBIDDEN_PATTERNS = [
+    r"^深夜",  # 以深夜开头的通常是时间描述
+    r"^映着",  # 以映着开头的通常是描述性短语
+    r"^李玄",  # 角色名字不应作为实体提取（除非是设定中的角色）
+    r"^这么晚",  # 时间描述
+]
+
+# 禁止的实体列表
+FORBIDDEN_ENTITIES = {
+    "深夜书", "映着昏黄的灯", "李玄推门走进墨香", 
+    "李玄推门走进墨香阁", "这么晚了还来买书"
+}
+
 # 实体提取配置
-ITEM_SUFFIXES = ["令牌", "灯", "香", "珠", "钥匙", "秘录", "密信", "残卷", 
-                 "匕首", "图", "书", "画", "剑", "玉", "丹", "符", "册"]
-SETTING_SUFFIXES = ["阁", "楼", "教", "派", "门", "宗", "殿", "秘境", 
-                    "禁地", "洞府", "遗迹", "山庄", "堡", "城", "谷"]
+ITEM_SUFFIXES = ["令牌", "秘录", "密信", "残卷", "匕首", "图", "书", "画", "剑", "玉", "丹", "符", "册"]
+SETTING_SUFFIXES = ["阁", "楼", "教", "派", "门", "宗", "殿", "秘境", "禁地", "洞府", "遗迹", "山庄", "堡", "城", "谷"]
+SHORT_SUFFIXES = ["珠", "灯", "香", "玉", "剑"]
 
 
 def load_scene(scene_path: Path) -> Tuple[str, List[str]]:
@@ -86,51 +113,92 @@ def load_reviews(reviews_path: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
+def contains_verb(text: str) -> bool:
+    """检查文本是否包含动词"""
+    for verb in VERBS:
+        if verb in text:
+            return True
+    return False
+
+
+def is_entity_forbidden(entity: str) -> bool:
+    """检查实体是否为禁止的噪声"""
+    if entity in FORBIDDEN_ENTITIES:
+        return True
+    for pattern in FORBIDDEN_PATTERNS:
+        if re.match(pattern, entity):
+            return True
+    return False
+
+
 def extract_entity_from_text(line: str, keyword: str) -> str:
-    """从文本行中提取实体"""
-    # 优先提取书名号内容
+    """从文本行中提取实体（降噪版本）"""
+    # 优先检查已知实体
+    for entity in KNOWN_ENTITIES:
+        if entity in line:
+            return entity
+    
+    # 提取书名号内容
     book_match = re.search(r"《([^》]+)》", line)
     if book_match:
-        return book_match.group(1)
+        book_title = book_match.group(1)
+        # 书名号内容通常是有效的
+        return book_title
     
     # 根据关键词类型提取实体
     if keyword in ["令牌", "秘录", "密信", "残卷"]:
-        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+        # 匹配2-4个字 + 后缀
+        pattern = rf"([\u4e00-\u9fa5]{{2,4}}{keyword})"
         match = re.search(pattern, line)
         if match:
-            return match.group(1)
+            entity = match.group(1)
+            if not contains_verb(entity) and len(entity) <= 6 and not is_entity_forbidden(entity):
+                return entity
     
-    if keyword in ["灯", "香", "珠", "匕首", "剑", "玉"]:
-        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+    if keyword in SHORT_SUFFIXES:
+        # 短后缀需要更严格的匹配：2-3个字 + 后缀
+        pattern = rf"([\u4e00-\u9fa5]{{2,3}}{keyword})"
         match = re.search(pattern, line)
         if match:
-            return match.group(1)
+            entity = match.group(1)
+            if not contains_verb(entity) and len(entity) <= 5 and not is_entity_forbidden(entity):
+                return entity
     
     if keyword in ["秘境", "禁地", "洞府", "遗迹"]:
-        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+        pattern = rf"([\u4e00-\u9fa5]{{2,4}}{keyword})"
         match = re.search(pattern, line)
         if match:
-            return match.group(1)
+            entity = match.group(1)
+            if not contains_verb(entity) and len(entity) <= 6 and not is_entity_forbidden(entity):
+                return entity
     
     if keyword in ["阁", "楼", "教", "派", "门", "宗", "殿"]:
-        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+        # 这些后缀需要至少2个前缀字
+        pattern = rf"([\u4e00-\u9fa5]{{2,4}}{keyword})"
         match = re.search(pattern, line)
         if match:
-            return match.group(1)
+            entity = match.group(1)
+            if not contains_verb(entity) and len(entity) <= 5 and not is_entity_forbidden(entity):
+                return entity
     
-    # 尝试提取带关键字的短语
+    # 尝试提取带已知后缀的短语
     for suffix in ITEM_SUFFIXES:
-        pattern = rf"([\u4e00-\u9fa5]+{suffix})"
+        pattern = rf"([\u4e00-\u9fa5]{{2,4}}{suffix})"
         match = re.search(pattern, line)
         if match:
-            return match.group(1)
+            entity = match.group(1)
+            if not contains_verb(entity) and len(entity) <= 6 and not is_entity_forbidden(entity):
+                return entity
     
     for suffix in SETTING_SUFFIXES:
-        pattern = rf"([\u4e00-\u9fa5]+{suffix})"
+        pattern = rf"([\u4e00-\u9fa5]{{2,4}}{suffix})"
         match = re.search(pattern, line)
         if match:
-            return match.group(1)
+            entity = match.group(1)
+            if not contains_verb(entity) and len(entity) <= 6 and not is_entity_forbidden(entity):
+                return entity
     
+    # 如果没有找到明确的实体，返回空
     return ""
 
 
@@ -259,7 +327,7 @@ def build_plot_debt(
     """构建 Plot Debt 表"""
     
     plot_debt = {
-        "phase": "T3-D7.5.1",
+        "phase": "T3-D7.5.2",
         "engine": "memory_engine",
         "artifact": "plot_debt_table",
         "source_scene": None,
@@ -408,7 +476,7 @@ def generate_markdown_report(plot_debt: Dict[str, Any]) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Phase T3-D7.5.1: Plot Debt 表 MVP (增强实体提取)"
+        description="Phase T3-D7.5.2: Plot Debt 表 MVP (实体降噪)"
     )
     parser.add_argument("--scene", type=Path, required=True,
                         help="场景 markdown 文件路径")
@@ -424,7 +492,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("Phase T3-D7.5.1: Plot Debt 表 MVP (增强实体提取)")
+    print("Phase T3-D7.5.2: Plot Debt 表 MVP (实体降噪)")
     print("=" * 60)
     print()
 
