@@ -104,8 +104,18 @@ watch(isStreaming, async () => {
 })
 
 function handleSuggestion(text: string) {
-  inputText.value = text
-  sendMessage()
+  // T4.1.3: 根据建议内容进行 intent 分流
+  if (text.includes('续写') || text.includes('帮我续写')) {
+    // 触发生成事件（调用 generationStore）
+    window.dispatchEvent(new Event('chat:request-generate'))
+  } else if (text.includes('润色') || text.includes('重写') || text.includes('帮我润色')) {
+    // 触发重写事件（调用 generationStore）
+    window.dispatchEvent(new Event('chat:request-rewrite'))
+  } else {
+    // 普通聊天
+    inputText.value = text
+    sendMessage()
+  }
 }
 
 function scrollToBottom() {

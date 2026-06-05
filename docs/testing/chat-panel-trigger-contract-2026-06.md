@@ -99,25 +99,47 @@ ChatPanel **不得**：
 
 ---
 
-## 5. 后续建议
+## 5. T4.1.3 更新记录
 
-如果缺口确认属实，下一阶段可进行：
+### 2026-06-05 已修复部分
+- ✅ 已修复：chat:request-generate 和 chat:request-rewrite 新增触发源（欢迎建议）
+- ✅ 已修复：欢迎建议“续写场景”会触发 chat:request-generate → generationStore
+- ✅ 已修复：欢迎建议“润色文字”会触发 chat:request-rewrite → generationStore
+- ✅ 复用已有 candidate 机制，不静默覆盖正文
 
-**T4.1.3：ChatPanel → Candidate/Workflow 触发 dry-run 修复**
+### 仍未解决
+- ❌ 未接入 selected text
+- ❌ 未接入 ChatPanel → Candidate link 展示
+- ❌ 未接入 ChatPanel 发起 adopt/reject
+- ❌ 后端 /chat API 未接入 main.py
+- ❌ 没有 ChatPanel 侧专用的 dry-run candidate 机制
+
+详情见：[chat-panel-candidate-trigger-dryrun-2026-06.md](file:///d:/newmoyun/docs/testing/chat-panel-candidate-trigger-dryrun-2026-06.md)
 
 ---
 
-## 6. 验收结论
+## 6. 后续建议
 
-⚠️ **ChatPanel 目前是纯聊天面板，缺少与 generation/candidate 集成的触发入口**
+下一阶段可考虑：
+- selected text 接入 ChatPanel
+- ChatPanel 显示 candidate link
+- 后端 /chat API 接入
+
+---
+
+## 7. 验收结论
+
+⚠️ **已打通 ChatPanel 欢迎建议 → generation/candidate 触发链路**
 
 - ✅ ChatPanel UI 完整
 - ✅ 支持 project_id 和 context_file 传递
-- ❌ chat:request-generate/rewrite 没有触发源
-- ❌ 欢迎建议只是纯聊天，不触发生成
+- ✅ chat:request-generate/rewrite 新增触发源（欢迎建议）
+- ✅ 欢迎建议“续写”/“润色”触发生成/改写
+- ✅ 复用 candidate 机制，不静默覆盖正文
 - ❌ 没有 selected text 集成
-- ❌ 没有 candidate 集成
+- ❌ 没有 candidate 展示/交互集成
 
 ---
 
 **文档完成日期**：2026-06-05
+**最后更新**：2026-06-05
