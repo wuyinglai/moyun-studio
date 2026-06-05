@@ -1,0 +1,51 @@
+{
+  "phase": "T3-D6.2",
+  "mode": "dry_run",
+  "llm_called": false,
+  "production_prompt_modified": false,
+  "variants": [
+    {
+      "id": "baseline",
+      "file": "docs\\testing\\prompt-experiments\\lite-continuation\\baseline.md",
+      "exists": true,
+      "line_count": 45,
+      "recommended": false,
+      "purpose": "当前生产 Prompt 对照组"
+    },
+    {
+      "id": "variant-a-length",
+      "file": "docs\\testing\\prompt-experiments\\lite-continuation\\variant-a-length.md",
+      "exists": true,
+      "line_count": 34,
+      "recommended": false,
+      "purpose": "字数约束"
+    },
+    {
+      "id": "variant-b-length-action-chain",
+      "file": "docs\\testing\\prompt-experiments\\lite-continuation\\variant-b-length-action-chain.md",
+      "exists": true,
+      "line_count": 38,
+      "recommended": false,
+      "purpose": "字数 + 行动链"
+    },
+    {
+      "id": "variant-c-action-conflict-hook",
+      "file": "docs\\testing\\prompt-experiments\\lite-continuation\\variant-c-action-conflict-hook.md",
+      "exists": true,
+      "line_count": 62,
+      "recommended": true,
+      "purpose": "字数 + 行动链 + 冲突推进 + 结尾钩子"
+    },
+    {
+      "id": "variant-d-full-constraints",
+      "file": "docs\\testing\\prompt-experiments\\lite-continuation\\variant-d-full-constraints.md",
+      "exists": true,
+      "line_count": 86,
+      "recommended": false,
+      "purpose": "完整约束 + 禁止模板词 + 降低 AI 腔"
+    }
+  ],
+  "recommended_first_variant": "variant-c-action-conflict-hook",
+  "all_valid": true,
+  "next_step": "Phase T3-D6.3 or T3-D6.2-real-run"
+}
