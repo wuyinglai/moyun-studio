@@ -456,6 +456,27 @@ Python 负责：
 - **专业版 Prompt 设计准备**：约 34%
 - **说明**：Plot Debt 是 Memory Engine 的第二步，为长篇小说连续性管理提供伏笔追踪能力
 
+### Phase T3-D7.5.1：Plot Debt 实体提取增强 ✅
+- **优化内容**：增强实体提取逻辑，让每条 debt 尽量带上明确 entity
+- **提取策略**：
+  - 书名号提取：《玄黄秘录》→ 玄黄秘录
+  - 道具后缀提取：令牌、灯、香、珠、钥匙、秘录、密信、残卷
+  - 设定后缀提取：阁、楼、教、派、门、秘境、禁地
+  - 优先从 Review output / Snapshot 中的 suggested_entry 获取实体
+  - 其次从当前文本行正则抽取
+- **关键实体提取结果**：
+  - ✅ 玄黄秘录
+  - ✅ 玄铁令牌
+  - ✅ 青铜灯
+  - ✅ 五曜珠
+  - ✅ 天机阁
+- **输出改进**：
+  - Markdown 报告新增实体列
+  - Summary 新增 `with_entity` 统计
+- **质量引擎进度**：约 50%
+- **专业版 Prompt 设计准备**：约 35%
+- **说明**：Plot Debt 不仅记录关键词，还尽量记录债务对象 entity，为后续 Rewrite Engine 提供准确的实体追踪能力
+
 ### Phase T3-D7.6：局部 Rewrite Engine MVP ⏳
 - 对 confirmed issues 提供改写建议
 - 生成 candidate 而非直接覆盖

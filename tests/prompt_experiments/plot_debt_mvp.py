@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Phase T3-D7.5: Plot Debt 表 MVP
+Phase T3-D7.5 / T3-D7.5.1: Plot Debt 表 MVP
 
 - 从场景文本、state snapshot、review output 中提取剧情债务候选
+- 增强实体提取：书名号、道具后缀、设定后缀
 - 不调用 LLM
 - 不自动入库
 - 只生成候选，不自动确认
@@ -10,6 +11,7 @@ Phase T3-D7.5: Plot Debt 表 MVP
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -38,17 +40,25 @@ DEBT_KEYWORDS = {
     "unexplained_item": [
         "钥匙", "令牌", "密信", "信物", "珠", "玉", "剑",
         "古画", "卷轴", "盒子", "匣子", "锦囊", "宝箱",
-        "神器", "法宝", "秘录", "天书", "符咒", "丹药"
+        "神器", "法宝", "秘录", "天书", "符咒", "丹药",
+        "灯", "香", "匕首", "残卷", "图", "书"
     ],
     "unresolved_setting": [
         "秘境", "禁地", "鬼域", "仙山", "洞府", "遗迹",
-        "藏宝图", "地图", "坐标", "方位", "入口", "通道"
+        "藏宝图", "地图", "坐标", "方位", "入口", "通道",
+        "阁", "楼", "教", "派", "门", "宗", "殿"
     ],
     "open_question": [
         "为何", "为什么", "何", "谁", "何人", "哪来的",
         "从何而来", "去向", "下落", "真相", "答案", "究竟"
     ]
 }
+
+# 实体提取配置
+ITEM_SUFFIXES = ["令牌", "灯", "香", "珠", "钥匙", "秘录", "密信", "残卷", 
+                 "匕首", "图", "书", "画", "剑", "玉", "丹", "符", "册"]
+SETTING_SUFFIXES = ["阁", "楼", "教", "派", "门", "宗", "殿", "秘境", 
+                    "禁地", "洞府", "遗迹", "山庄", "堡", "城", "谷"]
 
 
 def load_scene(scene_path: Path) -> Tuple[str, List[str]]:
@@ -76,6 +86,54 @@ def load_reviews(reviews_path: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
+def extract_entity_from_text(line: str, keyword: str) -> str:
+    """从文本行中提取实体"""
+    # 优先提取书名号内容
+    book_match = re.search(r"《([^》]+)》", line)
+    if book_match:
+        return book_match.group(1)
+    
+    # 根据关键词类型提取实体
+    if keyword in ["令牌", "秘录", "密信", "残卷"]:
+        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+        match = re.search(pattern, line)
+        if match:
+            return match.group(1)
+    
+    if keyword in ["灯", "香", "珠", "匕首", "剑", "玉"]:
+        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+        match = re.search(pattern, line)
+        if match:
+            return match.group(1)
+    
+    if keyword in ["秘境", "禁地", "洞府", "遗迹"]:
+        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+        match = re.search(pattern, line)
+        if match:
+            return match.group(1)
+    
+    if keyword in ["阁", "楼", "教", "派", "门", "宗", "殿"]:
+        pattern = rf"([\u4e00-\u9fa5]+{keyword})"
+        match = re.search(pattern, line)
+        if match:
+            return match.group(1)
+    
+    # 尝试提取带关键字的短语
+    for suffix in ITEM_SUFFIXES:
+        pattern = rf"([\u4e00-\u9fa5]+{suffix})"
+        match = re.search(pattern, line)
+        if match:
+            return match.group(1)
+    
+    for suffix in SETTING_SUFFIXES:
+        pattern = rf"([\u4e00-\u9fa5]+{suffix})"
+        match = re.search(pattern, line)
+        if match:
+            return match.group(1)
+    
+    return ""
+
+
 def extract_debts_from_scene(lines: List[str], scene_path: Path) -> List[Dict[str, Any]]:
     """从场景文本中提取剧情债务候选"""
     debts = []
@@ -89,14 +147,17 @@ def extract_debts_from_scene(lines: List[str], scene_path: Path) -> List[Dict[st
         for debt_type, keywords in DEBT_KEYWORDS.items():
             for keyword in keywords:
                 if keyword in line:
+                    # 提取实体
+                    entity = extract_entity_from_text(line, keyword)
+                    
                     debt = {
                         "debt_id": f"debt-{debt_counter:03d}",
                         "debt_type": debt_type,
                         "source_file": scene_path.name,
                         "line": line_num,
                         "text": line.strip(),
-                        "entity": "",
-                        "reason": f"发现关键词: {keyword}",
+                        "entity": entity,
+                        "reason": f"发现关键词: {keyword}" + (f"，提取实体: {entity}" if entity else ""),
                         "status": "candidate",
                         "priority": determine_priority(debt_type),
                         "needs_user_confirmation": True,
@@ -130,13 +191,14 @@ def extract_debts_from_snapshot(snapshot: Dict[str, Any], scene_path: Path) -> L
 
     # 从 suggested_settings_updates 中提取
     for update in snapshot.get("suggested_settings_updates", []):
+        entity = update["entry"].get("name", "")
         debt = {
             "debt_id": f"debt-snap-{debt_counter:03d}",
             "debt_type": "unresolved_setting",
             "source_file": scene_path.name,
             "line": update.get("line", 0),
             "text": update["entry"].get("name", "") + ": " + update["entry"].get("role", ""),
-            "entity": update["entry"].get("name", ""),
+            "entity": entity,
             "reason": "来自 suggested_settings_updates",
             "status": "candidate",
             "priority": "P2",
@@ -161,13 +223,20 @@ def extract_debts_from_reviews(reviews: Dict[str, Any], scene_path: Path) -> Lis
         if needs_confirmation or action == "unresolved":
             debt_type = "open_question" if needs_confirmation else "unresolved_setting"
             
+            # 获取实体，优先从 suggested_entry 获取
+            entity = review.get("entity", "")
+            if not entity:
+                suggested_entry = review.get("suggested_entry", {})
+                if suggested_entry:
+                    entity = suggested_entry.get("name", "")
+            
             debt = {
                 "debt_id": f"debt-review-{debt_counter:03d}",
                 "debt_type": debt_type,
                 "source_file": scene_path.name,
                 "line": review.get("line", 0),
                 "text": review.get("reason", ""),
-                "entity": review.get("entity", ""),
+                "entity": entity,
                 "reason": f"LLM review 需要确认: {action}",
                 "status": "candidate",
                 "priority": "P2",
@@ -190,7 +259,7 @@ def build_plot_debt(
     """构建 Plot Debt 表"""
     
     plot_debt = {
-        "phase": "T3-D7.5",
+        "phase": "T3-D7.5.1",
         "engine": "memory_engine",
         "artifact": "plot_debt_table",
         "source_scene": None,
@@ -203,7 +272,8 @@ def build_plot_debt(
         "summary": {
             "total_debts": 0,
             "by_type": {},
-            "needs_user_confirmation": 0
+            "needs_user_confirmation": 0,
+            "with_entity": 0
         },
         "debts": []
     }
@@ -227,13 +297,13 @@ def build_plot_debt(
     # 从 reviews 提取
     debts.extend(extract_debts_from_reviews(reviews, scene_path))
 
-    # 去重（基于 text）
-    seen_texts = set()
+    # 去重（基于 text 和 entity 的组合）
+    seen_keys = set()
     unique_debts = []
     for debt in debts:
-        text_key = debt["text"][:100]  # 取前100字符作为去重键
-        if text_key not in seen_texts:
-            seen_texts.add(text_key)
+        key = f"{debt['text'][:100]}_{debt['entity'][:50]}"
+        if key not in seen_keys:
+            seen_keys.add(key)
             unique_debts.append(debt)
 
     plot_debt["debts"] = unique_debts
@@ -241,6 +311,7 @@ def build_plot_debt(
     # 更新摘要统计
     plot_debt["summary"]["total_debts"] = len(unique_debts)
     plot_debt["summary"]["needs_user_confirmation"] = len([d for d in unique_debts if d["needs_user_confirmation"]])
+    plot_debt["summary"]["with_entity"] = len([d for d in unique_debts if d["entity"]])
     
     # 按类型统计
     type_counts = {}
@@ -284,6 +355,7 @@ def generate_markdown_report(plot_debt: Dict[str, Any]) -> str:
         "",
         f"- 总债务数: {plot_debt['summary']['total_debts']}",
         f"- 需要用户确认: {plot_debt['summary']['needs_user_confirmation']}",
+        f"- 已提取实体: {plot_debt['summary']['with_entity']}",
         "",
         "### 按类型分布",
         "",
@@ -300,14 +372,15 @@ def generate_markdown_report(plot_debt: Dict[str, Any]) -> str:
     if plot_debt["debts"]:
         lines.append("## 债务详情")
         lines.append("")
-        lines.append("| ID | 类型 | 优先级 | 位置 | 摘要 |")
-        lines.append("|----|------|--------|------|------|")
+        lines.append("| ID | 类型 | 优先级 | 实体 | 位置 | 摘要 |")
+        lines.append("|----|------|--------|------|------|------|")
         
         for debt in plot_debt["debts"]:
             type_label = type_labels.get(debt["debt_type"], debt["debt_type"])
             priority_label = priority_labels.get(debt["priority"], debt["priority"])
-            text_preview = debt["text"][:50] + "..." if len(debt["text"]) > 50 else debt["text"]
-            lines.append(f"| {debt['debt_id']} | {type_label} | {priority_label} | 第{debt['line']}行 | {text_preview} |")
+            entity_display = debt["entity"] if debt["entity"] else "-"
+            text_preview = debt["text"][:40] + "..." if len(debt["text"]) > 40 else debt["text"]
+            lines.append(f"| {debt['debt_id']} | {type_label} | {priority_label} | {entity_display} | 第{debt['line']}行 | {text_preview} |")
         lines.append("")
 
         # 需要确认的项
@@ -317,6 +390,8 @@ def generate_markdown_report(plot_debt: Dict[str, Any]) -> str:
             lines.append("")
             for debt in needs_confirmation:
                 lines.append(f"- **{debt['debt_id']}** ({type_labels.get(debt['debt_type'], debt['debt_type'])}):")
+                if debt["entity"]:
+                    lines.append(f"  - 实体: {debt['entity']}")
                 lines.append(f"  - 原文: {debt['text']}")
                 lines.append(f"  - 原因: {debt['reason']}")
                 lines.append(f"  - 建议: {debt['suggested_followup']}")
@@ -333,7 +408,7 @@ def generate_markdown_report(plot_debt: Dict[str, Any]) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Phase T3-D7.5: Plot Debt 表 MVP"
+        description="Phase T3-D7.5.1: Plot Debt 表 MVP (增强实体提取)"
     )
     parser.add_argument("--scene", type=Path, required=True,
                         help="场景 markdown 文件路径")
@@ -349,7 +424,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("Phase T3-D7.5: Plot Debt 表 MVP")
+    print("Phase T3-D7.5.1: Plot Debt 表 MVP (增强实体提取)")
     print("=" * 60)
     print()
 
@@ -392,6 +467,7 @@ def main():
         print("📊 Plot Debt 摘要:")
         print(f"   - 总债务数: {plot_debt['summary']['total_debts']}")
         print(f"   - 需要确认: {plot_debt['summary']['needs_user_confirmation']}")
+        print(f"   - 已提取实体: {plot_debt['summary']['with_entity']}")
         print(f"   - 按类型分布: {plot_debt['summary']['by_type']}")
 
     except Exception as e:

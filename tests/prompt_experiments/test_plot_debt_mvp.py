@@ -19,7 +19,7 @@ def test_plot_debt_json():
     
     # 检查基本结构
     assert "phase" in plot_debt, "缺少 phase 字段"
-    assert plot_debt["phase"] == "T3-D7.5", f"phase 不正确: {plot_debt['phase']}"
+    assert plot_debt["phase"] == "T3-D7.5.1", f"phase 不正确: {plot_debt['phase']}"
     
     assert "engine" in plot_debt, "缺少 engine 字段"
     assert plot_debt["engine"] == "memory_engine", f"engine 不正确: {plot_debt['engine']}"
@@ -38,6 +38,7 @@ def test_plot_debt_json():
     assert "total_debts" in plot_debt["summary"], "缺少 total_debts 字段"
     assert "by_type" in plot_debt["summary"], "缺少 by_type 字段"
     assert "needs_user_confirmation" in plot_debt["summary"], "缺少 needs_user_confirmation 字段"
+    assert "with_entity" in plot_debt["summary"], "缺少 with_entity 字段"
     
     # 检查 debts 列表
     assert "debts" in plot_debt, "缺少 debts 字段"
@@ -59,6 +60,39 @@ def test_plot_debt_json():
     return True
 
 
+def test_entity_extraction():
+    """测试实体提取功能"""
+    json_path = Path("docs/testing/prompt-experiments/plot-debt-mvp-sample.json")
+    
+    assert json_path.exists(), f"Plot Debt JSON 不存在: {json_path}"
+    
+    with open(json_path, encoding="utf-8") as f:
+        plot_debt = json.load(f)
+    
+    # 收集所有实体
+    entities = [debt["entity"] for debt in plot_debt["debts"] if debt["entity"]]
+    
+    print(f"📋 提取到的实体: {entities}")
+    
+    # 检查关键实体是否被提取
+    expected_entities = ["玄黄秘录", "玄铁令牌", "青铜灯", "龙涎香", "五曜珠", "玄黄秘境", "天机阁"]
+    
+    missing_entities = []
+    for expected in expected_entities:
+        if expected not in entities:
+            missing_entities.append(expected)
+    
+    if missing_entities:
+        print(f"⚠️ 缺失的实体: {missing_entities}")
+    
+    # 至少应有部分关键实体被提取
+    found_count = sum(1 for expected in expected_entities if expected in entities)
+    assert found_count >= 5, f"至少应提取到 5 个关键实体，实际提取到 {found_count} 个"
+    
+    print(f"✅ 实体提取测试通过! 提取到 {len(entities)} 个实体")
+    return True
+
+
 def test_markdown_report():
     """测试 Markdown 报告"""
     md_path = Path("docs/testing/prompt-experiments/plot-debt-mvp-sample.md")
@@ -68,9 +102,10 @@ def test_markdown_report():
     content = md_path.read_text(encoding="utf-8")
     
     assert "# Plot Debt 报告" in content, "报告标题不正确"
-    assert "Phase**" in content and "T3-D7.5" in content, "缺少 Phase 信息"
+    assert "Phase**" in content and "T3-D7.5.1" in content, "缺少 Phase 信息"
     assert "LLM Called**" in content and ": No" in content, "LLM Called 状态不正确"
     assert "Auto Write Settings**" in content and ": No" in content, "Auto Write Settings 状态不正确"
+    assert "已提取实体" in content, "缺少已提取实体统计"
     
     print("✅ Markdown 报告测试通过!")
     return True
@@ -79,6 +114,7 @@ def test_markdown_report():
 def main():
     try:
         test_plot_debt_json()
+        test_entity_extraction()
         test_markdown_report()
         print()
         print("🎉 所有测试通过!")
