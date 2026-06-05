@@ -59,7 +59,7 @@
 | Phase T4.1.2 | ChatPanel 触发契约与缺口确认 | ⚠️ | 静态 UI 链路确认，部分 Chat 入口未确认 | 文档验收 |
 | Phase T4.1.3 | ChatPanel → Candidate/Workflow 触发 dry-run 修复 | ⚠️ | 已打通欢迎建议 → generation/candidate 触发链路 | 文档验收 |
 | Phase T4.2 | Lite / Professional 共存与切换基线验收 | ⚠️ | 静态验收通过，模式切换 UI 尚未实现 | 文档验收 |
-| Phase T4.3 | 原专业版编辑能力验收 | ⏳ | - |
+| Phase T4.3 | 原专业版编辑能力验收 | ⚠️ | 静态验收通过，编辑能力存在且走 candidate，不破坏 Lite | 文档验收 |
 | Phase T4.4 | Workflow / Pipeline / Prompt 模块验收 | ⏳ | - |
 | Phase T4.5 | Story State / Materials / 文件系统验收 | ⏳ | - |
 | Phase T4.6 | Batch / Stream / SSE / Task 验收 | ⏳ | - |
@@ -106,6 +106,7 @@
 | Phase T4.1.2 | ⚠️ | 2026-06-05 | ChatPanel 触发契约与缺口确认 |
 | Phase T4.1.3 | ⚠️ | 2026-06-05 | ChatPanel → Candidate/Workflow 触发 dry-run 修复 |
 | Phase T4.2 | ⚠️ | 2026-06-05 | Lite / Professional 共存与切换基线验收 |
+| Phase T4.3 | ⚠️ | 2026-06-05 | 原专业版编辑能力验收 |
 
 ---
 
