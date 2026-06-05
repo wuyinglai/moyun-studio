@@ -142,7 +142,7 @@ Moyun Studio 当前处于架构收口与产品体验优化阶段，整体目标�
 | Phase T3-D7.3d | 真实 LLM Review 全量 14 条 | ✅ | 使用 Agnes AI API 成功完成 14 条，通过 validator 验证 | 功能验收 |
 | Phase T3-D7.3 | LLM Review + 覆盖校验 | ✅ | 定义 review schema、校验覆盖率、完成全量 14 条验证 | 功能验收 |
 | Phase T3-D7.4 | State Snapshot MVP | ✅ | 提取事实、生成 snapshot JSON 和 Markdown 报告 | 功能验收 |
-| Phase T3-D7.5 | Plot Debt 表 MVP | ⏳ | 记录伏笔、到期提醒 | 功能验收 |
+| Phase T3-D7.5 | Plot Debt 表 MVP | ✅ | 识别伏笔、承诺、威胁、开放问题，生成候选债务表 | 功能验收 |
 | Phase T4 | Professional 真实生成冒烟测试 | ⏳ | - | - |
 | Phase T5 | 输出质量评分表 | ⏳ | - | - |
 | Phase T6 | 候选稿采用/回滚测试 | ⏳ | - | - |

@@ -426,11 +426,35 @@ Python 负责：
 - **专业版 Prompt 设计准备**：约 30%
 - **说明**：Snapshot 是 Memory Engine 的第一步，为后续连续性检查、剧情债务表、局部 Rewrite Engine 提供基础数据
 
-### Phase T3-D7.5：Plot Debt 表 MVP ⏳
-- 定义 plot debt JSON schema
-- Python 扫描正文发现潜在伏笔
-- 生成 plot_debt.md
-- 简单的到期提醒
+### Phase T3-D7.5：Plot Debt 表 MVP ✅
+- **新增脚本**：`tests/prompt_experiments/plot_debt_mvp.py`
+- **输入**：场景 markdown、state snapshot JSON、review-engine output JSON
+- **输出**：Plot Debt JSON + Markdown 报告
+- **支持的债务类型**：
+  - `foreshadowing`（伏笔）：日后揭晓、下文分解等
+  - `promise`（承诺）：答应、约定、发誓等
+  - `threat`（威胁）：危险、杀机、危机等
+  - `mystery`（谜团）：神秘、未解、蹊跷等
+  - `unexplained_item`（未解释道具）：钥匙、令牌、密信等
+  - `unresolved_setting`（未解决设定）：秘境、禁地、遗迹等
+  - `open_question`（开放问题）：为何、谁、真相、下落等
+- **核心功能**：
+  - 基于关键词规则从场景文本中提取剧情债务候选
+  - 从 snapshot 的 suggested_settings_updates 提取 unresolved_setting
+  - 从 review 的 needs_user_confirmation 项生成 open_question
+  - 自动去重，避免重复记录
+- **关键设计**：
+  - `llm_called`: false（不调用新的 LLM）
+  - `auto_write_settings`: false（不自动入库）
+  - 所有债务状态默认是 `candidate`，不自动确认
+  - 根据债务类型自动确定优先级（P1/P2/P3）
+- **输出文件**：
+  - `docs/testing/prompt-experiments/plot-debt-mvp-sample.json`
+  - `docs/testing/prompt-experiments/plot-debt-mvp-sample.md`
+- **测试**：`tests/prompt_experiments/test_plot_debt_mvp.py`（所有测试通过）
+- **质量引擎进度**：约 48%
+- **专业版 Prompt 设计准备**：约 34%
+- **说明**：Plot Debt 是 Memory Engine 的第二步，为长篇小说连续性管理提供伏笔追踪能力
 
 ### Phase T3-D7.6：局部 Rewrite Engine MVP ⏳
 - 对 confirmed issues 提供改写建议
