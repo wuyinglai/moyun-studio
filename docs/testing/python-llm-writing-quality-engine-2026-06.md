@@ -354,6 +354,13 @@ Python 负责：
 - Validator 报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-validator.md`
 - 重要：真实 LLM Review 只跑 3 条 candidates，全量 14 条留到后续 D7.3d
 
+### Phase T3-D7.3c-b：真实 LLM Review 3 条冒烟 ⚠️ 环境限制
+- 已尝试真实 LLM 调用，因环境配置问题失败
+- 失败原因：LLM Provider NOT provided（模型名称格式需要 provider 前缀）
+- 失败报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-report-failure.md`
+- 脚本已修复，支持 --real-run 参数调用真实 LLM
+- 待修复：需要在 .env 中配置正确的 LLM_PROVIDER 和 LLM_MODEL
+
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema
 - Python 调用 LLM 对 candidates 做判断

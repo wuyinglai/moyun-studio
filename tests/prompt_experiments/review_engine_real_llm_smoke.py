@@ -211,8 +211,8 @@ def main():
                         help=f"输出 JSON 路径 (默认: {DEFAULT_OUTPUT_JSON_PATH})")
     parser.add_argument("--output-md", type=Path, default=DEFAULT_OUTPUT_MD_PATH,
                         help=f"输出 Markdown 报告路径 (默认: {DEFAULT_OUTPUT_MD_PATH})")
-    parser.add_argument("--dry-run", action="store_true", default=True,
-                        help="Dry-run 模式 (默认开启，不调用 LLM)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Dry-run 模式 (不调用 LLM，默认)")
     parser.add_argument("--real-run", action="store_true",
                         help="Real-run 模式 (允许调用真实 LLM)")
 
@@ -223,15 +223,13 @@ def main():
     print("=" * 60)
     print()
 
-    # 决定运行模式
-    is_real_run = args.real_run and not args.dry_run
+    # 决定运行模式：默认 dry-run，只有显式 --real-run 才允许真实调用
+    is_real_run = args.real_run
     if is_real_run:
         mode = "REAL-RUN"
     else:
         mode = "DRY-RUN"
-        # 如果用户同时传了 --real-run 和 --dry-run，默认 DRY-RUN
-        if args.real_run and args.dry_run:
-            print("⚠️  WARNING: 同时指定 --real-run 和 --dry-run，将使用 --dry-run")
+        print("ℹ️  默认使用 DRY-RUN 模式，如需真实调用请添加 --real-run")
 
     print(f"ℹ️   运行模式: {mode}")
     print()
