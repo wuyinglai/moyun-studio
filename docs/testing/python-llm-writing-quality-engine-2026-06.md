@@ -355,11 +355,13 @@ Python 负责：
 - 重要：真实 LLM Review 只跑 3 条 candidates，全量 14 条留到后续 D7.3d
 
 ### Phase T3-D7.3c-b：真实 LLM Review 3 条冒烟 ⚠️ 环境限制
-- 已尝试真实 LLM 调用，因环境配置问题失败
-- 失败原因：LLM Provider NOT provided（模型名称格式需要 provider 前缀）
+- 已修复 provider/model 适配问题
+- 新增 `get_llm_config_safely()` 和 `build_litellm_model_name()` 函数
+- Provider/model 适配已正确：`custom/agnes-2.0-flash`
+- 当前失败原因：APIConnectionError - 404 Not Found for https://apihub.agnes-ai.com/v1
 - 失败报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-report-failure.md`
-- 脚本已修复，支持 --real-run 参数调用真实 LLM
-- 待修复：需要在 .env 中配置正确的 LLM_PROVIDER 和 LLM_MODEL
+- 这是 API URL 配置问题，不是脚本问题
+- 待修复：检查 .env 中的 LLM_API_BASE 是否正确
 
 ### Phase T3-D7.3：LLM Review + 覆盖校验 ⏳
 - 定义 LLM review JSON schema

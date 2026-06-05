@@ -3,8 +3,7 @@
 - **Phase**: T3-D7.3c
 - **Status**: ❌ FAILED
 - **Failure Type**: RuntimeError
-- **Failure Reason**: LLM 调用失败: BadRequestError: litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=agnes-2.0-flash
- Pass model as E.g. For 'Huggingface' inference endpoints pass in `completion(model='huggingface/starcoder',..)` Learn more: https://docs.litellm.ai/docs/providers
+- **Failure Reason**: LLM 调用失败: APIConnectionError: litellm.APIConnectionError: CustomException - {"error":{"message":"Invalid URL (POST /v1)","type":"invalid_request_error","param":"","code":""}}
 
 ## 说明
 

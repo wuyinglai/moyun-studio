@@ -78,9 +78,135 @@ def run_dry_run(template_text: str, candidates_data: Dict[str, Any]) -> Tuple[Di
     return mock_output, "DRY-RUN: 使用预设 mock output"
 
 
+def get_llm_config_safely() -> Dict[str, Any]:
+    """
+    安全地获取 LLM 配置
+    - 不打印 API Key
+    - 只返回配置状态
+    """
+    import os
+    from dotenv import load_dotenv
+
+    config = {
+        "configured": False,
+        "provider": None,
+        "model": None,
+        "api_base": None,
+        "provider_configured": False,
+        "model_configured": False,
+        "api_base_configured": False
+    }
+
+    # 尝试从 .env 加载
+    env_path = Path(".env")
+    if env_path.exists():
+        load_dotenv(env_path)
+
+    # 检查 API Key（不打印）
+    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return config
+
+    # 获取 provider
+    provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+    if provider:
+        config["provider"] = provider
+        config["provider_configured"] = True
+
+    # 获取 model
+    model = os.getenv("LLM_MODEL", "").strip()
+    if model:
+        config["model"] = model
+        config["model_configured"] = True
+
+    # 获取 api_base
+    api_base = os.getenv("LLM_API_BASE", "").strip()
+    if api_base:
+        config["api_base"] = api_base
+        config["api_base_configured"] = True
+
+    # 只有当 provider 和 model 都配置时才认为配置完成
+    if config["provider_configured"] and config["model_configured"]:
+        config["configured"] = True
+
+    return config
+
+
+def build_litellm_model_name(provider: str, model: str) -> str:
+    """
+    为 LiteLLM 构建正确的 model 名称
+    - provider: 如 openai, anthropic, ollama, custom 等
+    - model: 如 gpt-4o-mini, claude-3, 等
+
+    LiteLLM 需要 `provider/model` 格式，或特定格式
+    """
+    if not provider or not model:
+        return model
+
+    # 如果 model 已经包含 /，直接返回
+    if "/" in model:
+        return model
+
+    # 根据 provider 构建正确的 model 名称
+    provider = provider.lower()
+
+    # 已知不需要前缀的 provider 或特殊处理
+    if provider == "openai":
+        # OpenAI 模型可以是裸模型名
+        return model
+
+    if provider == "anthropic":
+        # Anthropic 模型可以是裸模型名
+        return model
+
+    if provider == "ollama":
+        # Ollama 需要 ollama/ 前缀
+        return f"ollama/{model}"
+
+    if provider == "deepseek":
+        # DeepSeek 使用 openai/ 兼容格式
+        return f"openai/{model}"
+
+    if provider == "custom":
+        # Custom provider 需要使用 custom/ 前缀
+        # LiteLLM 对于 custom endpoint 使用 custom/ 前缀
+        return f"custom/{model}"
+
+    # 默认：添加 provider/ 前缀
+    return f"{provider}/{model}"
+
+
 def run_real_run(template_text: str, candidates_data: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
     """Real-run 模式：调用真实 LLM（仅当 --real-run 时执行）"""
     print("🚀 REAL-RUN 模式：尝试调用真实 LLM")
+
+    # 安全的 LLM 配置获取
+    config = get_llm_config_safely()
+
+    if not config["configured"]:
+        reasons = []
+        if not config["provider_configured"]:
+            reasons.append("LLM_PROVIDER 未配置")
+        if not config["model_configured"]:
+            reasons.append("LLM_MODEL 未配置")
+        if not config["api_base_configured"]:
+            reasons.append("LLM_API_BASE 未配置")
+
+        failure_msg = f"LLM 配置不完整: {', '.join(reasons)}"
+        raise RuntimeError(failure_msg)
+
+    # 构建 LiteLLM 兼容的 model 名称
+    litellm_model = build_litellm_model_name(
+        config["provider"],
+        config["model"]
+    )
+
+    # 调用 LLM（只打印 sanitized 信息）
+    print(f"ℹ️   LLM 配置:")
+    print(f"   - provider: {config['provider']}")
+    print(f"   - model: {config['model']}")
+    print(f"   - LiteLLM model: {litellm_model}")
+    print(f"   - api_base: {'已配置' if config['api_base_configured'] else '未配置'}")
 
     # 简单的 LiteLLM 调用封装（不依赖后端模块）
     try:
@@ -88,40 +214,24 @@ def run_real_run(template_text: str, candidates_data: Dict[str, Any]) -> Tuple[D
     except ImportError:
         raise RuntimeError("缺少依赖: pip install litellm")
 
-    # 检查是否有 .env 或可用配置（不打印具体值）
-    llm_configured = False
-    llm_provider = "unknown"
-    llm_model = "unknown"
-
-    # 尝试从环境或简单配置读取（不打印密钥）
-    import os
-    from dotenv import load_dotenv
-    env_path = Path(".env")
-    if env_path.exists():
-        load_dotenv(env_path)
-        api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
-        if api_key:
-            llm_configured = True
-            llm_provider = os.getenv("LLM_PROVIDER", "openai")
-            llm_model = os.getenv("LLM_MODEL", "gpt-4o-mini")
-
-    if not llm_configured:
-        raise RuntimeError("LLM 配置未找到。缺少 API Key 或相关配置。")
-
     # 构建完整 Prompt
     full_prompt = build_prompt_for_llm(template_text, candidates_data)
 
-    # 调用 LLM（只打印 provider/model，不打印 key）
-    print(f"ℹ️   调用 LLM: provider={llm_provider}, model={llm_model}")
+    # 准备 litellm 参数
+    litellm_kwargs = {
+        "model": litellm_model,
+        "messages": [{"role": "user", "content": full_prompt}],
+        "max_tokens": 2000,
+        "temperature": 0.1
+    }
+
+    # 如果有 api_base，添加到参数
+    if config["api_base_configured"]:
+        litellm_kwargs["api_base"] = config["api_base"]
 
     try:
-        # 简单的非流式调用
-        response = litellm.completion(
-            model=llm_model,
-            messages=[{"role": "user", "content": full_prompt}],
-            max_tokens=2000,
-            temperature=0.1
-        )
+        # 调用 LLM
+        response = litellm.completion(**litellm_kwargs)
         raw_output = response.choices[0].message.content.strip()
 
         # 尝试提取 JSON
