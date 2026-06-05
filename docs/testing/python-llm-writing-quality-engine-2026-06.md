@@ -521,6 +521,13 @@ Python 负责：
 - **质量引擎进度**：约 56%
 - **专业版 Prompt 设计准备**：约 40%
 
+### Phase T3-D7.7：D7 总体验收与流水线收口 ✅
+- **优化内容**：D7 全链路总体验收与文档收口
+- **详细文档**：[d7-writing-quality-engine-acceptance-2026-06.md](./d7-writing-quality-engine-acceptance-2026-06.md)
+- **质量引擎进度**：约 60%
+- **专业版 Prompt 设计准备**：约 42%
+- **说明**：D7 MVP 链路完成，不新增功能，准备进入 D7 Pipeline 一键 dry-run
+
 ---
 
 ## 6. 不做的事
