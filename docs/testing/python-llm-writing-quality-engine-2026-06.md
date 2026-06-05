@@ -368,6 +368,20 @@ Python 负责：
 - Validator 报告：`docs/testing/prompt-experiments/review-engine-real-llm-smoke-validator.md`
 - 质量引擎进度：约 32%
 
+### Phase T3-D7.3d：真实 LLM Review 全量 14 条 ✅
+- 使用完整 candidates 文件：`docs/testing/prompt-experiments/diff-engine-existence-mvp-sample.json`（14 条）
+- 直接使用 OpenAI SDK 调用 Agnes AI API（稳定可靠）
+- **执行结果**：
+  - 真实 LLM Review 成功完成全量 14 条
+  - 所有 candidate_id 全覆盖，无漏项
+  - 输出 JSON 通过 validator 验证
+  - 字段合法性检查通过
+  - action 枚举值均合法（suggest_add_to_settings, suggest_ignore）
+- 报告：`docs/testing/prompt-experiments/review-engine-real-llm-full-report.md`
+- Validator 报告：`docs/testing/prompt-experiments/review-engine-real-llm-full-validator.md`
+- 质量引擎进度：约 36%
+- 专业版 Prompt 设计准备：约 26%
+
 ### Phase T3-D7.3c-b1：LLM endpoint 配置探针 ✅
 - 新增探针脚本：`tests/prompt_experiments/llm_endpoint_probe.py`
 - 默认 --dry-run 模式，不发送请求
