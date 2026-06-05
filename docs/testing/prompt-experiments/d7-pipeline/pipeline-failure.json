@@ -1,0 +1,42 @@
+{
+  "phase": "T3-D7.8",
+  "pipeline": "d7_quality_engine_dryrun",
+  "status": "failed",
+  "error": "State Snapshot failed",
+  "steps_completed": 4,
+  "steps": [
+    {
+      "name": "diff_engine",
+      "status": "passed",
+      "command": "python tests/prompt_experiments/diff_engine_existence_mvp.py --scene tests\\fixtures\\diff_engine_existence\\scene_with_new_settings.md --settings-dir tests\\fixtures\\diff_engine_existence\\settings --output-json docs\\testing\\prompt-experiments\\d7-pipeline\\diff-candidates.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\diff-candidates.md",
+      "outputs": [
+        "diff-candidates.json",
+        "diff-candidates.md"
+      ],
+      "check_result": {
+        "candidates": 0
+      }
+    },
+    {
+      "name": "review_engine",
+      "status": "passed",
+      "note": "Used existing review output (no new LLM call)",
+      "source": "docs\\testing\\prompt-experiments\\review-engine-real-llm-full-output.json"
+    },
+    {
+      "name": "review_validator",
+      "status": "passed",
+      "command": "python tests/prompt_experiments/review_engine_validator.py --candidates-json docs\\testing\\prompt-experiments\\d7-pipeline\\diff-candidates.json --reviews-json docs\\testing\\prompt-experiments\\d7-pipeline\\review-output.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\review-validator.md --expect-valid true",
+      "outputs": [
+        "review-validator.md"
+      ]
+    },
+    {
+      "name": "state_snapshot",
+      "status": "failed",
+      "command": "python tests/prompt_experiments/state_snapshot_mvp.py --scene tests\\fixtures\\diff_engine_existence\\scene_with_new_settings.md --reviews-json docs\\testing\\prompt-experiments\\d7-pipeline\\review-output.json --output-json docs\\testing\\prompt-experiments\\d7-pipeline\\state-snapshot.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\state-snapshot.md",
+      "error": "usage: state_snapshot_mvp.py [-h] --scene SCENE\n                             --candidates-json CANDIDATES_JSON\n                             --reviews-json REVIEWS_JSON\n                             --output-json OUTPUT_JSON --output-md OUTPUT_MD\nstate_snapshot_mvp.py: error: the following arguments are required: --candidates-json\n"
+    }
+  ],
+  "timestamp": "2026-06-05T18:34:22.588297"
+}

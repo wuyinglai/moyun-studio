@@ -1,0 +1,80 @@
+{
+  "phase": "T3-D7.8",
+  "pipeline": "d7_quality_engine_dryrun",
+  "llm_called": false,
+  "used_existing_review_output": true,
+  "auto_write_scene": false,
+  "auto_write_settings": false,
+  "steps": [
+    {
+      "name": "diff_engine",
+      "status": "passed",
+      "command": "python tests/prompt_experiments/diff_engine_existence_mvp.py --scene tests\\fixtures\\diff_engine_existence\\scene_with_new_settings.md --settings-dir tests\\fixtures\\diff_engine_existence\\settings --output-json docs\\testing\\prompt-experiments\\d7-pipeline\\diff-candidates.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\diff-candidates.md",
+      "outputs": [
+        "diff-candidates.json",
+        "diff-candidates.md"
+      ],
+      "check_result": {
+        "candidates": 0
+      }
+    },
+    {
+      "name": "review_engine",
+      "status": "passed",
+      "note": "Used existing review output (no new LLM call)",
+      "source": "docs\\testing\\prompt-experiments\\review-engine-real-llm-full-output.json"
+    },
+    {
+      "name": "review_validator",
+      "status": "passed",
+      "command": "python tests/prompt_experiments/review_engine_validator.py --candidates-json docs\\testing\\prompt-experiments\\d7-pipeline\\diff-candidates.json --reviews-json docs\\testing\\prompt-experiments\\d7-pipeline\\review-output.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\review-validator.md --expect-valid true",
+      "outputs": [
+        "review-validator.md"
+      ]
+    },
+    {
+      "name": "state_snapshot",
+      "status": "passed",
+      "command": "python tests/prompt_experiments/state_snapshot_mvp.py --scene tests\\fixtures\\diff_engine_existence\\scene_with_new_settings.md --candidates-json docs\\testing\\prompt-experiments\\d7-pipeline\\diff-candidates.json --reviews-json docs\\testing\\prompt-experiments\\d7-pipeline\\review-output.json --output-json docs\\testing\\prompt-experiments\\d7-pipeline\\state-snapshot.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\state-snapshot.md",
+      "outputs": [
+        "state-snapshot.json",
+        "state-snapshot.md"
+      ],
+      "check_result": {
+        "updates": 0
+      }
+    },
+    {
+      "name": "plot_debt",
+      "status": "passed",
+      "command": "python tests/prompt_experiments/plot_debt_mvp.py --scene tests\\fixtures\\diff_engine_existence\\scene_with_new_settings.md --snapshot-json docs\\testing\\prompt-experiments\\d7-pipeline\\state-snapshot.json --reviews-json docs\\testing\\prompt-experiments\\d7-pipeline\\review-output.json --output-json docs\\testing\\prompt-experiments\\d7-pipeline\\plot-debt.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\plot-debt.md",
+      "outputs": [
+        "plot-debt.json",
+        "plot-debt.md"
+      ],
+      "check_result": {
+        "debts": 25
+      }
+    },
+    {
+      "name": "rewrite_engine",
+      "status": "passed",
+      "command": "python tests/prompt_experiments/rewrite_engine_mvp.py --scene tests\\fixtures\\diff_engine_existence\\scene_with_new_settings.md --snapshot-json docs\\testing\\prompt-experiments\\d7-pipeline\\state-snapshot.json --plot-debt-json docs\\testing\\prompt-experiments\\d7-pipeline\\plot-debt.json --reviews-json docs\\testing\\prompt-experiments\\d7-pipeline\\review-output.json --output-json docs\\testing\\prompt-experiments\\d7-pipeline\\rewrite-suggestions.json --output-md docs\\testing\\prompt-experiments\\d7-pipeline\\rewrite-suggestions.md --max-suggestions 5",
+      "outputs": [
+        "rewrite-suggestions.json",
+        "rewrite-suggestions.md"
+      ],
+      "check_result": {
+        "suggestions": 5
+      }
+    }
+  ],
+  "summary": {
+    "candidates": 0,
+    "reviews": 14,
+    "snapshot_updates": 0,
+    "plot_debts": 25,
+    "rewrite_suggestions": 5
+  },
+  "timestamp": "2026-06-05T18:34:40.969155"
+}
