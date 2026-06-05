@@ -261,11 +261,19 @@ Python 负责：
 ### Phase T3-D7.0：架构设计文档 ✅
 （本阶段）
 
-### Phase T3-D7.1：Diff Engine 存在性比对 MVP ⏳
-- 扫描正文提取实体（人名、地名）
+### Phase T3-D7.1：Diff Engine 存在性比对 MVP ✅
+- 扫描正文提取实体（人名、地名、道具、势力、术语）
 - 比对实体是否在设定库中存在
 - 生成 candidate issues（新增实体 vs 已知实体）
 - 不做语义理解，只做存在性比对
+- 输出 JSON 和 Markdown 报告
+- 不调用 LLM
+- 不自动入库
+
+**本阶段完成说明**：
+- 脚本位置：`tests/prompt_experiments/diff_engine_existence_mvp.py`
+- 示例报告：`docs/testing/prompt-experiments/diff-engine-existence-mvp-sample.json` 和 `diff-engine-existence-mvp-sample.md`
+- 下一阶段：Phase T3-D7.2 可以基于此做更完善的 candidate 格式化，然后 Phase T3-D7.3 接入 LLM review
 
 ### Phase T3-D7.2：Candidate JSON + Markdown report ⏳
 - 定义 candidate JSON schema
