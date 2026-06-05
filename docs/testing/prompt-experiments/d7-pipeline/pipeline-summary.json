@@ -15,7 +15,17 @@
         "diff-candidates.md"
       ],
       "check_result": {
-        "candidates": 0
+        "candidates": 14,
+        "known_diff_noise": [
+          {
+            "entity": "着昏黄的灯",
+            "reason": "Diff Engine candidate noise; should be reviewed/ignored downstream"
+          },
+          {
+            "entity": "李玄推阁",
+            "reason": "Diff Engine candidate noise; should be reviewed/ignored downstream"
+          }
+        ]
       }
     },
     {
@@ -70,11 +80,21 @@
     }
   ],
   "summary": {
-    "candidates": 0,
+    "candidates": 14,
     "reviews": 14,
     "snapshot_updates": 0,
     "plot_debts": 25,
     "rewrite_suggestions": 5
   },
-  "timestamp": "2026-06-05T18:34:40.969155"
+  "known_diff_noise": [
+    {
+      "entity": "着昏黄的灯",
+      "reason": "Diff Engine candidate noise; should be reviewed/ignored downstream"
+    },
+    {
+      "entity": "李玄推阁",
+      "reason": "Diff Engine candidate noise; should be reviewed/ignored downstream"
+    }
+  ],
+  "timestamp": "2026-06-05T18:43:10.154253"
 }

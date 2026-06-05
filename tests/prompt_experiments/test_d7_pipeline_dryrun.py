@@ -61,6 +61,9 @@ def test_pipeline_summary():
     assert "plot_debts" in summary
     assert "rewrite_suggestions" in summary
     
+    # 测试 candidates 数量（应该是 14，不是 0）
+    assert summary['candidates'] == 14, f"Candidates 应该是 14，实际是 {summary['candidates']}"
+    
     print("📊 Summary:")
     print(f"   - Candidates: {summary['candidates']}")
     print(f"   - Reviews: {summary['reviews']}")
@@ -73,7 +76,19 @@ def test_pipeline_summary():
     assert summary['rewrite_suggestions'] > 0, "应该有 rewrite suggestions"
     assert summary['plot_debts'] > 0, "应该有 plot debts"
     
-    print("✅ Pipeline Summary 测试通过!")
+    # 测试 known_diff_noise 字段
+    assert "known_diff_noise" in data, "应该有 known_diff_noise 字段"
+    known_noise = data.get("known_diff_noise", [])
+    print(f"\n📊 Known Diff Noise: {len(known_noise)}")
+    for noise in known_noise:
+        print(f"   - {noise['entity']}: {noise['reason']}")
+    
+    # 验证已知噪声实体
+    noise_entities = [n['entity'] for n in known_noise]
+    assert "着昏黄的灯" in noise_entities, "应该包含 '着昏黄的灯'"
+    assert "李玄推阁" in noise_entities, "应该包含 '李玄推阁'"
+    
+    print("\n✅ Pipeline Summary 测试通过!")
     return True
 
 

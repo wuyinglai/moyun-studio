@@ -100,13 +100,27 @@ class D7PipelineDryrun:
     
     def check_diff_candidates(self, output_dir: Path) -> Dict[str, Any]:
         """检查 Diff Engine 输出"""
-        result = {"candidates": 0}
+        result = {"candidates": 0, "known_diff_noise": []}
         diff_file = output_dir / "diff-candidates.json"
         if diff_file.exists():
             with open(diff_file, encoding="utf-8") as f:
                 data = json.load(f)
-                result["candidates"] = len(data.get("candidates", []))
+                # 从 summary.items_found 读取 candidates
+                if "summary" in data and "items_found" in data["summary"]:
+                    result["candidates"] = data["summary"]["items_found"]
+                else:
+                    result["candidates"] = len(data.get("items", []))
                 self.summary["candidates"] = result["candidates"]
+                
+                # 记录已知的 diff noise
+                noise_entities = ["着昏黄的灯", "李玄推阁"]
+                for item in data.get("items", []):
+                    entity = item.get("entity", "")
+                    if entity in noise_entities:
+                        result["known_diff_noise"].append({
+                            "entity": entity,
+                            "reason": "Diff Engine candidate noise; should be reviewed/ignored downstream"
+                        })
         return result
     
     def check_review_output(self, output_dir: Path) -> Dict[str, Any]:
@@ -291,6 +305,12 @@ class D7PipelineDryrun:
     
     def generate_pipeline_summary(self):
         """生成 Pipeline Summary"""
+        # 收集所有 known_diff_noise
+        known_diff_noise = []
+        for step in self.steps:
+            if "check_result" in step and "known_diff_noise" in step["check_result"]:
+                known_diff_noise.extend(step["check_result"]["known_diff_noise"])
+        
         summary = {
             "phase": "T3-D7.8",
             "pipeline": "d7_quality_engine_dryrun",
@@ -300,6 +320,7 @@ class D7PipelineDryrun:
             "auto_write_settings": False,
             "steps": self.steps,
             "summary": self.summary,
+            "known_diff_noise": known_diff_noise,
             "timestamp": datetime.now().isoformat(),
         }
         
@@ -339,6 +360,23 @@ class D7PipelineDryrun:
             f"- **Plot Debts**: {self.summary['plot_debts']}",
             f"- **Rewrite Suggestions**: {self.summary['rewrite_suggestions']}",
             "",
+        ])
+        
+        # 添加 known diff noise
+        if known_diff_noise:
+            md_lines.extend([
+                "## Known Diff Noise",
+                "",
+                "> **Note**: These are candidate noise, NOT confirmed settings. They will be reviewed/ignored downstream.",
+                "",
+                "| Entity | Reason |",
+                "|--------|--------|",
+            ])
+            for noise in known_diff_noise:
+                md_lines.append(f"| {noise['entity']} | {noise['reason']} |")
+            md_lines.append("")
+        
+        md_lines.extend([
             f"**Timestamp**: {summary['timestamp']}",
         ])
         

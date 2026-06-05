@@ -20,10 +20,19 @@
 
 ## Summary
 
-- **Candidates**: 0
+- **Candidates**: 14
 - **Reviews**: 14
 - **Snapshot Updates**: 0
 - **Plot Debts**: 25
 - **Rewrite Suggestions**: 5
 
-**Timestamp**: 2026-06-05T18:34:40.969155
+## Known Diff Noise
+
+> **Note**: These are candidate noise, NOT confirmed settings. They will be reviewed/ignored downstream.
+
+| Entity | Reason |
+|--------|--------|
+| 着昏黄的灯 | Diff Engine candidate noise; should be reviewed/ignored downstream |
+| 李玄推阁 | Diff Engine candidate noise; should be reviewed/ignored downstream |
+
+**Timestamp**: 2026-06-05T18:43:10.154253

@@ -109,6 +109,10 @@ Rewrite Engine Suggestions
 
 - Phase T3-D7.7：D7 总体验收与流水线收口 ✅
 - Phase T3-D7.8：D7 Pipeline 一键 dry-run ✅
+- Phase T3-D7.8.1：Pipeline summary 统计修正 + Diff 噪声记录 ✅
+
+建议新增：
+
 - Phase T3-D7.9：用户确认清单 MVP
 - Phase T4.0：Professional Prompt 架构设计
 - Phase T4.1：Professional 生成前 Scene Plan 验收
