@@ -61,8 +61,8 @@
 | Phase T4.2 | Lite / Professional 共存与切换基线验收 | ⚠️ | 静态验收通过，模式切换 UI 尚未实现 | 文档验收 |
 | Phase T4.3 | 原专业版编辑能力验收 | ⚠️ | 静态验收通过，编辑能力存在且走 candidate，不破坏 Lite | 文档验收 |
 | Phase T4.4 | Workflow / Pipeline / Prompt 模块验收 | ⚠️ | 静态验收通过，核心模块完整，Prompt Editor/Variant 未完整实现 | 文档验收 |
-| Phase T4.5 | Story State / Materials / 文件系统验收 | ⏳ | - |
-| Phase T4.6 | Batch / Stream / SSE / Task 验收 | ⏳ | - |
+| Phase T4.5 | Story State / Materials / 文件系统验收 | ⚠️ | 静态验收通过，核心能力完整且安全，不自动覆盖正文 | 文档验收 |
+| Phase T4.6 | Batch / Stream / SSE / Task 验收 | ⚠️ | 静态验收通过，SSE/Task完整，Batch/Stream部分未实现 | 文档验收 |
 | Phase T4.7 | 原专业版问题修复收口 | ⏳ | - |
 | Phase T4.8 | Scene Plan schema + validator dry-run | ⏳ | - |
 | Phase T4.9 | Selected-card → Scene Brief / Scene Plan | ⏳ | - |
@@ -109,6 +109,7 @@
 | Phase T4.3 | ⚠️ | 2026-06-05 | 原专业版编辑能力验收 |
 | Phase T4.4 | ⚠️ | 2026-06-05 | Workflow / Pipeline / Prompt 模块验收 |
 | Phase T4.5 | ⚠️ | 2026-06-05 | Story State / Materials / 文件系统验收 |
+| Phase T4.6 | ⚠️ | 2026-06-05 | Batch / Stream / SSE / Task 验收 |
 
 ---
 
