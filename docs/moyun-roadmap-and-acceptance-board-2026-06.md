@@ -4,9 +4,9 @@
 
 | 项目 | 当前进度 | 说明 |
 | ---- | ---- | ---- |
-| v0.1.x 总体进度 | ~82% | Lite Prompt 优化 + D7 质量引擎 MVP |
+| v0.1.x 总体进度 | ~88% | Lite Prompt 优化 + D7 质量引擎 MVP |
 | Lite Prompt 优化 | ~70% | 快速生成已可用 |
-| 专业版 Prompt 设计准备 | ~50% | T4 阶段启动 |
+| 专业版设计准备 | ~58% | T4 问题清单完成，准备修复 |
 | Python + LLM 写作质量与一致性引擎 | ~65% | D7 MVP 链路完成 |
 
 ---
@@ -63,7 +63,12 @@
 | Phase T4.4 | Workflow / Pipeline / Prompt 模块验收 | ⚠️ | 静态验收通过，核心模块完整，Prompt Editor/Variant 未完整实现 | 文档验收 |
 | Phase T4.5 | Story State / Materials / 文件系统验收 | ⚠️ | 静态验收通过，核心能力完整且安全，不自动覆盖正文 | 文档验收 |
 | Phase T4.6 | Batch / Stream / SSE / Task 验收 | ⚠️ | 静态验收通过，SSE/Task完整，Batch/Stream部分未实现 | 文档验收 |
-| Phase T4.7 | 原专业版问题修复收口 | ⏳ | - |
+| Phase T4.7 | 原专业版问题修复收口 | ⚠️ | 问题清单与修复计划完成，修复待执行 | 文档验收 |
+| Phase T4.7.1 | Professional 主流程 E2E dry-run | ⏳ | - |
+| Phase T4.7.2 | ChatPanel selected text + candidate link 最小修复 | ⏳ | - |
+| Phase T4.7.3 | Story State / Materials read-write dry-run | ⏳ | - |
+| Phase T4.7.4 | Workflow/Pipeline polish/rewrite dry-run | ⏳ | - |
+| Phase T4.7.5 | 原功能收口复验 | ⏳ | - |
 | Phase T4.8 | Scene Plan schema + validator dry-run | ⏳ | - |
 | Phase T4.9 | Selected-card → Scene Brief / Scene Plan | ⏳ | - |
 | Phase T4.10 | Professional Draft Prompt 模板 | ⏳ | - |
@@ -110,6 +115,7 @@
 | Phase T4.4 | ⚠️ | 2026-06-05 | Workflow / Pipeline / Prompt 模块验收 |
 | Phase T4.5 | ⚠️ | 2026-06-05 | Story State / Materials / 文件系统验收 |
 | Phase T4.6 | ⚠️ | 2026-06-05 | Batch / Stream / SSE / Task 验收 |
+| Phase T4.7 | ⚠️ | 2026-06-06 | 原专业版问题修复收口 |
 
 ---
 
@@ -128,4 +134,4 @@
 
 本文档每月更新一次，汇总各阶段的验收状态。
 
-最后更新：2026-06-05
+最后更新：2026-06-06
