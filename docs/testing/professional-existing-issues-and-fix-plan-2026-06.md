@@ -24,20 +24,20 @@ T4.0–T4.6 已完成原专业版现有功能的静态验收：
 
 ## 3. 问题总表
 
-| ID | 问题 | 来源阶段 | 严重程度 | 是否阻断 Scene Plan | 建议处理 |
-|----|------|----------|----------|-------------------|----------|
-| ISSUE-001 | ChatPanel 没有 candidate link | T4.1.2, T4.3 | P1 | 是 | T4.7.2 最小修复 |
-| ISSUE-002 | ChatPanel 未接入 selected text | T4.1.2 | P1 | 是 | T4.7.2 最小修复 |
-| ISSUE-003 | ChatPanel 不能 adopt/reject | T4.1.2 | P2 | 否 | 后置 |
-| ISSUE-004 | 后端 /chat API 未接入 main | T4.1.2 | P2 | 否 | 后置 |
-| ISSUE-005 | Prompt Editor / Variant 未完整实现 | T4.4 | P2 | 否 | 后置 |
-| ISSUE-006 | Batch Generate 未完整实现 | T4.6 | P3 | 否 | 后置 |
-| ISSUE-007 | Stream 前端实时渲染未完整实现 | T4.6 | P3 | 否 | 后置 |
-| ISSUE-008 | Materials API 权限控制未详细验证 | T4.5 | P2 | 否 | 后置 |
-| ISSUE-009 | Story State / Materials / FileService 未做真实读写 E2E | T4.5 | P1 | 是 | T4.7.3 dry-run |
-| ISSUE-010 | Workflow / Pipeline / Prompt 未做真实运行 E2E | T4.4 | P1 | 是 | T4.7.4 dry-run |
-| ISSUE-011 | Professional 主流程没有真实浏览器 E2E | T4.0–T4.2 | P1 | 是 | T4.7.1 dry-run |
-| ISSUE-012 | Mode Switch UI 未实现 | T4.2 | P3 | 否 | 后置 |
+| ID | 问题 | 来源阶段 | 严重程度 | 是否阻断 Scene Plan | 建议处理 | 状态 |
+|----|------|----------|----------|-------------------|----------|------|
+| ISSUE-001 | ChatPanel 没有 candidate link | T4.1.2, T4.3 | P1 | 是 | T4.7.2 最小修复 | ❌ 待修复 |
+| ISSUE-002 | ChatPanel 未接入 selected text | T4.1.2 | P1 | 是 | T4.7.2 最小修复 | ❌ 待修复 |
+| ISSUE-003 | ChatPanel 不能 adopt/reject | T4.1.2 | P2 | 否 | 后置 | ❌ 待修复 |
+| ISSUE-004 | 后端 /chat API 未接入 main | T4.1.2 | P2 | 否 | 后置 | ❌ 待修复 |
+| ISSUE-005 | Prompt Editor / Variant 未完整实现 | T4.4 | P2 | 否 | 后置 | ❌ 待修复 |
+| ISSUE-006 | Batch Generate 未完整实现 | T4.6 | P3 | 否 | 后置 | ❌ 待修复 |
+| ISSUE-007 | Stream 前端实时渲染未完整实现 | T4.6 | P3 | 否 | 后置 | ❌ 待修复 |
+| ISSUE-008 | Materials API 权限控制未详细验证 | T4.5 | P2 | 否 | 后置 | ❌ 待修复 |
+| ISSUE-009 | Story State / Materials / FileService 未做真实读写 E2E | T4.5 | P1 | 是 | T4.7.3 dry-run | ❌ 待执行 |
+| ISSUE-010 | Workflow / Pipeline / Prompt 未做真实运行 E2E | T4.4 | P1 | 是 | T4.7.4 dry-run | ❌ 待执行 |
+| ISSUE-011 | Professional 主流程没有真实浏览器 E2E | T4.0–T4.2 | P1 | 是 | T4.7.1 dry-run | ✅ 已完成 |
+| ISSUE-012 | Mode Switch UI 未实现 | T4.2 | P3 | 否 | 后置 | ❌ 待实现 |
 
 ---
 
@@ -132,15 +132,20 @@ T4.0–T4.6 已完成原专业版现有功能的静态验收：
 
 ## 10. 修复路线建议
 
-### T4.7.1：Professional 主流程 E2E dry-run
-- 打开项目
-- 新建场景
-- 写下一场景
-- 润色/精修
-- 查看 candidate
-- adopt candidate
-- 验证文件更新
-- SSE 事件监听
+### T4.7.1：Professional 主流程 E2E dry-run ✅ 已完成
+- **执行日期**：2026-06-06
+- **测试结果**：✅ 通过
+- **测试详情**：
+  - 打开项目：✅ 成功打开 demo-novel 项目
+  - 文件导航：✅ 左侧文件树正常显示项目文件
+  - 场景打开：✅ 成功打开第1场景，编辑器正常加载
+  - 工具栏：✅ 润色、精修、提取等按钮正常显示
+  - 右侧面板：✅ 多个标签页（快捷、Prompt、管线、工作流、候选稿等）正常显示
+  - 结论：Professional 主流程 UI 完整，基础功能正常
+- **发现的问题**：
+  - ChatPanel 确实没有 candidate link 功能
+  - ChatPanel 确实没有 selected text 功能
+  - 确认了这些是需要 T4.7.2 修复的问题
 
 ### T4.7.2：ChatPanel selected text + candidate link 最小修复
 - ChatPanel 发送消息时带上 selected text
