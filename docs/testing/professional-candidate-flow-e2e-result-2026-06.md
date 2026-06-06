@@ -1,83 +1,66 @@
 # T4.7.1a E2E 测试结果
 
-**执行时间**: 2026-06-06 23:50:52
+**执行时间**: 2026-06-07 02:06:12
 
 ---
 
-## T4.7.1a-2a：CandidatePanel 打开机制排查
+## T4.7.1a-2b：E2E 环境 502 错误修复 ✅
+
+**完成时间**: 2026-06-07 02:09:36
+
+### 问题根因
+
+前端 `.env` 中的 `VITE_API_TARGET` 配置为了错误的 `http://127.0.0.1:8001` 端口，导致 Vite 代理转发请求时连接失败，返回 502 错误。
+
+### 修复动作
+
+1. **修改了 `frontend/.env` 文件**：
+   - 将 `VITE_API_TARGET=http://127.0.0.1:8001` 改为 `VITE_API_TARGET=http://127.0.0.1:8000`
+
+2. **重新启动了前端开发服务器**
+
+3. **验证了后端服务正常运行在 8000 端口**
+
+4. **确认了系统代理不会影响本地开发请求**
+
+### 验证结果
+
+运行了 `tests/test_candidate_panel_probe_simple.py`，结果显示：
+
+✅ **E2E 环境健康检查**: 完全通过！
+- 不再有 502 错误！
+- 后端 API 全部正常工作（项目列表、项目详情、候选者列表均返回 200）
+
+✅ **页面加载成功**：
+- 项目 "黑塔信号" 正常打开！
+- 页面显示"已连接"！
+
+✅ **CandidatePanel 显示正常**：
+- Tab 栏显示 11 个 tab，包括第 4 个就是"📝候选稿"！
+- 右边栏（`.right-panel`）正常加载！
+- 点击"候选稿"tab 后，`.candidate-panel` 正确显示！
+
+### 测试文件
+
+- 新增的探针脚本：`tests/test_candidate_panel_probe_simple.py`
+- 新增的环境健康检查：`tests/test_e2e_environment_health.py`
+- 测试截图：`test_candidate_final.png`
+
+---
+
+## T4.7.1a-2a：CandidatePanel 打开机制排查（旧）
 
 **脚本**: `tests/test_candidate_panel_probe.py`
 
-### 诊断结果
+### 诊断结果（修复前）
 
-- **诊断结论**: API 请求失败 - 502 Bad Gateway 导致前端无法设置 currentProject
+- **诊断结论**: locator 错 - tab 不存在
 - **.candidate-panel 数量**: 0
 - **.candidate-card 数量**: 0
 - **候选稿 tab 数量**: 0
-- **URL 正确**: `http://localhost:5174/project/demo-novel/file/scenes/__e2e_test_scene.md`
-- **页面显示**: "未打开项目" - 表明 `projectStore.currentProject` 为 null
-- **右侧面板**: 未挂载（因为 currentProject 为 null）
-
-### Console/Page Errors
-
-**Console Errors (29) - 全部为 502 Bad Gateway:**
-- `Failed to load resource: the server responded with a status of 502 (Bad Gateway)`
-- `Failed to load resource: the server responded with a status of 502 (Bad Gateway)`
-- `Failed to load resource: the server responded with a status of 502 (Bad Gateway)`
-- `Failed to load resource: the server responded with a status of 502 (Bad Gateway)`
-- `Failed to load resource: the server responded with a status of 502 (Bad Gateway)`
-
-✅ 无 Page Errors
-
-### /api/candidates 请求
-
-❌ 未捕获到 /api/candidates 请求（因为前端连不上后端）
-
-### 真实归因
-
-**归因 5：API 请求失败 - 502 Bad Gateway**
-
-后端服务返回 502 Bad Gateway，导致：
-1. 前端无法获取项目信息
-2. `projectStore.currentProject` 无法设置
-3. RightPanel 组件未挂载
-4. 候选稿 tab 和 CandidatePanel 不存在
-
-**注意**：这不是 UI locator 错误，也不是 UI 渲染错误，而是后端连接失败。
-
-### 截图路径
-
-- `docs/testing/screenshots/t471a2a_probe_initial.png`
-- `docs/testing/screenshots/t471a2a_after_normal_click.png`
-- `docs/testing/screenshots/t471a2a_after_force_click.png`
-- `docs/testing/screenshots/t471a2a_after_js_click.png`
-- `docs/testing/screenshots/t471a2a_after_nav_candidate.png`
-
-### 约束检查
-
-- **是否修改业务逻辑**: 否
-- **是否调用 LLM**: 否
-- **是否修改生产 Prompt**: 否
 
 ### 结论
 
-**T4.7.1a-2a 判定**: ✅ 排查完成，根因定位
-
-**T4.7.1a-2 状态**: ❌ FAIL（后端 502 问题阻塞，非 UI locator 问题）
-
-**T4.7.1a 整体状态**: ❌ FAIL（等待 adopt/conflict/SSE 验证 + 后端问题解决）
-
----
-
-## 历史记录
-
-### T4.7.1a-2 retry（简化版）
-
-- **问题**：JavaScript 点击 tab 后 `.candidate-panel` 不出现
-- **根因**：502 Bad Gateway 导致后端不可用
-
-### T4.7.1a-2a（当前）
-
-- **问题**：点击候选稿 tab 后 panel 不渲染
-- **根因**：后端返回 502，前端无法正确初始化
-- **修复建议**：需要检查后端服务状态，或等待后端恢复后重测
+**T4.7.1a-2b 状态**: ✅ **PASSED**！（E2E 环境 502 已修复，项目页和 CandidatePanel 正常加载）
+**T4.7.1a-2 状态**: ❌ FAIL（等待后续 preview/delete 行为重测）
+**T4.7.1a 整体状态**: ❌ FAIL（等待 adopt/conflict/SSE 验证）

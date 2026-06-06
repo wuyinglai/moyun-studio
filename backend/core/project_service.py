@@ -79,7 +79,11 @@ class ProjectService:
     def _dt(self, s: str) -> datetime:
         """datetime 兼容处理"""
         try:
-            return datetime.fromisoformat(s)
+            dt = datetime.fromisoformat(s)
+            # 确保有时区
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
         except Exception:
             logger.debug("日期解析失败: %s", s, exc_info=True)
             return datetime.now(timezone.utc)

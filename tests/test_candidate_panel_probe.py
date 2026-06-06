@@ -12,10 +12,10 @@ from datetime import datetime
 from playwright.async_api import async_playwright
 
 BACKEND_URL = "http://localhost:8000"
-FRONTEND_URL = "http://localhost:5174"
+FRONTEND_URL = "http://localhost:5173"
 PROJECT_ID = "demo-novel"
 # 需要先打开一个文件才能设置 currentProject 并显示 RightPanel
-TEST_FILE_PATH = "scenes/__e2e_test_scene.md"
+TEST_FILE_PATH = "chapters/vol-01/ch-001/sec-001.md"
 
 
 class CandidatePanelProbe:
