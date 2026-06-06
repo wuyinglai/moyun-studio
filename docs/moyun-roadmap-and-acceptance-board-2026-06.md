@@ -64,7 +64,8 @@
 | Phase T4.5 | Story State / Materials / 文件系统验收 | ⚠️ | 静态验收通过，核心能力完整且安全，不自动覆盖正文 | 文档验收 |
 | Phase T4.6 | Batch / Stream / SSE / Task 验收 | ⚠️ | 静态验收通过，SSE/Task完整，Batch/Stream部分未实现 | 文档验收 |
 | Phase T4.7 | 原专业版问题修复收口 | ⚠️ | 问题清单与修复计划完成，修复待执行 | 文档验收 |
-| Phase T4.7.1 | Professional 主流程 E2E dry-run | ✅ | 真实浏览器 dry-run 通过，确认基础 UI 完整 |
+| Phase T4.7.1 | Professional 主流程 E2E dry-run | ⚠️ | 基础 UI 验证通过，candidate 链路静态验证通过，需真实 LLM 完整验证 |
+| Phase T4.7.1a | Professional candidate 链路 dry-run 补验 | ⚠️ | 静态验证通过，candidate UI 组件完整，需真实 LLM 执行端到端测试 |
 | Phase T4.7.2 | ChatPanel selected text + candidate link 最小修复 | ⏳ | - |
 | Phase T4.7.3 | Story State / Materials read-write dry-run | ⏳ | - |
 | Phase T4.7.4 | Workflow/Pipeline polish/rewrite dry-run | ⏳ | - |
@@ -116,7 +117,8 @@
 | Phase T4.5 | ⚠️ | 2026-06-05 | Story State / Materials / 文件系统验收 |
 | Phase T4.6 | ⚠️ | 2026-06-05 | Batch / Stream / SSE / Task 验收 |
 | Phase T4.7 | ⚠️ | 2026-06-06 | 原专业版问题修复收口 |
-| Phase T4.7.1 | ✅ | 2026-06-06 | Professional 主流程 E2E dry-run |
+| Phase T4.7.1 | ⚠️ | 2026-06-06 | Professional 主流程 E2E dry-run（基础 UI 验证通过，candidate 链路需真实 LLM） |
+| Phase T4.7.1a | ⚠️ | 2026-06-06 | Professional candidate 链路 dry-run 补验（静态验证通过） |
 
 ---
 
