@@ -65,7 +65,7 @@
 | Phase T4.6 | Batch / Stream / SSE / Task 验收 | ⚠️ | 静态验收通过，SSE/Task完整，Batch/Stream部分未实现 | 文档验收 |
 | Phase T4.7 | 原专业版问题修复收口 | ⚠️ | 问题清单与修复计划完成，修复待执行 | 文档验收 |
 | Phase T4.7.1 | Professional 主流程 E2E dry-run | ⚠️ | 基础 UI 验证通过，candidate 链路静态验证通过，需真实 LLM 完整验证 |
-| Phase T4.7.1a | Professional candidate 链路 dry-run 补验 | ❌ | API 基础验证通过，但 UI preview/delete/adopt/冲突阻断/SSE file.updated 尚未完整验证（脚本有语法错误） | 测试验收 |
+| Phase T4.7.1a | Professional candidate 链路 dry-run 补验 | ❌ | T4.7.1a-1: Locator 稳定性验证通过，所有 locator 稳定找到。等待行为验证 (preview/delete/adopt/conflict/SSE) | 测试验收 |
 | Phase T4.7.2 | ChatPanel selected text + candidate link 最小修复 | ⏳ | - |
 | Phase T4.7.3 | Story State / Materials read-write dry-run | ⏳ | - |
 | Phase T4.7.4 | Workflow/Pipeline polish/rewrite dry-run | ⏳ | - |
