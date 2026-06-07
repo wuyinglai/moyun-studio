@@ -284,6 +284,70 @@ def _is_reasoning_only_model_response(text: str) -> bool:
     return False
 
 
+def _clean_reasoning_channel_content(text: str) -> str:
+    """清洗 reasoning_format=none 模式下的输出，提取纯净正文
+
+    当使用 reasoning_format=none 时，内容会进入 content，但
+    可能包含 <|channel>thought 标签和推理过程。这个函数尝试
+    提取最后的正文部分，或者去掉推理标签。
+    """
+    if not text:
+        return text
+
+    # 首先尝试寻找：如果最后有明显的选项输出，例如 "*   *Option 1 ('...')"
+    # 或者直接在最后一行有不带星号的中文句子
+    lines = text.split("\n")
+    useful_lines = []
+
+    for line in lines:
+        # 跳过明显的推理标签行
+        line = line.strip()
+        if not line:
+            continue
+
+        # 跳过 channel 标签
+        if line.startswith("<|channel>") or line.startswith("</|channel>"):
+            continue
+
+        # 跳过 Input 开头的
+        if line.startswith("*   Input") or line.startswith("*   Original"):
+            continue
+
+        # 跳过 Constraint/Task
+        if line.startswith("*   Constraint") or line.startswith("*   Task"):
+            continue
+
+        # 跳过 Key elements/Atmosphere 等
+        if line.startswith("*   Key elements:") or line.startswith("*   Atmosphere:"):
+            continue
+
+        # 跳过只有单个星号标记的行
+        if (
+            line.startswith("*   \"")
+            or line.startswith("*   '")
+            or line.startswith("*   Option")
+        ):
+            continue
+
+        # 看起来像是有用内容的行
+        useful_lines.append(line)
+
+    if useful_lines:
+        # 尝试找最后一个符合中文句子特征的
+        for line in reversed(useful_lines):
+            # 检查是否是中文字符为主
+            chinese_count = sum(1 for c in line if '\u4e00' <= c <= '\u9fff')
+            if chinese_count >= 5:
+                # 找到了看起来像中文正文的
+                return line.strip()
+
+        # 没有特别明显的，就把有用的行合并
+        return "\n".join(useful_lines)
+
+    # 如果没有提取出有用内容，就原样返回
+    return text
+
+
 class LLMService:
     """LLM调用服务
 
@@ -414,6 +478,11 @@ class LLMService:
                                     "LLM fallback to reasoning_content produced reasoning log, not final output. "
                                     "Consider using a model that outputs normal content."
                                 )
+                            # Try to clean it anyway
+                            content = _clean_reasoning_channel_content(content)
+                        elif content and _is_reasoning_only_model_response(content):
+                            # Even in content field, if it looks like reasoning content, clean it
+                            content = _clean_reasoning_channel_content(content)
                         if content:
                             yield content
                 else:
@@ -429,6 +498,11 @@ class LLMService:
                                     "LLM fallback to reasoning_content produced reasoning log, not final output. "
                                     "Consider using a model that outputs normal content."
                                 )
+                            # Try to clean it anyway
+                            content = _clean_reasoning_channel_content(content)
+                        elif content and _is_reasoning_only_model_response(content):
+                            # Even in content field, if it looks like reasoning content, clean it
+                            content = _clean_reasoning_channel_content(content)
                         yield content
 
                 # 调用成功，记录到熔断器
