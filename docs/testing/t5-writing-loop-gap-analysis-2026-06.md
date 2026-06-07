@@ -21,12 +21,12 @@
 - ✅ CandidatePanel 预览、采用、删除功能
 - ✅ Story State / Materials 读写
 - ✅ Scene Plan schema 和 validator（后端完成）
-- ✅ Scene Plan validate API（后端完成，**已软接入 pipeline！）
+- ✅ Scene Plan validate API（后端完成，已软接入 pipeline！）
 
 **当前状态**：
-1. ✅ **Scene Plan validate API 已软接入 - 后端 API 存在，在 pipeline 中已集成验证
-2. ⚠️ **Scene Plan 生成功能未实现 - 只有校验，没有生成
-3. ⚠️ **前端没有 Scene Plan 相关 UI - 无法让用户创建/编辑 Scene Plan
+1. ✅ **Scene Plan validate API 已软接入** - 后端 API 存在，在 pipeline 中已集成验证
+2. ⚠️ **Scene Plan 生成功能未实现** - 只有校验，没有生成
+3. ⚠️ **前端没有 Scene Plan 相关 UI** - 无法让用户创建/编辑 Scene Plan
 
 ---
 
@@ -56,13 +56,13 @@
 
 ### T5.1 目标回顾
 
-**已完成任务：
+**已完成任务：**
 
 1. ✅ 修改 `PipelineRunRequest` 添加 `scene_plan` 可选字段
 2. ✅ 在 `pipeline.run()` 方法添加 scene_plan 验证逻辑
-3. ✅ 验证软接入：不传 scene_plan 时，旧流程不变；传了scene_plan 且非法时，阻止 pipeline 执行
+3. ✅ 验证软接入：不传 scene_plan 时，旧流程不变；传了 scene_plan 且非法时，阻止 pipeline 执行
 4. ✅ 更新 `api/pipeline.py` 传递 scene_plan
-5. ✅ 新增 `test_scene_plan_pipeline_integration.py 测试文件
+5. ✅ 新增 `tests/test_scene_plan_pipeline_integration.py` 测试文件
 6. ✅ 所有测试通过
 
 ### 软接入设计原则
@@ -72,7 +72,7 @@
 - **传了 scene_plan**：先验证通过后继续执行 pipeline
 
 **安全校验**：
-- **传了非法 scene_plan（含危险路径、违反 candidate_policy 等）：阻止 pipeline 执行，返回明确错误
+- **传了非法 scene_plan**（含危险路径、违反 candidate_policy 等）：阻止 pipeline 执行，返回明确错误
 
 ---
 
