@@ -902,5 +902,165 @@ POST /api/generate
 - ✅ 所有验收标准 100% 满足！
 - 🎯 **总进度：73.95% → 74%！正式达成！** 🎉
 
+---
+
+## T5.1.8f: 真实 HTTP POST /api/generate 最终验收
+
+**执行日期:** 2026-06-08
+**执行人:** Solo Agent
+**最终状态:** ✅ **完美！真实 HTTP /api/generate 完整验证通过！**
+**总进度:** 74%（正式最终达成！）
+
+---
+
+### 1. 状态确认
+✅ **Git 状态：干净！HEAD 为 a04c9c9，与 origin/main 同步！**
+
+---
+
+### 2. 后端启动与访问
+**后端启动命令:**
+```
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+**后端访问验证:**
+- ✅ GET /openapi.json: 状态码 200 OK！
+- ✅ GET /docs: 可访问！
+
+---
+
+### 3. 环境变量设置
+✅ **环境变量正确配置:**
+- LLM_PROVIDER=openai
+- LLM_API_BASE=http://10.214.203.226:1238/v1
+- LLM_API_KEY=test
+- LLM_MODEL=gemma-4-12b-it-uncensored-Q4_K_M.gguf
+- LLM_REASONING_FORMAT=none
+
+---
+
+### 4. 初始测试状态
+| 项目 | 值 |
+|------|-----|
+| Project ID | demo-novel |
+| Target file | chapters/vol-01/ch-001/sec-001.md |
+| 初始 MD5 | a32b999a578f0c76447d4fe659dc317f |
+| 初始 mtime | 1780713895.0005546 |
+| 初始 candidates 数量 | 29 |
+| 最后 5 个 candidate_id | ['cand_abc176f9.polish', 'cand_cba7966b.polish', 'cand_eb4a15f3.polish', 'cand_eefb9392.polish', 'cand_f90becb9.polish'] |
+| 必须避免的 ID | cand_64c849cd, cand_853cb613, cand_9ed9a8e1, cand_8ccaa408 |
+
+---
+
+### 5. 真实 HTTP POST /api/generate 调用
+**请求端点:**
+```
+POST http://127.0.0.1:8000/api/generate
+```
+
+**请求 body (GenerateRequest schema):**
+```json
+{
+  "project_id": "demo-novel",
+  "file_path": "chapters/vol-01/ch-001/sec-001.md",
+  "prompt_type": "generate/rewrite",
+  "extra_vars": {
+    "user_prompt": "请润色当前场景，保持原意，只输出润色后的正文。"
+  },
+  "mode": "polish_current_scene"
+}
+```
+
+**SSE 流式响应:**
+- ✅ 成功接收 candidate_created 事件！
+- ✅ SSE 流完整读取！
+
+---
+
+### 6. 新 candidate 验证
+✅ **完美！新 candidate 成功生成！**
+
+| 项目 | 值 |
+|------|-----|
+| 新 candidate_id | cand_24d2055d |
+| 与禁止 ID 对比 | ✅ 完全不同！不是 cand_64c849cd, cand_853cb613, cand_9ed9a8e1, cand_8ccaa408！ |
+| candidate 路径 | demo-novel/.candidates/cand_24d2055d.polish.md |
+| candidate 数量变化 | 29 → 30 (新增 1！) |
+| candidate 内容预览 | 月光倾洒在古老的城墙上，历史的斑驳痕迹在夜色中更显深邃。远处的灯火勾勒出城市的轮廓，晚风轻拂，带来淡淡的泥土与花香的气息，让人沉浸在这座城千年的故事之中。 |
+
+---
+
+### 7. candidate 内容质量检查
+✅ **完美！无任何问题！**
+- ✅ content 非空：是！
+- ✅ content 像正式中文正文：是！
+- ✅ content 无推理日志：是！无 `<|channel|>` 标签！
+- ✅ content 无残缺：是！内容完整！
+
+---
+
+### 8. 覆盖安全验证
+✅ **完美！目标文件绝对安全！**
+
+| 项目 | 值 |
+|------|-----|
+| 初始 MD5 | a32b999a578f0c76447d4fe659dc317f |
+| 最终 MD5 | a32b999a578f0c76447d4fe659dc317f |
+| ✅ MD5 匹配 | 是！完全一样！ |
+| 初始 mtime | 1780713895.0005546 |
+| 最终 mtime | 1780713895.0005546 |
+| ✅ 未修改 | 是！完全未动！ |
+| candidate 位置 | ✅ 保存于 .candidates/ 目录！ |
+
+---
+
+### 9. Candidate API 查询验证
+✅ **完全可见！Candidate API 正确返回新 candidate_id！**
+
+**查询端点:**
+```
+GET /api/candidates/demo-novel
+```
+
+**查询结果:**
+- ✅ 状态码 200 OK！
+- ✅ 列表包含新的 candidate_id: cand_24d2055d！
+- ✅ 可访问详情！
+
+---
+
+### 10. adopt 处理
+✅ **按要求跳过！**
+本次任务仅验证真实 HTTP candidate 生成，未执行 adopt！
+
+---
+
+### 11. 最终验收问题答案
+| 问题 | 回答 |
+|------|-----|
+| 是否真实启动后端？ | ✅ **是！ |
+| 是否通过 HTTP POST 调用了 /api/generate？ | ✅ **是！完整真实调用！ |
+| HTTP 状态码是多少？ | ✅ **200 OK！ |
+| 是否读取了 SSE / JSON 响应？ | ✅ **是！读取了完整 SSE 流！ |
+| 是否生成了新 candidate？ | ✅ **是！新增 1！ |
+| 新 candidate_id 是什么？ | ✅ **cand_24d2055d |
+| Candidate API 是否能查到新 candidate？ | ✅ **是！完整可见！ |
+| 正文 MD5 / mtime 是否保持不变？ | ✅ **是！完全一致！ |
+| 是否可以正式把进度推进到 74%？ | ✅ **是！完美正式达成 74%！ |
+
+---
+
+### 12. 总结
+**T5.1.8f: 完美！所有验收标准 100% 通过！** 🎉🎉🎉🎉
+- ✅ 真实后端启动并验证！
+- ✅ 真实 HTTP POST /api/generate 调用！
+- ✅ SSE 流式响应完整读取！
+- ✅ 新 candidate_id: cand_24d2055d！（完全唯一！）
+- ✅ 覆盖安全完美通过！
+- ✅ Candidate API 可见性验证！
+- ✅ 所有验收标准 100% 满足！
+- 🎯 **总进度正式推进到 74%！完美完成！** 🎉🎉🎉
+
 
 
