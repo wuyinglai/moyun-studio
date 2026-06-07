@@ -241,7 +241,19 @@ class CandidateService:
             logger.debug("读取源文件失败", exc_info=True)
 
         # 2. 对比当前 hash/mtime 和 base_hash/base_mtime
-        if candidate_info.base_hash and current_hash != candidate_info.base_hash:
+        # base_hash 为空时无法验证源文件未变化，必须拒绝 adopt
+        if not candidate_info.base_hash:
+            logger.warning(
+                "候选稿 base_hash 为空，无法验证源文件未变化，拒绝 adopt: candidate_id=%s",
+                candidate_id,
+            )
+            candidate_info.status = CandidateStatus.REJECTED
+            metadata = await self._load_metadata(project_id)
+            metadata[candidate_id] = candidate_info.model_dump(mode="json")
+            await self._save_metadata(project_id, metadata)
+            return AdoptResult.CONFLICT
+
+        if current_hash != candidate_info.base_hash:
             logger.warning(
                 "候选稿冲突: candidate_id=%s, base_hash=%s, current_hash=%s",
                 candidate_id, candidate_info.base_hash, current_hash,

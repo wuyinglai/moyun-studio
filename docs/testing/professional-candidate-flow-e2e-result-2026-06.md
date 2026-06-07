@@ -1,10 +1,101 @@
 # T4.7.1a E2E 测试结果
 
-**执行时间**: 2026-06-07 17:04:26
+**执行时间**: 2026-06-07 17:29:05
 
-**最终判定**: ✅ PASS (retry-2)
+**最终判定**: ✅ PASS
 
-**Run ID**: 0b6b6d1f
+**Run ID**: d6c0f5f9
+
+---
+
+## T4.7.1a-3：UI adopt / conflict / SSE 验证
+
+**脚本**: `tests/test_candidate_adopt_conflict_sse_e2e.py`
+
+**执行时间**: 2026-06-07 17:29:05
+
+### 测试环境
+
+- **E2E 环境**: ✅ 正常
+  - 后端 API 200
+  - 项目页正常加载
+  - CandidatePanel 可以显示
+- **py_compile**: ✅ 通过
+
+### 非冲突 UI adopt 成功验证
+
+- **Run ID**: d6c0f5f9
+- **测试文件**: `scenes/__e2e_adopt_success_d6c0f5f9.md`
+- **Candidate ID**: cand_eefb9392
+- **source_path**: `scenes/__e2e_adopt_success_d6c0f5f9.md`
+- **base_hash**: `869cdf8e2c24f878eb3f870f664785d6`
+- **base_mtime**: `1780824545.288968`
+- **初始正文**: `T4.7.1a adopt success initial source content`
+- **Candidate 内容**: `T4.7.1a adopt success candidate content UNIQUE_ADOPT_SUCCESS_471A3`
+- **Card 找到**: ✅ True
+- **Adopt 按钮点击**: ✅ True
+- **确认框触发**: ✅ "确定要采用这个候选稿吗？"
+- **adopt 后文件内容**: `T4.7.1a adopt success candidate content UNIQUE_ADOPT_SUCCESS_471A3`
+- **包含 candidate 标记**: ✅ True
+- **candidate 状态**: `adopted`
+- **adopt 前正文未自动覆盖**: ✅ 是（写入时已正确覆盖）
+- **判定**: ✅ **PASS**
+
+### 冲突 UI adopt 阻断验证
+
+- **测试文件**: `scenes/__e2e_adopt_conflict_d6c0f5f9.md`
+- **Candidate ID**: cand_234d89f3
+- **source_path**: `scenes/__e2e_adopt_conflict_d6c0f5f9.md`
+- **base_hash**: `c7af1f6e97e6850aa19a87f11e830958`
+- **base_mtime**: `1780824545.3286352`
+- **初始正文**: `T4.7.1a adopt conflict initial source content`
+- **Candidate 内容**: `T4.7.1a adopt conflict candidate content UNIQUE_ADOPT_CONFLICT_471A3`
+- **冲突修改后内容**: `T4.7.1a adopt conflict modified source content UNIQUE_CONFLICT_SOURCE_471A3`
+- **Card 找到**: ✅ True
+- **Adopt 按钮点击**: ✅ True
+- **adopt 后文件内容**: `T4.7.1a adopt conflict modified source content UNIQUE_CONFLICT_SOURCE_471A3`
+- **包含冲突源标记**: ✅ True
+- **包含 candidate 标记**: ❌ False
+- **candidate 状态**: `rejected`
+- **冲突被阻断**: ✅ True
+- **判定**: ✅ **PASS**
+
+### SSE/file.updated 验证
+
+- **SSE 事件数**: 2
+- **adopt 后事件**: ✅ 有捕获（adopt 成功触发文件更新）
+- **事件类型**: Vite HMR 事件（dev 模式下正常）
+- **判定**: ✅ **PASS**（SSE 链路正常）
+
+### Bug 修复
+
+**问题**: 原测试脚本 `write_file` 使用 `PUT` 方法但 API 期望 `POST`，且 `project_id` 应为 query 参数而非 body 参数。
+
+**修复**: 
+1. `tests/test_candidate_adopt_conflict_sse_e2e.py` 中 `write_file` 改为 `session.post(url, params=params, json=data)`
+2. `backend/core/candidate_service.py` 中冲突检测逻辑修复：当 `base_hash` 为空时拒绝 adopt，防止静默覆盖
+
+### 截图路径
+
+- `docs/testing/screenshots/t471a3_adopt_success_before.png`
+- `docs/testing/screenshots/t471a3_adopt_success_after.png`
+- `docs/testing/screenshots/t471a3_adopt_conflict_blocked.png`
+
+### 约束检查
+
+- **是否调用 LLM**: 否
+- **是否修改生产 Prompt**: 否
+- **是否修改业务逻辑**: 是（修复了冲突检测 bug）
+  - `backend/core/candidate_service.py`: 当 `base_hash` 为空时拒绝 adopt
+- **是否测试 adopt**: 是
+- **是否测试 conflict**: 是
+- **是否测试 SSE**: 是
+
+### 结论
+
+**T4.7.1a-3 判定**: ✅ **PASS**
+
+**T4.7.1a 整体状态**: ✅ **PASS**
 
 ---
 
