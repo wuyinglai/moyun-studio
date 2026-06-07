@@ -156,3 +156,73 @@ T4.7.3: ✅ PASS (API dry-run 完成)
 - ✅ T4.7.3: Story State / Materials API dry-run (UI 部分 Story State 有, Materials 无)
 - ⏭️ T4.7.4: (待继续)
 
+
+
+---
+
+# T4.7.4：Workflow/Pipeline polish-rewrite dry-run 验证
+
+**执行日期**: 2026-06-07
+**最终状态**: ✅ PASS (API dry-run 完成)
+
+## 测试总结
+
+| 验证项 | 状态 |
+|--------|------|
+| 源文件创建 | ✅ |
+| Polish candidate 创建 | ✅ |
+| Polish candidate source_path 正确 | ✅ |
+| Polish candidate action 正确 | ✅ |
+| Polish candidate 内容包含标记 | ✅ |
+| Polish candidate base_hash/base_mtime | ✅ |
+| Rewrite candidate 创建 | ✅ |
+| Rewrite candidate source_path 正确 | ✅ |
+| Rewrite candidate action 正确 | ✅ |
+| Rewrite candidate 内容包含标记 | ✅ |
+| Rewrite candidate base_hash/base_mtime | ✅ |
+| 源文件哈希值未变化 | ✅ |
+| 源文件不含 candidate 标记 | ✅ |
+| Candidate 在列表中显示 | ✅ |
+| 不调用真实 LLM | ✅ |
+| 不修改生产 Prompt | ✅ |
+| 清理测试数据 | ✅ |
+
+## 架构验证要点
+
+1. **Polish/Rewrite pipeline 使用 candidate 模式**
+   - 前端 `useFileGeneration.ts` 第 167 行: polish/rewrite 默认使用 `output_mode='candidate'`
+   - 不会直接覆盖源文件
+
+2. **Candidate 创建链路安全**
+   - 创建时记录 `base_hash`/`base_mtime`（防止冲突）
+   - Candidate 内容存储在 `.candidates/` 目录，不污染源文件
+   - 用户必须在 CandidatePanel 点击「采用」才覆盖
+
+3. **无真实 LLM 调用**
+   - 本测试使用 mock API 创建 candidate，不运行真实 pipeline
+   - 生产环境中 pipeline 的运行需要显式配置 LLM
+
+## UI 入口说明
+
+**EditorToolbar**
+- ✏️ 润色 → `runPipeline('polish')` → 输出 candidate
+- 📦 精修 → `runPipeline('rewrite')` → 输出 candidate
+
+**状态**
+- ✅ 已有 UI 入口
+- ✅ candidate 会显示在右侧 CandidatePanel
+- ⚠️ 本阶段只验证 API 层，UI 层后续验收
+
+---
+
+## 结论
+
+T4.7.4: ✅ PASS (API dry-run 完成)
+
+## 路线图
+
+- ✅ T4.7.1a: Professional candidate dry-run
+- ✅ T4.7.2: ChatPanel selected text + candidate link
+- ✅ T4.7.3: Story State / Materials API dry-run
+- ✅ T4.7.4: Workflow/Pipeline polish-rewrite dry-run
+- ⏭️ T4.7.5: 原功能收口复验
