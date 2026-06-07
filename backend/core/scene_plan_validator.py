@@ -162,7 +162,15 @@ def validate_scene_plan(
             message="candidate_policy.allow_direct_write 必须为 false",
         ))
 
-    # 7. 路径安全检查 - material_paths
+    # 7. 路径安全检查 - source_path
+    if _is_dangerous_path(scene_plan.source_path):
+        result.valid = False
+        result.errors.append(ScenePlanValidationError(
+            field="source_path",
+            message=f"source_path '{scene_plan.source_path}' 包含危险模式",
+        ))
+
+    # 8. 路径安全检查 - material_paths
     for i, path in enumerate(scene_plan.references.material_paths):
         if _is_dangerous_path(path):
             result.valid = False
@@ -171,7 +179,7 @@ def validate_scene_plan(
                 message=f"路径 '{path}' 包含危险模式",
             ))
 
-    # 8. 路径安全检查 - recent_context_paths
+    # 9. 路径安全检查 - recent_context_paths
     for i, path in enumerate(scene_plan.references.recent_context_paths):
         if _is_dangerous_path(path):
             result.valid = False
@@ -180,7 +188,7 @@ def validate_scene_plan(
                 message=f"路径 '{path}' 包含危险模式",
             ))
 
-    # 9. Characters 为空警告
+    # 10. Characters 为空警告
     if not scene_plan.characters or len(scene_plan.characters) == 0:
         result.warnings.append(ScenePlanValidationWarning(
             field="characters",
