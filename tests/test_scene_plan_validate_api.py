@@ -99,17 +99,19 @@ def test_empty_characters_warning_api(client):
     assert len(result["data"]["warnings"]) > 0
 
 
-def test_no_side_effects(client, tmp_path):
-    """测试 API 没有副作用：不写文件、不创建 candidate、不调用 LLM"""
-    # 保存当前工作目录状态（简化，这里只是验证 API 不产生文件）
+def test_validate_api_returns_successfully(client):
+    """测试 validate API 正常返回（注意：此测试不严格验证所有副作用）
+    
+    该测试仅验证 API 能够成功执行并返回结果，但不全面测试：
+    - 是否调用 LLM
+    - 是否创建 candidate
+    - 是否写入文件
+    
+    这些安全约束在 API 实现的代码审查中验证。
+    """
     data = load_fixture("scene_plan_valid.json")
-
-    # 调用 API
     response = client.post("/api/scene-plan/validate", json=data)
     assert response.status_code == 200
-
-    # 这里没有检查具体文件，因为 API 本身就不应该写文件
-    # 只要没有异常并且返回正确结果，就说明没有副作用
     assert response.json()["data"]["valid"] is True
 
 
