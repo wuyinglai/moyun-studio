@@ -182,12 +182,14 @@ Scene Plan 结构化中间表示已完成，包含完整的 schema 定义和严�
 
 ### 3. API 测试 ✅
 - 文件位置: `tests/test_scene_plan_validate_api.py`
-- 覆盖 6 个测试用例:
+- 覆盖 7 个测试用例:
   - valid scene plan 校验通过
   - 危险路径校验失败
   - 违反 candidate 策略校验失败
-  - 缺少必填字段校验失败
+  - 缺少必填字段失败（project_id）
+  - 缺少必填字段失败（source_path）
   - characters 为空产生警告
+  - validate API 正常返回（注：此测试不严格验证所有副作用，安全约束主要通过代码审查验证）
 
 ### 4. 安全约束验证 ✅
 - 是否调用真实 LLM: ❌ 否
@@ -203,14 +205,14 @@ Scene Plan 结构化中间表示已完成，包含完整的 schema 定义和严�
 |--------|------|
 | Scene Plan API 语法检查 | ✅ |
 | Scene Plan API 测试脚本 | ✅ |
-| 6 个 API 单元测试 | ✅ |
+| 7 个 API 单元测试 | ✅ |
 | 14 个 Validator 单元测试 | ✅ |
 | Professional 回归测试 | ✅ |
 | 前端构建 | ✅ |
 
 ## 结论
 
-✅ T4.9: 后端 Scene Plan validate API 已完成并测试通过；该 API 为后续 Professional dry-run 接入提供校验入口。本提交未实现完整前端/Professional 流程调用时，不应声称完整接入。
+✅ T4.9: 后端 Scene Plan validate API 已完成并测试通过；该 API 为后续 Professional dry-run 接入提供校验入口。本提交未实现完整前端/Professional 流程调用时，不得声称已完整接入。
 
 Scene Plan validate API 已完成并测试通过。API 安全可靠，不调用 LLM，不产生任何副作用，为后续 Scene Plan 生成和使用做好了准备。
 
