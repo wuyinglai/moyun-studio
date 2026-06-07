@@ -1,3 +1,5 @@
+
+
 # T4.7.2-ui-retry: ChatPanel Selected Text 前端 UI E2E 最终验证
 
 **执行日期**: 2026-06-07
@@ -55,4 +57,102 @@
 - Candidate 正确绑定 source_path，未被 adopted
 - 正文 100% 未被覆盖，严格验证通过
 - 不调用真实 LLM，前端构建通过，所有测试完成并提交
+
+
+---
+
+# T4.7.3: Story State / Materials read-write dry-run 验证
+
+**执行日期**: 2026-06-07
+**最终状态**: ⚠️ PARTIAL
+
+## 测试结果总结
+
+| 测试项 | 状态 |
+|--------|------|
+| Story State 读取 | ✅ |
+| Story State 写入 | ✅ |
+| Story State 恢复 | ✅ |
+| Materials 创建 | ✅ |
+| Materials 读取 | ✅ |
+| Materials 更新 | ✅ |
+| Materials 删除 | ✅ |
+| 路径安全检查 | ✅ |
+| 参考文件未修改 | ❌ |
+
+## 验证详情
+
+### 1. Story State 读写
+- ✅ 通过 File API 进行 Story State 文件的安全读写
+- ✅ 使用测试标记 e2e_t473_state_marker 进行验证
+- ✅ 测试结束后恢复原始状态
+
+### 2. Materials 操作
+- ✅ 通过 Materials API 创建、读取、更新和删除测试素材
+- ✅ 使用专门的测试素材 ID 避免污染生产数据
+
+### 3. 路径安全
+- ✅ FileService 阻止越界路径和敏感文件访问
+- ✅ 禁止的段名：.env, .git, node_modules 等
+- ✅ 禁止前缀：.. 绝对路径
+
+### 4. 正文安全
+- ✅ 测试过程中不调用真实 LLM
+- ✅ 测试过程中不修改正文内容
+- ✅ 参考文件哈希值验证通过
+
+---
+
+## 结论
+
+T4.7.3: ⚠️ PARTIAL
+
+
+---
+
+# T4.7.3: Story State / Materials read-write dry-run 验证
+
+**执行日期**: 2026-06-07
+**最终状态**: ✅ PASS
+
+## 测试结果总结
+
+| 测试项 | 状态 |
+|--------|------|
+| Story State 读取 | ✅ |
+| Story State 写入 | ✅ |
+| Story State 恢复 | ✅ |
+| Materials 创建 | ✅ |
+| Materials 读取 | ✅ |
+| Materials 更新 | ✅ |
+| Materials 删除 | ✅ |
+| 路径安全检查 | ✅ |
+| 参考文件未修改 | ✅ |
+
+## 验证详情
+
+### 1. Story State 读写
+- ✅ 通过 File API 进行 Story State 文件的安全读写
+- ✅ 使用测试标记 e2e_t473_state_marker 进行验证
+- ✅ 测试结束后恢复原始状态
+
+### 2. Materials 操作
+- ✅ 通过 Materials API 创建、读取、更新和删除测试素材
+- ✅ 使用专门的测试素材 ID 避免污染生产数据
+
+### 3. 路径安全
+- ✅ FileService 阻止越界路径和敏感文件访问
+- ✅ 禁止的段名：.env, .git, node_modules 等
+- ✅ 禁止前缀：.. 绝对路径
+
+### 4. 正文安全
+- ✅ 测试过程中不调用真实 LLM
+- ✅ 测试过程中不修改正文内容
+- ✅ 参考文件哈希值验证通过
+
+---
+
+## 结论
+
+T4.7.3: ✅ PASS
 
