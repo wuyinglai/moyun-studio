@@ -250,6 +250,40 @@ class LLMConfig:
         return max(0, self.context_window - self.reserved_output_tokens)
 
 
+def _is_reasoning_only_model_response(text: str) -> bool:
+    """检测文本是否像推理日志而非正式正文
+
+    检查常见的推理/分析标记。如果检测到这些模式，
+    说明模型可能输出了推理过程而非最终结果。
+    """
+    if not text:
+        return False
+
+    # 推理日志常见模式
+    reasoning_patterns = [
+        "*   Original",
+        "*   Literal",
+        "*   Context:",
+        "*   Meaning:",
+        "*   Strengths:",
+        "*   Task:",
+        "*   Constraint:",
+        "*   Option",
+        "Original phrase:",
+        "Literal meaning:",
+        "analysis",
+        "Analysis:",
+        "Task:",
+    ]
+
+    text_lower = text.lower()
+    for pattern in reasoning_patterns:
+        if pattern.lower() in text_lower:
+            return True
+
+    return False
+
+
 class LLMService:
     """LLM调用服务
 
@@ -374,6 +408,12 @@ class LLMService:
                         # Fallback to reasoning_content if content is empty (for reasoning models)
                         if not content and hasattr(chunk.choices[0].delta, 'reasoning_content'):
                             content = chunk.choices[0].delta.reasoning_content
+                            # Warn if the fallback content looks like reasoning log
+                            if _is_reasoning_only_model_response(content):
+                                self.logger.warning(
+                                    "LLM fallback to reasoning_content produced reasoning log, not final output. "
+                                    "Consider using a model that outputs normal content."
+                                )
                         if content:
                             yield content
                 else:
@@ -383,6 +423,12 @@ class LLMService:
                         # Fallback to reasoning_content if content is empty (for reasoning models)
                         if not content and hasattr(msg, 'reasoning_content'):
                             content = msg.reasoning_content
+                            # Warn if the fallback content looks like reasoning log
+                            if _is_reasoning_only_model_response(content):
+                                self.logger.warning(
+                                    "LLM fallback to reasoning_content produced reasoning log, not final output. "
+                                    "Consider using a model that outputs normal content."
+                                )
                         yield content
 
                 # 调用成功，记录到熔断器
