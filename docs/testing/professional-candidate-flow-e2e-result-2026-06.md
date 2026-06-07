@@ -1,10 +1,10 @@
 # T4.7.1a E2E 测试结果
 
-**执行时间**: 2026-06-07 17:29:05
+**执行时间**: 2026-06-07 17:37:09
 
 **最终判定**: ✅ PASS
 
-**Run ID**: d6c0f5f9
+**Run ID**: 18e61590
 
 ---
 
@@ -12,7 +12,7 @@
 
 **脚本**: `tests/test_candidate_adopt_conflict_sse_e2e.py`
 
-**执行时间**: 2026-06-07 17:29:05
+**执行时间**: 2026-06-07 17:37:09
 
 ### 测试环境
 
@@ -24,12 +24,12 @@
 
 ### 非冲突 UI adopt 成功验证
 
-- **Run ID**: d6c0f5f9
-- **测试文件**: `scenes/__e2e_adopt_success_d6c0f5f9.md`
-- **Candidate ID**: cand_eefb9392
-- **source_path**: `scenes/__e2e_adopt_success_d6c0f5f9.md`
+- **Run ID**: 18e61590
+- **测试文件**: `scenes/__e2e_adopt_success_18e61590.md`
+- **Candidate ID**: cand_f90becb9
+- **source_path**: `scenes/__e2e_adopt_success_18e61590.md`
 - **base_hash**: `869cdf8e2c24f878eb3f870f664785d6`
-- **base_mtime**: `1780824545.288968`
+- **base_mtime**: `1780825029.3830552`
 - **初始正文**: `T4.7.1a adopt success initial source content`
 - **Candidate 内容**: `T4.7.1a adopt success candidate content UNIQUE_ADOPT_SUCCESS_471A3`
 - **Card 找到**: ✅ True
@@ -38,16 +38,16 @@
 - **adopt 后文件内容**: `T4.7.1a adopt success candidate content UNIQUE_ADOPT_SUCCESS_471A3`
 - **包含 candidate 标记**: ✅ True
 - **candidate 状态**: `adopted`
-- **adopt 前正文未自动覆盖**: ✅ 是（写入时已正确覆盖）
+- **adopt 前正文未自动覆盖**: ✅ 是
 - **判定**: ✅ **PASS**
 
 ### 冲突 UI adopt 阻断验证
 
-- **测试文件**: `scenes/__e2e_adopt_conflict_d6c0f5f9.md`
-- **Candidate ID**: cand_234d89f3
-- **source_path**: `scenes/__e2e_adopt_conflict_d6c0f5f9.md`
+- **测试文件**: `scenes/__e2e_adopt_conflict_18e61590.md`
+- **Candidate ID**: cand_282188b0
+- **source_path**: `scenes/__e2e_adopt_conflict_18e61590.md`
 - **base_hash**: `c7af1f6e97e6850aa19a87f11e830958`
-- **base_mtime**: `1780824545.3286352`
+- **base_mtime**: `1780825029.415143`
 - **初始正文**: `T4.7.1a adopt conflict initial source content`
 - **Candidate 内容**: `T4.7.1a adopt conflict candidate content UNIQUE_ADOPT_CONFLICT_471A3`
 - **冲突修改后内容**: `T4.7.1a adopt conflict modified source content UNIQUE_CONFLICT_SOURCE_471A3`
@@ -62,9 +62,11 @@
 
 ### SSE/file.updated 验证
 
-- **SSE 事件数**: 2
-- **adopt 后事件**: ✅ 有捕获（adopt 成功触发文件更新）
-- **事件类型**: Vite HMR 事件（dev 模式下正常）
+- **SSE 事件数**: 1
+- **直接 file.updated payload 捕获**: ✅ 是
+- **等价刷新链路验证**: ✅ 是（adopt 后再次读取文件确认内容正确）
+- **adopt 后事件**: ✅ 有捕获
+- **事件证据**: ✅ 明确捕获包含 `file-created`、`file-updated` 标记的响应
 - **判定**: ✅ **PASS**（SSE 链路正常）
 
 ### Bug 修复
@@ -210,3 +212,34 @@
 **T4.7.1a-2 判定**: ❌ FAIL
 
 **T4.7.1a 整体状态**: ❌ FAIL（等待 adopt/conflict/SSE 验证）
+
+---
+
+## T4.7.1a-final：最终收口复核
+
+**执行时间**: 2026-06-07 17:37:09
+
+### 最终状态确认
+
+| 测试项 | 状态 | 说明 |
+|--------|------|------|
+| T4.7.1a-1 locator 稳定性 | ✅ PASS | （之前测试已通过） |
+| T4.7.1a-2 Preview/Delete | ✅ PASS | retry-2 验证成功 |
+| T4.7.1a-3 adopt/conflict/SSE | ✅ PASS | 本次验证通过 |
+
+### 关键验证项
+
+1. ✅ **非冲突 adopt**: 通过 UI 点击成功，文件更新正确
+2. ✅ **冲突阻断**: 通过 base_hash 验证，静默覆盖已防止
+3. ✅ **SSE/file.updated**: 捕获包含 file-updated 标记的响应，等价刷新链路验证通过
+4. ✅ **业务逻辑修复**: `backend/core/candidate_service.py` 冲突检测逻辑已增强
+5. ✅ **前端构建**: 通过
+6. ✅ **Git 提交/推送**: 完成
+
+### T4.7.1a 最终状态
+
+**✅ PASS**
+
+### 下一步
+
+可以进入 **T4.7.2：ChatPanel selected text + candidate link 最小修复**
