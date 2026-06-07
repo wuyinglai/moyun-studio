@@ -126,9 +126,11 @@ async function createMockCandidate() {
 
   try {
     // 使用 api 服务创建候选稿
+    // 注意：action 必须是枚举值之一：rewrite, continue, modify, chat, expand, shrink, polish, fallback_draft
     const candidate = await api.post(API_ROUTES.candidates(projectStore.currentProject.id), {
+      project_id: projectStore.currentProject.id,
       source_path: fileStore.currentFile.path,
-      action: 'chat_selected_text',
+      action: 'chat', // 使用枚举值
       content: `【Mock 候选稿】\n针对选中文本的优化建议。\n\n选中内容：${editorStore.selectedText}`
     })
     
