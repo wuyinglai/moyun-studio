@@ -1,0 +1,13 @@
+{
+  "project_id": "test-project-001",
+  "source_path": "chapters/vol-01/ch-001/sec-001.md",
+  "title": "初次相遇",
+  "goal": "男女主角在咖啡馆初次相遇",
+  "conflict": "林小雨打翻了咖啡",
+  "required_beats": ["林小雨打翻咖啡"],
+  "references": {
+    "material_paths": ["../evil.md", ".env", ".git/config", "C:\\windows\\system32\\", "/etc/passwd"],
+    "recent_context_paths": ["../secret.md"]
+  },
+  "output_intent": "draft"
+}

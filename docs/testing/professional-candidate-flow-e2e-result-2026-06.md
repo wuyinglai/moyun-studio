@@ -88,5 +88,204 @@ T4.7.5-final：✅ PASS
 - ✅ T4.7.3: Story State / Materials API dry-run
 - ✅ T4.7.4: Workflow/Pipeline polish-rewrite dry-run
 - ✅ T4.7.5: 原功能收口复验
+- ✅ T4.8: Scene Plan schema + validator dry-run
+
+
+---
+
+# T4.8：Scene Plan schema + validator dry-run
+
+**执行日期**: 2026-06-07
+**最终状态**: ✅ PASS
+
+## 完成内容
+
+### 1. Scene Plan Schema ✅
+- 文件位置: `backend/schemas/scene_plan.py`
+- 包含字段:
+  - 基础信息: project_id, source_path, scene_id
+  - 场景内容: title, goal, pov_character, characters, location, time_hint, conflict, emotional_shift
+  - 节拍约束: required_beats, constraints
+  - 关联引用: references (story_state_keys, material_paths, recent_context_paths)
+  - 输出策略: output_intent, candidate_policy (require_candidate, allow_direct_write)
+  - 元数据: metadata (created_by, version)
+
+### 2. Scene Plan Validator ✅
+- 文件位置: `backend/core/scene_plan_validator.py`
+- 校验规则:
+  - 必填字段验证 (project_id, source_path, title, goal, conflict, required_beats, output_intent)
+  - require_candidate 强制为 true
+  - allow_direct_write 强制为 false
+  - required_beats 至少 1 条
+  - 路径安全检查 (防止 .., .env, .git, 绝对路径等)
+  - characters 为空时警告
+- 返回结果结构: valid, errors, warnings
+
+### 3. 测试 Fixtures ✅
+- 文件位置: `tests/fixtures/`
+  - `scene_plan_valid.json`: 有效的 Scene Plan
+  - `scene_plan_invalid_paths.json`: 包含危险路径的 Scene Plan
+  - `scene_plan_direct_write_forbidden.json`: 违反 candidate 策略的 Scene Plan
+
+### 4. 测试覆盖 ✅
+- 文件位置: `tests/test_scene_plan_validator.py`
+- 覆盖 14 个测试用例:
+  - valid scene plan 通过
+  - 缺少必填字段失败
+  - required_beats 为空失败
+  - allow_direct_write=true 失败
+  - require_candidate=false 失败
+  - 危险路径失败
+  - characters 为空警告
+  - 支持 ScenePlan 对象和字典两种输入
+
+### 5. 是否新增 API: ❌ 否
+- 本阶段仅实现 schema 和 validator，暂不新增 API
+
+### 6. 其他约束验证
+- 是否调用真实 LLM: ❌ 否
+- 是否修改生产 Prompt: ❌ 否
+- 是否自动覆盖正文: ❌ 否
+- 是否破坏 T4.7 链路: ❌ 否
+
+## 测试结果
+
+| 测试项 | 状态 |
+|--------|------|
+| Scene Plan schema 语法检查 | ✅ |
+| Scene Plan validator 语法检查 | ✅ |
+| 测试脚本语法检查 | ✅ |
+| 14 个单元测试 | ✅ |
+| Professional 回归测试 | ✅ |
+| 前端构建 | ✅ |
+
+## 结论
+
+✅ T4.8: Scene Plan schema + validator dry-run **PASS**
+
+Scene Plan 结构化中间表示已完成，包含完整的 schema 定义和严格的 validator。核心安全约束（require_candidate=true, allow_direct_write=false, 路径安全）已实现并测试通过。可以进入下一阶段。
 
 **可以进入 T4.8**
+
+
+---
+
+# T4.7.5：原功能收口复验
+
+**执行日期**: 2026-06-07
+**最终状态**: ✅ PASS
+
+## 测试总结
+
+| 验证项 | 状态 |
+|--------|------|
+| 项目打开与列表 | ✅ |
+| 文件打开与读取 | ✅ |
+| 文件保存 | ✅ |
+| CandidatePanel 列表 | ✅ |
+| Story State 读取 | ✅ |
+| Materials 读取 | ✅ |
+| 清理测试数据 | ✅ |
+| 不调用真实 LLM | ✅ |
+| 不修改生产 Prompt | ✅ |
+
+## 运行的测试脚本
+
+1. `test_e2e_environment_health.py` - ✅
+2. `test_candidate_panel_probe_simple.py` - ✅
+3. `test_story_state_materials_dryrun.py` - ✅
+4. `test_workflow_pipeline_dryrun.py` - ✅
+5. `test_professional_regression_smoke.py` - ✅
+
+## 结论
+
+✅ T4.7.5: 原功能收口复验通过！
+- 核心功能无回归
+- 所有测试通过
+- 可以进入下一阶段
+
+---
+
+## 总路线图
+
+- ✅ T4.7.1a: Professional candidate dry-run
+- ✅ T4.7.2: ChatPanel selected text + candidate link
+- ✅ T4.7.3: Story State / Materials API dry-run
+- ✅ T4.7.4: Workflow/Pipeline polish-rewrite dry-run
+- ✅ T4.7.5: 原功能收口复验
+- ✅ T4.8: Scene Plan schema + validator dry-run
+
+
+---
+
+# T4.8：Scene Plan schema + validator dry-run
+
+**执行日期**: 2026-06-07
+**最终状态**: ✅ PASS
+
+## 完成内容
+
+### 1. Scene Plan Schema ✅
+- 文件位置: `backend/schemas/scene_plan.py`
+- 包含字段:
+  - 基础信息: project_id, source_path, scene_id
+  - 场景内容: title, goal, pov_character, characters, location, time_hint, conflict, emotional_shift
+  - 节拍约束: required_beats, constraints
+  - 关联引用: references (story_state_keys, material_paths, recent_context_paths)
+  - 输出策略: output_intent, candidate_policy (require_candidate, allow_direct_write)
+  - 元数据: metadata (created_by, version)
+
+### 2. Scene Plan Validator ✅
+- 文件位置: `backend/core/scene_plan_validator.py`
+- 校验规则:
+  - 必填字段验证 (project_id, source_path, title, goal, conflict, required_beats, output_intent)
+  - require_candidate 强制为 true
+  - allow_direct_write 强制为 false
+  - required_beats 至少 1 条
+  - 路径安全检查 (防止 .., .env, .git, 绝对路径等)
+  - characters 为空时警告
+- 返回结果结构: valid, errors, warnings
+
+### 3. 测试 Fixtures ✅
+- 文件位置: `tests/fixtures/`
+  - `scene_plan_valid.json`: 有效的 Scene Plan
+  - `scene_plan_invalid_paths.json`: 包含危险路径的 Scene Plan
+  - `scene_plan_direct_write_forbidden.json`: 违反 candidate 策略的 Scene Plan
+
+### 4. 测试覆盖 ✅
+- 文件位置: `tests/test_scene_plan_validator.py`
+- 覆盖 14 个测试用例:
+  - valid scene plan 通过
+  - 缺少必填字段失败
+  - required_beats 为空失败
+  - allow_direct_write=true 失败
+  - require_candidate=false 失败
+  - 危险路径失败
+  - characters 为空警告
+  - 支持 ScenePlan 对象和字典两种输入
+
+### 5. 是否新增 API: ❌ 否
+- 本阶段仅实现 schema 和 validator，暂不新增 API
+
+### 6. 其他约束验证
+- 是否调用真实 LLM: ❌ 否
+- 是否修改生产 Prompt: ❌ 否
+- 是否自动覆盖正文: ❌ 否
+- 是否破坏 T4.7 链路: ❌ 否
+
+## 测试结果
+
+| 测试项 | 状态 |
+|--------|------|
+| Scene Plan schema 语法检查 | ✅ |
+| Scene Plan validator 语法检查 | ✅ |
+| 测试脚本语法检查 | ✅ |
+| 14 个单元测试 | ✅ |
+| Professional 回归测试 | ✅ |
+| 前端构建 | ✅ |
+
+## 结论
+
+✅ T4.8: Scene Plan schema + validator dry-run **PASS**
+
+Scene Plan 结构化中间表示已完成，包含完整的 schema 定义和严格的 validator。核心安全约束（require_candidate=true, allow_direct_write=false, 路径安全）已实现并测试通过。可以进入下一阶段。

@@ -1,0 +1,40 @@
+{
+  "project_id": "test-project-001",
+  "source_path": "chapters/vol-01/ch-001/sec-001.md",
+  "scene_id": "scene-001",
+  "title": "初次相遇",
+  "goal": "男女主角在咖啡馆初次相遇，建立初步联系",
+  "pov_character": "林小雨",
+  "characters": ["林小雨", "陈阳"],
+  "location": "街角咖啡馆",
+  "time_hint": "周六下午",
+  "conflict": "林小雨打翻了咖啡，溅到了陈阳身上",
+  "emotional_shift": "从尴尬到尴尬后的轻松",
+  "required_beats": [
+    "林小雨在咖啡馆靠窗位置看书",
+    "转身时打翻咖啡",
+    "咖啡溅到邻座的陈阳",
+    "林小雨连忙道歉",
+    "陈阳微笑表示没关系",
+    "两人简短交流"
+  ],
+  "constraints": [
+    "保持轻松温馨的氛围",
+    "对话要自然",
+    "不要太戏剧化"
+  ],
+  "references": {
+    "story_state_keys": ["protagonist_intro", "setting_cafe"],
+    "material_paths": ["materials/characters/lin_xiaoyu.md", "materials/characters/chen_yang.md"],
+    "recent_context_paths": ["recent-context.md"]
+  },
+  "output_intent": "draft",
+  "candidate_policy": {
+    "require_candidate": true,
+    "allow_direct_write": false
+  },
+  "metadata": {
+    "created_by": "dryrun",
+    "version": "1.0.0"
+  }
+}
