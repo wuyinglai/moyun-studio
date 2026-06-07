@@ -371,11 +371,19 @@ class LLMService:
                         if not chunk.choices:
                             continue
                         content = chunk.choices[0].delta.content
+                        # Fallback to reasoning_content if content is empty (for reasoning models)
+                        if not content and hasattr(chunk.choices[0].delta, 'reasoning_content'):
+                            content = chunk.choices[0].delta.reasoning_content
                         if content:
                             yield content
                 else:
                     if response.choices:
-                        yield response.choices[0].message.content
+                        msg = response.choices[0].message
+                        content = msg.content
+                        # Fallback to reasoning_content if content is empty (for reasoning models)
+                        if not content and hasattr(msg, 'reasoning_content'):
+                            content = msg.reasoning_content
+                        yield content
 
                 # 调用成功，记录到熔断器
                 breaker.record_success(breaker_key)
