@@ -14,7 +14,7 @@ from datetime import datetime
 from playwright.async_api import async_playwright
 
 BACKEND_URL = "http://localhost:8000"
-FRONTEND_URL = "http://localhost:5174"
+FRONTEND_URL = "http://localhost:5173"
 PROJECT_ID = "demo-novel"
 
 # 生成唯一的测试文件路径（避免与旧数据冲突）
