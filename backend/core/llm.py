@@ -297,58 +297,66 @@ def _clean_reasoning_channel_content(text: str) -> str:
     if not text:
         return text
 
-    # 首先尝试寻找：如果最后有明显的选项输出，例如 "*   *Option 1 ('...')"
-    # 或者直接在最后一行有不带星号的中文句子
-    lines = text.split("\n")
-    useful_lines = []
+    # 收集所有非空行
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-    for line in lines:
-        # 跳过明显的推理标签行
-        line = line.strip()
-        if not line:
-            continue
+    # 检查是否包含明显的推理标记
+    has_reasoning_markers = any(
+        marker in text.lower()
+        for marker in [
+            "<|channel>", "*   original", "*   meaning", "*   context",
+            "*   strengths", "*   constraint", "*   task", "*   option",
+            "analysis:"
+        ]
+    )
 
-        # 跳过 channel 标签
-        if line.startswith("<|channel>") or line.startswith("</|channel>"):
-            continue
+    # 如果没有明显的推理标记，直接返回原样
+    if not has_reasoning_markers:
+        return text
 
-        # 跳过 Input 开头的
-        if line.startswith("*   Input") or line.startswith("*   Original"):
-            continue
+    # 否则，尝试从后往前找，找到第一个看起来像中文正文的行
+    for line in reversed(lines):
+        # 检查是否有足够多的中文字符
+        chinese_count = sum(1 for c in line if '\u4e00' <= c <= '\u9fff')
+        if chinese_count >= 5:
+            # 找到了看起来像中文正文的，尝试提取纯中文部分
+            # 找到第一个中文字符的位置
+            first_chinese_idx = None
+            for i, c in enumerate(line):
+                if '\u4e00' <= c <= '\u9fff':
+                    first_chinese_idx = i
+                    break
+            
+            if first_chinese_idx is not None:
+                # 从第一个中文字符开始截取
+                cleaned_line = line[first_chinese_idx:].strip()
+                # 再检查是否还有英文翻译部分在后面（例如 " (Twilight covers...)"）
+                # 找到最后一个中文字符或常见标点的位置
+                last_useful_idx = len(cleaned_line) - 1
+                for i in reversed(range(len(cleaned_line))):
+                    c = cleaned_line[i]
+                    # 中文字符、常见中文标点、或英文标点（用于句子结尾）
+                    if (
+                        '\u4e00' <= c <= '\u9fff'
+                        or c in '。！？，；：""''（）【】'
+                        or c in '.!?,;:"\'()[]'
+                    ):
+                        last_useful_idx = i
+                        break
+                
+                # 截取到最后一个有用字符
+                cleaned_line = cleaned_line[:last_useful_idx + 1].strip()
+                return cleaned_line
+            
+            return line.strip()
 
-        # 跳过 Constraint/Task
-        if line.startswith("*   Constraint") or line.startswith("*   Task"):
-            continue
-
-        # 跳过 Key elements/Atmosphere 等
-        if line.startswith("*   Key elements:") or line.startswith("*   Atmosphere:"):
-            continue
-
-        # 跳过只有单个星号标记的行
-        if (
-            line.startswith("*   \"")
-            or line.startswith("*   '")
-            or line.startswith("*   Option")
-        ):
-            continue
-
-        # 看起来像是有用内容的行
-        useful_lines.append(line)
-
-    if useful_lines:
-        # 尝试找最后一个符合中文句子特征的
-        for line in reversed(useful_lines):
-            # 检查是否是中文字符为主
-            chinese_count = sum(1 for c in line if '\u4e00' <= c <= '\u9fff')
-            if chinese_count >= 5:
-                # 找到了看起来像中文正文的
-                return line.strip()
-
-        # 没有特别明显的，就把有用的行合并
-        return "\n".join(useful_lines)
-
-    # 如果没有提取出有用内容，就原样返回
-    return text
+    # 如果没有找到合适的中文正文，尝试直接去掉 <|channel> 标记
+    cleaned = text
+    if "<|channel>" in cleaned:
+        # 简单地移除 channel 标记
+        cleaned = cleaned.replace("<|channel>", "").replace("</|channel>", "")
+    
+    return cleaned
 
 
 class LLMService:
