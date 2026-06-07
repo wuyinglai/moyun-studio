@@ -23,6 +23,10 @@ export const useEditorStore = defineStore('editor', () => {
     return countWords(contents.value[currentFilePath.value] || '')
   })
   const cursorPosition = ref({ line: 1, col: 1 })
+  // 选中的文本和选区范围
+  const selectedText = ref('')
+  const selectionStart = ref(0)
+  const selectionEnd = ref(0)
 
   // 按 projectId 隔离的编辑器状态（持久化）
   const perProjectData = ref<Record<string, { currentFilePath: string | null; filePrompts: Record<string, string>; compiledPrompts: Record<string, string> }>>({})
@@ -104,6 +108,13 @@ export const useEditorStore = defineStore('editor', () => {
     contentSource.value = 'local'
   }
 
+  /** 更新选区信息 */
+  function updateSelection(text: string, start: number, end: number) {
+    selectedText.value = text
+    selectionStart.value = start
+    selectionEnd.value = end
+  }
+
   // ─── 按 projectId 隔离：切换项目时保存/恢复 currentFilePath/filePrompts ───
   watch(
     () => useProjectStore().currentProject,
@@ -136,6 +147,9 @@ export const useEditorStore = defineStore('editor', () => {
     isDirty,
     wordCount,
     cursorPosition,
+    selectedText,
+    selectionStart,
+    selectionEnd,
     currentFilePath,
     loadContent,
     updateContent,
@@ -150,6 +164,7 @@ export const useEditorStore = defineStore('editor', () => {
     setCompiledPrompt,
     getCompiledPrompt,
     markLocalEdit,
+    updateSelection,
     perProjectData,
   }
 }, {

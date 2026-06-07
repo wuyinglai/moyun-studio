@@ -155,6 +155,11 @@ function createEditor(content: string) {
         line: line.number,
         col: pos - line.from + 1,
       }
+      
+      // 更新选中的文本
+      const selection = update.state.selection.main
+      const selectedText = update.state.doc.sliceString(selection.from, selection.to)
+      editorStore.updateSelection(selectedText, selection.from, selection.to)
     }
   })
 

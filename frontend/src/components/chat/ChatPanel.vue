@@ -23,6 +23,22 @@
       <span class="empty-hint">打开一个项目后即可开始 AI 对话</span>
     </div>
     <template v-else>
+      <!-- 选中状态提示 -->
+      <div
+        v-if="hasSelectedText"
+        class="selection-indicator"
+      >
+        <i class="fa-solid fa-highlighter" />
+        <span>已选中 {{ selectedTextLength }} 字</span>
+        <button
+          class="btn-create-candidate"
+          @click="createMockCandidate"
+        >
+          <i class="fa-solid fa-plus" />
+          创建候选稿
+        </button>
+      </div>
+      
       <div
         ref="messagesContainer"
         class="chat-messages"
@@ -75,8 +91,11 @@ import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
 import { useProjectStore } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
+import { useEditorStore } from '@/stores/editor'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { getPipelineForFile } from '@/utils/promptTypes'
+import api from '@/services/api'
+import { API_ROUTES } from '@/shared/api/routes'
 import ChatMessages from './ChatMessages.vue'
 import ChatInput from './ChatInput.vue'
 
@@ -86,6 +105,7 @@ const llmStore = useLLMStore()
 const notification = useNotificationStore()
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
+const editorStore = useEditorStore()
 
 const messagesContainer = ref<HTMLElement | null>(null)
 const inputText = ref('')
@@ -93,6 +113,32 @@ const inputText = ref('')
 const messages = computed(() => chatStore.messages)
 const isStreaming = computed(() => chatStore.isStreaming)
 const currentThinking = computed(() => chatStore.currentThinking)
+
+const hasSelectedText = computed(() => editorStore.selectedText.length > 0)
+const selectedTextLength = computed(() => editorStore.selectedText.length)
+
+// Mock 函数：创建候选稿（不调用真实 LLM）
+async function createMockCandidate() {
+  if (!projectStore.currentProject || !fileStore.currentFile) {
+    notification.warning('请先打开项目和文件')
+    return
+  }
+
+  try {
+    // 使用 api 服务创建候选稿
+    const candidate = await api.post(API_ROUTES.candidates(projectStore.currentProject.id), {
+      source_path: fileStore.currentFile.path,
+      action: 'chat_selected_text',
+      content: `【Mock 候选稿】\n针对选中文本的优化建议。\n\n选中内容：${editorStore.selectedText}`
+    })
+    
+    notification.success('候选稿已创建')
+    console.log('Created candidate:', candidate)
+  } catch (err) {
+    console.error('Failed to create candidate:', err)
+    notification.error('创建候选稿失败')
+  }
+}
 
 watch(
   () => messages.value.length,
@@ -205,6 +251,46 @@ onBeforeUnmount(() => {
   flex-direction: column;
   height: 100%;
   background: var(--ink-deep);
+}
+
+.selection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(201, 169, 110, 0.1);
+  border-bottom: 1px solid rgba(201, 169, 110, 0.2);
+  color: var(--gold-primary);
+  font-size: 13px;
+  
+  i {
+    opacity: 0.8;
+  }
+  
+  .btn-create-candidate {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(201, 169, 110, 0.15);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--gold-primary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    
+    &:hover {
+      background: rgba(201, 169, 110, 0.25);
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
 }
 
 .chat-empty {
