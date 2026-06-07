@@ -1,6 +1,9 @@
 """墨韵 - 管线引擎数据模型"""
 
+from typing import Any
 from pydantic import BaseModel, Field
+
+from backend.schemas.scene_plan import ScenePlan
 
 
 class PipelineStepDef(BaseModel):
@@ -28,6 +31,7 @@ class PipelineRunRequest(BaseModel):
     user_input: str | None = None
     output_mode: str = "write_scene"  # write_scene | candidate | append | dimension_file (LEGACY_COMPAT: overwrite accepted but deprecated)
     extra_vars: dict = Field(default_factory=dict)
+    scene_plan: ScenePlan | dict[str, Any] | None = Field(None, description="可选的 Scene Plan，用于场景规划和校验")
 
 
 class StepStatus(BaseModel):

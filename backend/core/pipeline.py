@@ -38,6 +38,7 @@ from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService
 from backend.core.prompt_versioning import archive_prompt
+from backend.core.scene_plan_validator import validate_scene_plan
 from backend.policies.generation_output_policy import (
     OutputDecision,
     decide_output,
@@ -45,8 +46,13 @@ from backend.policies.generation_output_policy import (
 )
 from backend.schemas.candidate import CandidateAction
 from backend.schemas.pipeline import PipelineDef
+from backend.schemas.scene_plan import ScenePlan
 
 logger = logging.getLogger(__name__)
+
+
+class PipelineError(Exception):
+    pass
 
 
 def _file_content(read_result: Any) -> str:
@@ -93,10 +99,6 @@ def _is_scaffold_placeholder(path: str | None, content: str) -> bool:
 def _has_substantive_content(path: str | None, content: str) -> bool:
     """Treat bootstrap placeholders as empty for first-run generation."""
     return bool(content and content.strip()) and not _is_scaffold_placeholder(path, content)
-
-
-class PipelineError(Exception):
-    pass
 
 
 REFERENCE_PATTERN = re.compile(r"@\{([^}]+)\}")
@@ -320,6 +322,7 @@ class PipelineRunner:
         llm_extra_kwargs: dict | None = None,
         require_candidate: bool = False,
         action: str | None = None,
+        scene_plan: ScenePlan | dict | None = None,
     ) -> AsyncGenerator[dict, None]:
         """执行管线
 
@@ -333,6 +336,17 @@ class PipelineRunner:
             - {"event": "done", "data": json}
             - {"event": "error", "data": json}
         """
+        # Scene Plan 验证（如果提供）
+        if scene_plan is not None:
+            validation_result = validate_scene_plan(scene_plan)
+            if not validation_result.valid:
+                error_messages = [f"{e.field}: {e.message}" for e in validation_result.errors]
+                yield {"event": "error", "data": json.dumps({"message": "Scene Plan 验证失败: " + "; ".join(error_messages), "task_id": f"pipeline-validate"})}
+                return
+            if validation_result.warnings:
+                for warning in validation_result.warnings:
+                    logger.warning("Scene Plan 警告: %s: %s", warning.field, warning.message)
+        
         pipeline = self.load_pipeline(pipeline_name)
         extra_vars = extra_vars or {}
         output_mode = await self._normalize_output_mode(

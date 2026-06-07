@@ -1,9 +1,9 @@
 
-# T5.0：墨韵真实写作闭环盘点报告
+# T5.1：墨韵真实写作闭环盘点报告（含 T5.1 完成版）
 
 **执行日期**: 2026-06-07
 **执行人**: Solo Agent
-**当前进度**: 约 71%
+**当前进度**: 约 73%
 
 ---
 
@@ -11,7 +11,7 @@
 
 ### 当前墨韵是否已经能完成一条真实写作闭环？
 
-**答案：部分能完成，但存在关键缺口**
+**答案：部分能完成，Scene Plan validate API 已软接入！**
 
 墨韵目前具备以下能力：
 - ✅ 项目创建和文件树显示
@@ -21,12 +21,12 @@
 - ✅ CandidatePanel 预览、采用、删除功能
 - ✅ Story State / Materials 读写
 - ✅ Scene Plan schema 和 validator（后端完成）
-- ✅ Scene Plan validate API（后端完成，但未被调用）
+- ✅ Scene Plan validate API（后端完成，**已软接入 pipeline！）
 
-**关键缺口**：
-1. ❌ **Scene Plan validate API 未被实际调用** - 后端 API 存在但前端/流程未接入
-2. ⚠️ **Scene Plan 生成功能未实现** - 只有校验，没有生成
-3. ⚠️ **前端没有 Scene Plan 相关 UI** - 无法让用户创建/编辑 Scene Plan
+**当前状态**：
+1. ✅ **Scene Plan validate API 已软接入 - 后端 API 存在，在 pipeline 中已集成验证
+2. ⚠️ **Scene Plan 生成功能未实现 - 只有校验，没有生成
+3. ⚠️ **前端没有 Scene Plan 相关 UI - 无法让用户创建/编辑 Scene Plan
 
 ---
 
@@ -48,7 +48,31 @@
 | 12. Adopt 后正文更新 | ✅ 可用 | - | - | backend/core/candidate_service.py | - |
 | 13. Adopt 后不破坏 story_state | ✅ 可用 | - | - | backend/core/story_state_service.py | - |
 | 14. 继续下一场景 | ✅ 可用 | - | - | frontend/composables/useSceneGenerationActions.ts | - |
-| 15. Scene Plan validate API 被调用 | ❌ 未接入 | ⚠️ P1 | backend/core/pipeline.py, frontend/composables/useSceneGenerationActions.ts | 接入 validate API |
+| 15. Scene Plan validate API 被调用 | ✅ 已接入（后端） | - | backend/core/pipeline.py, backend/api/scene_plan.py | 软接入成功 |
+
+---
+
+## 2.5 T5.1：Scene Plan validate API 软接入完成
+
+### T5.1 目标回顾
+
+**已完成任务：
+
+1. ✅ 修改 `PipelineRunRequest` 添加 `scene_plan` 可选字段
+2. ✅ 在 `pipeline.run()` 方法添加 scene_plan 验证逻辑
+3. ✅ 验证软接入：不传 scene_plan 时，旧流程不变；传了scene_plan 且非法时，阻止 pipeline 执行
+4. ✅ 更新 `api/pipeline.py` 传递 scene_plan
+5. ✅ 新增 `test_scene_plan_pipeline_integration.py 测试文件
+6. ✅ 所有测试通过
+
+### 软接入设计原则
+
+**向后兼容**：
+- **不传 scene_plan**：pipeline 行为与之前完全一致，保持旧流程不受影响
+- **传了 scene_plan**：先验证通过后继续执行 pipeline
+
+**安全校验**：
+- **传了非法 scene_plan（含危险路径、违反 candidate_policy 等）：阻止 pipeline 执行，返回明确错误
 
 ---
 
@@ -235,8 +259,7 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | T4.8 | ✅ 完成 | Scene Plan schema + validator |
 | T4.9 | ✅ 完成 | Scene Plan validate API 后端 |
 | T5.0 | ✅ 完成 | 写作闭环盘点 |
-| T5.1 | ⏳ 待做 | Scene Plan validate API 接入 dry-run |
+| **T5.1** | **✅ 完成** | **Scene Plan validate API 软接入 dry-run** |
 | T5.2 | 📋 规划中 | Scene Plan 前端 UI 最小接入 |
 
-**预计 T5.1 完成后进度**：约 73%
-**预计 T5.2 完成后进度**：约 75%
+**预计 T5.2 完成后进度**: 约 75%
