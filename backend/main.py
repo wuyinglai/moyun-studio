@@ -273,6 +273,7 @@ def create_app() -> FastAPI:
         quality,
         recent_context,
         revision_log,
+        scene_plan,
         snapshots,
         sse,
         story_state,
@@ -310,6 +311,7 @@ def create_app() -> FastAPI:
     app.include_router(trash.router, prefix="/api")
     app.include_router(lite.router, prefix="/api")
     app.include_router(candidates.router, prefix="/api")
+    app.include_router(scene_plan.router, prefix="/api")
 
     # ── 前端静态文件 & 单页入口 ──────────────────────────────────
     # 优先 serve Vue 构建产物 (dist/)，fallback 到 prototype.html
