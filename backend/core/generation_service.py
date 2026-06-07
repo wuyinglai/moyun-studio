@@ -99,11 +99,14 @@ class GenerationService:
         svc = LLMService.from_workspace_config(llm_cfg)
         runner = PipelineRunner(self.settings.prompts_path, svc, self.file_service, system_prompts_path=self.settings.system_prompts_path)
 
-        # 构建 LLM 额外参数（含 thinking 配置）
+        # 构建 LLM 额外参数（含 thinking 和 reasoning_format 配置）
         llm_extra_kwargs = {}
         thinking = llm_cfg.get("thinking", self.settings.llm_thinking)
         if thinking and "claude" in svc.config.model:
             llm_extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 2000}
+        reasoning_format = llm_cfg.get("reasoningFormat", self.settings.llm_reasoning_format)
+        if reasoning_format:
+            llm_extra_kwargs["reasoning_format"] = reasoning_format
 
         # 管线模式
         if prompt_type in GENERATE_PIPELINE_MAP:

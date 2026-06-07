@@ -31,7 +31,7 @@ def load_llm_config_from_workspace(settings) -> dict:
     2. workspace/.config.json 下的 "llm" 键（LLM API 保存的格式）
     3. 回退到 Settings（.env 中的全局配置）
 
-    返回 dict，包含键：apiType, apiKey, apiBase, model, thinking
+    返回 dict，包含键：apiType, apiKey, apiBase, model, thinking, reasoningFormat
     """
     import json
 
@@ -41,12 +41,13 @@ def load_llm_config_from_workspace(settings) -> dict:
         try:
             data = json.loads(config_file.read_text(encoding="utf-8"))
             return {
-                "apiType": data.get("apiType", data.get("api_type", settings.llm_provider)),
-                "apiKey": data.get("apiKey") or data.get("api_key") or settings.llm_api_key,
-                "apiBase": data.get("apiBase", data.get("api_base", settings.llm_api_base or "")),
-                "model": data.get("model", settings.llm_model),
-                "thinking": data.get("thinking", settings.llm_thinking),
-            }
+                    "apiType": data.get("apiType", data.get("api_type", settings.llm_provider)),
+                    "apiKey": data.get("apiKey") or data.get("api_key") or settings.llm_api_key,
+                    "apiBase": data.get("apiBase", data.get("api_base", settings.llm_api_base or "")),
+                    "model": data.get("model", settings.llm_model),
+                    "thinking": data.get("thinking", settings.llm_thinking),
+                    "reasoningFormat": data.get("reasoningFormat", data.get("reasoning_format", getattr(settings, "llm_reasoning_format", None))),
+                }
         except (json.JSONDecodeError, OSError) as e:
             logging.getLogger(__name__).warning(f"读取 llm_config.json 失败: {e}")
 
@@ -58,12 +59,13 @@ def load_llm_config_from_workspace(settings) -> dict:
             data = full.get("llm") or {}
             if data.get("apiKey") or data.get("model"):
                 return {
-                    "apiType": data.get("apiType", data.get("api_type", settings.llm_provider)),
-                    "apiKey": data.get("apiKey") or data.get("api_key") or settings.llm_api_key,
-                    "apiBase": data.get("apiBase") or data.get("apiUrl") or data.get("api_base") or settings.llm_api_base or "",
-                    "model": data.get("model", settings.llm_model),
-                    "thinking": data.get("thinking", settings.llm_thinking),
-                }
+                        "apiType": data.get("apiType", data.get("api_type", settings.llm_provider)),
+                        "apiKey": data.get("apiKey") or data.get("api_key") or settings.llm_api_key,
+                        "apiBase": data.get("apiBase") or data.get("apiUrl") or data.get("api_base") or settings.llm_api_base or "",
+                        "model": data.get("model", settings.llm_model),
+                        "thinking": data.get("thinking", settings.llm_thinking),
+                        "reasoningFormat": data.get("reasoningFormat", data.get("reasoning_format", getattr(settings, "llm_reasoning_format", None))),
+                    }
         except (json.JSONDecodeError, OSError) as e:
             logging.getLogger(__name__).warning(f"读取 .config.json 失败: {e}")
 
@@ -74,6 +76,7 @@ def load_llm_config_from_workspace(settings) -> dict:
         "apiBase": settings.llm_api_base or "",
         "model": settings.llm_model,
         "thinking": settings.llm_thinking,
+        "reasoningFormat": getattr(settings, "llm_reasoning_format", None),
     }
 
 
