@@ -131,11 +131,35 @@
 
 ---
 
-## 7. 下一步建议
+## 8. Human Review Evidence
 
-- 可考虑增加更多评分维度
-- 可尝试集成 LLM 辅助评分（作为可选功能）
-- 建议持续优化 scene_plan 设计
+A controlled candidate text snapshot has been added for human quality review:
+
+- [docs/testing/artifacts/t5-scene-plan-quality-candidates-2026-06.md](t5-scene-plan-quality-candidates-2026-06.md)
+
+This file contains:
+- Complete text of both baseline and with-plan candidates
+- Scene Plan summary
+- Preliminary comparison notes
+- Safety verification checklist
+
+**Note**: Rule-based scoring may not accurately reflect actual writing quality. External reviewers should manually evaluate the candidate text for:
+- scene_goal alignment
+- beats coverage
+- conflict presence
+- atmospheric consistency
+- overall writing quality
+
+---
+
+## T5.10.1a Update: Candidate Evidence Added
+
+**Status**: ✅ Complete
+
+- Baseline candidate (cand_3f3d8e72): 315 characters
+- With-plan candidate (cand_450a19fd): 360 characters
+- Safety verification: All checks passed
+- Ready for human quality review
 
 ---
 
