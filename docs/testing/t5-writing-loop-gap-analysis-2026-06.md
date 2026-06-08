@@ -1,9 +1,9 @@
 
-# T5.1：墨韵真实写作闭环盘点报告（含 T5.1 完成版）
+# T5.1-T5.6：墨韵真实写作闭环盘点报告（含 T5.6 完成版）
 
-**执行日期**: 2026-06-07
+**执行日期**: 2026-06-08
 **执行人**: Solo Agent
-**当前进度**: 约 77.5%
+**当前进度**: 约 80%
 
 ---
 
@@ -268,6 +268,6 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | T5.4.1 | ✅ 完成 | Scene Plan 前端浏览器 Smoke Test |
 | T5.4.2 | ✅ 完成 | Scene Plan 前端完整浏览器 Smoke 修复 |
 | T5.5 | ✅ 完成 | Scene Plan 自动加载优化 |
-| T5.6 | 📋 规划中 | Scene Plan 面板编辑器化 |
+| **T5.6** | **✅ 完成** | **Scene Plan JSON 编辑器最小版本** |
 
-**当前进度**: 约 79%
+**当前进度**: 约 80%

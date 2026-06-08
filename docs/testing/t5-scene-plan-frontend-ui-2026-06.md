@@ -1,8 +1,8 @@
-# T5.4：Scene Plan 前端 UI 最小集成测试报告
+# T5.4/T5.5/T5.6：Scene Plan 前端 UI 完整测试报告
 
 **执行日期**: 2026-06-08
 **执行人**: Solo Agent
-**当前进度**: 约 78%
+**当前进度**: 约 80%
 
 ---
 
@@ -196,9 +196,9 @@
 | T5.3 | ✅ 完成 | Scene Plan 持久化 API |
 | **T5.4** | **✅ 完成** | **Scene Plan 前端 UI 最小集成** |
 | T5.5 | ✅ 完成 | Scene Plan 自动加载优化 |
-| T5.6 | 📋 规划中 | Scene Plan 面板编辑器化 |
+| **T5.6** | **✅ 完成** | **Scene Plan JSON 编辑器最小版本** |
 
-**当前总进度**: 约 78%
+**当前总进度**: 约 80%
 
 ---
 
@@ -659,7 +659,7 @@ onMounted(() => {
 - ✅ 只调用 `GET /api/scene-plan/load` 自动加载
 - ✅ 不调用 `/api/generate`、`/api/candidates`
 
-### 5. 测试结论
+### 10. 测试结论
 
 **T5.5 测试结果**: ✅ PASS
 
@@ -674,6 +674,121 @@ onMounted(() => {
 8. ✅ 无副作用
 9. ✅ 前端构建通过
 10. ✅ 后端回归测试全部通过
+
+**是否完成**: ✅ YES
+
+---
+
+## T5.6: Scene Plan JSON 编辑器最小版本
+
+**执行日期**: 2026-06-08
+**执行人**: Solo Agent
+
+### 1. 实现目标
+
+1. 将 "只读 JSON 预览" 升级为 "最小可编辑 JSON 编辑器"
+2. 支持编辑模式（查看 / 编辑状态切换）
+3. JSON 语法错误实时检测与提示
+4. 调用 `POST /api/scene-plan/validate` 校验
+5. valid=false 时禁止保存
+6. 取消编辑功能（放弃未保存修改）
+7. 不做复杂可视化/拖拽/表单化
+8. 安全边界：不修改正文、不创建 candidate、不调用 `/api/generate`、不调用 `/api/candidates`
+
+### 2. 实现方案
+
+#### 2.1 编辑模式状态管理
+
+在 `ScenePlanPanel.vue` 中新增：
+- `isEditMode`: 编辑模式标记（false=查看，true=编辑）
+- `editJsonString`: JSON 文本编辑值
+- `isDirty`: 未保存修改标记
+- `parseError`: JSON 语法错误提示
+- `editedScenePlan`: 解析后的编辑数据
+
+#### 2.2 新增按钮
+
+1. "编辑 JSON"：进入编辑模式，显示 textarea
+2. "取消编辑"：退出编辑模式，放弃未保存修改
+3. "校验"：JSON 语法校验 + validate API 调用
+4. "保存"：保存编辑后的 scene_plan
+
+#### 2.3 UI 展示
+
+- 查看模式：显示格式化 JSON 预览
+- 编辑模式：显示 textarea（等宽字体）
+- 错误显示：红色边框 + 错误文本
+- 成功提示：绿色成功消息
+- dirty 状态：显示 "未保存" 提示
+
+#### 2.4 API 集成
+
+在 `useScenePlan.ts` 新增：
+```typescript
+export interface ScenePlanValidateResponse {
+  valid: boolean;
+  errors: Array<{ field: string; message: string }>;
+  warnings: Array<{ field: string; message: string }>;
+}
+
+export async function validateScenePlan(scenePlan: ScenePlanData): Promise<ScenePlanValidateResponse> {
+  const response = await api.post<ScenePlanValidateResponse>(API_ROUTES.scenePlanValidate, scenePlan);
+  return response;
+}
+```
+
+### 3. 编辑模式流程
+
+1. 用户点击 "编辑 JSON"
+   → 进入编辑模式
+   → `editJsonString` 设置为当前 scenePlan 格式化后的值
+2. 用户修改 textarea
+   → `isDirty` 设为 true
+   → 尝试 JSON.parse，解析成功则更新 `editedScenePlan`
+3. 用户点击 "校验"
+   → 检查 JSON 语法错误
+   → 调用 validate API
+   → 显示 valid=true/false 状态
+4. 用户点击 "保存"
+   → 检查 JSON 有效 + valid=true
+   → 调用 save API
+   → 保存成功后退出编辑模式
+5. 用户点击 "取消编辑"
+   → 放弃未保存修改
+   → 退出编辑模式
+
+### 4. 无副作用验证
+
+✅ **保证不执行**:
+- ❌ 不修改 target_file 正文
+- ❌ 不创建 candidate
+- ❌ 不执行 adopt
+- ❌ 不调用 `/api/generate`
+- ❌ 不调用 `/api/candidates`
+
+✅ **只调用**:
+- `POST /api/scene-plan/validate`
+- `POST /api/scene-plan/save`
+- `GET /api/scene-plan/load`
+
+### 5. 测试结论
+
+**T5.6 测试结果**: ✅ PASS
+
+关键验证点：
+1. ✅ "编辑 JSON" 按钮可用并能进入编辑模式
+2. ✅ JSON textarea 显示等宽字体，可编辑
+3. ✅ JSON 语法错误时显示 parseError 提示
+4. ✅ JSON 语法错误时不调用 validate/save API
+5. ✅ valid=true 时允许保存
+6. ✅ valid=false 时禁止保存
+7. ✅ 保存成功后退出编辑模式
+8. ✅ 重新加载显示修改后的数据
+9. ✅ "取消编辑" 功能正常，放弃修改
+10. ✅ 没有调用 `/api/generate` 和 `/api/candidates`
+11. ✅ 没有修改正文、没有创建 candidate、没有 adopt
+12. ✅ 前端构建通过
+13. ✅ 后端回归测试全部通过
 
 **是否完成**: ✅ YES
 

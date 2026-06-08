@@ -79,6 +79,13 @@ export interface ScenePlanLoadResponse {
   errors: Array<{ field: string; message: string }>
 }
 
+/** Scene Plan 校验响应 */
+export interface ScenePlanValidateResponse {
+  valid: boolean
+  errors: Array<{ field: string; message: string }>
+  warnings: Array<{ field: string; message: string }>
+}
+
 /** 生成 Scene Plan */
 export async function generateScenePlan(
   request: ScenePlanGenerateRequest
@@ -114,6 +121,17 @@ export async function loadScenePlan(
         target_file: targetFile,
       },
     }
+  )
+  return response
+}
+
+/** 校验 Scene Plan */
+export async function validateScenePlan(
+  scenePlan: ScenePlanData
+): Promise<ScenePlanValidateResponse> {
+  const response = await api.post<ScenePlanValidateResponse>(
+    API_ROUTES.scenePlanValidate,
+    scenePlan
   )
   return response
 }

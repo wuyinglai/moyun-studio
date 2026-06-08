@@ -10,7 +10,7 @@
         :disabled="loading"
         @click="handleLoad"
       >
-        <i class="fa-solid fa-rotate" />
+        <i class="fa-solid fa-rotate"></i>
       </button>
     </div>
 
@@ -19,7 +19,7 @@
       v-if="!isSceneFile"
       class="empty-state"
     >
-      <i class="fa-solid fa-file-circle-xmark" />
+      <i class="fa-solid fa-file-circle-xmark"></i>
       <span>当前文件不是场景文件</span>
       <span class="hint">Scene Plan 仅支持 sec-*.md 场景文件</span>
     </div>
@@ -29,22 +29,29 @@
       <!-- 当前状态 -->
       <div class="status-bar">
         <span
-          v-if="savedScenePlan"
+          v-if="isEditMode"
+          class="status-badge editing"
+        >
+          <i class="fa-solid fa-pen-to-square"></i> 编辑中
+          <span v-if="isDirty" class="dirty-indicator">*</span>
+        </span>
+        <span
+          v-else-if="savedScenePlan"
           class="status-badge saved"
         >
-          <i class="fa-solid fa-check" /> 已保存
+          <i class="fa-solid fa-check"></i> 已保存
         </span>
         <span
           v-else-if="generatedScenePlan"
           class="status-badge generated"
         >
-          <i class="fa-solid fa-pen" /> 已生成
+          <i class="fa-solid fa-pen"></i> 已生成
         </span>
         <span
           v-else
           class="status-badge empty"
         >
-          <i class="fa-solid fa-circle" /> 未保存
+          <i class="fa-solid fa-circle"></i> 未保存
         </span>
         <span
           v-if="currentTargetFile"
@@ -57,27 +64,66 @@
       <!-- 操作按钮 -->
       <div class="action-buttons">
         <button
+          v-if="!isEditMode"
           class="btn-action btn-load"
           :disabled="loading || generating || saving"
           @click="handleLoad"
         >
-          <i class="fa-solid fa-folder-open" />
+          <i class="fa-solid fa-folder-open"></i>
           加载
         </button>
         <button
+          v-if="!isEditMode"
           class="btn-action btn-generate"
           :disabled="loading || generating || saving || !llmConnected"
           @click="handleGenerate"
         >
-          <i class="fa-solid fa-wand-magic-sparkles" />
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
           生成
         </button>
         <button
+          v-if="!isEditMode && displayScenePlan"
+          class="btn-action btn-edit"
+          :disabled="loading || generating || saving"
+          @click="startEdit"
+        >
+          <i class="fa-solid fa-pen-to-square"></i>
+          编辑 JSON
+        </button>
+        <button
+          v-if="isEditMode"
+          class="btn-action btn-cancel"
+          :disabled="loading || generating || saving"
+          @click="cancelEdit"
+        >
+          <i class="fa-solid fa-xmark"></i>
+          取消
+        </button>
+        <button
+          v-if="isEditMode"
+          class="btn-action btn-validate"
+          :disabled="loading || generating || saving || !isJsonValid"
+          @click="doValidate"
+        >
+          <i class="fa-solid fa-check-double"></i>
+          校验
+        </button>
+        <button
+          v-if="!isEditMode"
           class="btn-action btn-save"
           :disabled="!canSave || saving"
           @click="handleSave"
         >
-          <i class="fa-solid fa-floppy-disk" />
+          <i class="fa-solid fa-floppy-disk"></i>
+          保存
+        </button>
+        <button
+          v-if="isEditMode"
+          class="btn-action btn-save"
+          :disabled="!canEditSave || saving"
+          @click="handleEditSave"
+        >
+          <i class="fa-solid fa-floppy-disk"></i>
           保存
         </button>
       </div>
@@ -87,7 +133,7 @@
         v-if="errorMessage"
         class="error-message"
       >
-        <i class="fa-solid fa-circle-exclamation" />
+        <i class="fa-solid fa-circle-exclamation"></i>
         {{ errorMessage }}
       </div>
 
@@ -96,7 +142,7 @@
         v-if="conflictMessage"
         class="conflict-message"
       >
-        <i class="fa-solid fa-triangle-exclamation" />
+        <i class="fa-solid fa-triangle-exclamation"></i>
         {{ conflictMessage }}
         <div class="conflict-actions">
           <button
@@ -119,7 +165,7 @@
         v-if="loading"
         class="loading-state"
       >
-        <i class="fa-solid fa-spinner fa-spin" />
+        <i class="fa-solid fa-spinner fa-spin"></i>
         加载中...
       </div>
 
@@ -128,7 +174,7 @@
         v-if="generating"
         class="generating-state"
       >
-        <i class="fa-solid fa-spinner fa-spin" />
+        <i class="fa-solid fa-spinner fa-spin"></i>
         生成中...
       </div>
 
@@ -137,8 +183,26 @@
         v-if="saving"
         class="saving-state"
       >
-        <i class="fa-solid fa-spinner fa-spin" />
+        <i class="fa-solid fa-spinner fa-spin"></i>
         保存中...
+      </div>
+
+      <!-- 校验中 -->
+      <div
+        v-if="validating"
+        class="validating-state"
+      >
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        校验中...
+      </div>
+
+      <!-- JSON 解析错误 -->
+      <div
+        v-if="isEditMode && parseError"
+        class="error-message"
+      >
+        <i class="fa-solid fa-circle-exclamation"></i>
+        JSON 解析错误: {{ parseError }}
       </div>
 
       <!-- 校验结果 -->
@@ -153,7 +217,7 @@
         >
           <i
             :class="validationResult.valid ? 'fa-solid fa-check-circle' : 'fa-solid fa-xmark-circle'"
-          />
+          ></i>
           {{ validationResult.valid ? '校验通过' : '校验失败' }}
         </div>
 
@@ -163,7 +227,7 @@
           class="validation-errors"
         >
           <div class="validation-title">
-            <i class="fa-solid fa-circle-exclamation" /> 错误
+            <i class="fa-solid fa-circle-exclamation"></i> 错误
           </div>
           <div
             v-for="(err, idx) in validationResult.errors"
@@ -180,7 +244,7 @@
           class="validation-warnings"
         >
           <div class="validation-title">
-            <i class="fa-solid fa-triangle-exclamation" /> 警告
+            <i class="fa-solid fa-triangle-exclamation"></i> 警告
           </div>
           <div
             v-for="(warn, idx) in validationResult.warnings"
@@ -192,9 +256,25 @@
         </div>
       </div>
 
-      <!-- Scene Plan JSON 预览 -->
+      <!-- 编辑模式：JSON 编辑器 -->
       <div
-        v-if="displayScenePlan"
+        v-if="isEditMode"
+        class="scene-plan-editor"
+      >
+        <div class="editor-header">
+          <span>编辑 JSON</span>
+        </div>
+        <textarea
+          v-model="editJsonString"
+          class="editor-textarea"
+          spellcheck="false"
+          @input="onJsonInput"
+        ></textarea>
+      </div>
+
+      <!-- 查看模式：JSON 预览 -->
+      <div
+        v-else-if="displayScenePlan"
         class="scene-plan-preview"
       >
         <div class="preview-header">
@@ -208,7 +288,7 @@
         v-if="savedPath"
         class="saved-path"
       >
-        <i class="fa-solid fa-check" />
+        <i class="fa-solid fa-check"></i>
         已保存到: {{ savedPath }}
       </div>
     </template>
@@ -226,6 +306,7 @@ import {
   generateScenePlan,
   saveScenePlan,
   loadScenePlan,
+  validateScenePlan,
   type ScenePlanData,
   type ScenePlanGenerateResponse,
 } from '@/composables/useScenePlan'
@@ -239,6 +320,7 @@ const notification = useNotificationStore()
 const loading = ref(false)
 const generating = ref(false)
 const saving = ref(false)
+const validating = ref(false)
 const errorMessage = ref('')
 const conflictMessage = ref('')
 const savedPath = ref('')
@@ -252,6 +334,13 @@ const validationResult = ref<{
 const lastLoadedTargetFile = ref('')
 const autoLoadInProgress = ref(false)
 
+// 编辑模式状态
+const isEditMode = ref(false)
+const editJsonString = ref('')
+const isDirty = ref(false)
+const parseError = ref('')
+const editedScenePlan = ref<ScenePlanData | null>(null)
+
 // 计算属性
 const currentTargetFile = computed(() => editorStore.currentFilePath || '')
 
@@ -264,6 +353,17 @@ const displayScenePlan = computed(() => generatedScenePlan.value || savedScenePl
 const canSave = computed(() => {
   if (!validationResult.value?.valid) return false
   if (!displayScenePlan.value) return false
+  return true
+})
+
+const isJsonValid = computed(() => {
+  return !parseError.value && editJsonString.value.trim().length > 0
+})
+
+const canEditSave = computed(() => {
+  if (!isJsonValid.value) return false
+  if (!validationResult.value?.valid) return false
+  if (!editedScenePlan.value) return false
   return true
 })
 
@@ -286,7 +386,8 @@ async function doLoad(isAutoLoad = false) {
   }
 
   if (
-    isAutoLoad && lastLoadedTargetFile.value === currentTargetFile.value && savedScenePlan.value !== null) {
+    isAutoLoad && lastLoadedTargetFile.value === currentTargetFile.value && savedScenePlan.value !== null
+  ) {
     // 避免重复加载同一个文件
     return
   }
@@ -296,6 +397,7 @@ async function doLoad(isAutoLoad = false) {
   errorMessage.value = ''
   conflictMessage.value = ''
   savedPath.value = ''
+  isEditMode.value = false
 
   try {
     const response = await loadScenePlan(
@@ -343,6 +445,11 @@ watch(currentTargetFile, (newFile) => {
   errorMessage.value = ''
   conflictMessage.value = ''
   savedPath.value = ''
+  isEditMode.value = false
+  editJsonString.value = ''
+  isDirty.value = false
+  parseError.value = ''
+  editedScenePlan.value = null
 
   if (newFile && isSceneFile.value && projectStore.currentProject?.id) {
     doLoad(true)
@@ -373,6 +480,7 @@ async function handleGenerate() {
   conflictMessage.value = ''
   savedPath.value = ''
   savedScenePlan.value = null
+  isEditMode.value = false
 
   try {
     const response: ScenePlanGenerateResponse = await generateScenePlan({
@@ -406,7 +514,7 @@ async function handleGenerate() {
   }
 }
 
-// 保存 Scene Plan
+// 保存 Scene Plan（查看模式）
 async function handleSave() {
   if (!canSave.value) return
   if (!projectStore.currentProject?.id) {
@@ -446,9 +554,120 @@ async function handleSave() {
   }
 }
 
+// 开始编辑
+function startEdit() {
+  if (!displayScenePlan.value) return
+  isEditMode.value = true
+  editJsonString.value = formatJson(displayScenePlan.value)
+  isDirty.value = false
+  parseError.value = ''
+  editedScenePlan.value = { ...displayScenePlan.value }
+}
+
+// 取消编辑
+function cancelEdit() {
+  isEditMode.value = false
+  editJsonString.value = ''
+  isDirty.value = false
+  parseError.value = ''
+  editedScenePlan.value = null
+}
+
+// JSON 输入处理
+function onJsonInput() {
+  isDirty.value = true
+  parseError.value = ''
+  editedScenePlan.value = null
+
+  try {
+    if (editJsonString.value.trim()) {
+      editedScenePlan.value = JSON.parse(editJsonString.value) as ScenePlanData
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    parseError.value = msg
+  }
+}
+
+// 校验 Scene Plan
+async function doValidate() {
+  if (!isJsonValid.value || !editedScenePlan.value) return
+  validating.value = true
+  errorMessage.value = ''
+  try {
+    const response = await validateScenePlan(editedScenePlan.value)
+    validationResult.value = {
+      valid: response.valid,
+      errors: response.errors,
+      warnings: response.warnings,
+    }
+    if (response.valid) {
+      notification.success('校验通过')
+    } else {
+      notification.warning('校验失败')
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    errorMessage.value = `校验失败: ${msg}`
+  } finally {
+    validating.value = false
+  }
+}
+
+// 保存编辑后的 Scene Plan
+async function handleEditSave() {
+  if (!canEditSave.value || !editedScenePlan.value) return
+  if (!projectStore.currentProject?.id) {
+    notification.warning('请先打开项目')
+    return
+  }
+
+  saving.value = true
+  errorMessage.value = ''
+  conflictMessage.value = ''
+  savedPath.value = ''
+
+  try {
+    const response = await saveScenePlan({
+      project_id: projectStore.currentProject.id,
+      target_file: currentTargetFile.value,
+      scene_plan: editedScenePlan.value,
+      overwrite: false,
+    })
+
+    if (response.saved) {
+      savedPath.value = response.path || ''
+      savedScenePlan.value = editedScenePlan.value
+      generatedScenePlan.value = null
+      isEditMode.value = false
+      editJsonString.value = ''
+      isDirty.value = false
+      parseError.value = ''
+      editedScenePlan.value = null
+      notification.success('Scene Plan 已保存')
+    } else if (response.conflict) {
+      conflictMessage.value = response.message || '文件已存在，是否覆盖？'
+    } else {
+      errorMessage.value = response.message || '保存失败'
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    errorMessage.value = `保存失败: ${msg}`
+  } finally {
+    saving.value = false
+  }
+}
+
 // 覆盖保存
 async function handleOverwrite() {
-  if (!displayScenePlan.value) return
+  let scenePlanToSave: ScenePlanData | null = null
+  if (isEditMode.value) {
+    scenePlanToSave = editedScenePlan.value
+  } else {
+    scenePlanToSave = displayScenePlan.value
+  }
+
+  if (!scenePlanToSave) return
   if (!projectStore.currentProject?.id) return
 
   conflictMessage.value = ''
@@ -458,14 +677,21 @@ async function handleOverwrite() {
     const response = await saveScenePlan({
       project_id: projectStore.currentProject.id,
       target_file: currentTargetFile.value,
-      scene_plan: displayScenePlan.value,
+      scene_plan: scenePlanToSave,
       overwrite: true,
     })
 
     if (response.saved) {
       savedPath.value = response.path || ''
-      savedScenePlan.value = displayScenePlan.value
+      savedScenePlan.value = scenePlanToSave
       generatedScenePlan.value = null
+      if (isEditMode.value) {
+        isEditMode.value = false
+        editJsonString.value = ''
+        isDirty.value = false
+        parseError.value = ''
+        editedScenePlan.value = null
+      }
       notification.success('Scene Plan 已覆盖保存')
     } else {
       errorMessage.value = response.message || '覆盖保存失败'
@@ -477,16 +703,6 @@ async function handleOverwrite() {
     saving.value = false
   }
 }
-
-// 监听文件切换，清除状态
-watch(currentTargetFile, () => {
-  savedScenePlan.value = null
-  generatedScenePlan.value = null
-  validationResult.value = null
-  errorMessage.value = ''
-  conflictMessage.value = ''
-  savedPath.value = ''
-})
 </script>
 
 <style scoped lang="scss">
@@ -580,6 +796,15 @@ watch(currentTargetFile, () => {
       background: var(--bg-hover);
       color: var(--text-muted);
     }
+
+    &.editing {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-warning);
+
+      .dirty-indicator {
+        font-weight: bold;
+      }
+    }
   }
 
   .current-file {
@@ -592,9 +817,11 @@ watch(currentTargetFile, () => {
 .action-buttons {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 
   .btn-action {
     flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -625,6 +852,33 @@ watch(currentTargetFile, () => {
 
       &:hover:not(:disabled) {
         background: rgba(59, 130, 246, 0.1);
+      }
+    }
+
+    &.btn-edit {
+      color: var(--accent-warning);
+      border-color: rgba(245, 158, 11, 0.3);
+
+      &:hover:not(:disabled) {
+        background: rgba(245, 158, 11, 0.1);
+      }
+    }
+
+    &.btn-validate {
+      color: var(--accent-primary);
+      border-color: rgba(59, 130, 246, 0.3);
+
+      &:hover:not(:disabled) {
+        background: rgba(59, 130, 246, 0.1);
+      }
+    }
+
+    &.btn-cancel {
+      color: var(--text-muted);
+      border-color: rgba(156, 163, 175, 0.3);
+
+      &:hover:not(:disabled) {
+        background: var(--bg-hover);
       }
     }
 
@@ -689,7 +943,8 @@ watch(currentTargetFile, () => {
 
 .loading-state,
 .generating-state,
-.saving-state {
+.saving-state,
+.validating-state {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -755,14 +1010,16 @@ watch(currentTargetFile, () => {
   }
 }
 
-.scene-plan-preview {
+.scene-plan-preview,
+.scene-plan-editor {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
 
-  .preview-header {
+  .preview-header,
+  .editor-header {
     padding: 6px 12px;
     background: var(--bg-card);
     font-size: 11px;
@@ -782,6 +1039,21 @@ watch(currentTargetFile, () => {
     max-height: 300px;
     white-space: pre-wrap;
     word-break: break-all;
+  }
+
+  .editor-textarea {
+    width: 100%;
+    min-height: 300px;
+    max-height: 500px;
+    padding: 12px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 11px;
+    border: none;
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
   }
 }
 
