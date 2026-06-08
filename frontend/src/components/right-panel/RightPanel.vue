@@ -81,6 +81,7 @@
         />
         <ExecutionPanel v-show="activeTab === 'execution'" />
         <FlowPanel v-show="activeTab === 'flow'" :activeFlow="flowStore.activeFlow" />
+        <ScenePlanPanel v-show="activeTab === 'scene-plan'" />
       </div>
     </template>
   </div>
@@ -102,6 +103,7 @@ import StoryStatePanel from '../global/StoryStatePanel.vue'
 import StyleGuidePanel from '../global/StyleGuidePanel.vue'
 import RecentContextPanel from '../global/RecentContextPanel.vue'
 import FlowPanel from '../flow/FlowPanel.vue'
+import ScenePlanPanel from '../scene-plan/ScenePlanPanel.vue'
 
 const projectStore = useProjectStore()
 const rightPanelStore = useRightPanelStore()
@@ -125,6 +127,7 @@ const tabs = [
   { id: 'recent', label: '上下文', icon: '🧭' },
   { id: 'execution', label: '执行', icon: '📊' },
   { id: 'flow', label: '流程', icon: '🔄' },
+  { id: 'scene-plan', label: '场景计划', icon: '🎯' },
 ]
 
 onMounted(() => {

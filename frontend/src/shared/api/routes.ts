@@ -101,4 +101,10 @@ export const API_ROUTES = {
 
   // ── Config ────────────────────────────────────────
   configCustomParams: '/config/custom-params',
+
+  // ── Scene Plan ────────────────────────────────────
+  scenePlanGenerate: '/scene-plan/generate',
+  scenePlanValidate: '/scene-plan/validate',
+  scenePlanSave: '/scene-plan/save',
+  scenePlanLoad: '/scene-plan/load',
 } as const
