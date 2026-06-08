@@ -649,9 +649,9 @@ async def generate_scene_plan_api(
         llm_service = LLMService.from_workspace_config(llm_cfg)
 
         logger.debug("调用 LLM 生成 Scene Plan")
-        raw_output = await llm_service.generate(
-            prompt=prompt,
-            model=llm_cfg.model,
+        raw_output = await llm_service.complete_sync(
+            messages=[{"role": "user", "content": prompt}],
+            model=llm_cfg.get("model"),
             temperature=0.3,
         )
         logger.debug("LLM 返回: %s", raw_output[:200])
