@@ -267,6 +267,7 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | T5.4 | ✅ 完成 | Scene Plan 前端 UI 最小集成 |
 | T5.4.1 | ✅ 完成 | Scene Plan 前端浏览器 Smoke Test |
 | T5.4.2 | ✅ 完成 | Scene Plan 前端完整浏览器 Smoke 修复 |
-| T5.5 | 📋 规划中 | Scene Plan 自动加载优化 |
+| T5.5 | ✅ 完成 | Scene Plan 自动加载优化 |
+| T5.6 | 📋 规划中 | Scene Plan 面板编辑器化 |
 
-**预计 T5.4.2 完成后进度**: 约 77.5%
+**当前进度**: 约 79%

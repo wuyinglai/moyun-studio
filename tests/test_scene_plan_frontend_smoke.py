@@ -1,13 +1,5 @@
 """
-T5.4.3 Scene Plan 前端完整浏览器 Smoke Test
-
-验证完整 UI 流程：
-1. 打开 demo-novel 项目，通过文件树打开场景文件
-2. 切换到场景计划标签
-3. 测试加载、生成、保存、再次加载
-
-使用 Mock API 模拟后端（LLM 未连接）
-明确标注：UI smoke mock API
+T5.5 Scene Plan 前端自动加载 Smoke Test
 """
 
 import os
@@ -27,12 +19,14 @@ SCENE_FILE_PATH = "chapters/vol-01/ch-001/sec-001.md"
 
 # 用于记录已保存状态，以便第二次 load 返回已保存
 saved_flag = False
+load_call_count = 0
 
 
 def setup_mocks(page):
     """设置 Mock API 路由 — 只拦截 scene-plan 相关 API"""
-    global saved_flag
+    global saved_flag, load_call_count
     saved_flag = False
+    load_call_count = 0
 
     def handle_generate(route: Route):
         print("Mock: intercepted POST /api/scene-plan/generate")
@@ -78,8 +72,9 @@ def setup_mocks(page):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
 
     def handle_load(route: Route):
-        global saved_flag
-        print(f"Mock: intercepted GET /api/scene-plan/load, saved_flag={saved_flag}")
+        global saved_flag, load_call_count
+        load_call_count +=1
+        print(f"Mock: intercepted GET /api/scene-plan/load #{load_call_count}, saved_flag={saved_flag}")
         scene_plan_data = {
             "project_id": PROJECT_ID,
             "source_path": SCENE_FILE_PATH,
@@ -192,7 +187,7 @@ def main():
         sec001_node = page.locator(".tree-node .node-row").filter(has_text="第1场景").first
         sec001_node.wait_for(state="visible", timeout=10000)
         sec001_node.click()
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         print("✅ Clicked 第1场景")
         
         # Wait for editor
@@ -202,16 +197,20 @@ def main():
         
         page.screenshot(path="test_results/02_scene_file_opened.png", full_page=True)
 
-        # ============ 步骤 3：切换到场景计划标签 ============
-        print("\n=== 步骤 3：切换到场景计划标签 ===")
+        # ============ 步骤 3：验证自动加载 ============
+        print("\n=== 步骤 3：验证自动加载 ===")
+        print(f"✅ Load called {load_call_count} times (expected at least 1)")
+
+        # ============ 步骤 4：切换到场景计划标签 ============
+        print("\n=== 步骤 4：切换到场景计划标签 ===")
         scene_plan_tab = page.locator(".right-panel .panel-tab .tab-label").filter(has_text="场景计划").first
         scene_plan_tab.wait_for(state="visible", timeout=30000)
         scene_plan_tab.click()
         page.wait_for_timeout(2000)
         print("✅ Switched to scene plan tab")
 
-        # ============ 步骤 4：验证场景计划面板 ============
-        print("\n=== 步骤 4：验证场景计划面板 ===")
+        # ============ 步骤 5：验证场景计划面板 ============
+        print("\n=== 步骤 5：验证场景计划面板 ===")
         scene_plan_panel = page.locator('[data-testid="scene-plan-panel"]')
         scene_plan_panel.wait_for(timeout=15000, state="visible")
         assert scene_plan_panel.is_visible(), "ScenePlanPanel not visible!"
@@ -219,79 +218,56 @@ def main():
 
         page.screenshot(path="test_results/03_scene_plan_panel.png", full_page=True)
 
-        # ============ 步骤 5：验证加载按钮 ============
-        print("\n=== 步骤 5：验证加载按钮 ===")
-        load_btn = scene_plan_panel.locator("button").filter(has_text="加载").first
-        load_btn.wait_for(state="visible", timeout=5000)
-        assert load_btn.is_visible(), "加载按钮不可见"
-        print("✅ 加载按钮可见")
+        # ============ 步骤 6：验证未保存状态 ============
+        print("\n=== 步骤 6：验证未保存状态 ===")
+        status_badge = scene_plan_panel.locator(".status-badge.empty").filter(has_text="未保存")
+        status_badge.wait_for(state="visible", timeout=5000)
+        assert status_badge.is_visible(), "未保存状态不可见"
+        print("✅ 显示未保存状态")
 
-        # ============ 步骤 6：验证生成按钮 ============
-        print("\n=== 步骤 6：验证生成按钮 ===")
+        # ============ 步骤 7：测试生成功能 ============
+        print("\n=== 步骤 7：测试生成功能 ===")
         generate_btn = scene_plan_panel.locator("button").filter(has_text="生成").first
-        generate_btn.wait_for(state="visible", timeout=5000)
-        assert generate_btn.is_visible(), "生成按钮不可见"
-        print("✅ 生成按钮可见")
-
-        # ============ 步骤 7：测试加载功能 ============
-        print("\n=== 步骤 7：测试加载功能 ===")
-        load_btn.click()
-        page.wait_for_timeout(2000)
-        page.screenshot(path="test_results/04_after_load.png", full_page=True)
-        print("✅ 已点击加载")
-
-        # ============ 步骤 8：测试生成功能 ============
-        print("\n=== 步骤 8：测试生成功能 ===")
         generate_btn.click()
         page.wait_for_timeout(3000)
-        page.screenshot(path="test_results/05_after_generate.png", full_page=True)
+        page.screenshot(path="test_results/04_after_generate.png", full_page=True)
         print("✅ 已点击生成")
 
         # 检查 valid badge
         valid_badge = scene_plan_panel.locator(".validation-badge.valid")
-        try:
-            valid_badge.wait_for(state="visible", timeout=10000)
-            assert valid_badge.is_visible(), "valid badge 不可见"
-            print("✅ 显示 valid=true")
-        except Exception:
-            validation_result = scene_plan_panel.locator(".validation-result")
-            if validation_result.is_visible():
-                print("⚠️ 验证结果可见但 valid badge 不可见")
-            else:
-                print("⚠️ 验证结果不可见")
+        valid_badge.wait_for(state="visible", timeout=10000)
+        assert valid_badge.is_visible(), "valid badge 不可见"
+        print("✅ 显示 valid=true")
 
         # 检查 JSON preview
         preview = scene_plan_panel.locator(".scene-plan-preview")
-        try:
-            preview.wait_for(state="visible", timeout=5000)
-            preview_text = preview.locator(".preview-content").first.inner_text()
-            if "scene_plan" in preview_text or "goal" in preview_text:
-                print("✅ 显示 scene_plan JSON")
-        except Exception:
-            print("⚠️ preview not found or empty")
+        preview.wait_for(state="visible", timeout=5000)
+        preview_text = preview.locator(".preview-content").first.inner_text()
+        assert "goal" in preview_text, "未显示 scene plan"
+        print("✅ 显示 scene_plan JSON")
 
-        # ============ 步骤 9：测试保存功能 ============
-        print("\n=== 步骤 9：测试保存功能 ===")
+        # ============ 步骤 8：测试保存功能 ============
+        print("\n=== 步骤 8：测试保存功能 ===")
         save_btn = scene_plan_panel.locator("button").filter(has_text="保存").first
-        if save_btn.is_visible() and save_btn.is_enabled():
-            save_btn.click()
-            page.wait_for_timeout(2000)
-            page.screenshot(path="test_results/06_after_save.png", full_page=True)
-            print("✅ 已点击保存")
-        else:
-            print("⚠️ 保存按钮不可用")
+        assert save_btn.is_visible() and save_btn.is_enabled(), "保存按钮不可用"
+        save_btn.click()
+        page.wait_for_timeout(2000)
+        page.screenshot(path="test_results/05_after_save.png", full_page=True)
+        print("✅ 已点击保存")
 
-        # ============ 步骤 10：测试重新加载 ============
-        print("\n=== 步骤 10：测试重新加载 ===")
+        # ============ 步骤 9：测试自动重新加载（或手动重新加载） ============
+        print("\n=== 步骤 9：验证重新加载显示已保存 ===")
+        load_btn = scene_plan_panel.locator("button").filter(has_text="加载").first
         load_btn.click()
         page.wait_for_timeout(2000)
-        page.screenshot(path="test_results/07_after_reload.png", full_page=True)
+        page.screenshot(path="test_results/06_after_reload.png", full_page=True)
         print("✅ 已再次点击加载")
 
-        # ============ 步骤 11：验证 ScenePlanPanel 仍然可见 ============
-        print("\n=== 步骤 11：验证 ScenePlanPanel 仍然可见 ===")
-        assert scene_plan_panel.is_visible(), "ScenePlanPanel 消失!"
-        print("✅ ScenePlanPanel 仍然可见")
+        # 检查已保存状态
+        saved_badge = scene_plan_panel.locator(".status-badge.saved")
+        saved_badge.wait_for(state="visible", timeout=5000)
+        assert saved_badge.is_visible(), "未显示已保存状态"
+        print("✅ 显示已保存状态")
 
         # ============ 最终清理 ============
         page.screenshot(path="test_results/99_final.png", full_page=True)

@@ -44,7 +44,7 @@
           v-else
           class="status-badge empty"
         >
-          <i class="fa-solid fa-circle" /> 未加载
+          <i class="fa-solid fa-circle" /> 未保存
         </span>
         <span
           v-if="currentTargetFile"
@@ -216,7 +216,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import { useProjectStore } from '@/stores/project'
 import { useLLMStore } from '@/stores/llm'
@@ -249,6 +249,8 @@ const validationResult = ref<{
   errors: Array<{ field: string; message: string }>
   warnings: Array<{ field: string; message: string }>
 } | null>(null)
+const lastLoadedTargetFile = ref('')
+const autoLoadInProgress = ref(false)
 
 // 计算属性
 const currentTargetFile = computed(() => editorStore.currentFilePath || '')
@@ -276,14 +278,21 @@ function formatJson(data: ScenePlanData | null): string {
 }
 
 // 加载已保存的 Scene Plan
-async function handleLoad() {
+async function doLoad(isAutoLoad = false) {
   if (!isSceneFile.value) return
   if (!projectStore.currentProject?.id) {
-    notification.warning('请先打开项目')
+    if (!isAutoLoad) notification.warning('请先打开项目')
+    return
+  }
+
+  if (
+    isAutoLoad && lastLoadedTargetFile.value === currentTargetFile.value && savedScenePlan.value !== null) {
+    // 避免重复加载同一个文件
     return
   }
 
   loading.value = true
+  autoLoadInProgress.value = isAutoLoad
   errorMessage.value = ''
   conflictMessage.value = ''
   savedPath.value = ''
@@ -294,6 +303,8 @@ async function handleLoad() {
       currentTargetFile.value
     )
 
+    lastLoadedTargetFile.value = currentTargetFile.value
+
     if (response.exists && response.scene_plan) {
       savedScenePlan.value = response.scene_plan
       generatedScenePlan.value = null
@@ -302,20 +313,48 @@ async function handleLoad() {
         errors: [],
         warnings: [],
       }
-      notification.success('已加载保存的 Scene Plan')
+      if (!isAutoLoad) notification.success('已加载保存的 Scene Plan')
     } else {
       savedScenePlan.value = null
       generatedScenePlan.value = null
       validationResult.value = null
-      notification.info('暂无保存的 Scene Plan')
+      // 自动加载时不显示通知
+      if (!isAutoLoad) notification.info('暂无保存的 Scene Plan')
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     errorMessage.value = `加载失败: ${msg}`
   } finally {
     loading.value = false
+    autoLoadInProgress.value = false
   }
 }
+
+// 手动加载按钮处理
+async function handleLoad() {
+  await doLoad(false)
+}
+
+// 监听文件切换，自动加载
+watch(currentTargetFile, (newFile) => {
+  savedScenePlan.value = null
+  generatedScenePlan.value = null
+  validationResult.value = null
+  errorMessage.value = ''
+  conflictMessage.value = ''
+  savedPath.value = ''
+
+  if (newFile && isSceneFile.value && projectStore.currentProject?.id) {
+    doLoad(true)
+  }
+}, { immediate: true })
+
+// 组件挂载时尝试自动加载
+onMounted(() => {
+  if (currentTargetFile.value && isSceneFile.value && projectStore.currentProject?.id) {
+    doLoad(true)
+  }
+})
 
 // 生成 Scene Plan
 async function handleGenerate() {
