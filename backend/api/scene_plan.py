@@ -440,9 +440,8 @@ async def save_scene_plan_api(
     try:
         json_content = json.dumps(scene_plan_dict, ensure_ascii=False, indent=2)
         await file_service.write_file(
-            path=full_path,
+            relative_path=full_path,
             content=json_content,
-            encoding="utf-8",
         )
         logger.info("Scene Plan 保存成功: %s", full_path)
 
