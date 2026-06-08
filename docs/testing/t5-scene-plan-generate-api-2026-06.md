@@ -13,6 +13,46 @@
 
 ---
 
+## T5.2.2 回归补票
+
+### 执行完整回归测试
+
+所有要求的测试均已执行：
+
+| 测试项 | 结果 | 数量 |
+|--------|------|------|
+| tests/test_scene_plan_generate_api.py | ✅ 通过 | 8 |
+| tests/test_scene_plan_validate_api.py | ✅ 通过 | 7 |
+| tests/test_scene_plan_validator.py | ✅ 通过 | 14 |
+| tests/test_scene_plan_pipeline_integration.py | ✅ 通过 | 5 |
+| tests/test_llm_reasoning_detection.py | ✅ 通过 | 7 |
+| tests/test_professional_regression_smoke.py | ✅ 通过 | - |
+| frontend build | ✅ 通过 | - |
+| git diff --check | ✅ 通过 (仅有 CRLF 警告) | - |
+
+### API Smoke 验证
+
+验证了以下功能点：
+
+1. ✅ raw_output 默认返回 null，保护用户内容安全
+2. ✅ include_raw_output=true 时，raw_output 正常返回
+3. ✅ 非法 JSON 不导致 500 错误，返回 valid=false 和 errors
+4. ✅ validator 失败时正常返回 errors
+5. ✅ 无副作用验证：
+   - ✅ 正文文件没有被修改（hash 和 mtime 保持不变）
+   - ✅ 没有创建任何 candidate
+   - ✅ 没有执行 adopt
+
+### 总结
+
+- 所有要求的回归测试均通过
+- 前端构建通过
+- API smoke 验证通过
+- 无副作用保证验证通过
+- 可以安全进入 T5.3
+
+---
+
 ## T5.2.1 收口修正
 
 ### 修正内容
@@ -222,6 +262,22 @@ tests/test_scene_plan_validator.py (14 tests)
 
 ---
 
+## T5.2.2 最终验收
+
+| 问题 | 回答 |
+|------|------|
+| tests/test_scene_plan_generate_api.py 是否已实际运行？ | ✅ 是，8 tests all passed |
+| tests/test_scene_plan_pipeline_integration.py 是否已通过？ | ✅ 是，5 tests all passed |
+| tests/test_llm_reasoning_detection.py 是否已通过？ | ✅ 是，7 tests all passed |
+| tests/test_professional_regression_smoke.py 是否已通过？ | ✅ 是，通过 |
+| frontend build 是否已通过？ | ✅ 是，vue-tsc -b && vite build 通过 |
+| git diff --check 是否已通过？ | ✅ 是，仅有 CRLF 警告 |
+| generate API 是否默认不返回 raw_output？ | ✅ 是，默认 null |
+| generate API 是否不写正文、不创建 candidate、不 adopt？ | ✅ 是，无副作用 |
+| **是否可以进入 T5.3？** | **✅ 是** |
+
+---
+
 ## T5.2.1 最终验收
 
 | 问题 | 回答 |
@@ -248,4 +304,5 @@ tests/test_scene_plan_validator.py (14 tests)
 
 ---
 
-**报告结论**: ✅ T5.2.1 收口完成，总进度约 75%
+**报告结论**: ✅ T5.2.2 回归补票完成，T5.2 整体完成，可以进入 T5.3，总进度约 75%
+
