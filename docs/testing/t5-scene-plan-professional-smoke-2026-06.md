@@ -230,3 +230,68 @@ POST /api/pipeline/run
 T5.8 已完成真实 smoke test，验证了 Scene Plan 接入 Professional dry-run 的完整链路。建议进入下一阶段（如需要）或进行功能完善。
 
 **当前总进度**: 约 82%
+
+---
+
+## T5.8.1: 安全收口
+
+**执行日期**: 2026-06-08
+**执行人**: Solo Agent
+
+### 1. 敏感信息扫描结果
+
+| 扫描项 | 结果 |
+|--------|------|
+| `git grep "sk-4ea45b"` | ✅ 仅出现在归档文档中记录的问题 |
+| `git grep "api.deepseek.com"` | ✅ 仅出现在文档示例和测试配置中 |
+| `git grep "LLM_API_KEY"` | ✅ 仅出现在文档说明和环境变量示例中 |
+| `git grep "deepseek-v4-flash"` | ✅ 仅出现在模型配置和文档中 |
+
+**结论**: 真实 API key 未进入仓库，所有敏感信息已脱敏。
+
+### 2. 真实 Smoke 脚本隔离
+
+**原路径**: `tests/test_scene_plan_professional_smoke.py`
+**新路径**: `scripts/smoke/scene_plan_professional_smoke.py`
+
+**原因**:
+- 该脚本依赖真实后端、真实 LLM、真实项目环境
+- 不属于默认单元测试
+- pytest 会自动扫描 `tests/` 目录下的 `test_*.py` 文件
+- 移动到 `scripts/smoke/` 可避免误跑
+
+**运行命令**:
+```powershell
+python scripts/smoke/scene_plan_professional_smoke.py
+```
+
+### 3. 默认 pytest 不会误跑
+
+确认：
+- ✅ `pytest tests/` 不会执行真实 smoke 脚本
+- ✅ 脚本已移出 tests 目录
+- ✅ 无需环境变量保护
+
+### 4. 回归测试结果
+
+| 测试项 | 结果 |
+|--------|------|
+| Scene Plan 后端测试 | ✅ 全部通过 |
+| frontend build | ✅ 通过 |
+| git diff --check | ✅ 通过 |
+
+### 5. Git 状态
+
+- ✅ HEAD = origin/main
+- ✅ 工作区 clean
+
+### 6. T5.8 是否可正式 PASS
+
+**结论**: ✅ YES
+
+所有安全收口检查通过：
+- 真实 API key 未进入仓库
+- 真实 smoke 脚本已隔离
+- 默认 pytest 不会误跑
+- 回归测试全部通过
+- Git 状态 clean

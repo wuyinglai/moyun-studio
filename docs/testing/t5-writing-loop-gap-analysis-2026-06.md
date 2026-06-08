@@ -272,5 +272,6 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | **T5.7** | **✅ 完成** | **Scene Plan 可选接入 Professional dry-run** |
 | **T5.7.1** | **✅ 完成** | **Scene Plan 安全收口（source file 匹配校验）** |
 | **T5.8** | **✅ 完成** | **Scene Plan 接入 Professional 真实 smoke test** |
+| **T5.8.1** | **✅ 完成** | **真实 smoke 安全收口（脚本隔离、敏感信息扫描）** |
 
 **当前进度**: 约 82%
