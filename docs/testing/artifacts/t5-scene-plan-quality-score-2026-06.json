@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-06-08T18:51:27.290401",
+  "project_id": "demo-novel",
+  "target_file": "chapters/vol-01/ch-001/sec-001.md",
+  "baseline_candidate_id": "cand_3f3d8e72",
+  "with_plan_candidate_id": "cand_450a19fd",
+  "scene_plan_title": "场景：旧港站",
+  "scores": {
+    "baseline": {
+      "scene_goal_alignment": {
+        "score": 1,
+        "label": "partial",
+        "evidence": "目标关键词部分匹配 (2/5)"
+      },
+      "beats_coverage": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "覆盖 4/4 beats"
+      },
+      "conflict_presence": {
+        "score": 0,
+        "label": "fail",
+        "evidence": "缺少冲突相关表述"
+      },
+      "characters_consistency": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "所有人物提及: 林澈"
+      },
+      "location_consistency": {
+        "score": 1,
+        "label": "partial",
+        "evidence": "location 提及有限 (2 次)"
+      },
+      "time_consistency": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "time 关键词丰富 (3 次提及)"
+      },
+      "no_reasoning_logs": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "未检测到推理日志"
+      },
+      "language_quality_basic": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "长度合理 (315 字)；内容非空"
+      },
+      "plan_contradiction_check": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "无明显矛盾"
+      },
+      "overall_score": {
+        "score": 14,
+        "max_score": 18,
+        "label": "pass"
+      }
+    },
+    "with_plan": {
+      "scene_goal_alignment": {
+        "score": 1,
+        "label": "partial",
+        "evidence": "目标关键词部分匹配 (2/5)"
+      },
+      "beats_coverage": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "覆盖 4/4 beats"
+      },
+      "conflict_presence": {
+        "score": 0,
+        "label": "fail",
+        "evidence": "缺少冲突相关表述"
+      },
+      "characters_consistency": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "所有人物提及: 林澈"
+      },
+      "location_consistency": {
+        "score": 1,
+        "label": "partial",
+        "evidence": "location 提及有限 (2 次)"
+      },
+      "time_consistency": {
+        "score": 1,
+        "label": "partial",
+        "evidence": "time 关键词有限 (1 次提及)"
+      },
+      "no_reasoning_logs": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "未检测到推理日志"
+      },
+      "language_quality_basic": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "长度合理 (360 字)；内容非空"
+      },
+      "plan_contradiction_check": {
+        "score": 2,
+        "label": "pass",
+        "evidence": "无明显矛盾"
+      },
+      "overall_score": {
+        "score": 13,
+        "max_score": 18,
+        "label": "pass"
+      }
+    }
+  },
+  "summary": {
+    "baseline_total": 14,
+    "with_plan_total": 13,
+    "delta": -1,
+    "conclusion": "❌ With-Plan 表现较差"
+  },
+  "safety_checks": [
+    {
+      "check": "Target file 未修改",
+      "passed": true,
+      "evidence": "MD5 保持: True, mtime 保持: True"
+    },
+    {
+      "check": "未创建 candidate",
+      "passed": true,
+      "evidence": "只读模式，未调用创建 API"
+    },
+    {
+      "check": "未调用生成 API",
+      "passed": true,
+      "evidence": "未调用 /api/pipeline/run"
+    },
+    {
+      "check": "未执行 adopt",
+      "passed": true,
+      "evidence": "未调用 adopt 相关 API"
+    },
+    {
+      "check": "未读取 API key",
+      "passed": true,
+      "evidence": "未访问环境变量中的 API key"
+    },
+    {
+      "check": "未调用外部 API",
+      "passed": true,
+      "evidence": "纯本地规则评分"
+    }
+  ],
+  "all_safe": true
+}
