@@ -794,6 +794,64 @@ export async function validateScenePlan(scenePlan: ScenePlanData): Promise<Scene
 
 ---
 
+## T5.6.1: Scene Plan JSON 编辑器收口验证
+
+**执行日期**: 2026-06-08
+**执行人**: Solo Agent
+
+### 1. 状态确认
+
+| 检查项 | 结果 | 说明 |
+|--------|------|------|
+| HEAD | `8132585db949226483e2113733369f3efa753c9e` | T5.6 提交 |
+| origin/main | `8132585db949226483e2113733369f3efa753c9e` | 与 HEAD 一致 |
+| 工作区状态 | ✅ Clean | 无未提交修改 |
+
+### 2. 远端内容验证
+
+| 验证项 | 结果 |
+|--------|------|
+| 编辑 JSON 入口 | ✅ 存在 |
+| parseError 处理 | ✅ 存在 |
+| validateScenePlan API | ✅ 存在 |
+| allow_direct_write 测试 | ✅ 存在 |
+| invalid JSON 测试 | ✅ 存在 |
+| T5.6 文档段落 | ✅ 存在 |
+
+### 3. 构建与测试结果
+
+| 测试项 | 结果 |
+|--------|------|
+| 前端构建 | ✅ 通过 (3.42s) |
+| Scene Plan 后端测试 | ✅ 39 个测试全部通过 |
+| git diff --check | ✅ 通过 |
+
+### 4. 安全边界验证
+
+✅ 确认没有副作用：
+- ❌ 不修改 target_file 正文
+- ❌ 不创建 candidate
+- ❌ 不执行 adopt
+- ❌ 不调用 `/api/generate`
+- ❌ 不调用 `/api/candidates`
+
+### 5. 测试产物清理
+
+| 检查项 | 结果 |
+|--------|------|
+| test_results 目录 | ✅ 已清理 |
+| 工作区状态 | ✅ Clean |
+
+### 6. 收口结论
+
+**T5.6.1 收口验证结果**: ✅ PASS
+
+**T5.6 是否可以正式判定 PASS**: ✅ YES
+
+**当前总进度**: 约 80%
+
+---
+
 ## 13. 涉及文件
 
 | 文件 | 操作 | 说明 |
