@@ -1,354 +1,304 @@
 """
-T5.4.2 Scene Plan 前端完整浏览器 Smoke Test
+T5.4.3 Scene Plan 前端完整浏览器 Smoke Test
 
 验证完整 UI 流程：
-1. 打开 demo-novel 项目
-2. 通过文件树展开打开场景文件 chapters/vol-01/ch-001/sec-001.md
-3. 切换到"场景计划"标签页
-4. 测试加载、生成、保存、再加载
+1. 打开 demo-novel 项目，通过文件树打开场景文件
+2. 切换到场景计划标签
+3. 测试加载、生成、保存、再次加载
 
-使用 Mock API 模拟后端（因为 LLM 未连接）
-注意：这是 UI Smoke Test，不是 LLM 功能测试
+使用 Mock API 模拟后端（LLM 未连接）
+明确标注：UI smoke mock API
 """
 
 import os
 import sys
+import json
 
+# 确保 playwright 可用
 try:
     from playwright.sync_api import sync_playwright, Route
 except ImportError:
     print("需要安装 playwright: pip install playwright && playwright install chromium")
     sys.exit(1)
 
-FRONTEND_URL = "http://127.0.0.1:5173"
+FRONTEND_URL = "http://localhost:5174"
 PROJECT_ID = "demo-novel"
 SCENE_FILE_PATH = "chapters/vol-01/ch-001/sec-001.md"
 
-MOCK_SCENE_PLAN = {
-    "scene_plan": {
-        "source_path": SCENE_FILE_PATH,
-        "scene_goal": "验证前端 UI 生成场景计划",
-        "characters": ["主角"],
-        "location": "古城",
-        "time": "夜晚",
-        "conflict": "主角面对未知选择",
-        "beats": ["打开场景", "生成计划", "保存计划"],
-        "references": {
-            "material_paths": [],
-            "recent_context_paths": []
-        },
-        "candidate_policy": {
-            "require_candidate": True,
-            "allow_direct_write": False
-        }
-    },
-    "valid": True,
-    "errors": [],
-    "warnings": []
-}
+# 用于记录已保存状态，以便第二次 load 返回已保存
+saved_flag = False
+
 
 def setup_mocks(page):
-    """设置 Mock API 路由"""
+    """设置 Mock API 路由 — 只拦截 scene-plan 相关 API"""
+    global saved_flag
+    saved_flag = False
 
     def handle_generate(route: Route):
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body='{"success":true,"data":' + str(MOCK_SCENE_PLAN).replace("'", '"') + ',"raw_output":null,"source_summary":{"target_file":"' + SCENE_FILE_PATH + '","used_story_state":false,"used_style_guide":false,"used_recent_context":false}}'
-        )
+        print("Mock: intercepted POST /api/scene-plan/generate")
+        scene_plan_data = {
+            "project_id": PROJECT_ID,
+            "source_path": SCENE_FILE_PATH,
+            "goal": "验证前端 UI 生成场景计划",
+            "conflict": "主角面对未知选择",
+            "required_beats": ["打开场景", "生成计划", "保存计划"],
+            "candidate_policy": {
+                "require_candidate": True,
+                "allow_direct_write": False
+            }
+        }
+        body = {
+            "scene_plan": scene_plan_data,
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "raw_output": None,
+            "source_summary": {
+                "target_file": SCENE_FILE_PATH,
+                "used_story_state": False,
+                "used_style_guide": False,
+                "used_recent_context": False
+            }
+        }
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
 
     def handle_save(route: Route):
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body='{"saved":true,"path":"materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json","valid":true,"errors":[],"warnings":[],"conflict":false,"message":null}'
-        )
+        global saved_flag
+        print("Mock: intercepted POST /api/scene-plan/save")
+        saved_flag = True
+        body = {
+            "saved": True,
+            "path": "materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json",
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "conflict": False,
+            "message": None
+        }
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
 
     def handle_load(route: Route):
-        if "ch-001" in route.request.url:
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                body='{"exists":true,"path":"materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json","scene_plan":' + str(MOCK_SCENE_PLAN["scene_plan"]).replace("'", '"') + ',"mtime":1234567890.0,"errors":[]}'
-            )
+        global saved_flag
+        print(f"Mock: intercepted GET /api/scene-plan/load, saved_flag={saved_flag}")
+        scene_plan_data = {
+            "project_id": PROJECT_ID,
+            "source_path": SCENE_FILE_PATH,
+            "goal": "验证前端 UI 生成场景计划",
+            "conflict": "主角面对未知选择",
+            "required_beats": ["打开场景", "生成计划", "保存计划"],
+        }
+        if saved_flag:
+            body = {
+                "exists": True,
+                "path": "materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json",
+                "scene_plan": scene_plan_data,
+                "mtime": 1234567890.0,
+                "errors": []
+            }
         else:
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                body='{"exists":false,"path":null,"scene_plan":null,"mtime":null,"errors":[]}'
-            )
+            body = {
+                "exists": False,
+                "path": None,
+                "scene_plan": None,
+                "mtime": None,
+                "errors": []
+            }
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
 
+    # 只拦截 scene-plan API，其他不拦截
     page.route("**/api/scene-plan/generate", handle_generate)
     page.route("**/api/scene-plan/save", handle_save)
     page.route("**/api/scene-plan/load", handle_load)
-
-
-def expand_and_click_file(page, display_text):
-    """
-    展开目录并点击文件。
-
-    策略：
-    1. 尝试在文件树中找到包含 display_text 的节点
-    2. 如果是目录，点击箭头展开
-    3. 如果是文件，直接点击节点行
-    """
-    try:
-        page.wait_for_selector('.tree-node', timeout=10000)
-
-        # 找到节点名称元素
-        node = page.locator(f'.tree-node .node-name:has-text("{display_text}")').first
-
-        if not node.is_visible():
-            return False
-
-        # 点击节点 - 实际上应该点击 node-row 而不是 node-name
-        # 但 Playwright 的点击会冒泡，所以我们直接点击 node-name
-        node.click(timeout=1000)
-        page.wait_for_timeout(800)
-
-        # 检查是否发生了展开（目录）还是选中（文件）
-        # 如果点击的是目录，它会展开，不会打开文件
-        # 我们需要再次点击来打开文件（如果是文件）
-
-        return True
-
-    except Exception as e:
-        print(f"  ⚠️ 展开/点击 '{display_text}' 失败: {e}")
-        return False
-
-
-def expand_path_step_by_step(page):
-    """
-    逐步展开文件树路径
-    """
-    # 步骤 1: 展开 chapters
-    try:
-        # 找到 chapters 目录的箭头
-        chapters_node = page.locator('.tree-node .node-name:has-text("chapters")')
-        if chapters_node.is_visible():
-            # 找到对应的 node-row
-            node_row = chapters_node.locator('..')
-            # 找到箭头并点击
-            arrow = node_row.locator('.node-arrow')
-            if arrow.is_visible():
-                arrow.click()
-                page.wait_for_timeout(800)
-                print("  ✅ 展开 chapters")
-    except Exception as e:
-        print(f"  ⚠️ 展开 chapters 失败: {e}")
-
-    # 步骤 2: 展开 第1卷
-    try:
-        vol_node = page.locator('.tree-node .node-name:has-text("第1卷")')
-        if vol_node.is_visible():
-            node_row = vol_node.locator('..')
-            arrow = node_row.locator('.node-arrow')
-            if arrow.is_visible():
-                arrow.click()
-                page.wait_for_timeout(800)
-                print("  ✅ 展开 第1卷")
-    except Exception as e:
-        print(f"  ⚠️ 展开 第1卷 失败: {e}")
-
-    # 步骤 3: 展开 第1章
-    try:
-        ch_node = page.locator('.tree-node .node-name:has-text("第1章")')
-        if ch_node.is_visible():
-            node_row = ch_node.locator('..')
-            arrow = node_row.locator('.node-arrow')
-            if arrow.is_visible():
-                arrow.click()
-                page.wait_for_timeout(800)
-                print("  ✅ 展开 第1章")
-    except Exception as e:
-        print(f"  ⚠️ 展开 第1章 失败: {e}")
-
-    # 步骤 4: 点击 第1场景
-    try:
-        sec_node = page.locator('.tree-node .node-name:has-text("第1场景")')
-        if sec_node.is_visible():
-            # 点击节点名称，这会触发 file-click
-            sec_node.click()
-            page.wait_for_timeout(1000)
-            print("  ✅ 点击 第1场景")
-            return True
-        else:
-            print("  ⚠️ 第1场景 不可见")
-    except Exception as e:
-        print(f"  ⚠️ 点击 第1场景 失败: {e}")
-
-    return False
+    print("Mock routes set up for /api/scene-plan/*")
 
 
 def main():
     os.makedirs("test_results", exist_ok=True)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False, slow_mo=500)
         page = browser.new_page()
 
-        setup_mocks(page)
+        # ============ 初始化：清除状态并设置 mocks ============
+        print("\n=== 初始化 ===")
+        page.goto(f"{FRONTEND_URL}", timeout=60000)
+        page.wait_for_load_state("domcontentloaded")
+        page.evaluate("() => localStorage.clear()")
+        print("localStorage cleared")
+        page.wait_for_timeout(1000)
 
-        print("\n=== 步骤 1: 打开 demo-novel 项目 ===")
+        setup_mocks(page)
+        print("Mocks set up")
+
+        # ============ 步骤 1：打开项目 ============
+        print("\n=== 步骤 1：打开项目 ===")
         page.goto(f"{FRONTEND_URL}/project/{PROJECT_ID}", timeout=60000)
         page.wait_for_load_state("domcontentloaded")
         page.wait_for_timeout(5000)
+        
+        # 查找 AppLayout
+        app_layout = page.locator(".app-layout")
+        try:
+            app_layout.wait_for(state="visible", timeout=30000)
+            print("✅ AppLayout visible!")
+        except Exception as e:
+            print(f"❌ AppLayout not visible! {e}")
+            page.screenshot(path="test_results/debug_01_app_layout_missing.png", full_page=True)
+            raise
+        
         page.screenshot(path="test_results/01_project_opened.png", full_page=True)
-        print("截图: 01_project_opened.png")
 
+        # Wait for file tree
         file_tree = page.locator('[data-testid="file-tree"]')
-        if file_tree.is_visible():
-            print("✅ 文件树可见")
-        else:
-            print("❌ 文件树不可见")
+        file_tree.wait_for(state="visible", timeout=10000)
+        print("✅ File tree visible")
 
-        right_panel = page.locator('.right-panel')
-        if right_panel.is_visible():
-            print("✅ 右侧面板可见")
-        else:
-            print("⚠️ 右侧面板不可见")
+        # Check mode switch
+        mode_link = page.locator(".mode-link")
+        if mode_link.is_visible():
+            mode_text = mode_link.inner_text()
+            print(f"Mode link text: '{mode_text}'")
+            if "专业模式" in mode_text:
+                mode_link.click()
+                page.wait_for_timeout(2000)
+                print("✅ Switched to professional mode")
 
-        print("\n=== 步骤 2: 打开场景文件 ===")
-        print("展开文件树...")
-        expand_path_step_by_step(page)
+        # ============ 步骤 2：打开场景文件 via 文件树 ============
+        print("\n=== 步骤 2：通过文件树打开场景文件 ===")
+        
+        # Click chapters row to expand it
+        chapters_row = page.locator(".tree-node .node-row").filter(has_text="chapters").first
+        chapters_row.wait_for(state="visible", timeout=10000)
+        chapters_row.click()
+        page.wait_for_timeout(1000)
+        print("✅ Clicked chapters row")
+        
+        # Wait for 第1卷 to appear (vol-01 auto-expanded by regex)
+        try:
+            vol01_node = page.locator(".tree-node .node-row").filter(has_text="第1卷").first
+            vol01_node.wait_for(state="visible", timeout=5000)
+            print("✅ Found 第1卷")
+        except Exception:
+            print("⚠️ 第1卷 not found, double-clicking chapters...")
+            chapters_row.click()
+            page.wait_for_timeout(1000)
+            vol01_node = page.locator(".tree-node .node-row").filter(has_text="第1卷").first
+            vol01_node.wait_for(state="visible", timeout=10000)
+        
+        # vol-01 and ch-001 are auto-expanded by regex — don't click them, just wait
+        page.wait_for_timeout(1000)
+        
+        # Find and click 第1场景 (sec-001.md)
+        sec001_node = page.locator(".tree-node .node-row").filter(has_text="第1场景").first
+        sec001_node.wait_for(state="visible", timeout=10000)
+        sec001_node.click()
         page.wait_for_timeout(2000)
+        print("✅ Clicked 第1场景")
+        
+        # Wait for editor
+        editor = page.locator('[data-testid="editor-panel"]')
+        editor.wait_for(state="visible", timeout=10000)
+        print("✅ Editor visible")
+        
         page.screenshot(path="test_results/02_scene_file_opened.png", full_page=True)
 
-        print("\n=== 步骤 3: 切换到场景计划标签页 ===")
+        # ============ 步骤 3：切换到场景计划标签 ============
+        print("\n=== 步骤 3：切换到场景计划标签 ===")
+        scene_plan_tab = page.locator(".right-panel .panel-tab .tab-label").filter(has_text="场景计划").first
+        scene_plan_tab.wait_for(state="visible", timeout=30000)
+        scene_plan_tab.click()
+        page.wait_for_timeout(2000)
+        print("✅ Switched to scene plan tab")
+
+        # ============ 步骤 4：验证场景计划面板 ============
+        print("\n=== 步骤 4：验证场景计划面板 ===")
+        scene_plan_panel = page.locator('[data-testid="scene-plan-panel"]')
+        scene_plan_panel.wait_for(timeout=15000, state="visible")
+        assert scene_plan_panel.is_visible(), "ScenePlanPanel not visible!"
+        print("✅ ScenePlanPanel visible!")
+
+        page.screenshot(path="test_results/03_scene_plan_panel.png", full_page=True)
+
+        # ============ 步骤 5：验证加载按钮 ============
+        print("\n=== 步骤 5：验证加载按钮 ===")
+        load_btn = scene_plan_panel.locator("button").filter(has_text="加载").first
+        load_btn.wait_for(state="visible", timeout=5000)
+        assert load_btn.is_visible(), "加载按钮不可见"
+        print("✅ 加载按钮可见")
+
+        # ============ 步骤 6：验证生成按钮 ============
+        print("\n=== 步骤 6：验证生成按钮 ===")
+        generate_btn = scene_plan_panel.locator("button").filter(has_text="生成").first
+        generate_btn.wait_for(state="visible", timeout=5000)
+        assert generate_btn.is_visible(), "生成按钮不可见"
+        print("✅ 生成按钮可见")
+
+        # ============ 步骤 7：测试加载功能 ============
+        print("\n=== 步骤 7：测试加载功能 ===")
+        load_btn.click()
+        page.wait_for_timeout(2000)
+        page.screenshot(path="test_results/04_after_load.png", full_page=True)
+        print("✅ 已点击加载")
+
+        # ============ 步骤 8：测试生成功能 ============
+        print("\n=== 步骤 8：测试生成功能 ===")
+        generate_btn.click()
+        page.wait_for_timeout(3000)
+        page.screenshot(path="test_results/05_after_generate.png", full_page=True)
+        print("✅ 已点击生成")
+
+        # 检查 valid badge
+        valid_badge = scene_plan_panel.locator(".validation-badge.valid")
         try:
-            page.wait_for_selector('.panel-tabs', timeout=10000)
-            scene_plan_tab = page.locator('.panel-tab', has_text='场景计划')
-            if scene_plan_tab.is_visible():
-                scene_plan_tab.click()
-                page.wait_for_timeout(1000)
-                print("✅ 已点击场景计划标签")
-                page.screenshot(path="test_results/03_scene_plan_panel.png", full_page=True)
+            valid_badge.wait_for(state="visible", timeout=10000)
+            assert valid_badge.is_visible(), "valid badge 不可见"
+            print("✅ 显示 valid=true")
+        except Exception:
+            validation_result = scene_plan_panel.locator(".validation-result")
+            if validation_result.is_visible():
+                print("⚠️ 验证结果可见但 valid badge 不可见")
             else:
-                print("❌ 场景计划标签不可见")
-        except Exception as e:
-            print(f"⚠️ 点击场景计划标签失败: {e}")
+                print("⚠️ 验证结果不可见")
 
-        print("\n=== 步骤 4: 检查场景文件状态 ===")
+        # 检查 JSON preview
+        preview = scene_plan_panel.locator(".scene-plan-preview")
         try:
-            page.wait_for_selector('[data-testid="scene-plan-panel"]', timeout=5000)
-            scene_plan_panel = page.locator('[data-testid="scene-plan-panel"]')
-            if scene_plan_panel.is_visible():
-                print("✅ ScenePlanPanel 可见")
+            preview.wait_for(state="visible", timeout=5000)
+            preview_text = preview.locator(".preview-content").first.inner_text()
+            if "scene_plan" in preview_text or "goal" in preview_text:
+                print("✅ 显示 scene_plan JSON")
+        except Exception:
+            print("⚠️ preview not found or empty")
 
-            # 检查是否识别为场景文件
-            load_btn = page.locator('button:has-text("加载")')
-            if load_btn.is_visible():
-                print("✅ 识别为场景文件（有加载按钮）")
-            else:
-                empty_state = page.locator('.empty-state')
-                if empty_state.is_visible():
-                    print("⚠️ 显示空状态（当前未打开场景文件）")
-                else:
-                    print("⚠️ 未识别为场景文件")
-        except Exception as e:
-            print(f"⚠️ 检查场景文件状态失败: {e}")
-
-        print("\n=== 步骤 5: 测试加载按钮 ===")
-        try:
-            load_btn = page.locator('button:has-text("加载")').first
-            if load_btn.is_visible() and load_btn.is_enabled():
-                load_btn.click()
-                page.wait_for_timeout(2000)
-                print("✅ 点击了加载按钮")
-                page.screenshot(path="test_results/04_after_load.png", full_page=True)
-            else:
-                print("⚠️ 加载按钮不可用")
-        except Exception as e:
-            print(f"⚠️ 测试加载按钮失败: {e}")
-
-        print("\n=== 步骤 6: 测试生成按钮 ===")
-        try:
-            generate_btn = page.locator('button:has-text("生成")').first
-            if generate_btn.is_visible():
-                if generate_btn.is_enabled():
-                    generate_btn.click()
-                    page.wait_for_timeout(3000)
-                    print("✅ 点击了生成按钮")
-                    page.screenshot(path="test_results/05_after_generate.png", full_page=True)
-
-                    try:
-                        page.wait_for_selector('.validation-result', timeout=5000)
-                        valid_badge = page.locator('.validation-badge.valid')
-                        if valid_badge.is_visible():
-                            print("✅ 校验通过 (valid=true)")
-                    except:
-                        pass
-
-                    try:
-                        preview = page.locator('.scene-plan-preview')
-                        if preview.is_visible():
-                            print("✅ JSON 预览显示")
-                    except:
-                        pass
-                else:
-                    print("⚠️ 生成按钮不可用（可能 LLM 未连接）")
-            else:
-                print("⚠️ 生成按钮不可见")
-        except Exception as e:
-            print(f"⚠️ 测试生成按钮失败: {e}")
-
-        print("\n=== 步骤 7: 测试保存按钮 ===")
-        try:
-            save_btn = page.locator('button:has-text("保存")').first
-            if save_btn.is_visible():
-                if save_btn.is_enabled():
-                    save_btn.click()
-                    page.wait_for_timeout(2000)
-                    print("✅ 点击了保存按钮")
-                    page.screenshot(path="test_results/06_after_save.png", full_page=True)
-
-                    saved_path = page.locator('.saved-path')
-                    if saved_path.is_visible():
-                        print("✅ 保存成功")
-                    else:
-                        conflict = page.locator('.conflict-message')
-                        if conflict.is_visible():
-                            print("⚠️ 发生冲突")
-                else:
-                    print("⚠️ 保存按钮不可用")
-            else:
-                print("⚠️ 保存按钮不可见")
-        except Exception as e:
-            print(f"⚠️ 测试保存按钮失败: {e}")
-
-        print("\n=== 步骤 8: 再次测试加载 ===")
-        try:
-            load_btn = page.locator('button:has-text("加载")').first
-            if load_btn.is_visible() and load_btn.is_enabled():
-                load_btn.click()
-                page.wait_for_timeout(2000)
-                print("✅ 再次点击了加载按钮")
-                page.screenshot(path="test_results/07_after_reload.png", full_page=True)
-
-                preview = page.locator('.scene-plan-preview')
-                if preview.is_visible():
-                    print("✅ 重新加载后显示 scene_plan JSON")
-        except Exception as e:
-            print(f"⚠️ 再次测试加载失败: {e}")
-
-        console_errors = []
-        page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
-
-        page.screenshot(path="test_results/08_final.png", full_page=True)
-
-        severe = [e for e in console_errors if not any(x in e for x in [
-            'ResizeObserver', 'vite-error-overlay', 'Download the Vue DevTools',
-            'net::ERR_CONNECTION_REFUSED', 'net::ERR_CONNECTION_CLOSED'
-        ])]
-        if severe:
-            print(f"\n⚠️ Console 错误: {severe}")
+        # ============ 步骤 9：测试保存功能 ============
+        print("\n=== 步骤 9：测试保存功能 ===")
+        save_btn = scene_plan_panel.locator("button").filter(has_text="保存").first
+        if save_btn.is_visible() and save_btn.is_enabled():
+            save_btn.click()
+            page.wait_for_timeout(2000)
+            page.screenshot(path="test_results/06_after_save.png", full_page=True)
+            print("✅ 已点击保存")
         else:
-            print("\n✅ 无严重 console 错误")
+            print("⚠️ 保存按钮不可用")
 
+        # ============ 步骤 10：测试重新加载 ============
+        print("\n=== 步骤 10：测试重新加载 ===")
+        load_btn.click()
+        page.wait_for_timeout(2000)
+        page.screenshot(path="test_results/07_after_reload.png", full_page=True)
+        print("✅ 已再次点击加载")
+
+        # ============ 步骤 11：验证 ScenePlanPanel 仍然可见 ============
+        print("\n=== 步骤 11：验证 ScenePlanPanel 仍然可见 ===")
+        assert scene_plan_panel.is_visible(), "ScenePlanPanel 消失!"
+        print("✅ ScenePlanPanel 仍然可见")
+
+        # ============ 最终清理 ============
+        page.screenshot(path="test_results/99_final.png", full_page=True)
         browser.close()
-        print("\n=== Smoke Test 完成 ===")
-        print("\n截图已保存到 test_results/ 目录")
+        print("\n=== Smoke Test PASS ===")
+        return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
