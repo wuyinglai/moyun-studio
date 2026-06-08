@@ -270,5 +270,6 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | T5.5 | ✅ 完成 | Scene Plan 自动加载优化 |
 | **T5.6** | **✅ 完成** | **Scene Plan JSON 编辑器最小版本** |
 | **T5.7** | **✅ 完成** | **Scene Plan 可选接入 Professional dry-run** |
+| **T5.7.1** | **✅ 完成** | **Scene Plan 安全收口（source file 匹配校验）** |
 
 **当前进度**: 约 81%

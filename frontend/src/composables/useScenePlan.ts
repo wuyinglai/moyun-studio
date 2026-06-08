@@ -198,13 +198,26 @@ export function clearCurrentScenePlan(): void {
   currentScenePlanValid.value = false
   currentScenePlanSourceFile.value = ''
   hasSavedScenePlan.value = false
+  useScenePlanForGeneration.value = false
 }
 
-/** 判断是否可以使用 Scene Plan 进行生成 */
-export function canUseScenePlanForGeneration(): boolean {
-  return (
-    useScenePlanForGeneration.value &&
-    currentScenePlan.value !== null &&
-    currentScenePlanValid.value
-  )
+/**
+ * 判断是否可以使用 Scene Plan 进行生成
+ * @param targetFile 可选的 target file 路径，用于校验 source file 匹配
+ * 如果传入 targetFile，则必须满足 currentScenePlanSourceFile === targetFile
+ */
+export function canUseScenePlanForGeneration(targetFile?: string): boolean {
+  const hasPlan = currentScenePlan.value !== null
+  const isValid = currentScenePlanValid.value
+  const isEnabled = useScenePlanForGeneration.value
+
+  // 如果传入了 targetFile，必须校验 source file 匹配
+  if (targetFile !== undefined) {
+    const sourceFile = currentScenePlanSourceFile.value
+    const fileMatch = sourceFile === targetFile
+    return isEnabled && hasPlan && isValid && fileMatch
+  }
+
+  // 不传入 targetFile 时，只做基本检查（用于 UI 显示）
+  return isEnabled && hasPlan && isValid
 }

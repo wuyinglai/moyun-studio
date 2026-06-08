@@ -179,8 +179,8 @@ export function useFileGeneration() {
         extra_vars: extraVars || {},
       }
 
-      // 如果启用了 Scene Plan 且可用，添加到请求中
-      if (canUseScenePlanForGeneration()) {
+      // 如果启用了 Scene Plan 且 source file 匹配当前文件，添加到请求中
+      if (canUseScenePlanForGeneration(filePath)) {
         const scenePlan = getCurrentScenePlan()
         if (scenePlan) {
           requestBody.scene_plan = scenePlan

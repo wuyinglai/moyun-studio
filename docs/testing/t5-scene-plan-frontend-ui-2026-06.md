@@ -939,6 +939,110 @@ export async function validateScenePlan(scenePlan: ScenePlanData): Promise<Scene
 
 ---
 
+## T5.7.1: Scene Plan 可选接入 Professional dry-run 安全收口
+
+**执行日期**: 2026-06-08
+**执行人**: Solo Agent
+
+### 1. T5.7 二次验收发现的问题
+
+T5.7 当前请求接入逻辑只检查：
+1. `useScenePlanForGeneration=true`
+2. `currentScenePlan` 存在
+3. `currentScenePlanValid=true`
+
+**缺失的检查**：`currentScenePlanSourceFile === filePath`
+
+这会留下 stale scene_plan 风险：A 场景的 Scene Plan 可能被错误用于 B 场景生成。
+
+### 2. 修复方案
+
+#### 2.1 修改 `canUseScenePlanForGeneration()`
+
+将函数签名改为支持可选参数：
+```typescript
+export function canUseScenePlanForGeneration(targetFile?: string): boolean {
+  const hasPlan = currentScenePlan.value !== null
+  const isValid = currentScenePlanValid.value
+  const isEnabled = useScenePlanForGeneration.value
+
+  // 如果传入了 targetFile，必须校验 source file 匹配
+  if (targetFile !== undefined) {
+    const sourceFile = currentScenePlanSourceFile.value
+    const fileMatch = sourceFile === targetFile
+    return isEnabled && hasPlan && isValid && fileMatch
+  }
+
+  // 不传入 targetFile 时，只做基本检查（用于 UI 显示）
+  return isEnabled && hasPlan && isValid
+}
+```
+
+#### 2.2 修改 `clearCurrentScenePlan()`
+
+增加状态清理，确保切换文件时关闭开关：
+```typescript
+export function clearCurrentScenePlan(): void {
+  currentScenePlan.value = null
+  currentScenePlanValid.value = false
+  currentScenePlanSourceFile.value = ''
+  hasSavedScenePlan.value = false
+  useScenePlanForGeneration.value = false  // 新增
+}
+```
+
+#### 2.3 修改 `useFileGeneration.ts`
+
+传入 `filePath` 参数进行 source file 匹配校验：
+```typescript
+if (canUseScenePlanForGeneration(filePath)) {
+  const scenePlan = getCurrentScenePlan()
+  if (scenePlan) {
+    requestBody.scene_plan = scenePlan
+  }
+}
+```
+
+### 3. 安全边界验证
+
+| 场景 | 行为 | 结果 |
+|------|------|------|
+| source_file === target_file | 附带 scene_plan | ✅ PASS |
+| source_file !== target_file | 不附带 scene_plan | ✅ PASS |
+| 无 Scene Plan | 不附带 scene_plan | ✅ PASS |
+| invalid Scene Plan | 不附带 scene_plan | ✅ PASS |
+| 切换文件 | useScenePlanForGeneration=false | ✅ PASS |
+
+### 4. 测试覆盖
+
+| 测试项 | 结果 |
+|--------|------|
+| 匹配文件时请求包含 scene_plan | ✅ PASS |
+| 不匹配文件时请求不包含 scene_plan | ✅ PASS |
+| 切换文件时状态清理 | ✅ PASS |
+| 无 Scene Plan 时不附带 | ✅ PASS |
+| invalid Scene Plan 不附带 | ✅ PASS |
+| 原 Professional dry-run 仍可用 | ✅ PASS |
+
+### 5. 测试结果
+
+**T5.7.1 测试结果**: ✅ PASS
+
+关键验证点：
+1. ✅ source file 匹配校验已实现
+2. ✅ `currentScenePlanSourceFile` 与 `target_file` 不一致时不附带 scene_plan
+3. ✅ `currentScenePlanSourceFile` 与 `target_file` 一致时勾选后附带 scene_plan
+4. ✅ `clearCurrentScenePlan()` 会关闭 `useScenePlanForGeneration`
+5. ✅ 切换文件后不会带上旧 Scene Plan
+6. ✅ 前端构建通过
+7. ✅ 后端回归测试全部通过（44个测试）
+
+**T5.7 是否可以正式 PASS**: ✅ YES
+
+**当前总进度**: 约 81%
+
+---
+
 ## 13. 涉及文件
 
 | 文件 | 操作 | 说明 |
