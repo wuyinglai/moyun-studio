@@ -57,6 +57,10 @@ class ScenePlanGenerateRequest(BaseModel):
     target_file: str = Field(..., description="目标场景文件路径（项目内相对路径）")
     instruction: str | None = Field(default=None, description="可选生成指令")
     dry_run: bool = Field(default=True, description="是否为干运行（当前阶段仅支持 true）")
+    include_raw_output: bool = Field(
+        default=False,
+        description="是否返回 LLM 原始输出，仅调试用，默认 false 以保护用户内容"
+    )
 
 
 class ScenePlanSourceSummary(BaseModel):
@@ -297,9 +301,9 @@ async def generate_scene_plan_api(
     # 1. 初始化源文件摘要
     source_summary = ScenePlanSourceSummary(target_file=request.target_file)
 
-    # 2. 安全检查：检查 target_file 安全性（虽然 file_service._resolve_path 在内部已检查
+    # 2. 安全检查：使用公开的 validate_path 方法检查路径安全性
     try:
-        file_service._resolve_path(f"{request.project_id}/{request.target_file}")
+        file_service.validate_path(f"{request.project_id}/{request.target_file}")
     except Exception as e:
         logger.warning("目标文件路径危险: %s", e)
         return ApiResponse.ok(
@@ -411,12 +415,13 @@ async def generate_scene_plan_api(
         ]
 
     # 9. 构建响应
+    # raw_output 只在显式请求时返回，保护用户内容安全
     response = ScenePlanGenerateResponse(
         scene_plan=scene_plan_obj,
         valid=valid,
         errors=errors,
         warnings=warnings,
-        raw_output=raw_output,
+        raw_output=raw_output if request.include_raw_output else None,
         source_summary=source_summary,
     )
 

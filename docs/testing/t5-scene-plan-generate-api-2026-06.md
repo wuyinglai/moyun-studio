@@ -13,6 +13,54 @@
 
 ---
 
+## T5.2.1 收口修正
+
+### 修正内容
+
+1. **raw_output 安全修正**
+   - 新增 `include_raw_output: bool = false` 字段到请求
+   - 默认不返回 raw_output，保护用户内容安全
+   - 仅在 `include_raw_output=true` 时返回 raw_output
+
+2. **路径验证公开方法**
+   - 在 `FileService` 中新增公开方法 `validate_path()`
+   - API 层不再直接调用私有方法 `_resolve_path()`
+   - 内部仍使用 `_resolve_path()`，但 API 层使用公开接口
+
+### API 更新
+
+#### 请求格式（更新）
+
+```json
+{
+  "project_id": "demo-novel",
+  "target_file": "chapters/vol-01/ch-001/sec-001.md",
+  "instruction": "请为当前场景生成结构化 Scene Plan",
+  "dry_run": true,
+  "include_raw_output": false  // 新增：默认不返回 raw_output
+}
+```
+
+#### 响应格式（更新）
+
+```json
+{
+  "scene_plan": { /* ScenePlan 对象 */ },
+  "valid": true,
+  "errors": [],
+  "warnings": [],
+  "raw_output": null,  // 默认不返回
+  "source_summary": {
+    "target_file": "chapters/vol-01/ch-001/sec-001.md",
+    "used_story_state": false,
+    "used_style_guide": false,
+    "used_recent_context": false
+  }
+}
+```
+
+---
+
 ## API 设计
 
 ### 接口路径
@@ -26,7 +74,8 @@
   "project_id": "demo-novel",
   "target_file": "chapters/vol-01/ch-001/sec-001.md",
   "instruction": "请为当前场景生成结构化 Scene Plan",
-  "dry_run": true
+  "dry_run": true,
+  "include_raw_output": false
 }
 ```
 
@@ -38,7 +87,7 @@
   "valid": true,
   "errors": [],
   "warnings": [],
-  "raw_output": "...",
+  "raw_output": null,  // 默认 null，include_raw_output=true 时返回
   "source_summary": {
     "target_file": "chapters/vol-01/ch-001/sec-001.md",
     "used_story_state": false,
@@ -63,7 +112,7 @@
 | style_guide.md | 风格指南 | 是 |
 | recent_context.md | 最近上下文 | 是 |
 
-所有读取操作均通过 `FileService._resolve_path` 进行安全检查，防止：
+所有读取操作均通过 `FileService.validate_path()` 进行安全检查（公开方法），防止：
 - 父目录遍历 (`../`)
 - 敏感文件访问 (`.env`, `.git`)
 - 绝对路径使用
@@ -97,10 +146,12 @@
 | 测试项 | 状态 |
 |--------|------|
 | 成功生成有效 Scene Plan | ✅ |
+| raw_output 默认不返回 | ✅ |
+| include_raw_output=true 时返回 raw_output | ✅ |
 | LLM 返回无效 JSON 处理 | ✅ |
 | 校验失败场景处理 | ✅ |
 | 危险路径安全检查 | ✅ |
-| 上下文文件加载 (story_state, style_guide, recent_context) | ✅ |
+| 上下文文件加载 | ✅ |
 | 无副作用验证（不写文件） | ✅ |
 
 ---
@@ -110,6 +161,7 @@
 执行以下现有测试，均通过：
 
 ```
+tests/test_scene_plan_generate_api.py (8 tests)
 tests/test_scene_plan_validate_api.py (7 tests)
 tests/test_scene_plan_validator.py (14 tests)
 ```
@@ -120,10 +172,19 @@ tests/test_scene_plan_validator.py (14 tests)
 
 ### 已实现的安全措施
 
-1. **路径安全**: 使用 `FileService._resolve_path` 检查所有输入路径
-2. **强制 candidate 策略**: 即使 LLM 返回错误的策略，也会强制重写为安全配置
-3. **无写操作**: 不执行任何文件写入
-4. **异常处理**: LLM 调用和 JSON 解析失败都不会导致 500 错误
+1. **路径安全**: 使用 `FileService.validate_path()` 公开方法检查所有输入路径
+2. **raw_output 保护**: 默认不返回 raw_output，防止用户内容泄露
+3. **强制 candidate 策略**: 即使 LLM 返回错误的策略，也会强制重写为安全配置
+4. **无写操作**: 不执行任何文件写入
+5. **异常处理**: LLM 调用和 JSON 解析失败都不会导致 500 错误
+
+---
+
+## 技术债
+
+### 已解决
+
+- ~~直接调用 `_resolve_path()` 私有方法~~ → 已通过新增 `validate_path()` 公开方法解决
 
 ---
 
@@ -157,7 +218,22 @@ tests/test_scene_plan_validator.py (14 tests)
 | 是否没有创建 candidate？ | ✅ 是 |
 | 是否没有执行 adopt？ | ✅ 是 |
 | 是否更新了 T5 报告？ | ✅ 是 |
-| **是否可以把总进度从 74% 推进到约 75%？** | **✅ 是** |
+| **是否可以把总进度从 74.7% 推进到 75%？** | **✅ 是** |
+
+---
+
+## T5.2.1 最终验收
+
+| 问题 | 回答 |
+|------|------|
+| tests/test_scene_plan_generate_api.py 是否已实际运行？ | ✅ 是，8 tests all passed |
+| raw_output 是否默认不返回？ | ✅ 是，默认返回 null |
+| include_raw_output=true 是否可以返回 raw_output？ | ✅ 是 |
+| generate API 是否仍然不写正文？ | ✅ 是 |
+| generate API 是否仍然不创建 candidate？ | ✅ 是 |
+| generate API 是否仍然不执行 adopt？ | ✅ 是 |
+| 是否处理了 _resolve_path() 私有调用问题？ | ✅ 是，新增 validate_path() 公开方法 |
+| **是否可以把总进度从 74.7% 推进到 75%？** | **✅ 是** |
 
 ---
 
@@ -166,9 +242,10 @@ tests/test_scene_plan_validator.py (14 tests)
 | 变更 | 文件 |
 |------|------|
 | 修改 | backend/api/scene_plan.py |
-| 新增 | tests/test_scene_plan_generate_api.py |
-| 新增 | docs/testing/t5-scene-plan-generate-api-2026-06.md |
+| 修改 | backend/core/file_ops.py (新增 validate_path) |
+| 修改 | tests/test_scene_plan_generate_api.py |
+| 修改 | docs/testing/t5-scene-plan-generate-api-2026-06.md |
 
 ---
 
-**报告结论**: ✅ T5.2 已实现并测试通过，总进度约 75%
+**报告结论**: ✅ T5.2.1 收口完成，总进度约 75%

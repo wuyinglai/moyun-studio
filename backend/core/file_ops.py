@@ -99,6 +99,17 @@ class FileService:
 
         return target
 
+    def validate_path(self, relative_path: str) -> None:
+        """验证路径安全性（公开方法）
+
+        调用内部的 _resolve_path 进行安全检查，但不返回解析后的路径。
+        用于 API 层在读取文件前进行路径验证，避免直接调用私有方法。
+
+        Raises:
+            ValidationError: 路径非法或危险
+        """
+        self._resolve_path(relative_path)
+
     @property
     def _trash(self) -> TrashService:
         """懒初始化的回收站服务（指向 workspace 的父级）"""
