@@ -36,12 +36,16 @@ def load_candidate_content(project_id: str, candidate_id: str):
     return None
 
 
-def load_scene_plan(project_id: str, target_file: str):
+def load_scene_plan(project_id: str, target_file: str, scene_plan_path: str = None):
     """读取 scene_plan 文件（只读）"""
-    # 从 materials/scene_plans/ 读取
+    if scene_plan_path:
+        scene_plan_file = Path("workspace/projects") / project_id / scene_plan_path
+        if scene_plan_file.exists():
+            with open(scene_plan_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    
     scene_plans_dir = Path("workspace/projects") / project_id / "materials" / "scene_plans"
     if scene_plans_dir.exists():
-        # 转换路径为文件名格式
         target_file_safe = target_file.replace("/", "__").replace("\\", "__")
         scene_plan_file = scene_plans_dir / f"{target_file_safe}.scene-plan.json"
         if scene_plan_file.exists():
@@ -460,7 +464,6 @@ def score_candidate(content: str, scene_plan: dict):
         "plan_contradiction_check": score_plan_contradiction_check(content, scene_plan),
     }
     
-    # 计算总分
     total_score = sum(s["score"] for s in scores.values())
     max_score = len(scores) * 2
     
@@ -473,20 +476,228 @@ def score_candidate(content: str, scene_plan: dict):
     return scores
 
 
-def main():
+def load_cases_from_file(cases_file_path: str):
+    """从 JSON 文件加载测试用例"""
+    with open(cases_file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def score_single_case(case: dict):
+    """对单个测试用例进行评分"""
+    print(f"\n{'='*60}")
+    print(f"处理 Case: {case.get('case_id', 'unknown')}")
+    print(f"{'='*60}")
+    
+    project_id = case.get("project_id", "demo-novel")
+    target_file = case.get("target_file", "")
+    baseline_candidate_id = case.get("baseline_candidate_id", "")
+    with_plan_candidate_id = case.get("with_plan_candidate_id", "")
+    scene_plan_path = case.get("scene_plan_path")
+    
+    scene_plan = load_scene_plan(project_id, target_file, scene_plan_path)
+    if not scene_plan:
+        print(f"[警告] 未找到 scene_plan，使用默认配置")
+        scene_plan = {
+            "project_id": project_id,
+            "source_path": target_file,
+            "title": "场景",
+            "goal": "",
+            "conflict": "",
+            "required_beats": [],
+            "characters": [],
+            "location": "",
+            "time": ""
+        }
+    
+    baseline_content = load_candidate_content(project_id, baseline_candidate_id)
+    with_plan_content = load_candidate_content(project_id, with_plan_candidate_id)
+    
+    if not baseline_content:
+        print(f"[错误] Baseline candidate 不存在: {baseline_candidate_id}")
+        return None
+    if not with_plan_content:
+        print(f"[错误] With-Plan candidate 不存在: {with_plan_candidate_id}")
+        return None
+    
+    baseline_scores = score_candidate(baseline_content, scene_plan)
+    with_plan_scores = score_candidate(with_plan_content, scene_plan)
+    
+    baseline_total = baseline_scores["overall_score"]["score"]
+    with_plan_total = with_plan_scores["overall_score"]["score"]
+    delta = with_plan_total - baseline_total
+    
+    if delta >= 3:
+        conclusion = "✅ With-Plan 明显更优"
+    elif delta >= 1:
+        conclusion = "⚠️ With-Plan 略优"
+    elif delta == 0:
+        conclusion = "⚠️ 两者相近"
+    else:
+        conclusion = "❌ With-Plan 表现较差"
+    
+    result = {
+        "case_id": case.get("case_id", "unknown"),
+        "project_id": project_id,
+        "target_file": target_file,
+        "baseline_candidate_id": baseline_candidate_id,
+        "with_plan_candidate_id": with_plan_candidate_id,
+        "scene_plan_title": scene_plan.get("title", ""),
+        "scores": {
+            "baseline": baseline_scores,
+            "with_plan": with_plan_scores
+        },
+        "summary": {
+            "baseline_total": baseline_total,
+            "with_plan_total": with_plan_total,
+            "delta": delta,
+            "conclusion": conclusion
+        }
+    }
+    
+    print(f"\n  Baseline 总分: {baseline_total}")
+    print(f"  With-Plan 总分: {with_plan_total}")
+    print(f"  Delta: {delta:+d}")
+    print(f"  结论: {conclusion}")
+    
+    return result
+
+
+def generate_multi_case_report(case_results: list, output_dir: str):
+    """生成多案例报告"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # JSON 输出
+    json_file = Path(output_dir) / f"t5-scene-plan-quality-multi-score-2026-06.json"
+    with open(json_file, 'w', encoding='utf-8') as f:
+        json.dump({
+            "generated_at": datetime.now().isoformat(),
+            "case_count": len(case_results),
+            "cases": case_results
+        }, f, ensure_ascii=False, indent=2)
+    print(f"\n多案例 JSON 已保存: {json_file}")
+    
+    # Markdown 输出
+    dimension_names = {
+        "scene_goal_alignment": "目标对齐度",
+        "beats_coverage": "情节覆盖度",
+        "conflict_presence": "冲突体现",
+        "characters_consistency": "人物一致性",
+        "location_consistency": "地点一致性",
+        "time_consistency": "时间一致性",
+        "no_reasoning_logs": "无推理日志",
+        "language_quality_basic": "语言质量",
+        "plan_contradiction_check": "矛盾检查"
+    }
+    
+    md = f"""# T5.11: 多场景样本验证评分稳定性
+
+**执行日期**: {datetime.now().strftime('%Y-%m-%d')}
+**执行人**: Solo Agent
+
+---
+
+## 1. 总体统计
+
+| 统计项 | 值 |
+|--------|-----|
+| 总测试用例数 | {len(case_results)} |
+| With-Plan 更优 | {sum(1 for r in case_results if r['summary']['delta'] > 0)} |
+| Baseline 更优 | {sum(1 for r in case_results if r['summary']['delta'] < 0)} |
+| 持平 | {sum(1 for r in case_results if r['summary']['delta'] == 0)} |
+| 平均 Delta | {sum(r['summary']['delta'] for r in case_results)/len(case_results) if case_results else 0:.1f} |
+
+---
+
+## 2. 各案例详情
+
+| 案例 ID | Target File | Baseline ID | With-Plan ID | Baseline | With-Plan | Delta | 结论 |
+|---------|-------------|-------------|--------------|----------|-----------|-------|------|
+"""
+    
+    for r in case_results:
+        md += f"| {r['case_id']} | {r['target_file']} | {r['baseline_candidate_id'][:10]}... | {r['with_plan_candidate_id'][:10]}... | {r['summary']['baseline_total']} | {r['summary']['with_plan_total']} | {r['summary']['delta']:+d} | {r['summary']['conclusion']} |\n"
+    
+    md += """
+---
+
+## 3. 稳定性评估
+
+"""
+    if len(case_results) >= 3:
+        better_count = sum(1 for r in case_results if r['summary']['delta'] > 0)
+        if better_count >= len(case_results) * 0.7:
+            md += "✅ **稳定**: With-Plan 在多数案例中更优\n"
+        elif better_count >= len(case_results) * 0.5:
+            md += "⚠️ **部分稳定**: With-Plan 在半数案例中更优\n"
+        else:
+            md += "❌ **不稳定**: With-Plan 未显示一致优势\n"
+    else:
+        md += "⚠️ **PARTIAL**: 样本不足，无法完整评估稳定性\n"
+    
+    md += """
+---
+
+## 4. 局限性说明
+
+1. 当前样本量有限，稳定性评估可能不充分
+2. 评分使用规则匹配，未调用 LLM 进行深度语义理解
+3. 仅作为辅助参考，不替代人工判断
+
+---
+
+## 5. 下一步建议
+
+- 补充更多不同类型场景的测试用例
+- 持续优化评分规则
+- 考虑集成 LLM 辅助评分（可选）
+
+"""
+    
+    md_file = Path("docs/testing") / "t5-scene-plan-quality-multi-score-2026-06.md"
+    with open(md_file, 'w', encoding='utf-8') as f:
+        f.write(md)
+    print(f"多案例 Markdown 已保存: {md_file}")
+    
+    return json_file, md_file
+
+
+def main_multi_case(args):
+    """多案例模式主函数"""
     print("=" * 60)
-    print("Scene Plan 质量对比自动评分脚本")
+    print("Scene Plan 质量对比自动评分 - 多案例模式")
+    print("=" * 60)
+    
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    
+    cases = load_cases_from_file(args.cases)
+    print(f"\n加载 {len(cases)} 个测试用例")
+    
+    case_results = []
+    for case in cases:
+        result = score_single_case(case)
+        if result:
+            case_results.append(result)
+    
+    if not case_results:
+        print("\n[错误] 没有成功评分的案例")
+        return 1
+    
+    generate_multi_case_report(case_results, args.output_dir)
+    
+    print(f"\n{'='*60}")
+    print("多案例评分完成")
+    print(f"{'='*60}")
+    print(f"成功处理: {len(case_results)}/{len(cases)} 个案例")
+    
+    return 0
+
+
+def main_single_case(args):
+    """单案例模式主函数（原 main 函数逻辑）"""
+    print("=" * 60)
+    print("Scene Plan 质量对比自动评分脚本 - 单案例模式")
     print("=" * 60)
     print()
-    
-    # 配置
-    parser = argparse.ArgumentParser(description="Scene Plan 质量对比评分")
-    parser.add_argument("--project_id", default="demo-novel", help="项目 ID")
-    parser.add_argument("--target_file", default="chapters/vol-01/ch-001/sec-001.md", help="目标文件")
-    parser.add_argument("--baseline_candidate_id", default="cand_3f3d8e72", help="Baseline candidate ID")
-    parser.add_argument("--with_plan_candidate_id", default="cand_450a19fd", help="With-Plan candidate ID")
-    parser.add_argument("--output_dir", default="docs/testing/artifacts", help="输出目录")
-    args = parser.parse_args()
     
     # 确保输出目录存在
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
@@ -731,6 +942,27 @@ def main():
     print(f"安全: {'✅ ALL SAFE' if all_safe else '❌ UNSAFE'}")
     
     return 0 if all_safe else 1
+
+
+def main():
+    print("=" * 60)
+    print("Scene Plan 质量对比自动评分脚本")
+    print("=" * 60)
+    print()
+    
+    parser = argparse.ArgumentParser(description="Scene Plan 质量对比评分")
+    parser.add_argument("--project_id", default="demo-novel", help="项目 ID")
+    parser.add_argument("--target_file", default="chapters/vol-01/ch-001/sec-001.md", help="目标文件")
+    parser.add_argument("--baseline_candidate_id", default="cand_3f3d8e72", help="Baseline candidate ID")
+    parser.add_argument("--with_plan_candidate_id", default="cand_450a19fd", help="With-Plan candidate ID")
+    parser.add_argument("--cases", help="测试用例文件 JSON（多案例模式）")
+    parser.add_argument("--output_dir", default="docs/testing/artifacts", help="输出目录")
+    args = parser.parse_args()
+    
+    if args.cases:
+        return main_multi_case(args)
+    else:
+        return main_single_case(args)
 
 
 def generate_markdown_report(args, scene_plan, baseline_scores, with_plan_scores,
