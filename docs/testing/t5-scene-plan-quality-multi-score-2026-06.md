@@ -16,11 +16,11 @@
 
 | 统计项 | 值 |
 |--------|-----|
-| 总测试用例数 | 1 |
+| 总测试用例数 | 2 |
 | With-Plan 更优 | 1 |
 | Baseline 更优 | 0 |
-| 持平 | 0 |
-| 平均 Delta | 2.0 |
+| 持平 | 1 |
+| 平均 Delta | 1.0 |
 
 ---
 
@@ -29,6 +29,7 @@
 | 案例 ID | Target File | Baseline ID | With-Plan ID | Baseline | With-Plan | Delta | 结论 |
 |---------|-------------|-------------|--------------|----------|-----------|-------|------|
 | demo-novel-sec-001 | chapters/vol-01/ch-001/sec-001.md | cand_3f3d8... | cand_450a1... | 11 | 13 | +2 | ⚠️ With-Plan 略优 |
+| demo-novel-sec-002 | chapters/vol-01/ch-001/sec-002.md | cand_acc25... | cand_a673e... | 14 | 14 | +0 | ⚠️ 两者相近 |
 
 ---
 
