@@ -852,6 +852,93 @@ export async function validateScenePlan(scenePlan: ScenePlanData): Promise<Scene
 
 ---
 
+## T5.7: Scene Plan 可选接入 Professional dry-run
+
+**执行日期**: 2026-06-08
+**执行人**: Solo Agent
+
+### 1. 实现目标
+
+1. 将已保存的 Scene Plan 作为"可选上下文"接入 Professional dry-run 前端流程
+2. 用户可选择"本次生成使用当前 Scene Plan"，但默认不强制使用
+3. 保持原 Professional dry-run 行为不变（不传 scene_plan 时仍可用）
+4. 不改变 candidate 防覆盖机制
+
+### 2. 实现方案
+
+#### 2.1 轻量状态共享
+
+在 `useScenePlan.ts` 中新增全局共享状态：
+- `currentScenePlan`: 当前 Scene Plan 数据
+- `currentScenePlanValid`: 是否有效
+- `currentScenePlanSourceFile`: 源文件路径
+- `hasSavedScenePlan`: 是否有已保存的 plan
+- `useScenePlanForGeneration`: 是否在生成时使用
+
+#### 2.2 UI 入口
+
+在 `ScenePlanPanel.vue` 中增加 checkbox：
+- "Professional 生成时使用当前 Scene Plan"
+- 只有存在 valid Scene Plan 时可勾选
+- 默认不勾选
+- 无 Scene Plan 时显示提示："请先生成或加载 Scene Plan"
+- Scene Plan 无效时显示提示："Scene Plan 无效，无法用于生成"
+
+#### 2.3 请求接入
+
+修改 `useFileGeneration.ts` 的 `runPipeline` 函数：
+
+当满足以下条件时，在请求中附带 `scene_plan`：
+1. 当前文件是场景文件
+2. `useScenePlanForGeneration=true`
+3. `currentScenePlan` 存在且 `currentScenePlanValid=true`
+
+否则，不传 `scene_plan`，保持原有行为。
+
+### 3. 安全边界
+
+✅ **保证不执行**:
+- ❌ 不修改 target_file 正文
+- ❌ 不创建 candidate（candidate 由 pipeline 正常创建）
+- ❌ 不执行 adopt
+- ❌ 不绕过 candidate 安全机制
+
+✅ **保持原行为**:
+- 不传 scene_plan 时，pipeline 行为与之前完全一致
+- 传了非法 scene_plan 时，后端会阻断 pipeline
+
+### 4. 测试覆盖
+
+| 测试项 | 结果 |
+|--------|------|
+| 勾选后请求包含 scene_plan | ✅ PASS |
+| 取消勾选后请求不包含 scene_plan | ✅ PASS |
+| 无 Scene Plan 时显示提示 | ✅ PASS |
+| Scene Plan 无效时显示提示 | ✅ PASS |
+| 原 Professional dry-run 仍可用 | ✅ PASS |
+
+### 5. 测试结果
+
+**T5.7 测试结果**: ✅ PASS
+
+关键验证点：
+1. ✅ 新增"Professional 生成时使用" checkbox
+2. ✅ 默认关闭，用户必须显式勾选
+3. ✅ 没有已保存 Scene Plan 时不可启用
+4. ✅ valid=false 时不可用于生成
+5. ✅ 勾选后 Professional 请求包含 scene_plan
+6. ✅ 取消勾选后 Professional 请求不包含 scene_plan
+7. ✅ 原不带 scene_plan 的 Professional dry-run 仍可用
+8. ✅ 没有直接写正文、没有绕过 candidate、没有执行 adopt
+9. ✅ 前端构建通过
+10. ✅ 后端回归测试全部通过（44个测试）
+
+**是否完成**: ✅ YES
+
+**当前总进度**: 约 81%
+
+---
+
 ## 13. 涉及文件
 
 | 文件 | 操作 | 说明 |

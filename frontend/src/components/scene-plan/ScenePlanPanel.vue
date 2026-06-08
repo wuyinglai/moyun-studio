@@ -72,6 +72,36 @@
           <i class="fa-solid fa-folder-open"></i>
           加载
         </button>
+
+        <!-- 使用 Scene Plan 开关 -->
+        <div
+          v-if="!isEditMode && displayScenePlan && validationResult?.valid"
+          class="use-scene-plan-toggle"
+        >
+          <label class="toggle-label">
+            <input
+              type="checkbox"
+              :checked="useScenePlanForGen"
+              :disabled="!canUseScenePlan"
+              @change="onUseScenePlanToggle"
+            />
+            <span class="toggle-text">Professional 生成时使用</span>
+          </label>
+        </div>
+        <div
+          v-if="!isEditMode && displayScenePlan && !validationResult?.valid"
+          class="use-scene-plan-disabled"
+        >
+          <i class="fa-solid fa-lock"></i>
+          <span>Scene Plan 无效，无法用于生成</span>
+        </div>
+        <div
+          v-if="!isEditMode && !displayScenePlan"
+          class="use-scene-plan-disabled"
+        >
+          <i class="fa-solid fa-file-circle-question"></i>
+          <span>请先生成或加载 Scene Plan</span>
+        </div>
         <button
           v-if="!isEditMode"
           class="btn-action btn-generate"
@@ -307,6 +337,10 @@ import {
   saveScenePlan,
   loadScenePlan,
   validateScenePlan,
+  setCurrentScenePlan,
+  clearCurrentScenePlan,
+  setUseScenePlanForGeneration,
+  getUseScenePlanForGeneration,
   type ScenePlanData,
   type ScenePlanGenerateResponse,
 } from '@/composables/useScenePlan'
@@ -340,6 +374,14 @@ const editJsonString = ref('')
 const isDirty = ref(false)
 const parseError = ref('')
 const editedScenePlan = ref<ScenePlanData | null>(null)
+
+// Professional 生成时使用 Scene Plan 的开关状态
+const useScenePlanForGen = ref(false)
+
+// 是否可以使用 Scene Plan 进行生成
+const canUseScenePlan = computed(() => {
+  return displayScenePlan.value !== null && validationResult.value?.valid
+})
 
 // 计算属性
 const currentTargetFile = computed(() => editorStore.currentFilePath || '')
@@ -703,6 +745,65 @@ async function handleOverwrite() {
     saving.value = false
   }
 }
+
+// 切换 Professional 生成时使用 Scene Plan 的开关
+function onUseScenePlanToggle(event: Event) {
+  const target = event.target as HTMLInputElement
+  const enabled = target.checked
+  useScenePlanForGen.value = enabled
+  setUseScenePlanForGeneration(enabled)
+  if (enabled) {
+    notification.info('已启用：Professional 生成时将使用当前 Scene Plan')
+  } else {
+    notification.info('已关闭：Professional 生成时不使用 Scene Plan')
+  }
+}
+
+// 更新全局共享状态
+function updateGlobalScenePlanState() {
+  const plan = displayScenePlan.value
+  const valid = validationResult.value?.valid || false
+  const saved = savedScenePlan.value !== null
+  setCurrentScenePlan(plan, valid, currentTargetFile.value, saved)
+}
+
+// 监听状态变化，更新全局状态
+watch([displayScenePlan, validationResult, currentTargetFile], () => {
+  updateGlobalScenePlanState()
+}, { deep: true })
+
+// 组件挂载时初始化全局状态
+onMounted(() => {
+  if (currentTargetFile.value && isSceneFile.value && projectStore.currentProject?.id) {
+    doLoad(true)
+  }
+  // 初始化开关状态
+  useScenePlanForGen.value = getUseScenePlanForGeneration()
+})
+
+// 监听文件切换，清除全局状态
+watch(currentTargetFile, (newFile) => {
+  savedScenePlan.value = null
+  generatedScenePlan.value = null
+  validationResult.value = null
+  errorMessage.value = ''
+  conflictMessage.value = ''
+  savedPath.value = ''
+  isEditMode.value = false
+  editJsonString.value = ''
+  isDirty.value = false
+  parseError.value = ''
+  editedScenePlan.value = null
+  useScenePlanForGen.value = false
+
+  // 清除全局状态
+  clearCurrentScenePlan()
+  setUseScenePlanForGeneration(false)
+
+  if (newFile && isSceneFile.value && projectStore.currentProject?.id) {
+    doLoad(true)
+  }
+}, { immediate: true })
 </script>
 
 <style scoped lang="scss">

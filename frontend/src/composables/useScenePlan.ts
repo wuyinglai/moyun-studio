@@ -2,10 +2,19 @@
  * Scene Plan API 调用封装
  *
  * 提供 generate、save、load 三个核心 API 的类型安全调用。
+ * 同时提供轻量状态共享，用于在组件间传递当前 Scene Plan。
  */
 
+import { ref } from 'vue'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
+
+/** 全局共享状态 - 当前 Scene Plan */
+const currentScenePlan = ref<ScenePlanData | null>(null)
+const currentScenePlanValid = ref(false)
+const currentScenePlanSourceFile = ref('')
+const hasSavedScenePlan = ref(false)
+const useScenePlanForGeneration = ref(false)
 
 /** Scene Plan 结构（简化版） */
 export interface ScenePlanData {
@@ -134,4 +143,68 @@ export async function validateScenePlan(
     scenePlan
   )
   return response
+}
+
+/**
+ * Scene Plan 状态管理 - 用于组件间共享
+ */
+
+/** 设置当前 Scene Plan */
+export function setCurrentScenePlan(
+  plan: ScenePlanData | null,
+  valid: boolean,
+  sourceFile: string,
+  saved: boolean = false
+): void {
+  currentScenePlan.value = plan
+  currentScenePlanValid.value = valid
+  currentScenePlanSourceFile.value = sourceFile
+  hasSavedScenePlan.value = saved
+}
+
+/** 获取当前 Scene Plan */
+export function getCurrentScenePlan(): ScenePlanData | null {
+  return currentScenePlan.value
+}
+
+/** 获取当前 Scene Plan 是否有效 */
+export function getCurrentScenePlanValid(): boolean {
+  return currentScenePlanValid.value
+}
+
+/** 获取当前 Scene Plan 的源文件路径 */
+export function getCurrentScenePlanSourceFile(): string {
+  return currentScenePlanSourceFile.value
+}
+
+/** 是否有已保存的 Scene Plan */
+export function getHasSavedScenePlan(): boolean {
+  return hasSavedScenePlan.value
+}
+
+/** 设置是否在 Professional 生成时使用 Scene Plan */
+export function setUseScenePlanForGeneration(enabled: boolean): void {
+  useScenePlanForGeneration.value = enabled
+}
+
+/** 获取是否在 Professional 生成时使用 Scene Plan */
+export function getUseScenePlanForGeneration(): boolean {
+  return useScenePlanForGeneration.value
+}
+
+/** 清除当前 Scene Plan 状态（切换文件时调用） */
+export function clearCurrentScenePlan(): void {
+  currentScenePlan.value = null
+  currentScenePlanValid.value = false
+  currentScenePlanSourceFile.value = ''
+  hasSavedScenePlan.value = false
+}
+
+/** 判断是否可以使用 Scene Plan 进行生成 */
+export function canUseScenePlanForGeneration(): boolean {
+  return (
+    useScenePlanForGeneration.value &&
+    currentScenePlan.value !== null &&
+    currentScenePlanValid.value
+  )
 }

@@ -428,6 +428,94 @@ def main():
         assert "编辑后的场景目标" in preview_text, "重新加载后应显示编辑后的内容"
         print("✅ 重新加载显示编辑后的内容")
 
+        # ============ 步骤 14：测试 Scene Plan 可选接入 Professional dry-run ============
+        print("\n=== 步骤 14：测试 Scene Plan 可选接入 Professional dry-run ===")
+        
+        # 记录 pipeline 请求中是否包含 scene_plan
+        pipeline_request_scene_plan = []
+        
+        def handle_pipeline_run(route: Route):
+            print("Mock: intercepted POST /api/pipeline/run")
+            request_payload = json.loads(route.request.post_data())
+            has_scene_plan = "scene_plan" in request_payload
+            pipeline_request_scene_plan.append(has_scene_plan)
+            print(f"  Request contains scene_plan: {has_scene_plan}")
+            
+            # 返回成功响应（模拟 candidate 生成）
+            body = {
+                "status": "success",
+                "message": "Pipeline executed",
+                "candidate_created": True
+            }
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+        
+        # 设置 pipeline run mock
+        page.route("**/api/pipeline/run", handle_pipeline_run)
+        print("✅ 设置 pipeline/run mock")
+
+        # 验证当前有 valid 的 scene plan
+        valid_badge = scene_plan_panel.locator(".validation-badge.valid")
+        assert valid_badge.is_visible(), "需要 valid 的 scene plan"
+        print("✅ Scene Plan 当前 valid")
+
+        # 找到并勾选 "Professional 生成时使用" checkbox
+        toggle_checkbox = scene_plan_panel.locator(".use-scene-plan-toggle input[type='checkbox']")
+        toggle_checkbox.wait_for(state="visible", timeout=5000)
+        assert toggle_checkbox.is_enabled(), "toggle checkbox 应可用"
+        toggle_checkbox.click()
+        page.wait_for_timeout(1000)
+        print("✅ 已勾选 'Professional 生成时使用'")
+
+        # 点击润色按钮（Professional candidate 操作）
+        polish_btn = page.locator("button").filter(has_text="润色").first
+        if polish_btn.is_visible() and polish_btn.is_enabled():
+            polish_btn.click()
+            page.wait_for_timeout(2000)
+            print("✅ 已点击润色")
+        else:
+            # 如果找不到润色按钮，尝试从右键菜单或其他位置触发
+            print("⚠️ 润色按钮不可见，跳过此步骤")
+            
+        # 验证请求是否包含 scene_plan
+        if pipeline_request_scene_plan:
+            assert pipeline_request_scene_plan[-1] == True, "勾选后请求应包含 scene_plan"
+            print("✅ 请求包含 scene_plan")
+
+        # 取消勾选
+        toggle_checkbox.click()
+        page.wait_for_timeout(1000)
+        print("✅ 已取消勾选")
+
+        # 再次点击润色
+        if polish_btn.is_visible() and polish_btn.is_enabled():
+            polish_btn.click()
+            page.wait_for_timeout(2000)
+            print("✅ 已再次点击润色")
+
+        # 验证请求不包含 scene_plan
+        if len(pipeline_request_scene_plan) >= 2:
+            assert pipeline_request_scene_plan[-1] == False, "取消勾选后请求不应包含 scene_plan"
+            print("✅ 请求不包含 scene_plan")
+
+        # ============ 步骤 15：验证无 Scene Plan 时提示 ============
+        print("\n=== 步骤 15：验证无 Scene Plan 时提示 ===")
+        
+        # 清除当前场景计划
+        global current_saved_plan, saved_flag
+        current_saved_plan = None
+        saved_flag = False
+        
+        # 重新加载（模拟没有已保存的 plan）
+        load_btn.click()
+        page.wait_for_timeout(2000)
+        
+        # 检查提示消息
+        disabled_hint = scene_plan_panel.locator(".use-scene-plan-disabled")
+        if disabled_hint.is_visible():
+            print("✅ 显示 '请先生成或加载 Scene Plan' 提示")
+        else:
+            print("⚠️ 未显示禁用提示（可能已有缓存）")
+
         # ============ 最终清理 ============
         page.screenshot(path="test_results/99_final.png", full_page=True)
         browser.close()

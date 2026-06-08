@@ -5,6 +5,10 @@ import { useFileMetaStore } from '@/stores/fileMeta'
 import { useNotificationStore } from '@/stores/notification'
 import { API_ROUTES } from '@/shared/api/routes'
 import { getPipelineForFile } from '@/utils/promptTypes'
+import {
+  canUseScenePlanForGeneration,
+  getCurrentScenePlan,
+} from '@/composables/useScenePlan'
 
 // Module-level singleton refs -- shared across all consumers
 const _isGenerating = ref(false)
@@ -165,16 +169,28 @@ export function useFileGeneration() {
 
     try {
       const mode = outputMode || (pipelineName === 'polish' || pipelineName === 'rewrite' ? 'candidate' : 'write_scene')
+      
+      // 构建请求体
+      const requestBody: Record<string, unknown> = {
+        pipeline: pipelineName,
+        project_id: projectId,
+        target_file: filePath,
+        output_mode: mode,
+        extra_vars: extraVars || {},
+      }
+
+      // 如果启用了 Scene Plan 且可用，添加到请求中
+      if (canUseScenePlanForGeneration()) {
+        const scenePlan = getCurrentScenePlan()
+        if (scenePlan) {
+          requestBody.scene_plan = scenePlan
+        }
+      }
+
       const response = await fetch(resolveApiUrl(API_ROUTES.pipelineRun), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pipeline: pipelineName,
-          project_id: projectId,
-          target_file: filePath,
-          output_mode: mode,
-          extra_vars: extraVars || {},
-        }),
+        body: JSON.stringify(requestBody),
         signal: _abortController.signal,
       })
 
