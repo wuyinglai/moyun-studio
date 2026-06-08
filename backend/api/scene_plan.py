@@ -3,6 +3,8 @@
 端点：
   POST /api/scene-plan/validate  校验 Scene Plan 结构
   POST /api/scene-plan/generate  生成 Scene Plan 草案
+  POST /api/scene-plan/save     保存 Scene Plan 到文件
+  GET  /api/scene-plan/load     从文件加载 Scene Plan
 """
 
 import json
@@ -79,6 +81,35 @@ class ScenePlanGenerateResponse(BaseModel):
     warnings: list[ScenePlanValidationWarningDetail] = Field(default_factory=list, description="校验警告")
     raw_output: str | None = Field(default=None, description="LLM 原始输出（仅调试用）")
     source_summary: ScenePlanSourceSummary = Field(..., description="源文件摘要")
+
+
+class ScenePlanSaveRequest(BaseModel):
+    """Scene Plan 保存请求"""
+    project_id: str = Field(..., description="项目 ID")
+    target_file: str = Field(..., description="目标场景文件路径（用于生成 Scene Plan 文件名）")
+    scene_plan: ScenePlan | dict[str, Any] = Field(..., description="要保存的 Scene Plan")
+    overwrite: bool = Field(default=False, description="是否覆盖已存在的文件")
+    expected_mtime: float | None = Field(default=None, description="期望的文件修改时间，用于冲突检测")
+
+
+class ScenePlanSaveResponse(BaseModel):
+    """Scene Plan 保存响应"""
+    saved: bool = Field(default=False, description="是否保存成功")
+    path: str | None = Field(default=None, description="保存的文件路径")
+    valid: bool = Field(default=False, description="是否通过校验")
+    errors: list[ScenePlanValidationErrorDetail] = Field(default_factory=list, description="校验错误")
+    warnings: list[ScenePlanValidationWarningDetail] = Field(default_factory=list, description="校验警告")
+    conflict: bool = Field(default=False, description="是否因为文件已存在而冲突")
+    message: str | None = Field(default=None, description="附加消息")
+
+
+class ScenePlanLoadResponse(BaseModel):
+    """Scene Plan 加载响应"""
+    exists: bool = Field(default=False, description="文件是否存在")
+    path: str | None = Field(default=None, description="文件路径")
+    scene_plan: ScenePlan | None = Field(default=None, description="加载的 Scene Plan")
+    mtime: float | None = Field(default=None, description="文件修改时间")
+    errors: list[ScenePlanValidationErrorDetail] = Field(default_factory=list, description="错误信息")
 
 
 # ─── 辅助函数 ─────────────────────────────────────────────────────────
@@ -231,6 +262,30 @@ def _build_scene_plan_prompt(
     return "\n".join(prompt_parts)
 
 
+def _map_target_file_to_scene_plan_path(target_file: str) -> str:
+    r"""将 target_file 映射为 Scene Plan 文件路径
+
+    规则：
+    - 保存路径固定在 materials/scene_plans/
+    - 将路径中的 / 和 \ 替换为 __
+    - 去掉 .md 后缀
+    - 清理危险字符（包括 .. 和 .）
+    - 后缀固定为 .scene-plan.json
+
+    例如：
+    chapters/vol-01/ch-001/sec-001.md
+    -> materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json
+    """
+    # 替换路径分隔符为双下划线
+    safe_name = target_file.replace("/", "__").replace("\\", "__")
+    # 去掉 .md 后缀
+    if safe_name.endswith(".md"):
+        safe_name = safe_name[:-3]
+    # 清理危险字符（.. 和其他）
+    safe_name = safe_name.replace("..", "_").replace(".", "_")
+    return f"materials/scene_plans/{safe_name}.scene-plan.json"
+
+
 # ─── 路由 ────────────────────────────────────────────────────────────
 
 @router.post("/validate", response_model=ApiResponse[ScenePlanValidateResponse])
@@ -272,6 +327,253 @@ async def validate_scene_plan_api(
                  result.valid, len(errors), len(warnings))
 
     return ApiResponse.ok(response)
+
+
+@router.post("/save", response_model=ApiResponse[ScenePlanSaveResponse])
+async def save_scene_plan_api(
+    request: ScenePlanSaveRequest,
+) -> ApiResponse[ScenePlanSaveResponse]:
+    """保存 Scene Plan 到文件
+
+    保存路径固定在 materials/scene_plans/。
+    保存前会调用 validate_scene_plan() 进行校验。
+    invalid Scene Plan 默认不会保存（除非设置 save_invalid=true，本阶段不支持）。
+
+    Args:
+        request: ScenePlanSaveRequest
+
+    Returns:
+        ScenePlanSaveResponse
+    """
+    logger.debug("Scene Plan 保存请求: project_id=%s, target_file=%s",
+               request.project_id, request.target_file)
+
+    settings = get_settings()
+    file_service = FileService(
+        settings.projects_path,
+        max_file_write_size=settings.max_file_write_size,
+    )
+
+    # 1. 安全检查：验证 target_file 路径
+    try:
+        file_service.validate_path(f"{request.project_id}/{request.target_file}")
+    except Exception as e:
+        logger.warning("目标文件路径危险: %s", e)
+        return ApiResponse.ok(
+            ScenePlanSaveResponse(
+                saved=False,
+                path=None,
+                valid=False,
+                errors=[
+                    ScenePlanValidationErrorDetail(
+                        field="target_file",
+                        message=f"目标文件路径无效: {e}",
+                    )
+                ],
+                warnings=[],
+                conflict=False,
+                message="路径验证失败",
+            )
+        )
+
+    # 2. 将 scene_plan 转为 dict
+    if isinstance(request.scene_plan, ScenePlan):
+        scene_plan_dict = request.scene_plan.model_dump()
+    else:
+        scene_plan_dict = dict(request.scene_plan)
+
+    # 3. 校验 Scene Plan
+    validation_result = validate_scene_plan(scene_plan_dict)
+    valid = validation_result.valid
+
+    errors = [
+        ScenePlanValidationErrorDetail(field=e.field, message=e.message)
+        for e in validation_result.errors
+    ]
+    warnings = [
+        ScenePlanValidationWarningDetail(field=w.field, message=w.message)
+        for w in validation_result.warnings
+    ]
+
+    # 4. 如果校验失败，默认不保存
+    if not valid:
+        logger.warning("Scene Plan 校验失败，不保存: errors=%s", errors)
+        return ApiResponse.ok(
+            ScenePlanSaveResponse(
+                saved=False,
+                path=None,
+                valid=False,
+                errors=errors,
+                warnings=warnings,
+                conflict=False,
+                message="校验失败，未保存",
+            )
+        )
+
+    # 5. 生成 Scene Plan 文件路径
+    scene_plan_relative_path = _map_target_file_to_scene_plan_path(request.target_file)
+    full_path = f"{request.project_id}/{scene_plan_relative_path}"
+
+    # 6. 检查文件是否已存在
+    try:
+        existing_content, existing_meta, _ = await file_service.read_file(full_path)
+        file_exists = True
+    except Exception:
+        file_exists = False
+
+    # 7. 如果文件已存在且不允许覆盖
+    if file_exists and not request.overwrite:
+        logger.warning("Scene Plan 文件已存在，禁止覆盖: %s", full_path)
+        return ApiResponse.ok(
+            ScenePlanSaveResponse(
+                saved=False,
+                path=scene_plan_relative_path,
+                valid=True,
+                errors=[],
+                warnings=warnings,
+                conflict=True,
+                message="文件已存在，请设置 overwrite=true 覆盖",
+            )
+        )
+
+    # 8. 保存文件（格式化 JSON）
+    try:
+        json_content = json.dumps(scene_plan_dict, ensure_ascii=False, indent=2)
+        await file_service.write_file(
+            path=full_path,
+            content=json_content,
+            encoding="utf-8",
+        )
+        logger.info("Scene Plan 保存成功: %s", full_path)
+
+        return ApiResponse.ok(
+            ScenePlanSaveResponse(
+                saved=True,
+                path=scene_plan_relative_path,
+                valid=True,
+                errors=[],
+                warnings=warnings,
+                conflict=False,
+                message="保存成功",
+            )
+        )
+
+    except Exception as e:
+        logger.error("Scene Plan 保存失败: %s", e, exc_info=True)
+        return ApiResponse.ok(
+            ScenePlanSaveResponse(
+                saved=False,
+                path=None,
+                valid=True,
+                errors=[
+                    ScenePlanValidationErrorDetail(
+                        field="__root__",
+                        message=f"保存失败: {e}",
+                    )
+                ],
+                warnings=warnings,
+                conflict=False,
+                message="保存失败",
+            )
+        )
+
+
+@router.get("/load", response_model=ApiResponse[ScenePlanLoadResponse])
+async def load_scene_plan_api(
+    project_id: str,
+    target_file: str,
+) -> ApiResponse[ScenePlanLoadResponse]:
+    """从文件加载 Scene Plan
+
+    加载路径固定在 materials/scene_plans/。
+
+    Args:
+        project_id: 项目 ID
+        target_file: 目标场景文件路径
+
+    Returns:
+        ScenePlanLoadResponse
+    """
+    logger.debug("Scene Plan 加载请求: project_id=%s, target_file=%s",
+               project_id, target_file)
+
+    settings = get_settings()
+    file_service = FileService(
+        settings.projects_path,
+        max_file_write_size=settings.max_file_write_size,
+    )
+
+    # 1. 安全检查：验证 target_file 路径
+    try:
+        file_service.validate_path(f"{project_id}/{target_file}")
+    except Exception as e:
+        logger.warning("目标文件路径危险: %s", e)
+        return ApiResponse.ok(
+            ScenePlanLoadResponse(
+                exists=False,
+                path=None,
+                scene_plan=None,
+                mtime=None,
+                errors=[
+                    ScenePlanValidationErrorDetail(
+                        field="target_file",
+                        message=f"目标文件路径无效: {e}",
+                    )
+                ],
+            )
+        )
+
+    # 2. 生成 Scene Plan 文件路径
+    scene_plan_relative_path = _map_target_file_to_scene_plan_path(target_file)
+    full_path = f"{project_id}/{scene_plan_relative_path}"
+
+    # 3. 读取文件
+    try:
+        content, meta, _ = await file_service.read_file(full_path)
+        scene_plan_dict = json.loads(content)
+        scene_plan_obj = ScenePlan(**scene_plan_dict)
+
+        logger.debug("Scene Plan 加载成功: %s", full_path)
+
+        return ApiResponse.ok(
+            ScenePlanLoadResponse(
+                exists=True,
+                path=scene_plan_relative_path,
+                scene_plan=scene_plan_obj,
+                mtime=meta.get("mtime") if meta else None,
+                errors=[],
+            )
+        )
+
+    except json.JSONDecodeError as e:
+        logger.warning("Scene Plan JSON 解析失败: %s", e)
+        return ApiResponse.ok(
+            ScenePlanLoadResponse(
+                exists=True,
+                path=scene_plan_relative_path,
+                scene_plan=None,
+                mtime=None,
+                errors=[
+                    ScenePlanValidationErrorDetail(
+                        field="__root__",
+                        message=f"JSON 解析失败: {e}",
+                    )
+                ],
+            )
+        )
+
+    except Exception as e:
+        # 文件不存在或其他错误
+        logger.debug("Scene Plan 文件不存在: %s", full_path)
+        return ApiResponse.ok(
+            ScenePlanLoadResponse(
+                exists=False,
+                path=None,
+                scene_plan=None,
+                mtime=None,
+                errors=[],
+            )
+        )
 
 
 @router.post("/generate", response_model=ApiResponse[ScenePlanGenerateResponse])

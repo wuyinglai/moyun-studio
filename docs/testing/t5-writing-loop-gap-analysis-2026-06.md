@@ -3,7 +3,7 @@
 
 **执行日期**: 2026-06-07
 **执行人**: Solo Agent
-**当前进度**: 约 73%
+**当前进度**: 约 76%
 
 ---
 
@@ -259,7 +259,11 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | T4.8 | ✅ 完成 | Scene Plan schema + validator |
 | T4.9 | ✅ 完成 | Scene Plan validate API 后端 |
 | T5.0 | ✅ 完成 | 写作闭环盘点 |
-| **T5.1** | **✅ 完成** | **Scene Plan validate API 软接入 dry-run** |
-| T5.2 | 📋 规划中 | Scene Plan 前端 UI 最小接入 |
+| T5.1 | ✅ 完成 | Scene Plan validate API 软接入 |
+| T5.2 | ✅ 完成 | Scene Plan generate API 最小版本 |
+| T5.2.1 | ✅ 完成 | raw_output 安全修正 |
+| T5.2.2 | ✅ 完成 | 全量回归补票 |
+| **T5.3** | **✅ 完成** | **Scene Plan 持久化 API** |
+| T5.4 | 📋 规划中 | Scene Plan 前端 UI 最小集成 |
 
-**预计 T5.2 完成后进度**: 约 75%
+**预计 T5.3 完成后进度**: 约 76%
