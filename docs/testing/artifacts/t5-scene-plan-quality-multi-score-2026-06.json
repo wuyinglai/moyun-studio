@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-08T19:33:03.435721",
+  "generated_at": "2026-06-08T20:08:28.913348",
   "case_count": 1,
   "cases": [
     {
@@ -122,5 +122,6 @@
         "conclusion": "⚠️ With-Plan 略优"
       }
     }
-  ]
+  ],
+  "note": "注意：当前使用的 Scene Plan 是测试数据，非真实旧港站场景"
 }

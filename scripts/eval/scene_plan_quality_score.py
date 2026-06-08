@@ -572,7 +572,8 @@ def generate_multi_case_report(case_results: list, output_dir: str):
         json.dump({
             "generated_at": datetime.now().isoformat(),
             "case_count": len(case_results),
-            "cases": case_results
+            "cases": case_results,
+            "note": "注意：当前使用的 Scene Plan 是测试数据，非真实旧港站场景"
         }, f, ensure_ascii=False, indent=2)
     print(f"\n多案例 JSON 已保存: {json_file}")
     
@@ -593,6 +594,13 @@ def generate_multi_case_report(case_results: list, output_dir: str):
 
 **执行日期**: {datetime.now().strftime('%Y-%m-%d')}
 **执行人**: Solo Agent
+**状态**: ⚠️ PARTIAL
+
+---
+
+## 重要说明
+
+⚠️ **当前 Scene Plan 为测试数据**，非真实的旧港站场景（包含"测试场景计划"、"测试角色"等内容）。本报告仅验证多案例评分框架的功能，不代表对真实质量的评估。
 
 ---
 
@@ -623,33 +631,31 @@ def generate_multi_case_report(case_results: list, output_dir: str):
 ## 3. 稳定性评估
 
 """
-    if len(case_results) >= 3:
-        better_count = sum(1 for r in case_results if r['summary']['delta'] > 0)
-        if better_count >= len(case_results) * 0.7:
-            md += "✅ **稳定**: With-Plan 在多数案例中更优\n"
-        elif better_count >= len(case_results) * 0.5:
-            md += "⚠️ **部分稳定**: With-Plan 在半数案例中更优\n"
-        else:
-            md += "❌ **不稳定**: With-Plan 未显示一致优势\n"
-    else:
-        md += "⚠️ **PARTIAL**: 样本不足，无法完整评估稳定性\n"
+    md += "⚠️ **PARTIAL**：样本不足（仅有 1 个案例），无法完整评估评分规则在不同场景下的稳定性。\n\n"
+    md += "需要补充至少 2-3 个不同类型场景的完整样本（悬疑场景、对话场景、动作/转折场景等）才能进行稳定性评估。\n"
     
     md += """
 ---
 
 ## 4. 局限性说明
 
-1. 当前样本量有限，稳定性评估可能不充分
-2. 评分使用规则匹配，未调用 LLM 进行深度语义理解
-3. 仅作为辅助参考，不替代人工判断
+1. **样本量严重不足**：仅有 1 个案例，无法评估稳定性
+2. **Scene Plan 为测试数据**：非真实场景，评分结果仅供框架验证使用
+3. 评分使用规则匹配，未调用 LLM 进行深度语义理解
+4. 仅作为辅助参考，不替代人工判断
 
 ---
 
 ## 5. 下一步建议
 
-- 补充更多不同类型场景的测试用例
-- 持续优化评分规则
-- 考虑集成 LLM 辅助评分（可选）
+1. **补充真实 Scene Plan**：替换为真实的旧港站场景计划（包含"林澈"、"旧港站"、"雨夜"、"第三根立柱"、"信任危机"等真实内容）
+2. **补充更多测试样本**：增加至少 2-3 个不同类型场景的完整样本（target_file + scene_plan + baseline candidate + with-plan candidate）
+3. 持续优化评分规则
+4. 考虑集成 LLM 辅助评分（可选）
+
+---
+
+**T5.11 状态**：⚠️ PARTIAL（多案例评分框架完成，但稳定性验证未完成）
 
 """
     
@@ -697,6 +703,8 @@ def main_single_case(args):
     print("=" * 60)
     print("Scene Plan 质量对比自动评分脚本 - 单案例模式")
     print("=" * 60)
+    print()
+    print("⚠️ 注意：本模式用于调试，不会覆盖 T5.10.1 的校准文档")
     print()
     
     # 确保输出目录存在
@@ -892,8 +900,6 @@ def main_single_case(args):
     print()
     print("=== 生成输出 ===")
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
     # JSON 输出
     output_data = {
         "generated_at": datetime.now().isoformat(),
@@ -916,10 +922,12 @@ def main_single_case(args):
         "all_safe": all_safe
     }
     
-    json_file = Path(args.output_dir) / "t5-scene-plan-quality-score-2026-06.json"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 使用临时文件名，避免覆盖 T5.10.1
+    json_file = Path(args.output_dir) / f"t5-scene-plan-quality-score-2026-06-temp-{timestamp}.json"
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
-    print(f"JSON 已保存: {json_file}")
+    print(f"JSON 已保存: {json_file} (临时文件，不覆盖 T5.10.1)")
     
     # Markdown 输出（简短版本，不包含长正文）
     md_content = generate_markdown_report(
@@ -928,10 +936,10 @@ def main_single_case(args):
         safety_checks, all_safe
     )
     
-    md_file = Path("docs/testing") / "t5-scene-plan-quality-score-2026-06.md"
+    md_file = Path("docs/testing") / f"t5-scene-plan-quality-score-2026-06-temp-{timestamp}.md"
     with open(md_file, 'w', encoding='utf-8') as f:
         f.write(md_content)
-    print(f"Markdown 已保存: {md_file}")
+    print(f"Markdown 已保存: {md_file} (临时文件，不覆盖 T5.10.1)")
     
     # 最终状态
     print()
