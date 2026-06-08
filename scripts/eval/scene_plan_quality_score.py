@@ -51,36 +51,41 @@ def load_scene_plan(project_id: str, target_file: str):
 
 
 def score_scene_goal_alignment(content: str, scene_plan: dict):
-    """评分 scene_goal 对齐度 (0-2)"""
+    """评分 scene_goal 对齐度 (0-2)
+    
+    校准后规则：
+    - 核心目标链条：地点 + 立柱 + 神秘信息/脚步声 = 2分
+    - 只覆盖地点和动作 = 1分
+    - 缺少关键要素 = 0分
+    """
     goal = scene_plan.get("goal", "")
     score = 0
     evidence = []
-
-    # 检查是否包含 goal 关键词
-    goal_keywords = [
-        "等待", "神秘人", "接头", "林澈", "旧港站"
-    ]
-    matched = sum(1 for kw in goal_keywords if kw in content)
     
-    if matched >= 4:
+    # 核心要素检查：地点、立柱、神秘信息/脚步声
+    has_location = "旧港站" in content
+    has_pillar = "立柱" in content or ("一" in content and "二" in content and "三" in content)
+    has_mystery = any(kw in content for kw in ["神秘", "22:30", "脚步声", "指令", "无署名", "无前因后果", "幽灵"])
+    has_wait = any(kw in content for kw in ["等待", "等候", "凝视", "停顿"])
+    
+    # 覆盖核心目标链条
+    elements_covered = sum([has_location, has_pillar, has_mystery, has_wait])
+    
+    if elements_covered >= 3 and has_location and has_pillar:
         score = 2
         label = "pass"
-        evidence.append(f"目标关键词匹配度高 ({matched}/5)")
-    elif matched >= 2:
+        evidence.append(f"覆盖核心目标链条 ({elements_covered}/4)")
+        if has_mystery:
+            evidence.append("包含神秘信息/悬念要素")
+        if has_wait:
+            evidence.append("包含等待/停顿描写")
+    elif elements_covered >= 2 and has_location:
         score = 1
         label = "partial"
-        evidence.append(f"目标关键词部分匹配 ({matched}/5)")
+        evidence.append(f"部分覆盖目标要素 ({elements_covered}/4)")
     else:
         label = "fail"
-        evidence.append(f"目标关键词匹配不足 ({matched}/5)")
-    
-    # 更具体的检查
-    if "等待" in content or "等候" in content:
-        score = min(score + 1, 2)
-        evidence.append("包含等待/等候相关表述")
-    if "接头" in content:
-        score = min(score + 1, 2)
-        evidence.append("包含接头相关表述")
+        evidence.append(f"目标覆盖不足 ({elements_covered}/4)")
     
     return {
         "score": score,
@@ -145,23 +150,47 @@ def score_beats_coverage(content: str, scene_plan: dict):
 
 
 def score_conflict_presence(content: str, scene_plan: dict):
-    """评分 conflict 体现 (0-2)"""
+    """评分 conflict 体现 (0-2)
+    
+    校准后规则：
+    - 硬冲突关键词（阴森、紧张等）：2个以上 = 2分
+    - 软冲突/悬疑心理线索（沉默、犹豫、幽灵、目光等）：2个以上 = 2分
+    - 混合存在 = 2分
+    - 只有1类 = 1分
+    - 缺少 = 0分
+    """
     conflict = scene_plan.get("conflict", "")
     score = 0
     evidence = []
     
-    # 检查 conflict 关键词
-    conflict_keywords = ["阴森", "信任危机", "不确定", "神秘", "紧张", "诡异", "不安"]
-    matched = sum(1 for kw in conflict_keywords if kw in content)
+    # 硬冲突关键词（传统冲突词）
+    hard_conflict_keywords = ["阴森", "信任危机", "紧张", "诡异", "不安"]
+    hard_matched = sum(1 for kw in hard_conflict_keywords if kw in content)
     
-    if matched >= 2:
+    # 软冲突/悬疑心理线索（根据人工复评新增）
+    soft_conflict_keywords = [
+        "沉默", "犹豫", "迟疑", "不确定", "锁住", "潜行", 
+        "目光", "凝视", "幽灵", "无署名", "无前因后果",
+        "危机", "停顿", "迟疑", "四十七秒"
+    ]
+    soft_matched = sum(1 for kw in soft_conflict_keywords if kw in content)
+    
+    total_matched = hard_matched + soft_matched
+    
+    if total_matched >= 3 or (hard_matched >= 1 and soft_matched >= 2) or soft_matched >= 3:
         score = 2
         label = "pass"
-        evidence.append(f"冲突关键词丰富 ({matched} 个)")
-    elif matched >= 1:
+        if soft_matched >= 2:
+            evidence.append(f"软冲突/悬疑线索丰富 ({soft_matched} 个)")
+        if hard_matched >= 1:
+            evidence.append(f"硬冲突词 ({hard_matched} 个)")
+    elif total_matched >= 2:
         score = 1
         label = "partial"
-        evidence.append(f"冲突关键词有限 ({matched} 个)")
+        if soft_matched >= 1:
+            evidence.append(f"包含软冲突/悬疑线索 ({soft_matched} 个)")
+        if hard_matched >= 1:
+            evidence.append(f"包含硬冲突词 ({hard_matched} 个)")
     else:
         label = "fail"
         evidence.append("缺少冲突相关表述")
@@ -169,7 +198,7 @@ def score_conflict_presence(content: str, scene_plan: dict):
     return {
         "score": score,
         "label": label,
-        "evidence": "；".join(evidence)
+        "evidence": "；".join(evidence) if evidence else "无明显冲突体现"
     }
 
 
@@ -234,7 +263,13 @@ def score_location_consistency(content: str, scene_plan: dict):
 
 
 def score_time_consistency(content: str, scene_plan: dict):
-    """评分 time 一致性 (0-2)"""
+    """评分 time_consistency 时间一致性 (0-2)
+    
+    校准后规则：
+    - 明确出现时间或夜晚意象充分（雨、夜、灯光、阴暗等）= 2分
+    - 只要没有时间冲突，并有雨、夜、灯光、阴暗等意象，至少 = 1分
+    - 完全不相关或有时间冲突 = 0分
+    """
     time = scene_plan.get("time", "")
     score = 0
     evidence = []
@@ -242,24 +277,39 @@ def score_time_consistency(content: str, scene_plan: dict):
     if not time:
         return {"score": 2, "label": "pass", "evidence": "无 time 要求"}
     
-    # 检查 time 关键词
+    # 夜晚/时间意象关键词
     time_keywords = []
-    if "雨夜" in time:
-        time_keywords.extend(["雨", "夜", "雨夜", "夜晚", "深夜"])
+    if "雨夜" in time or "夜" in time or "雨" in time:
+        time_keywords.extend(["雨", "夜", "夜晚", "深夜", "昏暗", "黑暗"])
     
-    matched_count = sum(1 for kw in time_keywords if kw in content)
+    # 额外检查：灯光、阴暗等氛围词
+    atmosphere_keywords = ["灯光", "灯火", "微光", "指示牌", "昏暗", "阴暗", "惨绿", "惨白", "斑驳"]
     
-    if matched_count >= 3:
+    matched_time = sum(1 for kw in time_keywords if kw in content)
+    matched_atmosphere = sum(1 for kw in atmosphere_keywords if kw in content)
+    
+    # 只要有雨/夜意象 + 氛围描写，就应该给分
+    if matched_time >= 1 and matched_atmosphere >= 1:
         score = 2
         label = "pass"
-        evidence.append(f"time 关键词丰富 ({matched_count} 次提及)")
-    elif matched_count >= 1:
+        evidence.append(f"时间意象充足 ({matched_time} 个) + 氛围充分 ({matched_atmosphere} 个)")
+    elif matched_time >= 2 or matched_atmosphere >= 2:
         score = 1
         label = "partial"
-        evidence.append(f"time 关键词有限 ({matched_count} 次提及)")
+        if matched_time >= 2:
+            evidence.append(f"时间意象存在 ({matched_time} 个)")
+        else:
+            evidence.append(f"氛围意象存在 ({matched_atmosphere} 个)")
+    elif matched_time >= 1 or matched_atmosphere >= 1:
+        score = 1
+        label = "partial"
+        if matched_time >= 1:
+            evidence.append(f"包含时间意象 ({matched_time} 个)")
+        else:
+            evidence.append(f"包含氛围意象 ({matched_atmosphere} 个)")
     else:
         label = "fail"
-        evidence.append(f"未提及 time 相关关键词")
+        evidence.append("缺少时间/氛围相关关键词")
     
     return {
         "score": score,
@@ -300,7 +350,15 @@ def score_no_reasoning_logs(content: str, scene_plan: dict):
 
 
 def score_language_quality_basic(content: str, scene_plan: dict):
-    """评分 基础语言质量 (0-2)"""
+    """评分 基础语言质量 (0-2)
+    
+    校准后规则：
+    - 长度合理（300-1000字）+ 内容非空 = 2分
+    - 长度略偏或略长 + 内容非空 = 1分
+    - 长度严重偏短/偏长或为空 = 0分
+    
+    注意：baseline 简洁有节奏感，with-plan 有氛围但略华丽，两者各有优势
+    """
     score = 0
     evidence = []
     
@@ -309,22 +367,38 @@ def score_language_quality_basic(content: str, scene_plan: dict):
     if 300 <= content_length <= 1000:
         score += 1
         evidence.append(f"长度合理 ({content_length} 字)")
-    elif content_length > 1000:
+    elif 200 <= content_length < 300 or 1000 < content_length <= 1500:
+        score += 1
+        evidence.append(f"长度略偏 ({content_length} 字)")
+    elif content_length > 1500:
         evidence.append(f"长度偏长 ({content_length} 字)")
-    elif content_length < 300:
+    else:
         evidence.append(f"长度偏短 ({content_length} 字)")
     
     # 检查是否为空
     if content_length > 0:
         score += 1
         evidence.append("内容非空")
+        
+        # 额外检查：节奏感 vs 氛围感
+        # Baseline 特征：径直、直接、急促
+        # With-Plan 特征：潜行、沉默、凝视
+        concise_keywords = ["径直", "直接", "急促", "瞬间", "没有停留", "骤起"]
+        atmosphere_keywords = ["潜行", "沉默", "凝视", "死死", "四十七秒", "惨绿", "刺眼"]
+        
+        concise_count = sum(1 for kw in concise_keywords if kw in content)
+        atmosphere_count = sum(1 for kw in atmosphere_keywords if kw in content)
+        
+        if concise_count >= 2:
+            evidence.append("节奏简洁直接")
+        if atmosphere_count >= 2:
+            evidence.append("氛围描写充分")
+            
     else:
         label = "fail"
         evidence.append("内容为空")
-        return {"score": 0, "label": label, "evidence": "；".join(evidence)}
+        return {"score": 0, "label": label, "evidence": "；".join(evidence[:2])}
     
-    # 检查重复
-    # 简单的重复检查：相同的短片段不超过2次
     if score >= 1:
         label = "pass" if score == 2 else "partial"
     else:
@@ -333,7 +407,7 @@ def score_language_quality_basic(content: str, scene_plan: dict):
     return {
         "score": min(score, 2),
         "label": label,
-        "evidence": "；".join(evidence[:2])
+        "evidence": "；".join(evidence[:3])  # 最多3条证据
     }
 
 

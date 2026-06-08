@@ -276,5 +276,7 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | **T5.9** | **✅ 完成** | **Scene Plan 驱动生成质量对比 smoke test** |
 | **T5.9.1** | **✅ 完成** | **质量对比安全与文档收口** |
 | **T5.10** | **✅ 完成** | **Scene Plan 质量对比自动评分脚本** |
+| **T5.10.1a** | **✅ 完成** | **上传 candidate 证据供人工复评** |
+| **T5.10.1** | **✅ 完成** | **评分规则校准（基于人工复评）** |
 
 **当前进度**: 约 84%

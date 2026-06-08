@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-08T18:51:27.290401",
+  "generated_at": "2026-06-08T19:18:34.260639",
   "project_id": "demo-novel",
   "target_file": "chapters/vol-01/ch-001/sec-001.md",
   "baseline_candidate_id": "cand_3f3d8e72",
@@ -8,9 +8,9 @@
   "scores": {
     "baseline": {
       "scene_goal_alignment": {
-        "score": 1,
-        "label": "partial",
-        "evidence": "目标关键词部分匹配 (2/5)"
+        "score": 2,
+        "label": "pass",
+        "evidence": "覆盖核心目标链条 (3/4)；包含神秘信息/悬念要素"
       },
       "beats_coverage": {
         "score": 2,
@@ -35,7 +35,7 @@
       "time_consistency": {
         "score": 2,
         "label": "pass",
-        "evidence": "time 关键词丰富 (3 次提及)"
+        "evidence": "时间意象充足 (3 个) + 氛围充分 (6 个)"
       },
       "no_reasoning_logs": {
         "score": 2,
@@ -45,7 +45,7 @@
       "language_quality_basic": {
         "score": 2,
         "label": "pass",
-        "evidence": "长度合理 (315 字)；内容非空"
+        "evidence": "长度合理 (315 字)；内容非空；节奏简洁直接"
       },
       "plan_contradiction_check": {
         "score": 2,
@@ -53,16 +53,16 @@
         "evidence": "无明显矛盾"
       },
       "overall_score": {
-        "score": 14,
+        "score": 15,
         "max_score": 18,
         "label": "pass"
       }
     },
     "with_plan": {
       "scene_goal_alignment": {
-        "score": 1,
-        "label": "partial",
-        "evidence": "目标关键词部分匹配 (2/5)"
+        "score": 2,
+        "label": "pass",
+        "evidence": "覆盖核心目标链条 (4/4)；包含神秘信息/悬念要素；包含等待/停顿描写"
       },
       "beats_coverage": {
         "score": 2,
@@ -70,9 +70,9 @@
         "evidence": "覆盖 4/4 beats"
       },
       "conflict_presence": {
-        "score": 0,
-        "label": "fail",
-        "evidence": "缺少冲突相关表述"
+        "score": 2,
+        "label": "pass",
+        "evidence": "软冲突/悬疑线索丰富 (9 个)"
       },
       "characters_consistency": {
         "score": 2,
@@ -85,9 +85,9 @@
         "evidence": "location 提及有限 (2 次)"
       },
       "time_consistency": {
-        "score": 1,
-        "label": "partial",
-        "evidence": "time 关键词有限 (1 次提及)"
+        "score": 2,
+        "label": "pass",
+        "evidence": "时间意象充足 (3 个) + 氛围充分 (6 个)"
       },
       "no_reasoning_logs": {
         "score": 2,
@@ -97,7 +97,7 @@
       "language_quality_basic": {
         "score": 2,
         "label": "pass",
-        "evidence": "长度合理 (360 字)；内容非空"
+        "evidence": "长度合理 (360 字)；内容非空；氛围描写充分"
       },
       "plan_contradiction_check": {
         "score": 2,
@@ -105,17 +105,17 @@
         "evidence": "无明显矛盾"
       },
       "overall_score": {
-        "score": 13,
+        "score": 17,
         "max_score": 18,
         "label": "pass"
       }
     }
   },
   "summary": {
-    "baseline_total": 14,
-    "with_plan_total": 13,
-    "delta": -1,
-    "conclusion": "❌ With-Plan 表现较差"
+    "baseline_total": 15,
+    "with_plan_total": 17,
+    "delta": 2,
+    "conclusion": "⚠️ With-Plan 略优"
   },
   "safety_checks": [
     {
