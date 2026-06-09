@@ -1,25 +1,77 @@
 {
-  "generated_at": "2026-06-08T21:23:13.907984",
+  "generated_at": "2026-06-09T08:50:49.947966",
   "case_count": 2,
   "cases": [
     {
       "case_id": "demo-novel-sec-001",
       "project_id": "demo-novel",
       "target_file": "chapters/vol-01/ch-001/sec-001.md",
-      "baseline_candidate_id": "cand_3f3d8e72",
-      "with_plan_candidate_id": "cand_450a19fd",
-      "scene_plan_title": "测试场景计划",
+      "baseline_candidate_id": "cand_a00fb183",
+      "with_plan_candidate_id": "cand_effcf335",
+      "scene_plan_title": "雨夜：旧港站的未知召唤",
       "scores": {
         "baseline": {
+          "scene_goal_alignment": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "覆盖核心目标链条 (4/4)；包含神秘信息/悬念要素；包含等待/停顿描写"
+          },
+          "beats_coverage": {
+            "score": 1,
+            "label": "partial",
+            "evidence": "覆盖 2/3 beats"
+          },
+          "conflict_presence": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "软冲突/悬疑线索丰富 (3 个)"
+          },
+          "characters_consistency": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "无 characters 要求"
+          },
+          "location_consistency": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "无 location 要求"
+          },
+          "time_consistency": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "无 time 要求"
+          },
+          "no_reasoning_logs": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "未检测到推理日志"
+          },
+          "language_quality_basic": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "长度合理 (301 字)；内容非空；节奏简洁直接"
+          },
+          "plan_contradiction_check": {
+            "score": 2,
+            "label": "pass",
+            "evidence": "无明显矛盾"
+          },
+          "overall_score": {
+            "score": 17,
+            "max_score": 18,
+            "label": "pass"
+          }
+        },
+        "with_plan": {
           "scene_goal_alignment": {
             "score": 2,
             "label": "pass",
             "evidence": "覆盖核心目标链条 (3/4)；包含神秘信息/悬念要素"
           },
           "beats_coverage": {
-            "score": 0,
-            "label": "fail",
-            "evidence": "覆盖 0/3 beats"
+            "score": 1,
+            "label": "partial",
+            "evidence": "覆盖 2/3 beats"
           },
           "conflict_presence": {
             "score": 0,
@@ -27,9 +79,9 @@
             "evidence": "缺少冲突相关表述"
           },
           "characters_consistency": {
-            "score": 0,
-            "label": "fail",
-            "evidence": "未提及指定人物: 测试角色"
+            "score": 2,
+            "label": "pass",
+            "evidence": "无 characters 要求"
           },
           "location_consistency": {
             "score": 2,
@@ -49,77 +101,25 @@
           "language_quality_basic": {
             "score": 2,
             "label": "pass",
-            "evidence": "长度合理 (315 字)；内容非空；节奏简洁直接"
+            "evidence": "长度合理 (352 字)；内容非空"
           },
           "plan_contradiction_check": {
-            "score": 1,
+            "score": 2,
             "label": "pass",
-            "evidence": "缺少人物: 测试角色"
+            "evidence": "无明显矛盾"
           },
           "overall_score": {
-            "score": 11,
-            "max_score": 18,
-            "label": "partial"
-          }
-        },
-        "with_plan": {
-          "scene_goal_alignment": {
-            "score": 2,
-            "label": "pass",
-            "evidence": "覆盖核心目标链条 (4/4)；包含神秘信息/悬念要素；包含等待/停顿描写"
-          },
-          "beats_coverage": {
-            "score": 0,
-            "label": "fail",
-            "evidence": "覆盖 0/3 beats"
-          },
-          "conflict_presence": {
-            "score": 2,
-            "label": "pass",
-            "evidence": "软冲突/悬疑线索丰富 (9 个)"
-          },
-          "characters_consistency": {
-            "score": 0,
-            "label": "fail",
-            "evidence": "未提及指定人物: 测试角色"
-          },
-          "location_consistency": {
-            "score": 2,
-            "label": "pass",
-            "evidence": "无 location 要求"
-          },
-          "time_consistency": {
-            "score": 2,
-            "label": "pass",
-            "evidence": "无 time 要求"
-          },
-          "no_reasoning_logs": {
-            "score": 2,
-            "label": "pass",
-            "evidence": "未检测到推理日志"
-          },
-          "language_quality_basic": {
-            "score": 2,
-            "label": "pass",
-            "evidence": "长度合理 (360 字)；内容非空；氛围描写充分"
-          },
-          "plan_contradiction_check": {
-            "score": 1,
-            "label": "pass",
-            "evidence": "缺少人物: 测试角色"
-          },
-          "overall_score": {
-            "score": 13,
+            "score": 15,
             "max_score": 18,
             "label": "pass"
           }
         }
       },
       "summary": {
-        "baseline_total": 11,
-        "with_plan_total": 13,
-        "delta": 2,
-        "conclusion": "⚠️ With-Plan 略优"
+        "baseline_total": 17,
+        "with_plan_total": 15,
+        "delta": -2,
+        "conclusion": "❌ With-Plan 表现较差"
       }
     },
     {

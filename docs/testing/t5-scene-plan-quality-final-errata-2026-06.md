@@ -129,14 +129,32 @@ T5.15 归档动作已完成，但 ChatGPT 二次验收发现最终快照（final
 
 **结论**: T5.16.1 已完成，`/api/scene-plan/generate` 现在可以正常工作（不再依赖不存在的 `generate()` 方法）。
 
-### 6.2 待执行的任务
+### 6.2 已执行的任务 (T5.16.2)
 
-1. **T5.16**（需用户授权）：使用修复后的真实 LLM 为 sec-001 生成新的 Scene Plan，并创建 paired baseline candidate + with-plan candidate
-2. **T5.17**：在真实数据基础上重新执行多案例评分、更新 final 快照
-3. **或者**：用户提供 sec-001 的真实 Scene Plan 文件供脚本读取
-4. 最终重新跑 T5.13，并在真实数据基础上归档新的 final 快照
+在用户授权调用真实 LLM 后，已完成以下工作：
 
-### 6.3 安全承诺
+| 项目 | 结果 |
+|------|------|
+| 生成真实 sec-001 Scene Plan | ✅ `雨夜：旧港站的未知召唤` |
+| 保存真实 Scene Plan | ✅ 覆盖旧的测试数据 |
+| 生成 baseline candidate | ✅ `cand_a00fb183` (301 chars) |
+| 生成 with-plan candidate | ✅ `cand_effcf335` (352 chars) |
+| target_file 正文未变 | ✅ MD5 一致 |
+| 未 adopt | ✅ |
+| 未覆盖正文 | ✅ |
+| 未提交 API key / workspace 原始数据 | ✅ |
+| 多案例评分重新执行 | ✅ 2/2 成功 |
+| final JSON 不再含"测试场景计划" | ✅ 0 处 |
+| final JSON 不再含"测试角色" | ✅ 0 处 |
+
+**评分结果**：sec-001 baseline 17 vs with-plan 15（with-plan 略差，如实记录）；sec-002 保持 14/14。
+
+### 6.3 待执行的任务
+
+1. 如需要，可进一步扩大真实样本范围（更多章节/场景）。
+2. 其他 case 的 score 稳定性评估（当前 2/2）。
+
+### 6.4 安全承诺
 
 - 本勘误文档不包含任何候选稿正文或推理日志
 - 未对 `workspace/` 目录下任何场景正文做修改

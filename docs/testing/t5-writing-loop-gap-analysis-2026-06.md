@@ -282,9 +282,10 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | **T5.12** | **✅ 完成** | **真实生成第二组 Scene Plan 多样本评分样本** |
 | **T5.13** | **✅ OK** | **Scene Plan 多案例评分稳定性验证（2 个完整案例）** |
 | **T5.14** | **✅ OK** | **多案例评分快照归档** |
-| **T5.15** | **⚠️ 归档完成 / 数据质量存在限制** | **多案例评分 final 快照整理（发现 sec-001 为测试数据，需后续真实 Scene Plan 补齐）** |
-| **T5.16.1** | **✅ 完成** | **`backend/api/scene_plan.py` 的 `llm_service.generate()` → `complete_sync()` bug 修复与回归测试（本文件）** |
-| **T5.16** | **🔄 计划 / 高优先级** | **用修复后的 generate API 真实生成 sec-001 Scene Plan（需真实 LLM 调用）** |
-| **T5.17** | **🔄 计划 / 中优先级** | **用真实 Scene Plan 生成 paired baseline / with-plan candidates 并替换 final 快照** |
+| **T5.15** | **✅ 已在 T5.16.2 纠偏** | **多案例评分 final 快照整理（sec-001 曾为测试数据，T5.16.2 已真实样本重建纠偏）** |
+| **T5.16.1** | **✅ 完成** | **`backend/api/scene_plan.py` 的 `llm_service.generate()` → `complete_sync()` bug 修复与回归测试** |
+| **T5.16.2** | **✅ 完成** | **真实 sec-001 Scene Plan 重建（baseline cand_a00fb183, with-plan cand_effcf335）；final JSON 不再含"测试场景计划/测试角色"** |
+| **T5.16** | **✅ 真实样本重建完成** | **综合标注：T5.16.1（修 bug）+ T5.16.2（真实生成与纠偏）** |
+| **T5.17** | **✅ 已在 T5.16.2 同步完成** | **paired baseline / with-plan candidates 重建 & final 快照同步完成** |
 
-**当前进度**: 约 88%（sec-001 真实 Scene Plan 与 paired candidates 待真实生成，backend API bug 已修复、10/10 测试通过）
+**当前进度**: 约 89%（sec-001 真实 Scene Plan 与 paired candidates 已通过真实 LLM pipeline 完成，final JSON 已纠偏；未 adopt，未覆盖正文，未提交 workspace 原始数据 / API key）

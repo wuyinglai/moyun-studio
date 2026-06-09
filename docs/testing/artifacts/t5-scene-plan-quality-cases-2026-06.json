@@ -3,9 +3,10 @@
     "case_id": "demo-novel-sec-001",
     "project_id": "demo-novel",
     "target_file": "chapters/vol-01/ch-001/sec-001.md",
-    "baseline_candidate_id": "cand_3f3d8e72",
-    "with_plan_candidate_id": "cand_450a19fd",
-    "scene_plan_path": "materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json"
+    "baseline_candidate_id": "cand_a00fb183",
+    "with_plan_candidate_id": "cand_effcf335",
+    "scene_plan_path": "materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json",
+    "note": "T5.16.2 重新生成：baseline & with-plan candidates from real pipeline (polish)."
   },
   {
     "case_id": "demo-novel-sec-002",
