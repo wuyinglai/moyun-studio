@@ -14,6 +14,7 @@ import asyncio
 from collections.abc import AsyncGenerator
 from datetime import datetime
 import difflib
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -646,11 +647,30 @@ class PipelineRunner:
                 # 生成候选稿而不是直接覆盖
                 candidate_service = CandidateService(self.file_service)
                 action = self._infer_candidate_action(pipeline_name, output_mode, action=action)
+                
+                # 构建 Scene Plan provenance 信息
+                generation_context = {}
+                scene_plan_hash = ""
+                scene_plan_path = ""
+                
+                if scene_plan:
+                    generation_context["scene_plan_used"] = True
+                    if isinstance(scene_plan, dict):
+                        scene_plan_str = json.dumps(scene_plan, ensure_ascii=False, sort_keys=True)
+                        scene_plan_hash = hashlib.md5(scene_plan_str.encode("utf-8")).hexdigest()
+                    if "source_path" in scene_plan:
+                        scene_plan_path = scene_plan["source_path"]
+                else:
+                    generation_context["scene_plan_used"] = False
+                
                 candidate = await candidate_service.create_candidate(
                     project_id=project_id,
                     source_path=target_file,
                     action=action,
                     content=final_output,
+                    generation_context=generation_context,
+                    scene_plan_hash=scene_plan_hash,
+                    scene_plan_path=scene_plan_path,
                 )
                 candidate_id = candidate.id
                 logger.info("已生成候选稿: %s -> %s", target_file, candidate_id)

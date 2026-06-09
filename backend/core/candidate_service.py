@@ -102,6 +102,9 @@ class CandidateService:
         pipeline_id: str | None = None,
         prompt_version: str | None = None,
         source_mode: str | None = None,
+        generation_context: dict | None = None,
+        scene_plan_hash: str = "",
+        scene_plan_path: str = "",
     ) -> CandidateInfo:
         """创建候选稿
 
@@ -147,6 +150,9 @@ class CandidateService:
             pipeline_id=pipeline_id,
             prompt_version=prompt_version,
             source_mode=source_mode,
+            generation_context=generation_context or {},
+            scene_plan_hash=scene_plan_hash,
+            scene_plan_path=scene_plan_path,
         )
 
         metadata = await self._load_metadata(project_id)

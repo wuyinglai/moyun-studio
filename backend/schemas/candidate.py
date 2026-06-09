@@ -11,6 +11,7 @@
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import Dict, Any
 
 from pydantic import BaseModel, Field
 
@@ -54,6 +55,11 @@ class CandidateInfo(BaseModel):
     pipeline_id: str | None = Field(None, description="管线ID")
     prompt_version: str | None = Field(None, description="Prompt 版本（可选）")
     source_mode: str | None = Field(None, description="来源模式: lite 或 professional")
+    
+    # Scene Plan provenance 字段
+    generation_context: Dict[str, Any] = Field(default_factory=dict, description="生成上下文，包含 scene_plan_used 等信息")
+    scene_plan_hash: str = Field("", description="生成时使用的 Scene Plan 哈希")
+    scene_plan_path: str = Field("", description="生成时使用的 Scene Plan 文件路径（项目内相对路径）")
 
     @property
     def filename(self) -> str:
@@ -77,6 +83,11 @@ class CreateCandidateRequest(BaseModel):
     pipeline_id: str | None = Field(None, description="管线ID")
     prompt_version: str | None = Field(None, description="Prompt 版本")
     source_mode: str | None = Field(None, description="来源模式: lite 或 professional")
+    
+    # Scene Plan provenance 字段
+    generation_context: Dict[str, Any] = Field(default_factory=dict, description="生成上下文")
+    scene_plan_hash: str = Field("", description="Scene Plan 哈希")
+    scene_plan_path: str = Field("", description="Scene Plan 文件路径")
 
 
 class AdoptCandidateRequest(BaseModel):
