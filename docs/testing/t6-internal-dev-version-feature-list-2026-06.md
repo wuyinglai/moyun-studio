@@ -633,7 +633,29 @@ tests/test_professional_regression_smoke.py            →  PASSED
 
 ---
 
-### 6.5.4 ❌ Batch Generate 批量生成（未验收）
+### 6.5.4 ❌ Task Queue 任务队列（未验收）
+
+**最小验收步骤**：
+1. 验证 `task_queue.py` 中 `TaskExecutor` 的基本任务提交/执行
+2. 验证任务状态流转：`pending → running → done/failed`
+3. 验证任务取消功能
+4. 验证 `tasks.py` API 端点的任务查询能力
+
+**依赖**：EventBus（已存在）、FastAPI（已存在）
+
+**测试文件**：扩展 `test_t472_backend_verification.py` 或新建 `test_task_queue_integration.py`
+
+**验证方法**：
+- 任务提交测试：任务正确进入 pending 状态
+- 任务执行测试：状态正确流转到 done
+- 任务取消测试：running 任务可被取消
+- 任务查询测试：API 返回正确任务列表
+
+**预期结果**：任务队列稳定执行异步任务，状态可查询
+
+---
+
+### 6.5.5 ❌ Batch Generate 批量生成（未验收）
 
 **最小验收步骤**：
 1. 实现 `batch_generate` 核心逻辑（已有骨架）
@@ -653,7 +675,7 @@ tests/test_professional_regression_smoke.py            →  PASSED
 
 ---
 
-### 6.5.5 ⚠️ Story State 深度集成（部分验收）
+### 6.5.6 ⚠️ Story State 深度集成（部分验收）
 
 **最小验收步骤**：
 1. 在生成前读取 Story State 作为上下文
@@ -673,7 +695,7 @@ tests/test_professional_regression_smoke.py            →  PASSED
 
 ---
 
-### 6.5.6 ⚠️ Pipeline / Workflow 深度验证（部分验收）
+### 6.5.7 ⚠️ Pipeline / Workflow 深度验证（部分验收）
 
 **最小验收步骤**：
 1. 测试多步骤管线执行
@@ -693,7 +715,29 @@ tests/test_professional_regression_smoke.py            →  PASSED
 
 ---
 
-### 6.5.7 ⚠️ Materials / Style Guide / Recent Context（部分验收）
+### 6.5.7 ⚠️ Prompt / Pipeline 编辑器深度验证（部分验收）
+
+**最小验收步骤**：
+1. 验证 `PipelineEditor.vue` 可正确加载并展示管线配置
+2. 验证用户可添加/删除/编辑管线步骤
+3. 验证用户可保存管线配置到 `prompts/pipelines/`
+4. 验证编辑器与 backend API 的数据流通
+
+**依赖**：Pipeline API（已存在）、Workflow API（已存在）、前端 Vue 组件（已存在）
+
+**测试文件**：新建 `test_pipeline_editor_ui.py`（基于 Playwright 或扩展 existing）
+
+**验证方法**：
+- UI 渲染测试：编辑器组件正确加载
+- 编辑测试：步骤增删改操作生效
+- 保存测试：配置正确持久化到文件
+- 回读测试：保存后重新加载内容一致
+
+**预期结果**：自定义管线编辑器端到端可用
+
+---
+
+### 6.5.8 ⚠️ Materials / Style Guide / Recent Context（部分验收）
 
 **最小验收步骤**：
 1. Materials：添加版本管理 API
@@ -720,7 +764,9 @@ tests/test_professional_regression_smoke.py            →  PASSED
 | P1 | Scene Plan 前端 UI | ❌ | 用户可创建/编辑/保存 Scene Plan |
 | P1 | Stream / SSE 流式推送 | ❌ | 长任务实时进度反馈 |
 | P2 | Prompt Engine 独立测试 | ⚠️ | 模板引擎功能独立验证 |
+| P2 | Prompt / Pipeline 编辑器深度验证 | ⚠️ | 自定义管线编辑器端到端可用 |
 | P2 | Pipeline / Workflow 深度验证 | ⚠️ | 复杂工作流稳定运行 |
+| P3 | Task Queue 任务队列 | ❌ | 异步任务稳定执行与状态查询 |
 | P3 | Story State 深度集成 | ⚠️ | 故事状态与生成一致性 |
 | P3 | Batch Generate | ❌ | 多场景批量生成 |
 | P4 | Materials / Style Guide / Recent Context | ⚠️ | 辅助模块集成完善 |
@@ -734,7 +780,7 @@ tests/test_professional_regression_smoke.py            →  PASSED
 - ✅ **未修改 workspace**（仅读取 `docs/testing/`、`tests/`、`backend/` 代码）
 - ✅ **未修改 scoring / final / multi-score / errata / gap-analysis 产物**（artifacts 目录只读）
 - ✅ **未提交 API key**（`git grep "sk-"` 仅出现于注释/脱敏示例）
-- ✅ **扫描时 HEAD == origin/main** (`977c602`，本次格式修复后 commit 将推进)
+- ✅ **HEAD == origin/main**（当前 commit 与远端同步）
 - ✅ **工作区 clean**
 
 ---
