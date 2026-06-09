@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-09T08:50:49.947966",
+  "generated_at": "2026-06-09T10:26:13.255541",
   "case_count": 2,
   "cases": [
     {
@@ -243,5 +243,5 @@
       }
     }
   ],
-  "note": "注意：当前使用的 Scene Plan 是测试数据，非真实旧港站场景"
+  "note": "T5.16.2 已完成 sec-001 真实样本重建；sec-001 与 sec-002 当前均使用真实 Scene Plan。历史测试数据问题见 docs/testing/t5-scene-plan-quality-final-errata-2026-06.md。"
 }

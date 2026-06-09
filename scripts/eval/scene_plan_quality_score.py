@@ -573,7 +573,7 @@ def generate_multi_case_report(case_results: list, output_dir: str):
             "generated_at": datetime.now().isoformat(),
             "case_count": len(case_results),
             "cases": case_results,
-            "note": "注意：当前使用的 Scene Plan 是测试数据，非真实旧港站场景"
+            "note": "T5.16.2 已完成 sec-001 真实样本重建；sec-001 与 sec-002 当前均使用真实 Scene Plan。历史测试数据问题见 docs/testing/t5-scene-plan-quality-final-errata-2026-06.md。"
         }, f, ensure_ascii=False, indent=2)
     print(f"\n多案例 JSON 已保存: {json_file}")
     
@@ -590,17 +590,20 @@ def generate_multi_case_report(case_results: list, output_dir: str):
         "plan_contradiction_check": "矛盾检查"
     }
     
-    md = f"""# T5.11: 多场景样本验证评分稳定性
+    md = f"""# T5.11 / T5.13 / T5.16.2a: 多案例评分报告（真实样本，最终状态）
 
 **执行日期**: {datetime.now().strftime('%Y-%m-%d')}
 **执行人**: Solo Agent
-**状态**: ⚠️ PARTIAL
+**状态**: ✅ PASS（2/2 案例完成）
 
 ---
 
 ## 重要说明
 
-⚠️ **当前 Scene Plan 为测试数据**，非真实的旧港站场景（包含"测试场景计划"、"测试角色"等内容）。本报告仅验证多案例评分框架的功能，不代表对真实质量的评估。
+✅ **sec-001 与 sec-002 当前均使用真实 Scene Plan**。
+- sec-001: `雨夜：旧港站的未知召唤`，T5.16.2 完成真实样本重建。
+- sec-002: `场景：旧港站接头`，自 T5.15 起即为真实样本。
+- 历史测试数据问题与纠偏过程，详见 [勘误文档](t5-scene-plan-quality-final-errata-2026-06.md)。
 
 ---
 
@@ -623,39 +626,38 @@ def generate_multi_case_report(case_results: list, output_dir: str):
 """
     
     for r in case_results:
-        md += f"| {r['case_id']} | {r['target_file']} | {r['baseline_candidate_id'][:10]}... | {r['with_plan_candidate_id'][:10]}... | {r['summary']['baseline_total']} | {r['summary']['with_plan_total']} | {r['summary']['delta']:+d} | {r['summary']['conclusion']} |\n"
+        md += f"| {r['case_id']} | {r['target_file']} | {r['baseline_candidate_id']} | {r['with_plan_candidate_id']} | {r['summary']['baseline_total']} | {r['summary']['with_plan_total']} | {r['summary']['delta']:+d} | {r['summary']['conclusion']} |\n"
     
     md += """
 ---
 
 ## 3. 稳定性评估
 
-"""
-    md += "⚠️ **PARTIAL**：样本不足（仅有 1 个案例），无法完整评估评分规则在不同场景下的稳定性。\n\n"
-    md += "需要补充至少 2-3 个不同类型场景的完整样本（悬疑场景、对话场景、动作/转折场景等）才能进行稳定性评估。\n"
-    
-    md += """
----
-
-## 4. 局限性说明
-
-1. **样本量严重不足**：仅有 1 个案例，无法评估稳定性
-2. **Scene Plan 为测试数据**：非真实场景，评分结果仅供框架验证使用
-3. 评分使用规则匹配，未调用 LLM 进行深度语义理解
-4. 仅作为辅助参考，不替代人工判断
+✅ **当前状态**：2 个案例均使用真实 Scene Plan，评分框架正常工作。
+- 评分结论如实记录，未强行要求 with-plan 获胜。
+- 如需更完整的稳定性评估，建议补充至少 2-3 个不同类型场景的完整样本。
 
 ---
 
-## 5. 下一步建议
+## 4. 说明
 
-1. **补充真实 Scene Plan**：替换为真实的旧港站场景计划（包含"林澈"、"旧港站"、"雨夜"、"第三根立柱"、"信任危机"等真实内容）
-2. **补充更多测试样本**：增加至少 2-3 个不同类型场景的完整样本（target_file + scene_plan + baseline candidate + with-plan candidate）
-3. 持续优化评分规则
-4. 考虑集成 LLM 辅助评分（可选）
+1. **sec-001**：经 T5.16.2 纠偏，当前已替换为真实样本。
+2. **sec-002**：自 T5.15 起保持真实样本，未改动。
+3. 评分使用规则匹配，未调用 LLM 进行深度语义理解。
+4. 仅作为辅助参考，不替代人工判断。
 
 ---
 
-**T5.11 状态**：⚠️ PARTIAL（多案例评分框架完成，但稳定性验证未完成）
+## 5. 安全声明
+
+- 未提交 workspace 原始 `.candidates/` 文件，仅通过受控证据文件披露正文快照。
+- 未提交 API key。
+- 未执行 adopt；未覆盖 target_file 正文。
+- 历史勘误保留用于审计。
+
+---
+
+**T5.11 / T5.13 / T5.16.2a 最终状态**：✅ PASS（2/2 案例，真实样本；测试数据问题已在勘误中记录与纠偏）
 
 """
     

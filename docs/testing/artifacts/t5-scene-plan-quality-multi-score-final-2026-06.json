@@ -243,6 +243,5 @@
       }
     }
   ],
-  "note": "注意：当前使用的 Scene Plan 是测试数据，非真实旧港站场景",
-  "_note": "T5.16.2 final snapshot after real sample rebuild. sec-001 baseline= cand_a00fb183, with_plan= cand_effcf335. 无测试数据。"
+  "note": "T5.16.2 已完成 sec-001 真实样本重建；sec-001 与 sec-002 当前均使用真实 Scene Plan。历史测试数据问题见 docs/testing/t5-scene-plan-quality-final-errata-2026-06.md。"
 }
