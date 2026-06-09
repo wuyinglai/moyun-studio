@@ -36,6 +36,18 @@
 
 ---
 
+## 2B. Candidate Provenance 状态
+
+| 案例 ID | Baseline 状态 | With-Plan 状态 | 说明 |
+|---------|---------------|----------------|------|
+| demo-novel-sec-001 | legacy_candidate | legacy_candidate | T5.18-H1: candidate provenance metadata only exists for candidates created after T5.17-H2. Missing p |
+| demo-novel-sec-002 | legacy_candidate | legacy_candidate | T5.18-H1: candidate provenance metadata only exists for candidates created after T5.17-H2. Missing p |
+
+> 说明：`legacy_candidate` 表示 candidate 创建于 T5.17-H2 之前，不包含 provenance metadata。这是正常的历史状态，不影响评分。
+> `complete` 表示 candidate 已包含 `generation_context` / `scene_plan_hash` / `scene_plan_path` 三个字段。
+
+---
+
 ## 3. 稳定性评估
 
 ✅ **当前状态**：2 个案例均使用真实 Scene Plan，评分框架正常工作。

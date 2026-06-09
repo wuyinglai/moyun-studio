@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-09T11:43:41.805122",
+  "generated_at": "2026-06-09T12:22:21.559065",
   "case_count": 2,
   "cases": [
     {
@@ -120,6 +120,26 @@
         "with_plan_total": 15,
         "delta": -2,
         "conclusion": "❌ With-Plan 表现较差"
+      },
+      "provenance": {
+        "baseline": {
+          "status": "legacy_candidate",
+          "scene_plan_used": false,
+          "scene_plan_hash": null,
+          "scene_plan_path": "materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json",
+          "message": "Candidate was created before T5.17-H2 provenance metadata support. This is expected for historical candidates."
+        },
+        "with_plan": {
+          "status": "legacy_candidate",
+          "scene_plan_used": true,
+          "scene_plan_hash": null,
+          "scene_plan_path": "materials/scene_plans/chapters__vol-01__ch-001__sec-001.scene-plan.json",
+          "message": "Candidate was created before T5.17-H2 provenance metadata support. This is expected for historical candidates."
+        }
+      },
+      "provenance_overall": {
+        "all_complete": false,
+        "note": "T5.18-H1: candidate provenance metadata only exists for candidates created after T5.17-H2. Missing provenance on historical candidates is normal and does not affect scoring."
       }
     },
     {
@@ -240,6 +260,26 @@
         "with_plan_total": 14,
         "delta": 0,
         "conclusion": "⚠️ 两者相近"
+      },
+      "provenance": {
+        "baseline": {
+          "status": "legacy_candidate",
+          "scene_plan_used": false,
+          "scene_plan_hash": null,
+          "scene_plan_path": "materials/scene_plans/chapters__vol-01__ch-001__sec-002.scene-plan.json",
+          "message": "Candidate was created before T5.17-H2 provenance metadata support. This is expected for historical candidates."
+        },
+        "with_plan": {
+          "status": "legacy_candidate",
+          "scene_plan_used": true,
+          "scene_plan_hash": null,
+          "scene_plan_path": "materials/scene_plans/chapters__vol-01__ch-001__sec-002.scene-plan.json",
+          "message": "Candidate was created before T5.17-H2 provenance metadata support. This is expected for historical candidates."
+        }
+      },
+      "provenance_overall": {
+        "all_complete": false,
+        "note": "T5.18-H1: candidate provenance metadata only exists for candidates created after T5.17-H2. Missing provenance on historical candidates is normal and does not affect scoring."
       }
     }
   ],

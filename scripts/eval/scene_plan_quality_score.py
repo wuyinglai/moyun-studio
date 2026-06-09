@@ -36,6 +36,81 @@ def load_candidate_content(project_id: str, candidate_id: str):
     return None
 
 
+def load_candidate_metadata(project_id: str, candidate_id: str):
+    """读取 candidate metadata JSON（只读，用于 provenance 检测）
+
+    返回 dict 或 None。不会因为缺少 metadata 而失败，也不会伪造数据。
+    """
+    candidates_dir = Path("workspace/projects") / project_id / ".candidates"
+    metadata_file = candidates_dir / f"{candidate_id}.json"
+    if metadata_file.exists():
+        try:
+            with open(metadata_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
+    return None
+
+
+def build_provenance_info(project_id: str, candidate_id: str,
+                          scene_plan_path: str,
+                          scene_plan_used: bool = None) -> dict:
+    """构建 candidate provenance 信息（只读，不伪造）
+
+    - 如果 candidate metadata 包含完整 provenance 字段：status = "complete"
+    - 如果 candidate metadata 部分字段存在：status = "partial"
+    - 如果 candidate metadata 不存在（T5.17-H2 之前的旧 candidate）：status = "legacy_candidate"
+    - 不会因为缺少 provenance 而失败
+    """
+    metadata = load_candidate_metadata(project_id, candidate_id)
+
+    # 从 metadata 提取 provenance 字段（如果存在）
+    has_gen_ctx = False
+    has_scene_plan_hash = False
+    has_scene_plan_path = False
+    extracted_scene_plan_used = None
+    extracted_scene_plan_hash = None
+    extracted_scene_plan_path = None
+
+    if metadata:
+        if isinstance(metadata.get("generation_context"), dict):
+            has_gen_ctx = True
+            gc = metadata["generation_context"]
+            if "scene_plan_used" in gc:
+                extracted_scene_plan_used = bool(gc["scene_plan_used"])
+        if metadata.get("scene_plan_hash"):
+            has_scene_plan_hash = True
+            extracted_scene_plan_hash = metadata["scene_plan_hash"]
+        if metadata.get("scene_plan_path"):
+            has_scene_plan_path = True
+            extracted_scene_plan_path = metadata["scene_plan_path"]
+
+    # 确定 provenance 状态
+    if has_gen_ctx and has_scene_plan_hash and has_scene_plan_path:
+        status = "complete"
+        message = "Candidate contains full provenance metadata (generation_context + scene_plan_hash + scene_plan_path)."
+    elif has_gen_ctx or has_scene_plan_hash or has_scene_plan_path:
+        status = "partial"
+        message = "Candidate contains partial provenance metadata."
+    else:
+        status = "legacy_candidate"
+        message = "Candidate was created before T5.17-H2 provenance metadata support. This is expected for historical candidates."
+
+    # scene_plan_used 优先使用 metadata 中的值；否则从调用方传入（baseline=False, with-plan=True）
+    if extracted_scene_plan_used is not None:
+        final_scene_plan_used = extracted_scene_plan_used
+    else:
+        final_scene_plan_used = scene_plan_used
+
+    return {
+        "status": status,
+        "scene_plan_used": final_scene_plan_used,
+        "scene_plan_hash": extracted_scene_plan_hash,
+        "scene_plan_path": extracted_scene_plan_path or scene_plan_path,
+        "message": message
+    }
+
+
 def load_scene_plan(project_id: str, target_file: str, scene_plan_path: str = None):
     """读取 scene_plan 文件（只读）"""
     if scene_plan_path:
@@ -535,6 +610,22 @@ def score_single_case(case: dict):
     else:
         conclusion = "❌ With-Plan 表现较差"
     
+    # Provenance 收集（只读，不修改 candidate，不伪造数据）
+    provenance = {
+        "baseline": build_provenance_info(
+            project_id, baseline_candidate_id, scene_plan_path, scene_plan_used=False),
+        "with_plan": build_provenance_info(
+            project_id, with_plan_candidate_id, scene_plan_path, scene_plan_used=True),
+    }
+    all_complete = (
+        provenance["baseline"]["status"] == "complete"
+        and provenance["with_plan"]["status"] == "complete"
+    )
+    provenance_overall = {
+        "all_complete": all_complete,
+        "note": "T5.18-H1: candidate provenance metadata only exists for candidates created after T5.17-H2. Missing provenance on historical candidates is normal and does not affect scoring."
+    }
+
     result = {
         "case_id": case.get("case_id", "unknown"),
         "project_id": project_id,
@@ -551,7 +642,9 @@ def score_single_case(case: dict):
             "with_plan_total": with_plan_total,
             "delta": delta,
             "conclusion": conclusion
-        }
+        },
+        "provenance": provenance,
+        "provenance_overall": provenance_overall,
     }
     
     print(f"\n  Baseline 总分: {baseline_total}")
@@ -627,8 +720,26 @@ def generate_multi_case_report(case_results: list, output_dir: str):
     
     for r in case_results:
         md += f"| {r['case_id']} | {r['target_file']} | {r['baseline_candidate_id']} | {r['with_plan_candidate_id']} | {r['summary']['baseline_total']} | {r['summary']['with_plan_total']} | {r['summary']['delta']:+d} | {r['summary']['conclusion']} |\n"
-    
+
+    # Candidate Provenance 小节
     md += """
+---
+
+## 2B. Candidate Provenance 状态
+
+| 案例 ID | Baseline 状态 | With-Plan 状态 | 说明 |
+|---------|---------------|----------------|------|
+"""
+    for r in case_results:
+        b_status = r.get("provenance", {}).get("baseline", {}).get("status", "unknown")
+        p_status = r.get("provenance", {}).get("with_plan", {}).get("status", "unknown")
+        note = r.get("provenance_overall", {}).get("note", "provenance info not available")
+        md += f"| {r['case_id']} | {b_status} | {p_status} | {note[:100]} |\n"
+
+    md += """
+> 说明：`legacy_candidate` 表示 candidate 创建于 T5.17-H2 之前，不包含 provenance metadata。这是正常的历史状态，不影响评分。
+> `complete` 表示 candidate 已包含 `generation_context` / `scene_plan_hash` / `scene_plan_path` 三个字段。
+
 ---
 
 ## 3. 稳定性评估

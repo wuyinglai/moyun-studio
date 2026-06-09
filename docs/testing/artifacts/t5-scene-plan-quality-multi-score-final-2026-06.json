@@ -120,6 +120,26 @@
         "with_plan_total": 15,
         "delta": -2,
         "conclusion": "❌ With-Plan 表现较差"
+      },
+      "provenance": {
+        "baseline": {
+          "status": "legacy_candidate",
+          "scene_plan_used": false,
+          "scene_plan_hash": null,
+          "scene_plan_path": null,
+          "message": "Candidate was created before T5.17-H2 provenance metadata support."
+        },
+        "with_plan": {
+          "status": "legacy_candidate",
+          "scene_plan_used": true,
+          "scene_plan_hash": null,
+          "scene_plan_path": null,
+          "message": "Candidate was created before T5.17-H2 provenance metadata support."
+        }
+      },
+      "provenance_overall": {
+        "all_complete": false,
+        "note": "T5.18-H1: All 4 candidates are legacy_candidate; T5.17-H2 code support is in place but predates these samples."
       }
     },
     {
@@ -240,8 +260,28 @@
         "with_plan_total": 14,
         "delta": 0,
         "conclusion": "⚠️ 两者相近"
+      },
+      "provenance": {
+        "baseline": {
+          "status": "legacy_candidate",
+          "scene_plan_used": false,
+          "scene_plan_hash": null,
+          "scene_plan_path": null,
+          "message": "Candidate was created before T5.17-H2 provenance metadata support."
+        },
+        "with_plan": {
+          "status": "legacy_candidate",
+          "scene_plan_used": true,
+          "scene_plan_hash": null,
+          "scene_plan_path": null,
+          "message": "Candidate was created before T5.17-H2 provenance metadata support."
+        }
+      },
+      "provenance_overall": {
+        "all_complete": false,
+        "note": "T5.18-H1: All 4 candidates are legacy_candidate; T5.17-H2 code support is in place but predates these samples."
       }
     }
   ],
-  "note": "T5.16.2 已完成 sec-001 真实样本重建；sec-001 与 sec-002 当前均使用真实 Scene Plan。历史测试数据问题见 docs/testing/t5-scene-plan-quality-final-errata-2026-06.md。"
+  "note": "T5.16.2 已完成 sec-001 真实样本重建；sec-001 与 sec-002 当前均使用真实 Scene Plan。T5.18-H1 补充：当前 4 个 candidate 均为 legacy_candidate（T5.17-H2 之前生成），不影响评分。历史测试数据问题见 docs/testing/t5-scene-plan-quality-final-errata-2026-06.md。"
 }
