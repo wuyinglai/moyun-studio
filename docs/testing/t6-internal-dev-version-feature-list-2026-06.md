@@ -566,6 +566,167 @@ tests/test_professional_regression_smoke.py            →  PASSED
 
 ---
 
+## 6.5 未验收模块最小验收方案
+
+针对内部开发版，以下为未验收/部分验收模块的最小验收方案，确保核心功能可运行并验证：
+
+### 6.5.1 ❌ Scene Plan 前端 UI（未验收）
+
+**最小验收步骤**：
+1. 在 EditorToolbar 添加「生成 Scene Plan」按钮
+2. 点击按钮调用 `/api/scene-plan/generate` 生成 plan
+3. 在 RightPanel 添加 ScenePlanTab，展示生成的 JSON
+4. 提供「保存」按钮，调用 `/api/scene-plan/save`
+5. 提供「验证」按钮，调用 `/api/scene-plan/validate`
+
+**依赖**：Scene Plan API（已完成）、RightPanel 框架（已存在）
+
+**测试文件**：`test_scene_plan_frontend_smoke.py`（需扩展）
+
+**验证方法**：
+- UI 点击测试：按钮存在且可点击
+- API 调用测试：生成/保存/验证接口返回成功
+- 状态测试：plan 内容正确显示
+
+**预期结果**：用户可通过 UI 创建、查看、保存 Scene Plan
+
+---
+
+### 6.5.2 ❌ Stream / SSE 流式推送（未验收）
+
+**最小验收步骤**：
+1. 在 `generation_service.py` 中实现流式响应到 EventBus 的转发
+2. 在 `sse.py` 中添加 chunk 级事件广播
+3. 在 `useSSE.ts` 中实现流式消息接收
+4. 在编辑器中实现打字机效果
+
+**依赖**：EventBus（已存在）、TaskQueue（已存在）、Generation Service（已完成）
+
+**测试文件**：新建 `test_stream_sse_integration.py`
+
+**验证方法**：
+- 启动生成任务，验证 SSE 事件持续推送
+- 验证打字机效果实时显示
+- 验证进度百分比更新
+
+**预期结果**：长任务有实时进度反馈，正文逐字显示
+
+---
+
+### 6.5.3 ⚠️ Prompt Engine 独立测试（部分验收）
+
+**最小验收步骤**：
+1. 创建独立测试文件，覆盖 Jinja2 模板渲染
+2. 测试变量注入、条件判断、循环等核心功能
+3. 测试模板版本管理的基本 CRUD
+
+**依赖**：Workflow / Pipeline（已完成）
+
+**测试文件**：新建 `test_prompt_engine.py`
+
+**验证方法**：
+- 模板渲染正确性测试
+- 变量替换测试
+- 版本切换测试
+
+**预期结果**：Prompt 模板引擎功能独立验证通过
+
+---
+
+### 6.5.4 ❌ Batch Generate 批量生成（未验收）
+
+**最小验收步骤**：
+1. 实现 `batch_generate` 核心逻辑（已有骨架）
+2. 集成 TaskQueue 进行任务调度
+3. 添加批量生成 API 端点
+
+**依赖**：Task Queue（待完成）、Stream SSE（待完成）
+
+**测试文件**：新建 `test_batch_generate.py`
+
+**验证方法**：
+- 多场景批量生成测试
+- 任务状态跟踪测试
+- 失败重试测试
+
+**预期结果**：支持选择多个场景一键生成
+
+---
+
+### 6.5.5 ⚠️ Story State 深度集成（部分验收）
+
+**最小验收步骤**：
+1. 在生成前读取 Story State 作为上下文
+2. 在生成后更新角色状态
+3. 实现状态变更的 SSE 推送
+
+**依赖**：Candidate Provenance（已完成）、EventBus（已存在）
+
+**测试文件**：扩展 `test_story_state_materials_dryrun.py`
+
+**验证方法**：
+- 状态读取测试：生成时正确获取状态
+- 状态更新测试：生成后状态正确变更
+- 事件推送测试：状态变更触发 SSE
+
+**预期结果**：故事状态与生成深度集成，保持一致性
+
+---
+
+### 6.5.6 ⚠️ Pipeline / Workflow 深度验证（部分验收）
+
+**最小验收步骤**：
+1. 测试多步骤管线执行
+2. 测试条件分支逻辑
+3. 测试 Human-in-the-loop 暂停/恢复
+
+**依赖**：Pipeline（已完成）、Workflow（已完成）
+
+**测试文件**：扩展 `test_workflow_pipeline_dryrun.py`
+
+**验证方法**：
+- 多步骤顺序执行测试
+- 条件分支测试
+- 暂停/恢复测试
+
+**预期结果**：复杂工作流场景稳定运行
+
+---
+
+### 6.5.7 ⚠️ Materials / Style Guide / Recent Context（部分验收）
+
+**最小验收步骤**：
+1. Materials：添加版本管理 API
+2. Style Guide：集成到生成 pipeline
+3. Recent Context：验证上下文生成质量
+
+**依赖**：Story State（已部分完成）
+
+**测试文件**：扩展现有测试
+
+**验证方法**：
+- 素材版本回滚测试
+- 风格指南影响生成测试
+- 上下文相关性测试
+
+**预期结果**：辅助模块与主流程有效集成
+
+---
+
+## 6.6 最小验收优先级汇总
+
+| 优先级 | 模块 | 状态 | 最小验收完成后可验证能力 |
+|--------|------|------|------------------------|
+| P1 | Scene Plan 前端 UI | ❌ | 用户可创建/编辑/保存 Scene Plan |
+| P1 | Stream / SSE 流式推送 | ❌ | 长任务实时进度反馈 |
+| P2 | Prompt Engine 独立测试 | ⚠️ | 模板引擎功能独立验证 |
+| P2 | Pipeline / Workflow 深度验证 | ⚠️ | 复杂工作流稳定运行 |
+| P3 | Story State 深度集成 | ⚠️ | 故事状态与生成一致性 |
+| P3 | Batch Generate | ❌ | 多场景批量生成 |
+| P4 | Materials / Style Guide / Recent Context | ⚠️ | 辅助模块集成完善 |
+
+---
+
 ## 7. 安全边界确认
 
 - ✅ **未调用真实 LLM**（本报告基于文件扫描）
