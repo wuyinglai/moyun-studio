@@ -283,5 +283,8 @@ async def validate_scene_plan_api(scene_plan_data: ScenePlan | dict):
 | **T5.13** | **✅ OK** | **Scene Plan 多案例评分稳定性验证（2 个完整案例）** |
 | **T5.14** | **✅ OK** | **多案例评分快照归档** |
 | **T5.15** | **⚠️ 归档完成 / 数据质量存在限制** | **多案例评分 final 快照整理（发现 sec-001 为测试数据，需后续真实 Scene Plan 补齐）** |
+| **T5.16.1** | **✅ 完成** | **`backend/api/scene_plan.py` 的 `llm_service.generate()` → `complete_sync()` bug 修复与回归测试（本文件）** |
+| **T5.16** | **🔄 计划 / 高优先级** | **用修复后的 generate API 真实生成 sec-001 Scene Plan（需真实 LLM 调用）** |
+| **T5.17** | **🔄 计划 / 中优先级** | **用真实 Scene Plan 生成 paired baseline / with-plan candidates 并替换 final 快照** |
 
-**当前进度**: 约 87%（数据质量待补齐）
+**当前进度**: 约 88%（sec-001 真实 Scene Plan 与 paired candidates 待真实生成，backend API bug 已修复、10/10 测试通过）

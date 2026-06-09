@@ -115,10 +115,33 @@ T5.15 归档动作已完成，但 ChatGPT 二次验收发现最终快照（final
 
 ## 6. 下一步行动建议
 
-1. **用户授权后**：使用真实 LLM 为 sec-001 生成新的 Scene Plan 和 candidate
-2. **或者**：用户提供 sec-001 的真实 Scene Plan 文件
-3. **重新跑 T5.13**：使用真实 Scene Plan 重新执行多案例评分
-4. **重新归档 T5.15**：在真实数据基础上生成新的 final 快照
+### 6.1 已完成的前置任务 (T5.16.1)
+
+在用户授权调用真实 LLM 之前，已完成**后端 API 修复**：
+
+| 项目 | 状态 |
+|------|------|
+| `backend/api/scene_plan.py` 中 `llm_service.generate()` → `complete_sync()` | ✅ 已修复 |
+| `llm_cfg.model` (dict) → `llm_cfg.get("model")` (安全 dict 访问) | ✅ 已修复 |
+| `tests/test_scene_plan_generate_api.py` 10 个单元测试（含回归测试） | ✅ 10/10 通过 |
+| `tests/test_scene_plan_validator.py` 9 个单元测试 | ✅ 9/9 通过 |
+| 文档与回归测试（故意不提供 `generate()` 方法的 Fake LLM 仍可通过） | ✅ 已覆盖 |
+
+**结论**: T5.16.1 已完成，`/api/scene-plan/generate` 现在可以正常工作（不再依赖不存在的 `generate()` 方法）。
+
+### 6.2 待执行的任务
+
+1. **T5.16**（需用户授权）：使用修复后的真实 LLM 为 sec-001 生成新的 Scene Plan，并创建 paired baseline candidate + with-plan candidate
+2. **T5.17**：在真实数据基础上重新执行多案例评分、更新 final 快照
+3. **或者**：用户提供 sec-001 的真实 Scene Plan 文件供脚本读取
+4. 最终重新跑 T5.13，并在真实数据基础上归档新的 final 快照
+
+### 6.3 安全承诺
+
+- 本勘误文档不包含任何候选稿正文或推理日志
+- 未对 `workspace/` 目录下任何场景正文做修改
+- 未提交任何 API key
+- T5.16.1 的修复严格限定在 `backend/api/scene_plan.py`（修复）与 `tests/test_scene_plan_generate_api.py`（测试）
 
 ---
 
