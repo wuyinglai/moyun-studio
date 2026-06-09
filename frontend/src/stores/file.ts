@@ -67,17 +67,19 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function readFile(projectId: string, path: string): Promise<FileContent> {
-    const data = await api.get<FileContent>(API_ROUTES.file, { params: { project_id: projectId, path } })
+    const normalizedPath = path.replace(/^\/+/, '')
+    const data = await api.get<FileContent>(API_ROUTES.file, { params: { project_id: projectId, path: normalizedPath } })
     fileContents.value[path] = data
     fileMeta.value[path] = { mtime: data.mtime, hash: data.hash }
     return data
   }
 
   async function saveFile(projectId: string, path: string, content: string) {
+    const normalizedPath = path.replace(/^\/+/, '')
     const known = fileMeta.value[path] || fileContents.value[path] || {}
     try {
       const result = await api.post<FileContent | null>(`${API_ROUTES.file}?project_id=${projectId}`, {
-        path,
+        path: normalizedPath,
         content,
         expected_mtime: known.mtime ?? undefined,
         expected_hash: known.hash ?? undefined,

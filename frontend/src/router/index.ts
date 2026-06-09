@@ -74,7 +74,7 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/project/:projectId/file/*',
+    path: '/project/:projectId/file/:pathMatch(.*)*',
     name: 'file',
     component: AppLayout,
     beforeEnter: async (to) => {
