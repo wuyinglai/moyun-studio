@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from backend.config import get_settings
 from backend.core.scene_plan_validator import (
     validate_scene_plan,
+    validate_scene_plan_target_binding,
     ScenePlanValidationResult,
     ScenePlanValidationError,
     ScenePlanValidationWarning,
@@ -395,6 +396,27 @@ async def save_scene_plan_api(
         for w in validation_result.warnings
     ]
 
+    binding_result = validate_scene_plan_target_binding(
+        scene_plan_dict,
+        request.target_file,
+    )
+    if not binding_result.valid:
+        binding_errors = [
+            ScenePlanValidationErrorDetail(field=e.field, message=e.message)
+            for e in binding_result.errors
+        ]
+        return ApiResponse.ok(
+            ScenePlanSaveResponse(
+                saved=False,
+                path=None,
+                valid=False,
+                errors=binding_errors,
+                warnings=warnings,
+                conflict=False,
+                message="SCENE_PLAN_TARGET_MISMATCH",
+            )
+        )
+
     # 4. 如果校验失败，默认不保存
     if not valid:
         logger.warning("Scene Plan 校验失败，不保存: errors=%s", errors)
@@ -528,9 +550,24 @@ async def load_scene_plan_api(
 
     # 3. 读取文件
     try:
-        content, meta, _ = await file_service.read_file(full_path)
+        content, _, mtime = await file_service.read_file(full_path)
         scene_plan_dict = json.loads(content)
         scene_plan_obj = ScenePlan(**scene_plan_dict)
+
+        binding_result = validate_scene_plan_target_binding(scene_plan_obj, target_file)
+        if not binding_result.valid:
+            return ApiResponse.ok(
+                ScenePlanLoadResponse(
+                    exists=True,
+                    path=scene_plan_relative_path,
+                    scene_plan=None,
+                    mtime=mtime,
+                    errors=[
+                        ScenePlanValidationErrorDetail(field=e.field, message=e.message)
+                        for e in binding_result.errors
+                    ],
+                )
+            )
 
         logger.debug("Scene Plan 加载成功: %s", full_path)
 
@@ -539,7 +576,7 @@ async def load_scene_plan_api(
                 exists=True,
                 path=scene_plan_relative_path,
                 scene_plan=scene_plan_obj,
-                mtime=meta.get("mtime") if meta else None,
+                mtime=mtime,
                 errors=[],
             )
         )

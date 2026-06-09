@@ -90,6 +90,37 @@ def test_generate_scene_plan_api_success(valid_scene_plan_dict):
 # ── 2. raw_output 默认不返回 ────────────────────────
 
 
+def test_generate_scene_plan_api_forces_source_path_to_target_file(valid_scene_plan_dict):
+    """Generate must bind scene_plan.source_path to the requested target_file."""
+    mismatched_dict = dict(valid_scene_plan_dict)
+    mismatched_dict["source_path"] = "chapters/vol-01/ch-001/sec-002.md"
+
+    with patch("backend.api.scene_plan.load_llm_config_from_workspace"), \
+         patch("backend.api.scene_plan.LLMService") as mock_llm_service, \
+         patch("backend.api.scene_plan.FileService") as mock_file_service:
+
+        mock_llm = AsyncMock()
+        mock_llm.complete_sync.return_value = json.dumps(mismatched_dict)
+        mock_llm_service.from_workspace_config.return_value = mock_llm
+
+        mock_file = MagicMock()
+        mock_file.read_file.side_effect = [("正文", {}, 12345.67)]
+        mock_file_service.return_value = mock_file
+
+        response = client.post(
+            "/api/scene-plan/generate",
+            json={
+                "project_id": "demo-novel",
+                "target_file": "chapters/vol-01/ch-001/sec-001.md",
+            },
+        )
+
+        assert response.status_code == 200
+        result = response.json()["data"]
+        assert result["valid"] is True
+        assert result["scene_plan"]["source_path"] == "chapters/vol-01/ch-001/sec-001.md"
+
+
 def test_generate_scene_plan_api_raw_output_not_included_by_default(valid_scene_plan_dict):
     """测试 raw_output 默认不返回"""
     with patch("backend.api.scene_plan.load_llm_config_from_workspace"), \

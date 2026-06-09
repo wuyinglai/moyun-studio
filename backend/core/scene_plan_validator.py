@@ -196,3 +196,44 @@ def validate_scene_plan(
         ))
 
     return result
+
+
+def validate_scene_plan_target_binding(
+    scene_plan: ScenePlan | dict[str, Any],
+    target_file: str | None,
+) -> ScenePlanValidationResult:
+    """Validate that a Scene Plan belongs to the requested target scene."""
+    result = ScenePlanValidationResult()
+
+    if not target_file:
+        result.valid = False
+        result.errors.append(ScenePlanValidationError(
+            field="target_file",
+            message="SCENE_PLAN_TARGET_MISMATCH: target_file is required when scene_plan is provided",
+        ))
+        return result
+
+    if isinstance(scene_plan, dict):
+        source_path = scene_plan.get("source_path")
+    else:
+        source_path = scene_plan.source_path
+
+    if not source_path:
+        result.valid = False
+        result.errors.append(ScenePlanValidationError(
+            field="source_path",
+            message="SCENE_PLAN_TARGET_MISMATCH: scene_plan.source_path is required",
+        ))
+        return result
+
+    if source_path != target_file:
+        result.valid = False
+        result.errors.append(ScenePlanValidationError(
+            field="source_path",
+            message=(
+                "SCENE_PLAN_TARGET_MISMATCH: scene_plan.source_path must match target_file "
+                f"(source_path={source_path}, target_file={target_file})"
+            ),
+        ))
+
+    return result

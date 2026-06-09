@@ -128,6 +128,38 @@ def test_pipeline_with_candidate_policy_violation(client, direct_write_forbidden
     assert any("allow_direct_write" in err for err in errors)
 
 
+@pytest.mark.asyncio
+async def test_pipeline_rejects_mismatched_scene_plan_before_loading(valid_scene_plan):
+    """Pipeline must reject scene_plan.source_path mismatch before loading or running."""
+    mismatched_plan = dict(valid_scene_plan)
+    mismatched_plan["source_path"] = "chapters/vol-01/ch-001/sec-002.md"
+
+    runner = PipelineRunner(
+        prompts_path=Path("prompts"),
+        llm_service=MagicMock(),
+        file_service=MagicMock(),
+    )
+
+    with patch.object(runner, "load_pipeline") as mock_load_pipeline:
+        events = []
+        async for event in runner.run(
+            pipeline_name="polish",
+            project_id=mismatched_plan["project_id"],
+            target_file="chapters/vol-01/ch-001/sec-001.md",
+            output_mode="candidate",
+            scene_plan=mismatched_plan,
+        ):
+            events.append(event)
+
+        mock_load_pipeline.assert_not_called()
+
+    assert len(events) == 1
+    assert events[0]["event"] == "error"
+    data = json.loads(events[0]["data"])
+    assert data["code"] == "SCENE_PLAN_TARGET_MISMATCH"
+    assert "source_path" in data["message"]
+
+
 def test_pipeline_scene_plan_soft_integration():
     """验证软接入设计：不传 scene_plan 时，流程完全不受影响
     

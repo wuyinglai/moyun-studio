@@ -38,7 +38,7 @@ from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService
 from backend.core.prompt_versioning import archive_prompt
-from backend.core.scene_plan_validator import validate_scene_plan
+from backend.core.scene_plan_validator import validate_scene_plan, validate_scene_plan_target_binding
 from backend.policies.generation_output_policy import (
     OutputDecision,
     decide_output,
@@ -342,6 +342,15 @@ class PipelineRunner:
             if not validation_result.valid:
                 error_messages = [f"{e.field}: {e.message}" for e in validation_result.errors]
                 yield {"event": "error", "data": json.dumps({"message": "Scene Plan 验证失败: " + "; ".join(error_messages), "task_id": f"pipeline-validate"})}
+                return
+            binding_result = validate_scene_plan_target_binding(scene_plan, target_file)
+            if not binding_result.valid:
+                error_messages = [f"{e.field}: {e.message}" for e in binding_result.errors]
+                yield {"event": "error", "data": json.dumps({
+                    "code": "SCENE_PLAN_TARGET_MISMATCH",
+                    "message": "SCENE_PLAN_TARGET_MISMATCH: " + "; ".join(error_messages),
+                    "task_id": "pipeline-validate",
+                })}
                 return
             if validation_result.warnings:
                 for warning in validation_result.warnings:

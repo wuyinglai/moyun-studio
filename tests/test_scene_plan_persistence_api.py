@@ -132,6 +132,64 @@ def test_save_scene_plan_overwrite_allowed(valid_scene_plan_dict):
         mock_file.write_file.assert_called_once()
 
 
+def test_save_scene_plan_rejects_source_path_mismatch(valid_scene_plan_dict):
+    """Save must reject a Scene Plan whose source_path differs from target_file."""
+    mismatched_dict = dict(valid_scene_plan_dict)
+    mismatched_dict["source_path"] = "chapters/vol-01/ch-001/sec-002.md"
+
+    with patch("backend.api.scene_plan.FileService") as mock_file_service_class:
+        mock_file = MagicMock()
+        mock_file.read_file.side_effect = Exception("File not found")
+        mock_file.write_file = AsyncMock()
+        mock_file_service_class.return_value = mock_file
+
+        response = client.post(
+            "/api/scene-plan/save",
+            json={
+                "project_id": "demo-novel",
+                "target_file": "chapters/vol-01/ch-001/sec-001.md",
+                "scene_plan": mismatched_dict,
+                "overwrite": False,
+            },
+        )
+
+        assert response.status_code == 200
+        result = response.json()["data"]
+        assert result["saved"] is False
+        assert result["valid"] is False
+        assert result["message"] == "SCENE_PLAN_TARGET_MISMATCH"
+        assert any(error["field"] == "source_path" for error in result["errors"])
+        mock_file.write_file.assert_not_called()
+
+
+def test_save_scene_plan_overwrite_does_not_bypass_source_path_mismatch(valid_scene_plan_dict):
+    """overwrite=true must not bypass Scene Plan target binding."""
+    mismatched_dict = dict(valid_scene_plan_dict)
+    mismatched_dict["source_path"] = "chapters/vol-01/ch-001/sec-002.md"
+
+    with patch("backend.api.scene_plan.FileService") as mock_file_service_class:
+        mock_file = MagicMock()
+        mock_file.read_file.return_value = ('{"test": "old"}', {}, 12345.67)
+        mock_file.write_file = AsyncMock()
+        mock_file_service_class.return_value = mock_file
+
+        response = client.post(
+            "/api/scene-plan/save",
+            json={
+                "project_id": "demo-novel",
+                "target_file": "chapters/vol-01/ch-001/sec-001.md",
+                "scene_plan": mismatched_dict,
+                "overwrite": True,
+            },
+        )
+
+        assert response.status_code == 200
+        result = response.json()["data"]
+        assert result["saved"] is False
+        assert result["message"] == "SCENE_PLAN_TARGET_MISMATCH"
+        mock_file.write_file.assert_not_called()
+
+
 def test_save_invalid_scene_plan_rejected(valid_scene_plan_dict):
     """测试 invalid Scene Plan 不保存"""
     invalid_dict = valid_scene_plan_dict.copy()
@@ -191,8 +249,8 @@ def test_load_scene_plan_success(valid_scene_plan_dict):
         mock_file = MagicMock()
         mock_file.read_file = AsyncMock(return_value=(
             json.dumps(valid_scene_plan_dict),
-            {"mtime": 12345.67},
-            {},
+            None,
+            12345.67,
         ))
         mock_file_service_class.return_value = mock_file
 
@@ -214,6 +272,36 @@ def test_load_scene_plan_success(valid_scene_plan_dict):
         assert result["path"] is not None
         assert result["mtime"] is not None
         assert len(result["errors"]) == 0
+
+
+def test_load_scene_plan_rejects_source_path_mismatch(valid_scene_plan_dict):
+    """Load must reject a Scene Plan whose source_path differs from target_file."""
+    mismatched_dict = dict(valid_scene_plan_dict)
+    mismatched_dict["source_path"] = "chapters/vol-01/ch-001/sec-002.md"
+
+    with patch("backend.api.scene_plan.FileService") as mock_file_service_class:
+        mock_file = MagicMock()
+        mock_file.read_file = AsyncMock(return_value=(
+            json.dumps(mismatched_dict),
+            None,
+            12345.67,
+        ))
+        mock_file_service_class.return_value = mock_file
+
+        response = client.get(
+            "/api/scene-plan/load",
+            params={
+                "project_id": "demo-novel",
+                "target_file": "chapters/vol-01/ch-001/sec-001.md",
+            },
+        )
+
+        assert response.status_code == 200
+        result = response.json()["data"]
+        assert result["exists"] is True
+        assert result["scene_plan"] is None
+        assert result["mtime"] == 12345.67
+        assert any(error["field"] == "source_path" for error in result["errors"])
 
 
 def test_load_scene_plan_not_exists():
