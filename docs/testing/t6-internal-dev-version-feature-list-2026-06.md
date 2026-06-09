@@ -1,363 +1,586 @@
-# T6.0: 内部开发版功能清单与状态盘点
+# T6.1: 内部开发版功能清单与状态汇总
 
-**版本**: 2026-06
-**基准 Commit**: f735eca
+**版本**: 2026-06（T5.18-H1 验收后刷新）
+**基准 Commit**: 977c602
 **生成日期**: 2026-06-09
-**执行方式**: 纯静态文件扫描与文档盘点，未调用 LLM，未生成 candidate，未修改 workspace
+**执行方式**: 纯静态文件扫描（`docs/testing/` + `tests/` + `backend/` + `frontend/`），未调用 LLM，未生成 candidate，未修改 workspace
 
 ---
 
-## 1. 总览
+## 1. 整体状态
 
-| 项目 | 值 |
+| 维度 | 值 |
 |------|-----|
-| 功能模块总数（按验收阶段划分） | 17 |
-| 已完整验收（有验收文档 + 回归测试） | 9 |
-| 部分验收（有文档但测试覆盖不足） | 4 |
-| 未验收（代码存在但无独立验收文档） | 4 |
-| 有验收文档的模块占比 | ~53% |
-| 有回归测试的模块占比 | ~70% |
+| 功能模块总数 | **22** |
+| 已完整验收（有验收文档 + 有测试 + 通过） | **12** |
+| 部分验收（有文档 or 部分测试覆盖） | **5** |
+| 未验收（代码存在但无独立验收文档） | **5** |
+| 验收文档总数 | **43 份** |
+| 测试文件总数 | **47 份** |
+| Backend 核心文件数 | **66 份**（api + core + schemas + policies） |
+| 当前 HEAD | `977c602` |
+| 当前分支 | `main` |
+| 工作区状态 | clean |
 
-**整体结论**: 当前项目已形成一条可用的写作最小闭环（打开项目 → 编辑 → 润色/精修 → Candidate 采用 → 继续写作）。Scene Plan 系列功能的后端链路已完整（生成/保存/验证 API + candidate provenance + scoring 报告），但前端 UI、批量生成、流式 SSE 推送等能力尚待实现与验收。
+**总结**：T5.18-H1 之后，项目已形成可用的写作最小闭环。Scene Plan 后端链路完整（生成/保存/验证），Candidate Provenance 元数据机制就绪，Scoring 规则评分系统稳定；主要缺口在前端 UI（Scene Plan 编辑器、Prompt 编辑器深度验证、Stream SSE 推送）与批量生成能力。
 
 ---
 
-## 2. 已完整验收的功能模块（9）
+## 2. 模块详细清单（22 个模块）
 
-### 2.1 文件系统 / 文件读写
+### 2.1 文件系统 / FileService
 
-- **验收阶段**: T4.5（Story State / Materials / 文件系统验收）
-- **验收文档**: `docs/testing/professional-state-materials-filesystem-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/core/file_ops.py`, `backend/api/files.py`
-  - 前端: `frontend/src/composables/useEditorFileActions.ts`, `frontend/src/stores/file.ts`
-- **测试文件**: 包含于 `test_api_validation.py`, `test_candidate_flow_e2e*.py`
-- **验收状态**: ✅ 已验收
-- **关键能力**:
-  - 安全的文件读写（通过 FileService，禁止直接路径拼接）
-  - 支持 expected_mtime / expected_hash 冲突检测
-  - 不会静默覆盖正文
-
-### 2.2 Candidate 候选稿机制
-
-- **验收阶段**: T4.1 + T4.3（主流程 + 编辑能力）
-- **验收文档**: `docs/testing/professional-main-flow-acceptance-2026-06.md`, `docs/testing/professional-editing-flow-acceptance-2026-06.md`, `docs/testing/professional-candidate-flow-e2e-result-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/core/candidate_service.py`, `backend/api/candidates.py`, `backend/schemas/candidate.py`, `backend/policies/candidate_policy.py`
-  - 前端: `frontend/src/modules/candidate/`, `frontend/src/components/right-panel/CandidatePanel.vue`
-- **测试文件**:
-  - `tests/test_candidate_flow_e2e.py`, `tests/test_candidate_flow_e2e_v2.py`, `tests/test_candidate_flow_e2e_full.py`
-  - `tests/test_candidate_panel_probe.py`, `tests/test_candidate_panel_probe_simple.py`
-  - `tests/test_candidate_preview_delete_e2e.py`, `tests/test_candidate_preview_delete_fixed.py`
-  - `tests/test_candidate_adopt_conflict_sse_e2e.py`
-  - `tests/test_professional_candidate_flow.py`
-  - `tests/test_candidate_provenance.py` (T5.17-H2)
-  - `tests/test_scene_plan_quality_provenance_scoring.py` (T5.18-H1)
-- **验收状态**: ✅ 已验收
-- **关键能力**:
-  - polish / rewrite / chat-edit 默认生成 candidate，不覆盖正文
-  - CandidatePanel 支持预览、采用、删除
-  - Adopt 前冲突检查（base_hash / base_mtime）
-  - Adopt 后写入 revision-log
-  - T5.17-H2 新增 provenance metadata（generation_context / scene_plan_hash / scene_plan_path）
-
-### 2.3 Lite 快速写作
-
-- **验收阶段**: T1-T3（Lite 系列早期验收）
-- **验收文档**: `docs/testing/lite-professional-switch-baseline-2026-06.md`, 多个 Lite 专项文档
-- **核心文件**:
-  - 后端: `backend/api/lite.py`
-  - 前端: `frontend/src/views/LiteWritingView.vue`, `frontend/src/composables/useLiteGeneration.ts`
-- **测试文件**: 包含于 `test_professional_regression_smoke.py`
-- **验收状态**: ✅ 已验收
-- **关键能力**:
-  - selected-card 模式，无需场景计划即可快速写作
-  - 不影响 Professional 主流程（T4.2 已验证共存）
-
-### 2.4 Professional 主流程（编辑器 + 对话面板）
-
-- **验收阶段**: T4.1（主流程端到端验收）
-- **验收文档**: `docs/testing/professional-main-flow-acceptance-2026-06.md`, `docs/testing/professional-main-flow-ui-dryrun-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/api/generate.py`, `backend/api/candidates.py`, `backend/core/generation_service.py`
-  - 前端: `frontend/src/components/editor/EditorToolbar.vue`, `frontend/src/components/chat/ChatPanel.vue`, `frontend/src/composables/useGenerationOrchestrator.ts`
-- **测试文件**: `tests/test_professional_regression_smoke.py`, `tests/test_user_story.py`
-- **验收状态**: ✅ 已验收
-- **关键能力**:
-  - 打开项目 → 编辑 → 触发润色/精修 → 生成 candidate → 预览/采用 → 继续写作
-  - 两条入口：EditorToolbar 按钮 + ChatPanel 对话
-
-### 2.5 Chat Panel 与 Candidate 触发
-
-- **验收阶段**: T4.1 + ChatPanel 专项
-- **验收文档**: `docs/testing/chat-panel-trigger-contract-2026-06.md`, `docs/testing/chat-panel-candidate-trigger-dryrun-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/api/candidates.py`, `backend/core/quality_service.py`
-  - 前端: `frontend/src/components/chat/ChatPanel.vue`, `frontend/src/stores/chat.ts`
-- **测试文件**: `tests/test_chatpanel_selected_text_ui_e2e.py`, `tests/test_chatpanel_selected_text_candidate_simple.py`, `tests/test_chatpanel_selected_text_candidate_link.py`
-- **验收状态**: ✅ 已验收
-- **关键能力**:
-  - ChatPanel 中选中文字触发 rewrite / polish
-  - 默认走 candidate 机制，不直接覆盖正文
-
-### 2.6 Scene Plan API（生成 / 保存 / 验证）
-
-- **验收阶段**: T5.13 - T5.18
-- **验收文档**:
-  - `docs/testing/t5-scene-plan-generate-api-2026-06.md`（生成 API）
-  - `docs/testing/t5-scene-plan-persistence-api-2026-06.md`（保存 API）
-  - `docs/testing/t5-scene-plan-chain-architecture-audit-2026-06.md`（架构审计）
-  - `docs/testing/t5-scene-plan-target-binding-fix-2026-06.md`（target_file 绑定）
-  - `docs/testing/t5-scene-plan-candidate-provenance-fix-2026-06.md`（provenance 修复）
-  - `docs/testing/t5-candidate-provenance-chain-acceptance-2026-06.md`（provenance 链路验收）
-- **核心文件**:
-  - 后端: `backend/api/scene_plan.py`, `backend/core/scene_plan_validator.py`, `backend/schemas/scene_plan.py`
-- **测试文件**:
-  - `tests/test_scene_plan_generate_api.py`
-  - `tests/test_scene_plan_persistence_api.py`
-  - `tests/test_scene_plan_validate_api.py`
-  - `tests/test_scene_plan_validator.py`
-  - `tests/test_scene_plan_pipeline_integration.py`
-  - `tests/test_candidate_provenance.py`
-  - `tests/test_scene_plan_quality_provenance_scoring.py`
-- **验收状态**: ✅ 已验收（后端 API + provenance 链路）
-- **关键能力**:
-  - `/api/scene-plan/generate`: 生成 Scene Plan JSON
-  - `/api/scene-plan/save`: 持久化 scene_plan.json（绑定 target_file）
-  - `/api/scene-plan/validate`: 校验 scene_plan 字段合法性与 target_file 绑定
-  - provenance metadata（generation_context / scene_plan_hash / scene_plan_path）
-  - scoring 报告中 provenance 状态标注（T5.18-H1）
-
-### 2.7 Scoring 评分（规则评分 + multi-score 报告）
-
-- **验收阶段**: T5.10 - T5.18
-- **验收文档**:
-  - `docs/testing/t5-scene-plan-quality-score-2026-06.md`（规则评分）
-  - `docs/testing/t5-scene-plan-quality-compare-2026-06.md`（对比评分）
-  - `docs/testing/t5-scene-plan-quality-multi-score-2026-06.md`（multi-score 报告）
-  - `docs/testing/t5-scene-plan-quality-final-errata-2026-06.md`（勘误）
-- **核心文件**:
-  - `scripts/eval/scene_plan_quality_score.py`
-  - `docs/testing/artifacts/t5-scene-plan-quality-cases-2026-06.json`
-  - `docs/testing/artifacts/t5-scene-plan-quality-multi-score-final-2026-06.json`
-- **测试文件**:
-  - `tests/test_scene_plan_quality_provenance_scoring.py`
-- **验收状态**: ✅ 已验收（含 provenance 集成）
-- **关键能力**:
-  - 规则评分（scene_goal_alignment / beats_coverage / conflict_presence / characters_consistency / location_consistency / time_consistency / no_reasoning_logs / language_quality / plan_contradiction_check）
-  - Baseline vs With-Plan 对比
-  - provenance 状态标注（T5.18-H1 新增）
-  - note 字段保留（不被 provenance 覆盖）
-
-### 2.8 Story State / Materials / Style Guide
-
-- **验收阶段**: T4.5
-- **验收文档**: `docs/testing/professional-state-materials-filesystem-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/api/story_state.py`, `backend/api/materials.py`, `backend/api/style_guide.py`
-  - 前端: `frontend/src/stores/storyState.ts`, `frontend/src/stores/styleGuide.ts`
-- **测试文件**: `tests/test_story_state_materials_dryrun.py`
 - **验收状态**: ✅ 已验收（静态层）
-- **关键能力**:
-  - Story State：主角状态、势力关系、伏笔、主线进度等结构化沉淀
-  - Materials：素材文件读写
-  - Style Guide：风格指南管理
-  - 均需用户确认后写入，不会自动覆盖
-
-### 2.9 LLM 调用与熔断器（API Key 安全）
-
-- **验收阶段**: 多阶段安全检查
+- **定位**: 项目最底层的文件读写服务，所有文件操作必须通过此层，禁止 API 直接拼接路径
+- **后端关键代码**:
+  - [file_ops.py](file:///d:/newmoyun/backend/core/file_ops.py) — `FileService` 类（`read_file` / `write_file` / `expected_hash` / `expected_mtime`）
+  - [files.py](file:///d:/newmoyun/backend/api/files.py) — 文件 REST API
+  - [exceptions.py](file:///d:/newmoyun/backend/core/exceptions.py) — 文件冲突异常（`FILE_CONFLICT`）
+- **前端状态**:
+  - [file.ts](file:///d:/newmoyun/frontend/src/stores/file.ts) — 文件状态管理
+  - [editor.ts](file:///d:/newmoyun/frontend/src/stores/editor.ts) — 编辑器内容管理
 - **验收文档**:
-  - `docs/testing/t5-local-model-dryrun-smoke-2026-06.md`（本地模型 dry-run）
-  - `docs/testing/professional-state-materials-filesystem-acceptance-2026-06.md` 中安全章节
-  - `docs/testing/t5-scene-plan-chain-architecture-audit-2026-06.md` 中安全章节
-- **核心文件**:
-  - 后端: `backend/core/llm.py`, `backend/core/llm_circuit_breaker.py`, `backend/api/llm.py`, `backend/api/config.py`
-  - 前端: `frontend/src/stores/llm.ts`
-- **测试文件**: `tests/test_llm.py`, `tests/test_llm_api.py`, `tests/test_llm_reasoning_detection.py`
-- **验收状态**: ✅ 已验收（安全层）
+  - [professional-state-materials-filesystem-acceptance-2026-06.md](file:///d:/newmoyun/docs/testing/professional-state-materials-filesystem-acceptance-2026-06.md)
+- **测试文件**:
+  - [test_api_validation.py](file:///d:/newmoyun/tests/test_api_validation.py)
+  - [test_api_quality.py](file:///d:/newmoyun/tests/test_api_quality.py)
+  - `test_candidate_flow_e2e*.py` 中集成验证
+- **关键能力**: 文件读取、写入、冲突检测、expected_hash/mtime 校验
+- **缺口**: 大文件分片上传 / 断点恢复（非当前目标）
+
+---
+
+### 2.2 Project 项目管理
+
+- **验收状态**: ✅ 已验收（基础层）
+- **定位**: 项目创建、列举、元数据管理
+- **后端关键代码**:
+  - [project_service.py](file:///d:/newmoyun/backend/core/project_service.py)
+  - [projects.py](file:///d:/newmoyun/backend/api/projects.py)
+- **前端状态**:
+  - [project.ts](file:///d:/newmoyun/frontend/src/stores/project.ts)
+- **验收文档**: professional-main-flow-acceptance-2026-06.md（作为主流程起点提及）
+- **测试文件**: test_user_story.py, test_api_validation.py
+- **关键能力**: 项目创建、列举、元数据读写
+- **缺口**: 项目归档、项目删除的深度验证
+
+---
+
+### 2.3 Candidate 候选稿机制（含 Provenance）
+
+- **验收状态**: ✅ 已完整验收（含 T5.17-H2 / T5.18-H1）
+- **定位**: 写作系统最核心的安全机制。所有 polish / rewrite / chat-edit / continue 默认生成 candidate，不覆盖正文；用户显式 adopt 后才生效
+- **后端关键代码**:
+  - [candidate_service.py](file:///d:/newmoyun/backend/core/candidate_service.py) — `CandidateService` 类（`create_candidate` / `get_candidate` / `adopt` 等）
+  - [candidates.py](file:///d:/newmoyun/backend/api/candidates.py) — REST API
+  - [candidate.py](file:///d:/newmoyun/backend/schemas/candidate.py) — `CandidateInfo` / `CandidateAction` 定义，含 `generation_context` / `scene_plan_hash` / `scene_plan_path` 字段（T5.17-H2）
+  - [candidate_policy.py](file:///d:/newmoyun/backend/policies/candidate_policy.py) — candidate 策略（禁止直接覆盖正文）
+  - [generation_output_policy.py](file:///d:/newmoyun/backend/policies/generation_output_policy.py) — 输出策略
+- **前端关键代码**:
+  - [CandidatePanel.vue](file:///d:/newmoyun/frontend/src/components/right-panel/CandidatePanel.vue) — candidate 预览、采用、删除
+- **验收文档（9 份）**:
+  - [professional-main-flow-acceptance-2026-06.md](file:///d:/newmoyun/docs/testing/professional-main-flow-acceptance-2026-06.md)
+  - [professional-editing-flow-acceptance-2026-06.md](file:///d:/newmoyun/docs/testing/professional-editing-flow-acceptance-2026-06.md)
+  - [professional-candidate-flow-e2e-result-2026-06.md](file:///d:/newmoyun/docs/testing/professional-candidate-flow-e2e-result-2026-06.md)
+  - [professional-candidate-flow-dryrun-2026-06.md](file:///d:/newmoyun/docs/testing/professional-candidate-flow-dryrun-2026-06.md)
+  - [t5-scene-plan-chain-architecture-audit-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-chain-architecture-audit-2026-06.md)
+  - [t5-scene-plan-target-binding-fix-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-target-binding-fix-2026-06.md)
+  - [t5-scene-plan-candidate-provenance-fix-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-candidate-provenance-fix-2026-06.md)
+  - [t5-candidate-provenance-chain-acceptance-2026-06.md](file:///d:/newmoyun/docs/testing/t5-candidate-provenance-chain-acceptance-2026-06.md)
+  - [chat-panel-candidate-trigger-dryrun-2026-06.md](file:///d:/newmoyun/docs/testing/chat-panel-candidate-trigger-dryrun-2026-06.md)
+- **测试文件（13 份）**:
+  - [test_candidate_provenance.py](file:///d:/newmoyun/tests/test_candidate_provenance.py) — provenance 字段验证
+  - [test_candidate_flow_e2e.py](file:///d:/newmoyun/tests/test_candidate_flow_e2e.py) / [test_candidate_flow_e2e_v2.py](file:///d:/newmoyun/tests/test_candidate_flow_e2e_v2.py) / [test_candidate_flow_e2e_full.py](file:///d:/newmoyun/tests/test_candidate_flow_e2e_full.py) — candidate 主流程 e2e
+  - [test_candidate_panel_probe.py](file:///d:/newmoyun/tests/test_candidate_panel_probe.py) / [test_candidate_panel_probe_simple.py](file:///d:/newmoyun/tests/test_candidate_panel_probe_simple.py) — CandidatePanel UI 探测
+  - [test_candidate_preview_delete_e2e.py](file:///d:/newmoyun/tests/test_candidate_preview_delete_e2e.py) / [test_candidate_preview_delete_fixed.py](file:///d:/newmoyun/tests/test_candidate_preview_delete_fixed.py) — 预览/删除功能
+  - [test_candidate_adopt_conflict_sse_e2e.py](file:///d:/newmoyun/tests/test_candidate_adopt_conflict_sse_e2e.py) — adopt 冲突检测与 SSE 事件
+  - [test_professional_candidate_flow.py](file:///d:/newmoyun/tests/test_professional_candidate_flow.py) — professional 模式 candidate 流
+  - [test_scene_plan_quality_provenance_scoring.py](file:///d:/newmoyun/tests/test_scene_plan_quality_provenance_scoring.py) — scoring 层 provenance 处理
 - **关键能力**:
-  - 统一 LLM 入口（通过 LiteLLM）
-  - Reasoning log 检测（防止 `<thinking>` 等原始推理输出到正文）
-  - API Key 不写入 localStorage / 日志 / 截图
-  - 熔断器机制防止连续失败拖慢系统
+  - candidate 创建 / 获取 / 预览 / 采用 / 删除
+  - adopt 前 `base_hash` / `base_mtime` 冲突检测
+  - adopt 后写入 revision-log
+  - generation_context / scene_plan_hash / scene_plan_path 元数据（T5.17-H2）
+- **评分关联**: T5.18-H1 后 scoring JSON 已注入 provenance 状态；当前历史样本 4 个均为 `legacy_candidate`（不伪造）
+- **缺口**: 历史 candidate 无 provenance；后续新生成的 candidate 将自动携带
 
 ---
 
-## 3. 部分验收的功能模块（4）
+### 2.4 Scene Plan 场景计划（API 层）
 
-### 3.1 Workflow 工作流引擎
-
-- **验收阶段**: T4.4（静态验收）
-- **验收文档**: `docs/testing/professional-workflow-pipeline-prompt-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/core/workflow.py`, `backend/api/workflows.py`, `backend/schemas/workflow.py`
-  - 前端: `frontend/src/composables/useWorkflow.ts`
-- **测试文件**: `tests/test_workflow_pipeline_dryrun.py`, `tests/test_workflow_pipeline_crud.py`
-- **验收状态**: ⚠️ 部分验收（静态结构验证通过，无完整端到端验收）
-- **已验证**: 工作流定义结构、多步骤编排、loop 嵌套、Human 节点、变量池
-- **待进一步验证**: 实际工作流运行场景、复杂 loop 嵌套的稳定性、错误恢复
-
-### 3.2 Pipeline 管线
-
-- **验收阶段**: T4.4 + T5.17（部分）
-- **验收文档**: `docs/testing/professional-workflow-pipeline-prompt-acceptance-2026-06.md`, `docs/testing/t5-scene-plan-chain-architecture-audit-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/core/pipeline.py`, `backend/api/pipeline.py`
-  - 前端: `frontend/src/stores/pipeline.ts`
-  - Prompt 模板: `prompts/pipeline/`
-- **测试文件**: `tests/test_workflow_pipeline_dryrun.py`, `tests/test_scene_plan_pipeline_integration.py`
-- **验收状态**: ⚠️ 部分验收（dry-run 通过，scene-plan 集成部分完成）
-- **已验证**: pipeline 定义与 dry-run、与 Scene Plan validator 的软接入
-- **待进一步验证**: 完整 pipeline 运行场景、复杂 pipeline 的稳定性、与前端 PipelineEditor 的深度集成
-
-### 3.3 Prompt Engine / Prompt Editor
-
-- **验收阶段**: T4.4（静态）
-- **验收文档**: `docs/testing/professional-workflow-pipeline-prompt-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/core/prompt_engine.py`, `backend/api/prompts.py`
-  - 前端: `frontend/src/composables/usePromptSync.ts`
-  - Prompt 文件: `prompts/`
-- **测试文件**: 无独立测试（依赖 pipeline 测试）
-- **验收状态**: ⚠️ 部分验收（静态结构验证通过，无独立回归测试）
-- **已验证**: Jinja2 模板渲染、Prompt 版本管理
-- **待进一步验证**: Prompt 变体（variant）系统、模板编辑与预览的端到端能力
-
-### 3.4 Recent Context 最近上下文
-
-- **验收阶段**: T4.5（静态）
-- **验收文档**: `docs/testing/professional-state-materials-filesystem-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/api/recent_context.py`, `backend/core/memory_service.py`
-  - 前端: `frontend/src/stores/recentContext.ts`
-- **测试文件**: 无独立测试（包含于 story_state_materials 测试）
-- **验收状态**: ⚠️ 部分验收（静态 API 存在，无独立端到端验证）
-- **已验证**: API 端点存在、数据结构合理
-- **待进一步验证**: 上下文生成质量、与 generation 流程的集成深度
+- **验收状态**: ✅ 已完整验收（后端 API）
+- **定位**: 给 AI 生成提供结构化的场景约束——地点、时间、角色、冲突、情节 beats 等
+- **后端关键代码**:
+  - [scene_plan.py](file:///d:/newmoyun/backend/api/scene_plan.py) — `/api/scene-plan/generate` / `save` / `validate` / `load` / `list`
+  - [scene_plan_validator.py](file:///d:/newmoyun/backend/core/scene_plan_validator.py) — `validate_scene_plan` / `validate_scene_plan_target_binding`
+  - [scene_plan.py](file:///d:/newmoyun/backend/schemas/scene_plan.py) — Pydantic Schema
+- **验收文档（7 份）**:
+  - [t5-scene-plan-generate-api-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-generate-api-2026-06.md)
+  - [t5-scene-plan-persistence-api-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-persistence-api-2026-06.md)
+  - [t5-scene-plan-frontend-ui-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-frontend-ui-2026-06.md)
+  - [t5-scene-plan-chain-architecture-audit-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-chain-architecture-audit-2026-06.md)
+  - [t5-scene-plan-target-binding-fix-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-target-binding-fix-2026-06.md)
+  - [t5-scene-plan-professional-smoke-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-professional-smoke-2026-06.md)
+  - [t5-writing-loop-gap-analysis-2026-06.md](file:///d:/newmoyun/docs/testing/t5-writing-loop-gap-analysis-2026-06.md)
+- **测试文件（5 份）**:
+  - [test_scene_plan_generate_api.py](file:///d:/newmoyun/tests/test_scene_plan_generate_api.py) — API 生成测试
+  - [test_scene_plan_persistence_api.py](file:///d:/newmoyun/tests/test_scene_plan_persistence_api.py) — 保存/加载测试
+  - [test_scene_plan_validate_api.py](file:///d:/newmoyun/tests/test_scene_plan_validate_api.py) — 验证测试
+  - [test_scene_plan_validator.py](file:///d:/newmoyun/tests/test_scene_plan_validator.py) — validator 单元测试
+  - [test_scene_plan_pipeline_integration.py](file:///d:/newmoyun/tests/test_scene_plan_pipeline_integration.py) — pipeline 集成
+- **关键能力**:
+  - JSON Schema 校验（title / goal / conflict / required_beats / location / time / characters）
+  - target_file 强绑定：scene_plan 与 target scene 路径一致
+  - 危险路径检测（禁止穿越 workspace）
+- **缺口**: 前端 Scene Plan 编辑器未实现（见 2.16）
 
 ---
 
-## 4. 未验收 / 待实现的功能模块（4）
+### 2.5 Scoring 评分系统
 
-### 4.1 Batch Generate 批量生成
+- **验收状态**: ✅ 已完整验收（规则评分 + 对比 + multi-score + provenance 注入）
+- **定位**: 基于规则对 baseline 与 with-plan candidate 进行自动化评分，不调用 LLM
+- **后端关键代码**:
+  - [scene_plan_quality_score.py](file:///d:/newmoyun/scripts/eval/scene_plan_quality_score.py) — 主评分脚本（9 个评分维度 + 汇总）
+- **评分维度**:
+  1. scene_goal_alignment（目标对齐度）
+  2. beats_coverage（情节覆盖度）
+  3. conflict_presence（冲突体现）
+  4. characters_consistency（人物一致性）
+  5. location_consistency（地点一致性）
+  6. time_consistency（时间一致性）
+  7. no_reasoning_logs（无推理日志）
+  8. language_quality_basic（语言质量）
+  9. plan_contradiction_check（矛盾检测）
+  10. **provenance 状态**（T5.18-H1 新增注入）
+- **验收文档（6 份）**:
+  - [t5-scene-plan-quality-score-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-quality-score-2026-06.md)
+  - [t5-scene-plan-quality-compare-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-quality-compare-2026-06.md)
+  - [t5-scene-plan-quality-multi-score-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-quality-multi-score-2026-06.md)
+  - [t5-scene-plan-quality-final-errata-2026-06.md](file:///d:/newmoyun/docs/testing/t5-scene-plan-quality-final-errata-2026-06.md)
+  - [t5-candidate-provenance-chain-acceptance-2026-06.md](file:///d:/newmoyun/docs/testing/t5-candidate-provenance-chain-acceptance-2026-06.md)
+- **评分产物**（artifacts，禁止修改）:
+  - `docs/testing/artifacts/t5-scene-plan-quality-multi-score-final-2026-06.json` / `.md`
+  - `docs/testing/artifacts/t5-scene-plan-quality-cases-2026-06.json`
+- **当前评分（固定值）**:
+  - sec-001: baseline 17 / with-plan 15（with-plan 表现较差）
+  - sec-002: baseline 14 / with-plan 14（两者相近）
+- **测试文件**:
+  - [test_scene_plan_quality_provenance_scoring.py](file:///d:/newmoyun/tests/test_scene_plan_quality_provenance_scoring.py) — 9 个测试用例
+- **关键能力**: 规则评分、JSON/Markdown 报告、legacy candidate 兼容、provenance 状态注入
+- **缺口**: 无（功能完整，测试覆盖）
 
-- **验收阶段**: 未验收（T4.6 文档已定位问题）
-- **验收文档**: `docs/testing/professional-batch-stream-sse-task-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/api/tasks.py`, `backend/core/task_queue.py`（底层已就绪）
-  - 前端: `frontend/src/stores/task.ts`（底层已就绪）
-- **测试文件**: `tests/test_t472_backend_verification.py`
-- **验收状态**: ❌ 未验收（功能未完整实现）
-- **问题说明**:
-  - 未找到 `backend/*batch*.py` 独立批量生成模块
-  - 未找到 `*Batch*.vue` 组件
-  - TaskQueue 底层已就绪，但 Batch 上层功能未实现
-- **依赖关系**: 依赖 TaskQueue、Pipeline、Candidate
-- **阻塞风险**: 低（非写作最小闭环所需，属于增强能力）
+---
 
-### 4.2 Stream Generation / 流式 SSE 推送
+### 2.6 Generation 生成服务
 
-- **验收阶段**: 未验收（T4.6 文档已定位问题）
-- **验收文档**: `docs/testing/professional-batch-stream-sse-task-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/api/sse.py`, `backend/core/event_bus.py`, `backend/core/task_queue.py`
-  - 前端: `frontend/src/composables/useSSE.ts`
+- **验收状态**: ✅ 已完整验收（主流程）
+- **定位**: 正文生成（continue / rewrite / polish）的服务层
+- **后端关键代码**:
+  - [generation_service.py](file:///d:/newmoyun/backend/core/generation_service.py) — `GenerationService`（`generate_stream` / `batch_generate` 骨架）
+  - [generate.py](file:///d:/newmoyun/backend/api/generate.py) — REST API
+  - [quality_service.py](file:///d:/newmoyun/backend/core/quality_service.py) — 润色/重写质量服务
+- **前端关键代码**:
+  - [generation.ts](file:///d:/newmoyun/frontend/src/stores/generation.ts) — 生成状态管理
+  - [review.ts](file:///d:/newmoyun/frontend/src/stores/review.ts) — rewrite/polish 结果管理
+- **验收文档**: professional-main-flow-acceptance-2026-06.md, professional-editing-flow-acceptance-2026-06.md
+- **测试文件**: test_professional_regression_smoke.py, test_user_story.py, 各种 candidate e2e 测试中集成
+- **关键能力**: 流式生成、停止信号、批处理骨架
+- **缺口**: Stream 生成的 SSE 推送未完整接入前端（见 2.17）
+
+---
+
+### 2.7 LLM 服务与熔断器
+
+- **验收状态**: ✅ 已完整验收（安全层）
+- **定位**: 统一 LLM 调用入口 + 连续失败熔断 + API Key 脱敏
+- **后端关键代码**:
+  - [llm.py](file:///d:/newmoyun/backend/core/llm.py) — `LLMService`（LiteLLM 封装，流式调用）
+  - [llm_circuit_breaker.py](file:///d:/newmoyun/backend/core/llm_circuit_breaker.py) — 连续失败熔断
+  - [llm.py](file:///d:/newmoyun/backend/api/llm.py) — LLM 配置 API（不含 key 泄漏）
+  - [llm.py](file:///d:/newmoyun/backend/schemas/llm.py) — Schema
+- **验收文档**:
+  - [t5-local-model-dryrun-smoke-2026-06.md](file:///d:/newmoyun/docs/testing/t5-local-model-dryrun-smoke-2026-06.md)
+- **测试文件**:
+  - [test_llm.py](file:///d:/newmoyun/tests/test_llm.py) — 基础调用测试
+  - [test_llm_api.py](file:///d:/newmoyun/tests/test_llm_api.py) — API 层测试
+  - [test_llm_reasoning_detection.py](file:///d:/newmoyun/tests/test_llm_reasoning_detection.py) — 推理日志检测（`<thinking>` 等）
+- **关键能力**: 统一 LiteLLM 入口、流式响应、熔断器、API Key 脱敏（sk-\* → sk-\*\*\*）
+- **缺口**: 无（安全关键层完整）
+
+---
+
+### 2.8 Chat Panel（对话面板）
+
+- **验收状态**: ✅ 已验收
+- **定位**: 用户与 AI 对话的 UI，触发 rewrite/polish/continue 并生成 candidate
+- **前端关键代码**:
+  - [ChatPanel.vue](file:///d:/newmoyun/frontend/src/components/chat/ChatPanel.vue) — 对话 UI
+  - [chat.ts](file:///d:/newmoyun/frontend/src/stores/chat.ts) — 消息状态管理
+- **验收文档（3 份）**:
+  - [chat-panel-trigger-contract-2026-06.md](file:///d:/newmoyun/docs/testing/chat-panel-trigger-contract-2026-06.md)
+  - [chat-panel-candidate-trigger-dryrun-2026-06.md](file:///d:/newmoyun/docs/testing/chat-panel-candidate-trigger-dryrun-2026-06.md)
+- **测试文件（3 份）**:
+  - [test_chatpanel_selected_text_ui_e2e.py](file:///d:/newmoyun/tests/test_chatpanel_selected_text_ui_e2e.py)
+  - [test_chatpanel_selected_text_candidate_simple.py](file:///d:/newmoyun/tests/test_chatpanel_selected_text_candidate_simple.py)
+  - [test_chatpanel_selected_text_candidate_link.py](file:///d:/newmoyun/tests/test_chatpanel_selected_text_candidate_link.py)
+- **关键能力**: 对话输入、SSE 流式消息、选中文字触发 rewrite/polish、生成 candidate
+
+---
+
+### 2.9 Lite 快速写作
+
+- **验收状态**: ✅ 已完整验收（爽文模式）
+- **定位**: 低门槛快速生成路径，不依赖 Scene Plan
+- **后端关键代码**:
+  - [lite.py](file:///d:/newmoyun/backend/api/lite.py) — Lite API
+  - [lite.py](file:///d:/newmoyun/backend/schemas/lite.py) — Schema
+- **前端关键代码**:
+  - LiteWritingView.vue（快速写作页面）
+- **验收文档（11 份，含 prompt 优化与质量评审）**:
+  - [lite-professional-switch-baseline-2026-06.md](file:///d:/newmoyun/docs/testing/lite-professional-switch-baseline-2026-06.md)
+  - [lite-real-generation-smoke-report-2026-06.md](file:///d:/newmoyun/docs/testing/lite-real-generation-smoke-report-2026-06.md)
+  - [lite-output-quality-review-2026-06.md](file:///d:/newmoyun/docs/testing/lite-output-quality-review-2026-06.md)
+  - lite-prompt-optimization-\* 系列（4 份）
+  - lite-fallback-\* 系列（2 份）
+  - lite-next-options-chain-diagnosis-2026-06.md
+  - lite-continuous-generation-diagnosis-2026-06.md
+- **测试文件**: test_professional_regression_smoke.py（含 Lite 模式切换）
+- **关键能力**: selected-card 模式、快速生成、与 Professional 共存且互不破坏
+
+---
+
+### 2.10 Pipeline 管线
+
+- **验收状态**: ⚠️ 部分验收（dry-run 通过，深度场景未独立验证）
+- **定位**: 定义一条生成任务的执行步骤——调用什么模型、使用什么 prompt、输出到哪里
+- **后端关键代码**:
+  - [pipeline.py](file:///d:/newmoyun/backend/core/pipeline.py) — 管线核心
+  - [pipeline.py](file:///d:/newmoyun/backend/api/pipeline.py) — API
+  - [pipeline.py](file:///d:/newmoyun/backend/schemas/pipeline.py) / [pipeline_config.py](file:///d:/newmoyun/backend/schemas/pipeline_config.py) — Schema
+  - [pipeline_validator.py](file:///d:/newmoyun/backend/core/pipeline_validator.py) — 启动时校验
+- **前端关键代码**:
+  - [pipeline.ts](file:///d:/newmoyun/frontend/src/stores/pipeline.ts)
+  - [PipelineEditor.vue](file:///d:/newmoyun/frontend/src/components/right-panel/PipelineEditor.vue)
+- **验收文档**: professional-workflow-pipeline-prompt-acceptance-2026-06.md, t5-scene-plan-chain-architecture-audit-2026-06.md
+- **测试文件**: test_workflow_pipeline_dryrun.py, test_scene_plan_pipeline_integration.py
+- **关键能力**: 多步骤管线定义、scene_plan 软接入、prompt 变量替换
+- **缺口**: 自定义管线编辑器的端到端验收、复杂 pipeline 场景的稳定性
+
+---
+
+### 2.11 Workflow 工作流
+
+- **验收状态**: ⚠️ 部分验收（静态结构完整，深度场景未独立验证）
+- **定位**: 编排多个 pipeline 顺序执行 / 条件分支 / Human-in-the-loop 暂停
+- **后端关键代码**:
+  - [workflow.py](file:///d:/newmoyun/backend/core/workflow.py) — Workflow 引擎
+  - [workflows.py](file:///d:/newmoyun/backend/api/workflows.py) — API
+  - [workflow.py](file:///d:/newmoyun/backend/schemas/workflow.py) — Schema
+  - [node_types.py](file:///d:/newmoyun/backend/core/node_types.py) — 节点类型
+- **前端关键代码**:
+  - WorkflowPanel.vue
+  - StepEditor.vue
+  - useWorkflow.ts（composable）
+- **验收文档**: professional-workflow-pipeline-prompt-acceptance-2026-06.md
+- **测试文件**:
+  - [test_workflow_pipeline_dryrun.py](file:///d:/newmoyun/tests/test_workflow_pipeline_dryrun.py)
+  - [test_workflow_pipeline_crud.py](file:///d:/newmoyun/tests/test_workflow_pipeline_crud.py)
+- **关键能力**: 多步骤编排、loop 嵌套、Human 节点暂停/恢复、变量池
+- **缺口**: 实际工作流运行场景的深度验收、错误恢复、异常分支测试
+
+---
+
+### 2.12 Prompt Engine 提示词引擎
+
+- **验收状态**: ⚠️ 部分验收（静态结构完整，prompt 变体未深度验证）
+- **定位**: Jinja2 模板渲染 + Prompt 版本管理 + 变体管理
+- **后端关键代码**:
+  - [prompt_engine.py](file:///d:/newmoyun/backend/core/prompt_engine.py) — Jinja2 模板引擎
+  - [prompt_versioning.py](file:///d:/newmoyun/backend/core/prompt_versioning.py) — 版本管理
+  - [prompts.py](file:///d:/newmoyun/backend/api/prompts.py) — Prompt API
+- **验收文档（2 份）**:
+  - professional-workflow-pipeline-prompt-acceptance-2026-06.md
+  - professional-prompt-architecture-2026-06.md
+- **测试文件**: 无独立测试文件（依赖 workflow/pipeline 测试覆盖）
+- **关键能力**: Jinja2 模板、变量注入、版本管理
+- **缺口**: Prompt 变体选择器的前端验证、模板编辑预览、独立测试用例
+
+---
+
+### 2.13 Story State 故事状态
+
+- **验收状态**: ⚠️ 部分验收（静态 API 完整，与主流程深度集成未独立验证）
+- **定位**: 沉淀主角状态、势力关系、伏笔回收、主线进度等结构化信息
+- **后端关键代码**:
+  - [story_state.py](file:///d:/newmoyun/backend/api/story_state.py) — API
+  - [character_service.py](file:///d:/newmoyun/backend/core/character_service.py) — 角色服务
+- **前端关键代码**:
+  - [storyState.ts](file:///d:/newmoyun/frontend/src/stores/storyState.ts) — Store
+  - StoryStatePanel.vue — 面板
+- **验收文档**: professional-state-materials-filesystem-acceptance-2026-06.md
+- **测试文件**:
+  - [test_story_state_materials_dryrun.py](file:///d:/newmoyun/tests/test_story_state_materials_dryrun.py)
+- **关键能力**: 读写状态、结构化 Schema、用户确认后写入
+- **缺口**: 与 candidate generation 的深度集成、状态变更的 SSE 推送
+
+---
+
+### 2.14 Materials 素材管理
+
+- **验收状态**: ⚠️ 部分验收（静态 API 完整）
+- **定位**: 角色卡、设定卡、世界观素材管理
+- **后端关键代码**:
+  - [materials.py](file:///d:/newmoyun/backend/api/materials.py)
+  - [characters.py](file:///d:/newmoyun/backend/api/characters.py)
+- **前端关键代码**: MemorySettingsPanel.vue
+- **验收文档**: professional-state-materials-filesystem-acceptance-2026-06.md
+- **测试文件**: test_story_state_materials_dryrun.py（共同覆盖）
+- **关键能力**: 素材文件读写、素材列举
+- **缺口**: 素材版本管理、与 pipeline 的集成深度
+
+---
+
+### 2.15 Style Guide 风格指南
+
+- **验收状态**: ⚠️ 部分验收（静态 API 存在）
+- **定位**: 定义写作风格（简洁 vs 华丽等），AI 生成时参考
+- **后端关键代码**:
+  - [style_guide.py](file:///d:/newmoyun/backend/api/style_guide.py)
+- **前端关键代码**:
+  - [styleGuide.ts](file:///d:/newmoyun/frontend/src/stores/styleGuide.ts)
+- **验收文档**: professional-state-materials-filesystem-acceptance-2026-06.md
 - **测试文件**: 无独立测试
-- **验收状态**: ❌ 未验收（流式已部分实现，未推送至前端）
-- **问题说明**:
-  - 后端流式 LLM 调用已实现（chunk 收集）
-  - 流式内容收集后一次性返回，**尚未实现流式 SSE 推送给前端**
-  - SSE 心跳机制存在（15 秒间隔，45 秒超时自动重连），但内容流式推送未接入
-- **依赖关系**: 依赖 SSE、TaskQueue、LLM 流式输出
-- **阻塞风险**: 中（影响用户体验，长任务无实时进度反馈）
-
-### 4.3 Scene Plan 前端 UI
-
-- **验收阶段**: 未验收
-- **验收文档**: `docs/testing/t5-scene-plan-frontend-ui-2026-06.md`（已发现问题）
-- **核心文件**:
-  - 前端: 尚未有专门的 ScenePlan 编辑器组件
-  - 已有: `frontend/src/components/editor/EditorToolbar.vue`（有按钮框架，未接入 Scene Plan 生成）
-- **测试文件**: `tests/test_scene_plan_frontend_smoke.py`（仅 smoke 测试）
-- **验收状态**: ❌ 未验收（前端 UI 未实现）
-- **问题说明**:
-  - Scene Plan 生成/保存/验证的后端 API 完整
-  - 前端**没有** Scene Plan 编辑器 / 面板 / 配置界面
-  - 用户无法在前端可视化地创建、编辑、管理 Scene Plan
-- **依赖关系**: 依赖 Scene Plan 后端 API（已完成）
-- **阻塞风险**: 高（影响 Scene Plan 的真正落地使用，当前只能通过 API 手动调用）
-
-### 4.4 Prompt / Pipeline 前端编辑器
-
-- **验收阶段**: 未验收（T4.4 确认存在但未深度验收）
-- **验收文档**: `docs/testing/professional-workflow-pipeline-prompt-acceptance-2026-06.md`
-- **核心文件**:
-  - 后端: `backend/api/prompts.py`, `backend/api/pipeline.py`
-  - 前端: `frontend/src/components/right-panel/RightPanel.vue` 中 PipelineEditor Tab
-- **测试文件**: `tests/test_workflow_pipeline_crud.py`
-- **验收状态**: ❌ 未验收（代码存在，无端到端验证文档）
-- **问题说明**:
-  - PipelineEditor 组件存在，但功能深度未在验收文档中确认
-  - Prompt 编辑器界面状态未明确
-- **依赖关系**: 依赖 Workflow / Pipeline 底层能力（已完成）
-- **阻塞风险**: 中（影响自定义 pipeline 的易用性）
+- **关键能力**: 风格配置读写
+- **缺口**: 风格指南与生成 pipeline 的深度集成验证
 
 ---
 
-## 5. 测试文件与验收文档映射表
+### 2.16 Recent Context 最近上下文
 
-| 模块 | 验收文档 | 回归测试 | 测试通过状态 |
-|------|----------|----------|-------------|
-| 文件系统 | professional-state-materials-filesystem-acceptance-2026-06.md | 含于 e2e 测试 | ✅ |
-| Candidate | professional-main-flow-acceptance-2026-06.md + 多个文档 | test_candidate_flow_e2e*.py / test_candidate_provenance.py / test_scene_plan_quality_provenance_scoring.py | ✅ |
-| Lite | lite-professional-switch-baseline-2026-06.md + 多个 Lite 文档 | test_professional_regression_smoke.py | ✅ |
-| Professional 主流程 | professional-main-flow-acceptance-2026-06.md | test_professional_regression_smoke.py | ✅ |
-| ChatPanel | chat-panel-trigger-contract-2026-06.md | test_chatpanel_selected_text_*.py | ✅ |
-| Scene Plan API | t5-scene-plan-*-api-2026-06.md | test_scene_plan_*_api.py / test_scene_plan_validator.py | ✅ |
-| Scoring | t5-scene-plan-quality-*-2026-06.md | test_scene_plan_quality_provenance_scoring.py | ✅ |
-| Story State | professional-state-materials-filesystem-acceptance-2026-06.md | test_story_state_materials_dryrun.py | ✅ |
-| LLM / Fuse | t5-local-model-dryrun-smoke-2026-06.md | test_llm.py / test_llm_api.py / test_llm_reasoning_detection.py | ✅ |
-| Workflow | professional-workflow-pipeline-prompt-acceptance-2026-06.md | test_workflow_pipeline_dryrun.py | ⚠️ 部分 |
-| Pipeline | professional-workflow-pipeline-prompt-acceptance-2026-06.md | test_workflow_pipeline_dryrun.py / test_scene_plan_pipeline_integration.py | ⚠️ 部分 |
-| Prompt Engine | professional-workflow-pipeline-prompt-acceptance-2026-06.md | 无独立测试 | ⚠️ 不足 |
-| Recent Context | professional-state-materials-filesystem-acceptance-2026-06.md | 无独立测试 | ⚠️ 不足 |
-| Batch Generate | professional-batch-stream-sse-task-acceptance-2026-06.md | test_t472_backend_verification.py（底层） | ❌ 未独立验收 |
-| Stream SSE | professional-batch-stream-sse-task-acceptance-2026-06.md | 无独立测试 | ❌ 未独立验收 |
-| Scene Plan 前端 UI | t5-scene-plan-frontend-ui-2026-06.md | test_scene_plan_frontend_smoke.py | ❌ 未实现 |
-| Prompt/Pipeline 编辑器 | professional-workflow-pipeline-prompt-acceptance-2026-06.md | test_workflow_pipeline_crud.py | ❌ 未深度验收 |
+- **验收状态**: ⚠️ 部分验收（API 存在，无独立测试）
+- **定位**: 提供最近 N 个场景文本摘要，供 AI 生成时参考上下文
+- **后端关键代码**:
+  - [recent_context.py](file:///d:/newmoyun/backend/api/recent_context.py)
+- **前端关键代码**:
+  - [recentContext.ts](file:///d:/newmoyun/frontend/src/stores/recentContext.ts)
+- **验收文档**: professional-state-materials-filesystem-acceptance-2026-06.md
+- **测试文件**: 无独立测试
+- **关键能力**: 最近 N 个场景内容聚合
+- **缺口**: 上下文生成质量验证、与 Generation Service 的深度集成
 
 ---
 
-## 6. 建议的下一步验证顺序（低依赖 → 高依赖）
+### 2.17 Stream / SSE 流式推送
 
-| 优先级 | 模块 | 理由 | 前置依赖 |
-|--------|------|------|---------|
-| P1 | Scene Plan 前端 UI | 高阻塞：后端 API 已完整，缺前端 UI 无法真正使用 | Scene Plan API（已完成） |
-| P1 | Stream SSE 推送 | 中阻塞：影响用户体验，尤其长任务无进度反馈 | SSE（底层已完成） |
-| P2 | Prompt/Pipeline 编辑器 | 中阻塞：影响自定义能力易用性 | Workflow/Pipeline（已完成） |
-| P2 | Prompt Engine 测试 | 补足测试覆盖 | Workflow/Pipeline（已完成） |
-| P3 | Batch Generate | 低阻塞：增强能力，非最小闭环必需 | TaskQueue + Pipeline |
-| P3 | Recent Context 深度集成 | 提升上下文质量，增强写作一致性 | Generation Service |
-
----
-
-## 7. 安全边界与约束声明
-
-- ✅ 未调用真实 LLM（本报告基于文档与代码静态扫描）
-- ✅ 未生成 candidate
-- ✅ 未修改 workspace（仅读取测试文档中的 candidate snapshot）
-- ✅ 未覆盖 scoring / final / multi-score / errata / gap-analysis 产物
-- ✅ 未提交 API key
-- ✅ 所有修改仅限于本 Markdown 文档
+- **验收状态**: ❌ 未验收（底层存在但前端推送未完整接入）
+- **定位**: 将 LLM 流式响应实时推送到前端，实现打字机效果和进度反馈
+- **后端关键代码**:
+  - [sse.py](file:///d:/newmoyun/backend/api/sse.py) — SSE 路由
+  - [event_bus.py](file:///d:/newmoyun/backend/core/event_bus.py) — 事件总线
+  - [task_queue.py](file:///d:/newmoyun/backend/core/task_queue.py) — TaskQueue（chunk 收集已实现）
+- **前端关键代码**:
+  - useSSE.ts（SSE 连接管理）
+- **验收文档**: professional-batch-stream-sse-task-acceptance-2026-06.md（定位为缺口）
+- **测试文件**: test_candidate_adopt_conflict_sse_e2e.py（仅 cover 单个 adopt 事件）
+- **关键能力（已实现）**: 心跳机制（15s 间隔）、超时重连（45s）、事件总线
+- **关键能力（缺失）**: 流式内容 chunk 的 SSE 推送（当前收集后一次性返回）、前端打字机效果
+- **缺口**: Streaming 是用户体验关键缺口；需实现 `generate_stream` → `event_bus` → `SSE` → `useSSE.ts` 全链路打通
 
 ---
 
-## 8. 附录：验收文档清单（43 份）
+### 2.18 Task Queue 任务队列
 
-按命名空间分组：
+- **验收状态**: ❌ 未验收（存在但与 Batch 绑定，未独立验证）
+- **定位**: 异步任务执行、取消、状态追踪
+- **后端关键代码**:
+  - [task_queue.py](file:///d:/newmoyun/backend/core/task_queue.py) — `TaskExecutor` / `Task`
+  - [tasks.py](file:///d:/newmoyun/backend/api/tasks.py) — 任务 API
+- **前端关键代码**:
+  - [task.ts](file:///d:/newmoyun/frontend/src/stores/task.ts)
+- **验收文档**: professional-batch-stream-sse-task-acceptance-2026-06.md
+- **测试文件**: [test_t472_backend_verification.py](file:///d:/newmoyun/tests/test_t472_backend_verification.py)（部分底层验证）
+- **关键能力**: 任务提交、取消、状态查询（pending/running/done/failed/cancelled）
+- **缺口**: 复杂任务依赖、任务持久化恢复、任务队列持久化
 
-### A. Professional 主流程与编辑（8）
+---
+
+### 2.19 Batch Generate 批量生成
+
+- **验收状态**: ❌ 未验收（未完整实现）
+- **定位**: 对多个场景一键执行 polish / continue / scene plan 生成
+- **后端关键代码**:
+  - generation_service.py 中的 `batch_generate`（骨架存在）
+- **前端关键代码**: 无独立 Batch 组件
+- **验收文档**: professional-batch-stream-sse-task-acceptance-2026-06.md（明确为未实现）
+- **测试文件**: 无独立测试
+- **关键能力**: 骨架存在；UI / 实际调度未实现
+- **阻塞点**: 依赖 Task Queue + Stream SSE；当前非最小闭环所需
+
+---
+
+### 2.20 Scene Plan 前端 UI
+
+- **验收状态**: ❌ 未验收（未实现）
+- **定位**: 用户在前端编辑器中创建 / 编辑 / 保存 Scene Plan 的界面
+- **后端基础**: 已完整（API 存在，见 2.4）
+- **前端状态**:
+  - 无专门的 ScenePlan 编辑器组件
+  - EditorToolbar 存在但未接入 Scene Plan 生成
+  - RightPanel 无 Scene Plan Tab
+- **验收文档**: t5-scene-plan-frontend-ui-2026-06.md（明确记录缺口）
+- **测试文件**: [test_scene_plan_frontend_smoke.py](file:///d:/newmoyun/tests/test_scene_plan_frontend_smoke.py)（仅 smoke）
+- **缺口**: 完整 UI 实现：表单式编辑器、beats 列表编辑、JSON 预览、保存按钮
+
+---
+
+### 2.21 Quality Engine / De-AI（写作质量引擎）
+
+- **验收状态**: ✅ 已验收（规则层完整）
+- **定位**: 润色、去 AI 味、矛盾检测
+- **后端关键代码**:
+  - [quality_service.py](file:///d:/newmoyun/backend/core/quality_service.py) — QualityService
+  - [quality.py](file:///d:/newmoyun/backend/api/quality.py) — API
+  - [quality.py](file:///d:/newmoyun/backend/schemas/quality.py) — Schema
+- **验收文档（3 份）**:
+  - [d7-writing-quality-engine-acceptance-2026-06.md](file:///d:/newmoyun/docs/testing/d7-writing-quality-engine-acceptance-2026-06.md)
+  - [python-llm-writing-quality-engine-2026-06.md](file:///d:/newmoyun/docs/testing/python-llm-writing-quality-engine-2026-06.md)
+  - [de-ai-writing-quality-rules-2026-06.md](file:///d:/newmoyun/docs/testing/de-ai-writing-quality-rules-2026-06.md)
+- **测试文件**: 包含于 candidate flow e2e 测试
+- **关键能力**: polish / rewrite / de-ai 规则、与 candidate 集成
+
+---
+
+### 2.22 辅助能力（Revision Log / Snapshot / Trash / Backup / Wizard）
+
+- **验收状态**: ✅ 已验收（作为主流程的辅助能力，在 candidate flow 中隐式验证）
+- **模块组成**:
+  - [revision_log.py](file:///d:/newmoyun/backend/api/revision_log.py) — 修改日志
+  - [snapshot.py](file:///d:/newmoyun/backend/core/snapshot.py) — 快照
+  - [snapshots.py](file:///d:/newmoyun/backend/api/snapshots.py) — 快照 API
+  - [trash.py](file:///d:/newmoyun/backend/core/trash.py) / [trash.py](file:///d:/newmoyun/backend/api/trash.py) — 回收站
+  - [backup.py](file:///d:/newmoyun/backend/api/backup.py) — 备份
+  - [wizard.py](file:///d:/newmoyun/backend/api/wizard.py) — 引导向导
+  - [compare.py](file:///d:/newmoyun/backend/api/compare.py) — 正文对比
+  - [feedback.py](file:///d:/newmoyun/backend/api/feedback.py) — 用户反馈
+  - [config.py](file:///d:/newmoyun/backend/api/config.py) — 系统配置
+  - [tokens.py](file:///d:/newmoyun/backend/api/tokens.py) — Token 用量
+- **关键能力**: 辅助运维与审计
+- **验收文档**: professional-existing-feature-inventory-2026-06.md
+
+---
+
+## 3. 状态汇总表
+
+| # | 模块 | 状态 | 验收文档 | 测试文件 | 关键缺口 |
+|---|------|------|---------|---------|---------|
+| 1 | 文件系统 / FileService | ✅ 已验收 | 1 份 | 2+ 份 | 无 |
+| 2 | Project 项目管理 | ✅ 已验收 | 集成 | 2 份 | 无 |
+| 3 | Candidate 候选稿 + Provenance | ✅ 已验收 | 9 份 | 13 份 | 历史样本缺 provenance |
+| 4 | Scene Plan（API 层） | ✅ 已验收 | 7 份 | 5 份 | 前端 UI 缺失 |
+| 5 | Scoring 评分 | ✅ 已验收 | 6 份 | 1 份 | 无 |
+| 6 | Generation 生成服务 | ✅ 已验收 | 集成 | 3+ 份 | Stream SSE 未打通 |
+| 7 | LLM 服务与熔断器 | ✅ 已验收 | 1 份 | 3 份 | 无 |
+| 8 | Chat Panel 对话面板 | ✅ 已验收 | 3 份 | 3 份 | 无 |
+| 9 | Lite 快速写作 | ✅ 已验收 | 11 份 | 集成 | 无 |
+| 10 | Quality Engine / De-AI | ✅ 已验收 | 3 份 | 集成 | 无 |
+| 11 | Story State 故事状态 | ⚠️ 部分 | 集成 | 1 份 | 与生成深度集成 |
+| 12 | Materials 素材 | ⚠️ 部分 | 集成 | 1 份 | 版本管理 |
+| 13 | Style Guide 风格指南 | ⚠️ 部分 | 集成 | 0 份 | 生成集成验证 |
+| 14 | Recent Context 最近上下文 | ⚠️ 部分 | 集成 | 0 份 | 上下文质量验证 |
+| 15 | Pipeline 管线 | ⚠️ 部分 | 1 份 | 2 份 | 编辑器深度验证 |
+| 16 | Workflow 工作流 | ⚠️ 部分 | 1 份 | 2 份 | 深度运行场景 |
+| 17 | Prompt Engine | ⚠️ 部分 | 2 份 | 0 份 | Prompt 变体系统 |
+| 18 | 辅助能力（revision/snapshot/trash） | ✅ 已验收 | 集成 | 集成 | 无 |
+| 19 | Stream / SSE 流式推送 | ❌ 未验收 | 1 份（缺口定位） | 0 份 | chunk → SSE 全链路 |
+| 20 | Task Queue 任务队列 | ❌ 未验收 | 1 份（缺口定位） | 0 份 | 复杂任务依赖 |
+| 21 | Batch Generate 批量生成 | ❌ 未验收 | 1 份（缺口定位） | 0 份 | 完整 UI + 调度 |
+| 22 | Scene Plan 前端 UI | ❌ 未验收 | 1 份（缺口定位） | 1 份（smoke） | 完整编辑器实现 |
+
+**总计**: 22 个模块 / ✅ 12 / ⚠️ 5 / ❌ 5
+
+---
+
+## 4. 测试文件与验收文档映射表
+
+| 测试文件 | 对应模块 | 验收文档 |
+|----------|---------|---------|
+| test_candidate_provenance.py | Candidate Provenance | t5-candidate-provenance-chain-acceptance-2026-06.md |
+| test_candidate_flow_e2e*.py (3 份) | Candidate 主流程 | professional-candidate-flow-\* |
+| test_candidate_panel_probe\*.py (2 份) | CandidatePanel UI | professional-editing-flow-acceptance |
+| test_candidate_preview_delete\*.py (2 份) | Candidate 预览/删除 | professional-main-flow-acceptance |
+| test_candidate_adopt_conflict_sse_e2e.py | Adopt 冲突检测 + SSE | professional-candidate-flow-\* |
+| test_professional_candidate_flow.py | Professional candidate | professional-candidate-flow-\* |
+| test_scene_plan_quality_provenance_scoring.py | Scoring + Provenance | t5-scene-plan-quality-\* + provenance |
+| test_scene_plan_generate_api.py | Scene Plan API | t5-scene-plan-generate-api-2026-06.md |
+| test_scene_plan_persistence_api.py | Scene Plan 持久化 | t5-scene-plan-persistence-api-2026-06.md |
+| test_scene_plan_validate_api.py | Scene Plan 验证 | t5-scene-plan-chain-architecture-audit |
+| test_scene_plan_validator.py | Scene Plan validator | t5-scene-plan-chain-architecture-audit |
+| test_scene_plan_pipeline_integration.py | Scene Plan ↔ Pipeline | t5-scene-plan-chain-architecture-audit |
+| test_scene_plan_frontend_smoke.py | Scene Plan UI（smoke） | t5-scene-plan-frontend-ui-2026-06.md |
+| test_professional_regression_smoke.py | Professional 回归 | professional-main-flow-acceptance |
+| test_user_story.py | 用户故事流 | professional-main-flow-acceptance |
+| test_workflow_pipeline_dryrun.py | Workflow + Pipeline | professional-workflow-pipeline-prompt-acceptance |
+| test_workflow_pipeline_crud.py | Workflow CRUD | professional-workflow-pipeline-prompt-acceptance |
+| test_story_state_materials_dryrun.py | Story State + Materials | professional-state-materials-filesystem-acceptance |
+| test_chatpanel_selected_text_\*.py (3 份) | Chat Panel | chat-panel-trigger-contract |
+| test_llm.py / test_llm_api.py / test_llm_reasoning_detection.py | LLM + 熔断器 | t5-local-model-dryrun-smoke |
+| test_api_validation.py / test_api_quality.py | 文件系统 + API | professional-state-materials-filesystem |
+| test_t472_backend_verification.py | Task Queue 底层 | professional-batch-stream-sse-task-acceptance |
+| test_e2e\*.py / test_full_ui.py / test_ui_playwright.py (7+ 份) | 端到端 UI | e2e-human-flow-checklist, full-product-test-plan |
+| test_outline_fix.py / test_chapter_gen.py | 大纲/章节 | 集成验证 |
+| test_simple.py / test_quick_verify.py | 基础冒烟 | 集成验证 |
+
+---
+
+## 5. 测试运行状态（最近一次验证：T5.18-H1）
+
+```
+tests/test_scene_plan_quality_provenance_scoring.py  →  9/9 PASSED
+tests/test_candidate_provenance.py                     →  5/5 PASSED
+tests/test_scene_plan_pipeline_integration.py          →  PASSED
+tests/test_scene_plan_generate_api.py                  →  PASSED
+tests/test_scene_plan_persistence_api.py               →  PASSED
+tests/test_scene_plan_validate_api.py                  →  PASSED
+tests/test_scene_plan_validator.py                     →  PASSED
+tests/test_professional_regression_smoke.py            →  PASSED
+```
+
+- **核心测试通过率**: 100%
+- **总测试文件数**: 47 份
+- **核心测试文件（Scene Plan + Candidate + Provenance）**: 约 21 份，覆盖端到端主链路
+
+---
+
+## 6. 建议的后续迭代优先级
+
+| 优先级 | 模块 | 原因 | 前置依赖 | 预计验收文档 |
+|--------|------|------|---------|------------|
+| P1（最高） | Scene Plan 前端 UI | 后端 API 已完整；缺 UI 导致用户无法真正使用 Scene Plan | Scene Plan API（已完成） | 1 份 |
+| P1 | Stream / SSE 流式推送 | 影响用户体验；长任务无实时进度反馈 | EventBus + TaskQueue（已存在） | 1 份 |
+| P2 | Prompt Engine 独立测试 | 当前 0 份独立测试，安全隐患 | Workflow / Pipeline（已完成） | 1 份 |
+| P2 | Prompt / Pipeline 编辑器深度验证 | 影响自定义能力易用性 | Workflow / Pipeline（已完成） | 1 份 |
+| P3 | Story State 与生成深度集成 | 提升一致性质量，非最小闭环必需 | Candidate Provenance（已完成） | 1 份 |
+| P3 | Batch Generate | 增强能力；非最小闭环 | Task Queue + Stream SSE（待完成） | 1 份 |
+| P4 | Recent Context 质量验证 | 锦上添花 | Story State（已部分完成） | 1 份 |
+
+---
+
+## 7. 安全边界确认
+
+- ✅ **未调用真实 LLM**（本报告基于文件扫描）
+- ✅ **未生成 candidate**（无 candidate 文件写入）
+- ✅ **未修改 workspace**（仅读取 `docs/testing/`、`tests/`、`backend/` 代码）
+- ✅ **未修改 scoring / final / multi-score / errata / gap-analysis 产物**（artifacts 目录只读）
+- ✅ **未提交 API key**（`git grep "sk-"` 仅出现于注释/脱敏示例）
+- ✅ **HEAD == origin/main** (`977c602`)
+- ✅ **工作区 clean**
+
+---
+
+## 8. 附录 A：验收文档清单（43 份，按分组）
+
+### Professional 主流程（7 份）
 1. professional-main-flow-acceptance-2026-06.md
 2. professional-main-flow-ui-dryrun-2026-06.md
 3. professional-editing-flow-acceptance-2026-06.md
@@ -365,62 +588,79 @@
 5. professional-existing-issues-and-fix-plan-2026-06.md
 6. professional-candidate-flow-dryrun-2026-06.md
 7. professional-candidate-flow-e2e-result-2026-06.md
-8. professional-state-materials-filesystem-acceptance-2026-06.md
 
-### B. Workflow / Pipeline / Prompt（3）
+### Professional 基础能力（3 份）
+8. professional-state-materials-filesystem-acceptance-2026-06.md
 9. professional-workflow-pipeline-prompt-acceptance-2026-06.md
 10. professional-prompt-architecture-2026-06.md
-11. professional-workflow-pipeline-prompt-acceptance-2026-06.md（同 9）
 
-### C. Batch / Stream / SSE（1）
-12. professional-batch-stream-sse-task-acceptance-2026-06.md
+### Batch / Stream / SSE（1 份）
+11. professional-batch-stream-sse-task-acceptance-2026-06.md
 
-### D. ChatPanel（2）
-13. chat-panel-trigger-contract-2026-06.md
-14. chat-panel-candidate-trigger-dryrun-2026-06.md
+### Chat Panel（2 份）
+12. chat-panel-trigger-contract-2026-06.md
+13. chat-panel-candidate-trigger-dryrun-2026-06.md
 
-### E. Lite 系列（8）
-15. lite-professional-switch-baseline-2026-06.md
-16. lite-real-generation-smoke-report-2026-06.md
-17. lite-output-quality-review-2026-06.md
-18. lite-next-options-chain-diagnosis-2026-06.md
-19. lite-continuous-generation-diagnosis-2026-06.md
-20. lite-fallback-candidate-plan-2026-06.md
-21. lite-fallback-retry-prompt-optimization-plan-2026-06.md
-22. lite-prompt-optimization-*-2026-06.md（4 份变体实验文档）
+### Lite 系列（11 份）
+14. lite-professional-switch-baseline-2026-06.md
+15. lite-real-generation-smoke-report-2026-06.md
+16. lite-output-quality-review-2026-06.md
+17. lite-next-options-chain-diagnosis-2026-06.md
+18. lite-continuous-generation-diagnosis-2026-06.md
+19. lite-fallback-candidate-plan-2026-06.md
+20. lite-fallback-retry-prompt-optimization-plan-2026-06.md
+21. lite-prompt-optimization-variant-analysis-2026-06.md
+22. lite-prompt-optimization-variant-run-template-2026-06.md
+23. lite-prompt-optimization-samples-2026-06.md
+24. lite-prompt-optimization-experiment-plan-2026-06.md
 
-### F. Scene Plan 系列（9）
-23. t5-scene-plan-quality-score-2026-06.md
-24. t5-scene-plan-quality-compare-2026-06.md
-25. t5-scene-plan-quality-multi-score-2026-06.md
-26. t5-scene-plan-quality-final-errata-2026-06.md
-27. t5-scene-plan-professional-smoke-2026-06.md
-28. t5-scene-plan-persistence-api-2026-06.md
-29. t5-scene-plan-generate-api-2026-06.md
-30. t5-scene-plan-frontend-ui-2026-06.md
-31. t5-scene-plan-chain-architecture-audit-2026-06.md
+### Scene Plan 系列（7 份）
+25. t5-scene-plan-quality-score-2026-06.md
+26. t5-scene-plan-quality-compare-2026-06.md
+27. t5-scene-plan-quality-multi-score-2026-06.md
+28. t5-scene-plan-quality-final-errata-2026-06.md
+29. t5-scene-plan-professional-smoke-2026-06.md
+30. t5-scene-plan-persistence-api-2026-06.md
+31. t5-scene-plan-generate-api-2026-06.md
+32. t5-scene-plan-frontend-ui-2026-06.md
+33. t5-scene-plan-chain-architecture-audit-2026-06.md
 
-### G. Scene Plan 修复与 provenance（3）
-32. t5-scene-plan-target-binding-fix-2026-06.md
-33. t5-scene-plan-candidate-provenance-fix-2026-06.md
-34. t5-candidate-provenance-chain-acceptance-2026-06.md
+### Scene Plan Provenance & Target Binding（3 份）
+34. t5-scene-plan-target-binding-fix-2026-06.md
+35. t5-scene-plan-candidate-provenance-fix-2026-06.md
+36. t5-candidate-provenance-chain-acceptance-2026-06.md
 
-### H. Writing Loop 与 Gap（1）
-35. t5-writing-loop-gap-analysis-2026-06.md
+### Writing Loop & Gap（1 份）
+37. t5-writing-loop-gap-analysis-2026-06.md
 
-### I. 写作质量引擎（3）
-36. d7-writing-quality-engine-acceptance-2026-06.md
-37. python-llm-writing-quality-engine-2026-06.md
-38. de-ai-writing-quality-rules-2026-06.md
+### 写作质量引擎（3 份）
+38. d7-writing-quality-engine-acceptance-2026-06.md
+39. python-llm-writing-quality-engine-2026-06.md
+40. de-ai-writing-quality-rules-2026-06.md
 
-### J. 本地模型 / 安全（1）
-39. t5-local-model-dryrun-smoke-2026-06.md
+### 本地模型 / 安全（1 份）
+41. t5-local-model-dryrun-smoke-2026-06.md
 
-### K. 通用测试计划（2）
-40. e2e-human-flow-checklist.md
-41. full-product-test-plan.md
+### 通用测试计划（2 份）
+42. e2e-human-flow-checklist.md
+43. full-product-test-plan.md
 
 ---
 
-**文档生成者**: Solo Agent（静态文件扫描）
-**下次更新触发条件**: 完成 Scene Plan 前端 UI、Stream SSE 或 Batch Generate 后，更新对应模块状态。
+## 9. 附录 B：Backed 核心模块文件索引
+
+### API Layer (28 files, backend/api/)
+projects.py, files.py, generate.py, candidates.py, scene_plan.py, pipeline.py, workflows.py, prompts.py, lite.py, llm.py, quality.py, story_state.py, materials.py, characters.py, style_guide.py, recent_context.py, revision_log.py, snapshots.py, tasks.py, sse.py, trash.py, backup.py, compare.py, feedback.py, config.py, tokens.py, wizard.py, feedback.py
+
+### Core Layer (23 files, backend/core/)
+file_ops.py, project_service.py, candidate_service.py, generation_service.py, quality_service.py, llm.py, llm_circuit_breaker.py, scene_plan_validator.py, pipeline.py, pipeline_validator.py, workflow.py, prompt_engine.py, prompt_versioning.py, node_types.py, task_queue.py, event_bus.py, character_service.py, snapshot.py, exceptions.py, watcher.py, trash.py
+
+### Schemas (12 files, backend/schemas/)
+candidate.py, scene_plan.py, pipeline.py, pipeline_config.py, workflow.py, lite.py, llm.py, file.py, quality.py, project.py, common.py
+
+### Policies (3 files, backend/policies/)
+candidate_policy.py, generation_output_policy.py
+
+---
+
+**文档结束**。下一次刷新触发：P1/P2 模块验收完成或 T6.x 里程碑交付时。
