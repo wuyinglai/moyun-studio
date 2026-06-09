@@ -640,6 +640,9 @@ tests/test_professional_regression_smoke.py            →  PASSED
 2. 验证任务状态流转：`pending → running → done/failed`
 3. 验证任务取消功能
 4. 验证 `tasks.py` API 端点的任务查询能力
+5. 验证 dry-run/mock 模式（不调用真实 LLM）
+6. 验证失败任务的错误信息捕获与展示
+7. 验证与 Batch Generate 的边界隔离（任务队列不直接调用生成）
 
 **依赖**：EventBus（已存在）、FastAPI（已存在）
 
@@ -650,8 +653,11 @@ tests/test_professional_regression_smoke.py            →  PASSED
 - 任务执行测试：状态正确流转到 done
 - 任务取消测试：running 任务可被取消
 - 任务查询测试：API 返回正确任务列表
+- dry-run 测试：mock 模式下不调用真实 LLM
+- 错误处理测试：failed 任务包含详细错误信息
+- 边界测试：任务队列与 Batch Generate 正确解耦
 
-**预期结果**：任务队列稳定执行异步任务，状态可查询
+**预期结果**：任务队列稳定执行异步任务，支持 dry-run 模式，错误信息可追溯，与 Batch Generate 边界清晰
 
 ---
 
@@ -715,13 +721,19 @@ tests/test_professional_regression_smoke.py            →  PASSED
 
 ---
 
-### 6.5.7 ⚠️ Prompt / Pipeline 编辑器深度验证（部分验收）
+### 6.5.8 ⚠️ Prompt / Pipeline 编辑器深度验证（部分验收）
 
 **最小验收步骤**：
 1. 验证 `PipelineEditor.vue` 可正确加载并展示管线配置
 2. 验证用户可添加/删除/编辑管线步骤
 3. 验证用户可保存管线配置到 `prompts/pipelines/`
 4. 验证编辑器与 backend API 的数据流通
+5. 验证编辑器正文不会被自动覆盖
+6. 验证 candidate 创建、预览、adopt、delete 完整流程
+7. 验证 adopt 前冲突检查机制
+8. 验证 prompt 修改后 pipeline 行为符合预期
+9. 验证 workflow/prompt/editor 状态一致性
+10. 验证不污染 story_state、materials、recent_context
 
 **依赖**：Pipeline API（已存在）、Workflow API（已存在）、前端 Vue 组件（已存在）
 
@@ -732,12 +744,18 @@ tests/test_professional_regression_smoke.py            →  PASSED
 - 编辑测试：步骤增删改操作生效
 - 保存测试：配置正确持久化到文件
 - 回读测试：保存后重新加载内容一致
+- 保护测试：编辑器正文不会被自动覆盖
+- candidate 流程测试：创建→预览→adopt→delete 完整流程
+- 冲突检查测试：adopt 前检测文件变更
+- 行为测试：prompt 修改后 pipeline 行为符合预期
+- 一致性测试：workflow/prompt/editor 状态保持同步
+- 隔离测试：不污染 story_state、materials、recent_context
 
-**预期结果**：自定义管线编辑器端到端可用
+**预期结果**：自定义管线编辑器端到端可用，支持安全的 candidate 工作流，状态一致且不污染其他模块
 
 ---
 
-### 6.5.8 ⚠️ Materials / Style Guide / Recent Context（部分验收）
+### 6.5.9 ⚠️ Materials / Style Guide / Recent Context（部分验收）
 
 **最小验收步骤**：
 1. Materials：添加版本管理 API
