@@ -3,6 +3,48 @@
 > 生成时间：2026-06-09
 > 基于 commit：`9d7f9598559d45f4546ffc5d315605b079a18cfa`
 > 目的：为 T6.5 系列端到端测试提供真实可执行的路径映射，所有结论附带代码证据
+> 最后校准：修正统计不一致与 mock 机制说明（详见下方"校准摘要"）
+
+---
+
+## 校准摘要（已核对真实文件系统）
+
+| 维度 | 文档表格数量 | 真实数量（backend/api 全量扫描） | 说明 |
+|------|-------------|---------------------------------|------|
+| 前端真实入口 | 24 条（A 节表格） | 以 A 节表格为准 | 覆盖路由/Modal/面板/store/composable 层级 |
+| 后端 API 端点 | 55 条（B 节表格，核心端点） | 119 条路由装饰器 / 27 个 API 文件 | B 节为常用核心端点，全量见 `backend/api/` 目录 grep |
+| 测试文件扫描 | 41 条（C 节表格） | 以 C 节表格为准 | 含 Playwright E2E + pytest 单元测试 |
+| Evidence Index | 42 条（E 节 E001–E042） | 以 Evidence Index 表格为准 | 每条均指向真实代码文件+行号 |
+
+**测试数量核对（按 grep 统计真实 `def test_` 数量）：**
+
+| 文件 | `def test_` 数量 | 文档标注 | 状态 |
+|------|-----------------|----------|------|
+| `backend/tests/test_materials.py` | 40 | 40 | ✅ |
+| `backend/tests/test_style_guide.py` | 17 | 17 | ✅ |
+| `backend/tests/test_recent_context.py` | 25 | 25 | ✅ |
+| `backend/tests/test_workflow_memory.py` | 18 | 18 | ✅ |
+| `backend/tests/test_pipeline.py` | 30 | 31 | ⚠️ 近似 |
+| `backend/tests/test_workflow.py` | 45 | 26 | ⚠️ 差异 |
+| `backend/tests/test_task_queue.py` | 26 | 26 | ✅ |
+| `backend/tests/test_event_bus.py` | 22 | 22 | ✅ |
+| `backend/tests/test_sse_heartbeat.py` | 7 | 7 | ✅ |
+| `backend/tests/test_prompt_engine.py` | 26 | 9 | ⚠️ 差异 |
+
+> 注：`def test_` 为 pytest 收集器默认匹配模式；文档中标注的"X 个测试"可能仅指关键测试用例数。T6.5 执行时以 `pytest --collect-only` 的实际输出为准。
+
+**Playwright E2E mock LLM 关键提醒（G 节详述）：**
+
+- `backend/tests/conftest.py` 的 `mock_llm_service` fixture **只对 pytest 进程内测试可靠**；
+- 如果 Playwright 测试连接的是**单独启动**的后端服务，fixture **不会自动注入**；
+- **T6.5.1 Candidate 工作流优先采用「预置 candidate 文件」策略**，不通过 generate/batch/pipeline run 等 LLM 端点生成 candidate；
+- 需要专门的 test server / mock provider 配置时另行准备，不在本校准文档范围内。
+
+**Scene Plan 组件名修正：**
+
+- 之前引用：`frontend/src/components/right-panel/ScenePlanEditor.vue`（不存在）
+- 真实路径：`frontend/src/components/scene-plan/ScenePlanPanel.vue`
+- `RightPanel.vue` 第 84 行 `<ScenePlanPanel v-show="activeTab === 'scene-plan'" />`，第 106 行 `import ScenePlanPanel from '../scene-plan/ScenePlanPanel.vue'`
 
 ---
 
@@ -19,7 +61,7 @@
 | EditorToolbar（生成工具栏） | ✅ | `frontend/src/components/editor/EditorToolbar.vue` | `useGenerationOrchestrator` / `openBatchGenerate()` | 工具栏按钮 | `App.vue` 第 32 行 `useGenerationOrchestrator()` | ✅ |
 | CandidatePanel（候选稿面板） | ✅ | `frontend/src/components/right-panel/CandidatePanel.vue` | `useCandidateStore` / `adoptCandidate()` | 右侧面板 Tab | `RightPanel.vue` 内注册 | ✅ |
 | BatchGenerateModal（批量生成） | ✅ | `frontend/src/components/modals/BatchGenerateModal.vue` | `openBatchGenerate()` / `batchGenerate()` | 工具栏 + Modal | `App.vue` 第 166 行 | ✅ |
-| ScenePlanEditor | ✅ | `frontend/src/components/right-panel/ScenePlanEditor.vue` | `useScenePlanStore` | 右侧面板 Tab | `RightPanel.vue` 内注册 | ✅ |
+| ScenePlanPanel | ✅ | `frontend/src/components/scene-plan/ScenePlanPanel.vue` | `useScenePlanStore` | 右侧面板 Tab | `RightPanel.vue` 第 84/106 行引用 | ✅ |
 | PipelineEditor | ✅ | `frontend/src/components/right-panel/PipelineEditor.vue` | `usePipelineStore` / CRUD API | 右侧面板 Tab | `RightPanel.vue` 内注册 | ✅ |
 | StyleGuide 编辑 | ✅ | `frontend/src/stores/styleGuide.ts` | `load()` / `save()` | File API | 无独立 UI，通过 File 编辑 | ⚠️ 需 File 路径 |
 | RecentContext 编辑 | ✅ | `frontend/src/stores/recentContext.ts` | `load()` / `save()` | File API | 无独立 UI，通过 File 编辑 | ⚠️ 需 File 路径 |
@@ -135,9 +177,10 @@
 | `backend/tests/test_prompt_engine.py` | pytest | Prompt Engine | ✅ 直接运行 | ❌ 不需要 | ✅ | 9 个测试 |
 | `backend/tests/test_pipeline.py` | pytest | Pipeline Runner | ✅ 直接运行 | ❌ 不需要 | ✅ | 31 个测试 |
 | `backend/tests/test_workflow.py` | pytest | Workflow Runner | ✅ 直接运行 | ❌ 不需要 | ✅ | 26 个测试 |
-| `backend/tests/test_materials.py` | pytest | Materials API | ✅ 直接运行 | ❌ 不需要 | ✅ | 23 个测试 |
-| `backend/tests/test_style_guide.py` | pytest | Style Guide API | ✅ 直接运行 | ❌ 不需要 | ✅ | 18 个测试 |
-| `backend/tests/test_recent_context.py` | pytest | Recent Context API | ✅ 直接运行 | ❌ 不需要 | ✅ | 28 个测试 |
+| `backend/tests/test_materials.py` | pytest | Materials API | ✅ 直接运行 | ❌ 不需要 | ✅ | 40 个测试 |
+| `backend/tests/test_style_guide.py` | pytest | Style Guide API | ✅ 直接运行 | ❌ 不需要 | ✅ | 17 个测试 |
+| `backend/tests/test_recent_context.py` | pytest | Recent Context API | ✅ 直接运行 | ❌ 不需要 | ✅ | 25 个测试 |
+| `backend/tests/test_workflow_memory.py` | pytest | Workflow Memory | ✅ 直接运行 | ❌ 不需要 | ✅ | 18 个测试 |
 | `backend/tests/test_sse_heartbeat.py` | pytest | SSE Heartbeat | ✅ 直接运行 | ❌ 不需要 | ✅ | 7 个测试 |
 | `backend/tests/test_event_bus.py` | pytest | EventBus | ✅ 直接运行 | ❌ 不需要 | ✅ | 22 个测试 |
 | `backend/tests/contracts/test_sse_contract.py` | pytest | SSE 契约测试 | ✅ 直接运行 | ❌ 不需要 | ✅ | 14 个测试 |
@@ -186,8 +229,8 @@
 ### 路径 2：Scene Plan UI 流程
 
 #### 真实入口
-- **前端文件**：`frontend/src/components/right-panel/ScenePlanEditor.vue`
-- **组件**：`ScenePlanEditor.vue` + `useScenePlanStore`
+- **前端文件**：`frontend/src/components/scene-plan/ScenePlanPanel.vue`
+- **组件**：`ScenePlanPanel.vue` + `useScenePlanStore`
 - **触发函数**：
   - `validateScenePlan()` → POST `/api/scene-plan/validate`
   - `saveScenePlan()` → POST `/api/scene-plan/save`
@@ -498,7 +541,7 @@
 | E002 | `frontend/src/App.vue` | Modal 组件注册（第 159-172 行） | 13 个 Modal 存在 |
 | E003 | `frontend/src/components/modals/BatchGenerateModal.vue` | `BatchGenerateModal.vue` | Batch Generate Modal 存在 |
 | E004 | `frontend/src/components/right-panel/CandidatePanel.vue` | `CandidatePanel.vue` | Candidate 面板存在 |
-| E005 | `frontend/src/components/right-panel/ScenePlanEditor.vue` | `ScenePlanEditor.vue` | Scene Plan UI 存在 |
+| E005 | `frontend/src/components/scene-plan/ScenePlanPanel.vue` | `ScenePlanPanel.vue` | Scene Plan UI 存在（RightPanel 第 84/106 行引用） |
 | E006 | `frontend/src/components/right-panel/PipelineEditor.vue` | `PipelineEditor.vue` | Pipeline Editor 存在 |
 | E007 | `frontend/src/stores/styleGuide.ts` | `useStyleGuideStore` | Style Guide store 存在 |
 | E008 | `frontend/src/stores/recentContext.ts` | `useRecentContextStore` | Recent Context store 存在 |
@@ -539,7 +582,41 @@
 
 ---
 
-## G. T6.5 后续测试建议
+## G. Playwright E2E 的 Mock LLM 限制
+
+### 核心结论
+
+**`backend/tests/conftest.py` 的 `mock_llm_service` fixture 只对 pytest 进程内测试可靠。**
+
+如果 Playwright E2E 测试连接的是**单独启动**的后端服务（如 `uvicorn backend.main:app`），该 fixture **不会自动注入**到后端进程。换句话说：
+
+| 场景 | `mock_llm_service` fixture 是否生效 |
+|------|-------------------------------------|
+| pytest 直接调用 FastAPI TestClient | ✅ 生效（monkeypatch 注入到同进程） |
+| Playwright → 独立 uvicorn 后端 | ❌ 不生效（后端进程未被 monkeypatch） |
+| Playwright → pytest `live_server` fixture | ⚠️ 需特殊处理，依赖 fixture 传参 |
+
+### 建议做法
+
+T6.5 E2E 应优先采用以下**不依赖真实 LLM** 的策略，避免把 Playwright 测试绑定到 mock fixture：
+
+1. **预置测试数据文件**：直接写入 candidate / scene-plan / materials JSON 文件，不通过 generate/batch/pipeline run 等 LLM 端点生成。
+2. **dry-run 或 mock provider 配置**：后端启动时切换到 mock LLM provider（如返回固定内容的 completion），避免网络调用。
+3. **test server 模式**：为 Playwright 专用一个 test server 启动命令（如 `APP_ENV=test uvicorn ...`），由后端代码自身在启动时检测并用 mock 替换 LLM。
+4. **只测试非 LLM 端点**：对 candidate adopt/delete、file save/read、scene-plan validate/save/load、materials list/create/delete 等纯文件/计算端点进行完整 E2E，generate 端点只做契约/烟雾测试。
+
+### 对 T6.5.1 Candidate 的影响
+
+T6.5.1 Candidate 完整工作流测试应：
+
+- **不调用** `POST /api/generate`、`POST /api/generate/batch`、`POST /api/pipeline/run`、`POST /api/workflows/run` 等需要 LLM 的端点来生成候选稿；
+- **直接预置** `candidates/` 目录下的 candidate 文件作为测试输入；
+- adopt 操作本身不调用 LLM，仅依赖文件写入 + 冲突检测；
+- 测试完成后清理所有 `__e2e_*` 文件。
+
+---
+
+## H. T6.5 后续测试建议
 
 ### T6.5.1 → Candidate 完整工作流 E2E
 
@@ -553,20 +630,25 @@
 
 **依赖的入口和测试文件**：
 - 前端入口：`CandidatePanel.vue` + `useCandidateStore`
-- 现有测试：`tests/test_candidate_flow_e2e.py`（可改造使用 mock fixture）
+- 现有测试：`tests/test_candidate_flow_e2e.py`
 - `tests/test_candidate_preview_delete_e2e.py`（Preview + Delete）
 - `tests/test_candidate_adopt_conflict_sse_e2e.py`（Adopt + SSE）
-- `backend/tests/conftest.py` 的 `mock_llm_service` fixture（用于生成候选稿）
 - 测试命名规范：`__e2e_candidate_test_scene.md`
+- 预置 candidate 文件路径：`{project_id}/candidates/` 目录
 
 **Mock 策略**：
-- 使用 `mock_llm_service` fixture 生成候选稿
+- 不依赖 `mock_llm_service` fixture 生成候选稿（该 fixture 仅对 pytest 进程内测试可靠，对 Playwright 直连独立后端无效）
+- **直接预置 candidate 文件到 `candidates/` 目录，不通过 generate/batch/pipeline run 生成
 - Adopt 操作本身不调用 LLM，无需 mock
 
 **前置条件**：
-1. 预置 sec 文件到测试项目（空文件或含测试内容）
-2. 调用 LLM 生成候选稿（使用 mock LLM）
-3. adopt 端点需要正确的 `expected_mtime`（防止静默覆盖）
+1. 直接在测试项目目录中**预置 candidate 文件**（不调用任何 LLM 生成）
+2. 预置目标 sec 文件（空或含测试内容）
+3. 不调用 `POST /api/generate`、`POST /api/generate/batch`、`POST /api/pipeline/run`、`POST /api/workflows/run`
+4. 不依赖真实 LLM
+5. adopt 端点必须携带 `expected_mtime`（防止静默覆盖）
+6. 验证：正文变化、candidate 状态变化、SSE 事件（file.updated / candidate.adopted）
+7. 测试完成后清理所有 `__e2e_*` 文件
 
 ---
 
@@ -579,7 +661,7 @@
 4. Scene Plan 生成（POST `/api/scene-plan/generate`，mock LLM）
 
 **依赖的入口和测试文件**：
-- 前端入口：`ScenePlanEditor.vue` + `useScenePlanStore`
+- 前端入口：`ScenePlanPanel.vue` + `useScenePlanStore`
 - 现有测试：`tests/test_scene_plan_validate_api.py`
 - `tests/test_scene_plan_persistence_api.py`
 - `tests/test_scene_plan_pipeline_integration.py`
@@ -641,8 +723,8 @@
 
 **依赖的入口和测试文件**：
 - 前端入口：File API（styleGuideStore / recentContextStore / storyStateStore）
-- 现有测试：`backend/tests/test_style_guide.py`（18 个）
-- `backend/tests/test_recent_context.py`（28 个）
+- 现有测试：`backend/tests/test_style_guide.py`（17 个）
+- `backend/tests/test_recent_context.py`（25 个）
 - `backend/tests/test_story_state.py`（13 个）
 - `tests/test_story_state_materials_dryrun.py`
 
@@ -666,7 +748,7 @@
 
 **依赖的入口和测试文件**：
 - 前端入口：`useSceneGenerationActions.ts` → `ChatPanel.vue`
-- 现有测试：`backend/tests/test_materials.py`（23 个）
+- 现有测试：`backend/tests/test_materials.py`（40 个）
 
 **Mock 策略**：
 - list / create / delete 无需 mock
@@ -691,7 +773,7 @@
 
 ---
 
-## H. 验证命令
+## I. 验证命令
 
 ```bash
 # 工作区状态
@@ -712,7 +794,7 @@ $env:PYTHONPATH = "."
 python -m pytest tests/test_task_queue.py -v --tb=line -q  # 26/26 ✅
 python -m pytest tests/test_prompt_engine.py -v --tb=line -q # 9/9 ✅
 python -m pytest tests/test_sse_heartbeat.py -v --tb=line -q  # 7/7 ✅
-python -m pytest tests/test_materials.py tests/test_style_guide.py tests/test_recent_context.py -v --tb=line -q  # 82/82 ✅
+python -m pytest tests/test_materials.py tests/test_style_guide.py tests/test_recent_context.py tests/test_workflow_memory.py -v --tb=line -q  # 100/100 ✅
 
 # 说明：本次任务为文档生成，不修改代码，因此不跑全量测试。
 # 所有测试已在 T6.3.1-T6.3.8 中验证通过。
@@ -720,13 +802,13 @@ python -m pytest tests/test_materials.py tests/test_style_guide.py tests/test_re
 
 ---
 
-## I. 校准结论
+## J. 校准结论
 
 ### 可立即执行的 T6.5 E2E 路径
 
 | 路径 | 测试文件 | 覆盖端点 | Mock 需求 |
 |------|----------|----------|-----------|
-| Candidate 完整工作流 | `tests/test_candidate_flow_e2e.py` + `tests/test_candidate_preview_delete_e2e.py` | 4 个 API | mock LLM（生成候选稿时） |
+| Candidate 完整工作流 | `tests/test_candidate_flow_e2e.py` + `tests/test_candidate_preview_delete_e2e.py` | 4 个 API | 预置 candidate 文件（不依赖 mock LLM） |
 | Scene Plan UI | `tests/test_scene_plan_validate_api.py` + `tests/test_scene_plan_persistence_api.py` | 4 个 API | mock LLM（generate 时） |
 | Pipeline / Workflow CRUD | `tests/test_workflow_pipeline_crud.py` | 8 个 API | mock LLM（run 时） |
 | Pipeline / Workflow Dry-run | `tests/test_workflow_pipeline_dryrun.py` | 2 个 API | mock LLM（已有） |
