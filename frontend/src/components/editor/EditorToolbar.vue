@@ -155,6 +155,13 @@
               <a-menu-item @click="handleQualityReview">
                 <i class="fa-solid fa-check-circle" /> 质量审查
               </a-menu-item>
+              <a-menu-divider />
+              <a-menu-item
+                data-testid="scene-plan-button"
+                @click="handleScenePlan"
+              >
+                <i class="fa-solid fa-bullseye" /> 场景计划
+              </a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
@@ -170,6 +177,7 @@ import { useHistoryStore } from '@/stores/history'
 import { useEditorStore } from '@/stores/editor'
 import { useNotificationStore } from '@/stores/notification'
 import { useUIStore } from '@/stores/ui'
+import { useRightPanelStore } from '@/stores/rightPanel'
 import { useMarkdownPreview } from '@/composables/useMarkdownPreview'
 import { useSceneGenerationActions } from '@/composables/useSceneGenerationActions'
 import { useEditorFileActions } from '@/composables/useEditorFileActions'
@@ -178,6 +186,7 @@ const historyStore = useHistoryStore()
 const editorStore = useEditorStore()
 const notification = useNotificationStore()
 const uiStore = useUIStore()
+const rightPanelStore = useRightPanelStore()
 const { isPreviewMode, togglePreview } = useMarkdownPreview()
 
 const {
@@ -236,6 +245,7 @@ function handleRevisionLog() { uiStore.openRevisionLog() }
 function handleExtractModal() { uiStore.openExtract() }
 function handleBatchGenerate() { uiStore.openBatchGenerate() }
 function handleQualityReview() { uiStore.openQualityReview() }
+function handleScenePlan() { rightPanelStore.setActiveTab('scene-plan') }
 </script>
 
 <style scoped lang="scss">
