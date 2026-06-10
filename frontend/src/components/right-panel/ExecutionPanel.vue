@@ -457,6 +457,7 @@ async function handleDryRunBatch() {
   justify-content: space-between;
   margin-bottom: 12px;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .exec-status {
