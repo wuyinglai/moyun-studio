@@ -60,6 +60,12 @@ async def run_pipeline(
     llm_service = LLMService.from_workspace_config(llm_cfg)
     runner = PipelineRunner(settings.prompts_path, llm_service, file_service, system_prompts_path=settings.system_prompts_path)
 
+    # smoke 项目：在 llm_extra_kwargs 中强制注入 max_tokens
+    from backend.core.smoke_gate import is_llm_smoke_project, get_smoke_max_tokens
+    pipeline_llm_extra: dict | None = None
+    if is_llm_smoke_project(req.project_id) and settings.allow_real_llm_smoke and not req.dry_run:
+        pipeline_llm_extra = {"max_tokens": get_smoke_max_tokens(settings)}
+
     async def _stream():
         task_id = f"pipeline-{req.pipeline}"
 
@@ -82,6 +88,7 @@ async def run_pipeline(
                 extra_vars=req.extra_vars,
                 scene_plan=req.scene_plan,
                 dry_run=req.dry_run,
+                llm_extra_kwargs=pipeline_llm_extra,
             ):
                 # 直接返回事件到 streaming 响应
                 yield event

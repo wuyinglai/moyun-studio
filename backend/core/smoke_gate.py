@@ -26,6 +26,10 @@ from backend.config import Settings
 LLM_SMOKE_PROJECT_PREFIX = "__llm_smoke_"
 REAL_LLM_SMOKE_DISABLED_CODE = "REAL_LLM_SMOKE_DISABLED"
 BATCH_REAL_LLM_SMOKE_FORBIDDEN_CODE = "BATCH_REAL_LLM_SMOKE_FORBIDDEN"
+# smoke 最大 tokens 硬上限（最终 cap，防止配置溢出）
+LLM_SMOKE_MAX_TOKENS_HARD_CAP = 1024
+# smoke 最大 tokens 默认值（与 Settings.llm_smoke_max_tokens 默认一致）
+LLM_SMOKE_MAX_TOKENS_DEFAULT = 300
 
 
 def is_llm_smoke_project(project_id: str) -> bool:
@@ -95,3 +99,36 @@ def check_batch_real_llm_smoke_gate(
         ),
         code=BATCH_REAL_LLM_SMOKE_FORBIDDEN_CODE,
     )
+
+
+def get_smoke_max_tokens(settings: Settings) -> int:
+    """
+    返回 smoke 专用 max_tokens，强制落在 [1, LLM_SMOKE_MAX_TOKENS_HARD_CAP] 区间内。
+    非 smoke 项目不应调用此函数。
+    """
+    raw = getattr(settings, "llm_smoke_max_tokens", LLM_SMOKE_MAX_TOKENS_DEFAULT)
+    try:
+        raw_int = int(raw)
+    except (TypeError, ValueError):
+        raw_int = LLM_SMOKE_MAX_TOKENS_DEFAULT
+    return min(max(raw_int, 1), LLM_SMOKE_MAX_TOKENS_HARD_CAP)
+
+
+def maybe_apply_smoke_max_tokens(
+    settings: Settings,
+    project_id: str,
+    llm_extra_kwargs: dict | None,
+) -> dict:
+    """
+    在不破坏现有接口的前提下，对 smoke 项目强制覆盖 max_tokens。
+
+    - 非 smoke 项目 → 直接返回输入 dict
+    - smoke 项目 → 返回一个新 dict（不会修改输入对象），新增 max_tokens=llm_smoke_max_tokens
+    """
+    if not is_llm_smoke_project(project_id):
+        return llm_extra_kwargs or {}
+
+    smoke_tokens = get_smoke_max_tokens(settings)
+    merged = dict(llm_extra_kwargs or {})
+    merged["max_tokens"] = smoke_tokens
+    return merged

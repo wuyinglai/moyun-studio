@@ -137,12 +137,19 @@ async def chat(
             svc = LLMService.from_workspace_config(llm_cfg)
             runner = PipelineRunner(settings.prompts_path, svc, file_service, system_prompts_path=settings.system_prompts_path)
 
+            # smoke 项目：强制注入 max_tokens
+            from backend.core.smoke_gate import is_llm_smoke_project, get_smoke_max_tokens
+            chat_llm_extra = {}
+            if is_llm_smoke_project(req.project_id) and settings.allow_real_llm_smoke:
+                chat_llm_extra["max_tokens"] = get_smoke_max_tokens(settings)
+
             async for event in runner.run(
                 pipeline_name="chat",
                 project_id=req.project_id,
                 target_file=req.context_file,
                 user_input=req.message,
                 output_mode="append",
+                llm_extra_kwargs=chat_llm_extra or None,
             ):
                 yield event
 

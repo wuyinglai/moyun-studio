@@ -17,6 +17,7 @@ from backend.config import Settings
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
+from backend.core.smoke_gate import is_llm_smoke_project, maybe_apply_smoke_max_tokens
 from backend.domain.events import (
     make_pipeline_started_event,
     make_pipeline_step_completed_event,
@@ -111,6 +112,9 @@ class GenerationService:
         # 管线模式
         if prompt_type in GENERATE_PIPELINE_MAP:
             pipeline_name, output_mode = GENERATE_PIPELINE_MAP[prompt_type]
+            # smoke 项目：在 llm_extra_kwargs 中注入 smoke max_tokens
+            # 注意：llm_extra_kwargs 会沿 pipeline → pipeline runner → executor → svc.complete(..., **llm_extra_kwargs)
+            smoke_kwargs = maybe_apply_smoke_max_tokens(self.settings, project_id, llm_extra_kwargs)
             try:
                 async for event in runner.run(
                     pipeline_name=pipeline_name,
@@ -120,7 +124,7 @@ class GenerationService:
                     output_mode=output_mode,
                     extra_vars=extra_vars,
                     stop_event=self._stop_signals.get(task_id),
-                    llm_extra_kwargs=llm_extra_kwargs,
+                    llm_extra_kwargs=smoke_kwargs,
                     action=mode,
                 ):
                     yield event
@@ -194,7 +198,14 @@ class GenerationService:
             messages = [{"role": "user", "content": prompt_text}]
             stop_event = self._stop_signals.get(task_id)
             generated_text = ""
-            async for chunk in svc.complete(messages, stop_event=stop_event, timeout=180, **llm_extra_kwargs):
+            # smoke 项目：在 fallback 路径中强制覆盖 max_tokens
+            fallback_extra = dict(llm_extra_kwargs)
+            if is_llm_smoke_project(project_id):
+                from backend.core.smoke_gate import get_smoke_max_tokens
+                fallback_extra["max_tokens"] = get_smoke_max_tokens(self.settings)
+            async for chunk in svc.complete(
+                messages, stop_event=stop_event, timeout=180, **fallback_extra
+            ):
                 generated_text += chunk
                 yield {
                     "event": "generation",
@@ -391,6 +402,10 @@ class GenerationService:
                 messages = [{"role": "user", "content": prompt_text}]
                 # 场景级 max_tokens：单场景目标800字，约2500 tokens
                 max_output_tokens = 2500
+                # smoke 项目：强制覆盖为 llm_smoke_max_tokens
+                if is_llm_smoke_project(project_id):
+                    from backend.core.smoke_gate import get_smoke_max_tokens
+                    max_output_tokens = get_smoke_max_tokens(self.settings)
 
                 if dry_run:
                     # Dry-run：不调用真实 LLM，不写文件，不生成 candidate
