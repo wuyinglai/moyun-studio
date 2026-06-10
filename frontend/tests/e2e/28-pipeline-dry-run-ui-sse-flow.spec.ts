@@ -223,6 +223,27 @@ test.describe('T6.6.3 Pipeline dry-run UI + SSE 串联测试', () => {
     } else {
       console.log('[t6.6.3] ⚠️ 日志中未找到 Pipeline 内容')
     }
+
+    // ─── T6.7.4 统一状态面板断言 ───
+    const statusPanel = page.getByTestId('dry-run-status-panel')
+    await expect(statusPanel).toBeVisible({ timeout: 10000 })
+    console.log('[t6.7.4] ✓ dry-run-status-panel 可见')
+
+    const statusType = page.getByTestId('dry-run-status-type')
+    await expect(statusType).toHaveText('pipeline')
+    console.log('[t6.7.4] ✓ dry-run-status-type === pipeline')
+
+    const statusState = page.getByTestId('dry-run-status-state')
+    await expect(statusState).toBeVisible()
+    console.log('[t6.7.4] ✓ dry-run-status-state 可见')
+
+    const statusDryRun = page.getByTestId('dry-run-status-dry-run')
+    await expect(statusDryRun).toContainText('true')
+    console.log('[t6.7.4] ✓ dry-run-status-dry-run 包含 true')
+
+    const statusSummary = page.getByTestId('dry-run-status-summary')
+    await expect(statusSummary).toBeVisible()
+    console.log('[t6.7.4] ✓ dry-run-status-summary 可见')
   })
 
   test('4. 安全边界：Pipeline dry-run 不覆盖正文', async () => {

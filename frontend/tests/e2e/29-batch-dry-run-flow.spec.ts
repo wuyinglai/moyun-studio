@@ -134,6 +134,27 @@ test.describe('T6.6.4 Batch Dry Run', () => {
     await batchBtn.click()
     console.log('[t6.6.4] ✓ 已执行真实用户 click')
 
+    // ─── T6.7.4 统一状态面板断言 ───
+    const statusPanel = page.getByTestId('dry-run-status-panel')
+    await expect(statusPanel).toBeVisible({ timeout: 10000 })
+    console.log('[t6.7.4] ✓ dry-run-status-panel 可见')
+
+    const statusType = page.getByTestId('dry-run-status-type')
+    await expect(statusType).toHaveText('batch')
+    console.log('[t6.7.4] ✓ dry-run-status-type === batch')
+
+    const statusState = page.getByTestId('dry-run-status-state')
+    await expect(statusState).toBeVisible()
+    console.log('[t6.7.4] ✓ dry-run-status-state 可见')
+
+    const statusDryRun = page.getByTestId('dry-run-status-dry-run')
+    await expect(statusDryRun).toContainText('true')
+    console.log('[t6.7.4] ✓ dry-run-status-dry-run 包含 true')
+
+    const statusSummary = page.getByTestId('dry-run-status-summary')
+    await expect(statusSummary).toBeVisible()
+    console.log('[t6.7.4] ✓ dry-run-status-summary 可见')
+
     // 6) 验证 dry_run 请求体 — 通过 API 路径验证，不需要等 UI 反馈
     //    由于按钮的 handleDryRunBatch 是 fetch API，Playwright 无法直接捕获跨进程响应；
     //    这里用 API 层验证来确认 dry_run 正确性。

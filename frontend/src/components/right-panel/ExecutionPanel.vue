@@ -112,6 +112,36 @@
       </div>
     </div>
 
+    <!-- Dry Run 统一状态面板（仅 dev/test 可见） -->
+    <div
+      v-if="isDevMode && dryRunStatus.type"
+      class="dev-dry-run-status"
+      data-testid="dry-run-status-panel"
+    >
+      <div class="drs-header">
+        <span
+          class="drs-type"
+          data-testid="dry-run-status-type"
+        >{{ dryRunStatus.type }}</span>
+        <span
+          class="drs-state"
+          :class="dryRunStatus.state"
+          data-testid="dry-run-status-state"
+        >{{ dryRunStatus.state }}</span>
+        <span
+          class="drs-dry-run-badge"
+          data-testid="dry-run-status-dry-run"
+        >dry_run: {{ dryRunStatus.dryRun }}</span>
+        <span
+          class="drs-time"
+        >{{ formatTime(dryRunStatus.timestamp) }}</span>
+      </div>
+      <div
+        class="drs-summary"
+        data-testid="dry-run-status-summary"
+      >{{ dryRunStatus.summary }}</div>
+    </div>
+
     <!-- AI 修改摘要 -->
     <div
       v-if="diffSummary.hasSummary.value"
@@ -211,6 +241,33 @@ const tasks = computed(() => {
 const logs = computed(() => taskStore.logs)
 const hasRunningTasks = computed(() => tasks.value.some(t => t.status === 'running'))
 
+// ─── Dry Run 统一状态面板 ───────────────────────
+interface DryRunStatus {
+  type: 'task' | 'pipeline' | 'batch' | ''
+  state: 'idle' | 'running' | 'completed' | 'failed' | ''
+  dryRun: boolean
+  timestamp: number
+  summary: string
+}
+
+const dryRunStatus = ref<DryRunStatus>({
+  type: '',
+  state: '',
+  dryRun: false,
+  timestamp: 0,
+  summary: '',
+})
+
+function updateDryRunStatus(type: DryRunStatus['type'], state: DryRunStatus['state'], dryRun: boolean, summary: string) {
+  dryRunStatus.value = {
+    type,
+    state,
+    dryRun,
+    timestamp: Date.now(),
+    summary,
+  }
+}
+
 const statusText: Record<string, string> = {
   pending: '等待中',
   running: '进行中',
@@ -273,6 +330,7 @@ async function handleDryRunTask() {
       return
     }
 
+    updateDryRunStatus('task', 'running', true, 'Task Dry Run 开始...')
     const result = await api.post('/tasks', {
       template_category: 'generate',
       template_type: 'chapter',
@@ -284,12 +342,13 @@ async function handleDryRunTask() {
     if (result.success) {
       notification.info(`Dry Run 任务已提交: ${result.data?.task_id}`)
       taskStore.addLog('info', `[Dry Run] 任务提交成功: ${result.data?.task_id}`)
-      // 立即轮询更新任务列表
+      updateDryRunStatus('task', 'completed', true, `任务完成: ${result.data?.task_id}`)
       await taskStore.pollTasks()
     }
   } catch (error) {
     notification.error('Dry Run 任务提交失败')
     taskStore.addLog('error', '[Dry Run] 任务提交失败')
+    updateDryRunStatus('task', 'failed', true, `任务失败: ${error}`)
     console.error('Dry Run error:', error)
   }
 }
@@ -304,6 +363,7 @@ async function handleDryRunPipeline() {
       return
     }
 
+    updateDryRunStatus('pipeline', 'running', true, 'Pipeline Dry Run 开始...')
     taskStore.addLog('info', '[Pipeline Dry Run] 开始执行...')
 
     // 使用当前打开的文件路径，如果没有则使用默认测试路径
@@ -373,13 +433,16 @@ async function handleDryRunPipeline() {
 
     if (receivedDone) {
       notification.success(`Pipeline Dry Run 完成! dry_run=${isDryRun}`)
+      updateDryRunStatus('pipeline', 'completed', isDryRun, `Pipeline done (dry_run=${isDryRun})`)
     } else {
       notification.warning('Pipeline Dry Run 未收到 done 事件')
       taskStore.addLog('warning', '[Pipeline Dry Run] 未收到 done 事件')
+      updateDryRunStatus('pipeline', 'failed', true, '未收到 done 事件')
     }
   } catch (error) {
     notification.error('Pipeline Dry Run 执行失败')
     taskStore.addLog('error', `[Pipeline Dry Run] 执行失败: ${error}`)
+    updateDryRunStatus('pipeline', 'failed', true, `执行失败: ${error}`)
     console.error('Pipeline Dry Run error:', error)
   }
 }
@@ -393,6 +456,7 @@ async function handleDryRunBatch() {
       return
     }
 
+    updateDryRunStatus('batch', 'running', true, 'Batch Dry Run 开始...')
     taskStore.addLog('info', '[Batch Dry Run] 开始执行...')
 
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/generate/batch`, {
@@ -425,13 +489,16 @@ async function handleDryRunBatch() {
     if (allDryRun) {
       notification.success(`Batch Dry Run 完成! ${succeeded}/${total} 项`)
       taskStore.addLog('success', `[Batch Dry Run] 完成! dry_run=true, ${succeeded}/${total} 项`)
+      updateDryRunStatus('batch', 'completed', true, `Batch 完成: ${succeeded}/${total} 项 dry_run`)
     } else {
       notification.warning(`Batch Dry Run 完成，但部分项未标记 dry_run`)
       taskStore.addLog('warning', `[Batch Dry Run] 部分项未标记 dry_run`)
+      updateDryRunStatus('batch', 'completed', false, `Batch 完成: ${succeeded}/${total} 项 (部分未标记 dry_run)`)
     }
   } catch (error) {
     notification.error('Batch Dry Run 执行失败')
     taskStore.addLog('error', `[Batch Dry Run] 执行失败: ${error}`)
+    updateDryRunStatus('batch', 'failed', true, `Batch 执行失败: ${error}`)
     console.error('Batch Dry Run error:', error)
   }
 }
@@ -753,6 +820,72 @@ async function handleDryRunBatch() {
     flex-shrink: 0;
     margin-left: 0; // reset .btn-pipeline/.btn-batch margin
   }
+}
+
+.dev-dry-run-status {
+  padding: 10px 16px;
+  border-top: 1px dashed var(--border-color);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.drs-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.drs-type {
+  font-weight: 600;
+  color: var(--accent-warning);
+  text-transform: uppercase;
+}
+
+.drs-state {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+
+  &.completed {
+    background: var(--accent-success);
+    color: white;
+  }
+
+  &.failed {
+    background: var(--accent-danger);
+    color: white;
+  }
+
+  &.running {
+    background: var(--accent-primary);
+    color: white;
+  }
+
+  &.idle {
+    background: var(--text-muted);
+    color: white;
+  }
+}
+
+.drs-dry-run-badge {
+  font-size: 10px;
+  background: var(--accent-warning);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.drs-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.drs-summary {
+  font-size: 12px;
+  color: var(--text-primary);
 }
 
 .log-list {

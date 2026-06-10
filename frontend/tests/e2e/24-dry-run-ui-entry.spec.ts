@@ -144,6 +144,28 @@ test.describe('T6.5.9 前端 dry-run 测试入口 E2E', () => {
 
     expect(taskList.length).toBeGreaterThan(0)
     console.log(`[t6.5.9] ✓ 任务列表包含 ${taskList.length} 个任务`)
+
+    // ─── T6.7.4 统一状态面板断言 ───
+    const statusPanel = page.getByTestId('dry-run-status-panel')
+    await expect(statusPanel).toBeVisible({ timeout: 10000 })
+    console.log('[t6.7.4] ✓ dry-run-status-panel 可见')
+
+    const statusType = page.getByTestId('dry-run-status-type')
+    await expect(statusType).toHaveText('task')
+    console.log('[t6.7.4] ✓ dry-run-status-type === task')
+
+    const statusState = page.getByTestId('dry-run-status-state')
+    await expect(statusState).toBeVisible()
+    // 最终状态可能是 completed 或 running（轮询未完成）
+    console.log('[t6.7.4] ✓ dry-run-status-state 可见')
+
+    const statusDryRun = page.getByTestId('dry-run-status-dry-run')
+    await expect(statusDryRun).toContainText('true')
+    console.log('[t6.7.4] ✓ dry-run-status-dry-run 包含 true')
+
+    const statusSummary = page.getByTestId('dry-run-status-summary')
+    await expect(statusSummary).toBeVisible()
+    console.log('[t6.7.4] ✓ dry-run-status-summary 可见')
   })
 
   test('3. Dry Run 任务完成后 → 正文未被覆盖', async ({ page }) => {
