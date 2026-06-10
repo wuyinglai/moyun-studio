@@ -9,6 +9,7 @@ import App from './App.vue'
 import { useUIStore } from './stores/ui'
 import { useNotificationStore } from './stores/notification'
 import { restoreInterruptedTasks } from './composables/useTaskQueue'
+import { sseService } from './composables/useSSE'
 
 const pinia = createPinia()
 pinia.use(piniaPersistedstate)
@@ -98,3 +99,8 @@ app.mount('#app')
 
 // 恢复页面刷新前中断的任务
 restoreInterruptedTasks()
+
+// 开发/测试环境：暴露 sseService 到 window 供测试使用
+if (import.meta.env.DEV) {
+  ;(window as any).sseService = sseService
+}
