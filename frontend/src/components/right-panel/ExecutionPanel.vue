@@ -21,6 +21,17 @@
         >
           <i class="fa-solid fa-trash-can" />
         </button>
+        <!-- 开发模式测试入口 -->
+        <button
+          v-if="isDevMode"
+          data-testid="dry-run-task-button"
+          class="btn-dry-run"
+          title="Dry Run 测试"
+          @click="handleDryRunTask"
+        >
+          <i class="fa-solid fa-flask-vial" />
+          Dry Run
+        </button>
       </div>
 
       <div
@@ -133,12 +144,16 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useTaskStore } from '@/stores/task'
 import { useNotificationStore } from '@/stores/notification'
 import { useDiffSummary } from '@/composables/useDiffSummary'
 import { cancelQueuedTask } from '@/composables/useTaskQueue'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
+
+const route = useRoute()
+const isDevMode = import.meta.env.DEV
 
 const diffSummary = useDiffSummary()
 
@@ -211,6 +226,43 @@ function clearAll() {
 function clearLogs() {
   taskStore.clearLogs()
   notification.success('日志已清空')
+}
+
+// ─── 开发模式 Dry Run 测试入口 ────────────────────
+interface DryRunResult {
+  success: boolean
+  data?: {
+    task_id: string
+  }
+}
+
+async function handleDryRunTask() {
+  try {
+    const projectId = route.params.projectId as string
+    if (!projectId) {
+      notification.error('未找到项目 ID')
+      return
+    }
+
+    const result = await api.post('/tasks', {
+      template_category: 'generate',
+      template_type: 'chapter',
+      project_id: projectId,
+      variables: {},
+      dry_run: true,
+    }) as DryRunResult
+
+    if (result.success) {
+      notification.info(`Dry Run 任务已提交: ${result.data?.task_id}`)
+      taskStore.addLog('info', `[Dry Run] 任务提交成功: ${result.data?.task_id}`)
+      // 立即轮询更新任务列表
+      await taskStore.pollTasks()
+    }
+  } catch (error) {
+    notification.error('Dry Run 任务提交失败')
+    taskStore.addLog('error', '[Dry Run] 任务提交失败')
+    console.error('Dry Run error:', error)
+  }
 }
 </script>
 
@@ -464,6 +516,29 @@ function clearLogs() {
   &:hover {
     background: var(--accent-danger);
     color: white;
+  }
+}
+
+.btn-dry-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--accent-warning);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  i {
+    font-size: 10px;
   }
 }
 
