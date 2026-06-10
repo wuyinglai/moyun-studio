@@ -109,12 +109,17 @@ test.describe('T6.6.4 Batch Dry Run', () => {
     await execTab.click()
     console.log('[t6.6.4] ✓ 已切换到"执行" tab')
 
-    // 2) 验证 Batch Dry Run 按钮可见（真实可见，非 force）
+    // 2) 验证 dev-dry-run-tools 区块可见
+    const devTools = page.getByTestId('dev-dry-run-tools')
+    await expect(devTools).toBeVisible({ timeout: 20000 })
+    console.log('[t6.6.4] ✓ dev-dry-run-tools 区块可见')
+
+    // 3) 验证 Batch Dry Run 按钮可见（真实可见，非 force）
     const batchBtn = page.getByTestId('dry-run-batch-button')
     await expect(batchBtn).toBeVisible({ timeout: 20000 })
     console.log('[t6.6.4] ✓ Batch Dry Run 按钮真实可见')
 
-    // 3) 捕获请求以验证 body 含 dry_run:true
+    // 4) 捕获请求以验证 body 含 dry_run:true
     let dryRunRequest: any = null
     page.on('request', (req) => {
       const url = req.url()
@@ -125,11 +130,11 @@ test.describe('T6.6.4 Batch Dry Run', () => {
       }
     })
 
-    // 4) 真实用户 click（非 force，非 JS）
+    // 5) 真实用户 click（非 force，非 JS）
     await batchBtn.click()
     console.log('[t6.6.4] ✓ 已执行真实用户 click')
 
-    // 5) 验证 dry_run 请求体 — 通过 API 路径验证，不需要等 UI 反馈
+    // 6) 验证 dry_run 请求体 — 通过 API 路径验证，不需要等 UI 反馈
     //    由于按钮的 handleDryRunBatch 是 fetch API，Playwright 无法直接捕获跨进程响应；
     //    这里用 API 层验证来确认 dry_run 正确性。
     const resp = await fetch(`${BACKEND_API}/generate/batch`, {

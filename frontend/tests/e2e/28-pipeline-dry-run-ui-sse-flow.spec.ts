@@ -160,21 +160,29 @@ test.describe('T6.6.3 Pipeline dry-run UI + SSE 串联测试', () => {
     }
   })
 
-  test('1. 打开项目页面 → Pipeline Dry Run 按钮存在', async ({ page }) => {
+  test('1. 切换到"执行" tab → Pipeline Dry Run 按钮可见', async ({ page }) => {
     await installLLMMock(page)
 
     await page.goto(`/project/${projectId}/file/${TEST_FILE_PATH}`)
     await dismissViteOverlay(page)
 
-    await page.waitForTimeout(8000)
+    // 切换到"执行" tab
+    const execTab = page.getByText('执行', { exact: true }).nth(0)
+    await expect(execTab).toBeVisible({ timeout: 20000 })
+    await execTab.click()
+    console.log('[t6.6.3] ✓ 已切换到"执行" tab')
 
-    // 验证 Pipeline Dry Run 按钮存在
+    // 验证 dev-dry-run-tools 区块可见
+    const devTools = page.getByTestId('dev-dry-run-tools')
+    await expect(devTools).toBeVisible({ timeout: 20000 })
+    console.log('[t6.6.3] ✓ dev-dry-run-tools 区块可见')
+
+    // 验证 Pipeline Dry Run 按钮可见
     const pipelineBtn = page.getByTestId('dry-run-pipeline-button')
-    await pipelineBtn.waitFor({ timeout: 15000, state: 'attached' })
-
+    await expect(pipelineBtn).toBeVisible({ timeout: 20000 })
     const buttonText = await pipelineBtn.textContent()
     expect(buttonText).toContain('Pipeline Dry Run')
-    console.log('[t6.6.3] ✓ Pipeline Dry Run 按钮存在')
+    console.log('[t6.6.3] ✓ Pipeline Dry Run 按钮可见')
   })
 
   test('2. 通过 API 调用 Pipeline dry-run → SSE 返回 done 和 dry_run 标记', async () => {
@@ -191,15 +199,17 @@ test.describe('T6.6.3 Pipeline dry-run UI + SSE 串联测试', () => {
 
     await page.goto(`/project/${projectId}/file/${TEST_FILE_PATH}`)
     await dismissViteOverlay(page)
-    await page.waitForTimeout(8000)
 
-    // 点击 Pipeline Dry Run 按钮
-    await page.evaluate(() => {
-      const btn = document.querySelector('[data-testid="dry-run-pipeline-button"]')
-      if (btn) {
-        btn.click()
-      }
-    })
+    // 切换到"执行" tab
+    const execTab = page.getByText('执行', { exact: true }).nth(0)
+    await expect(execTab).toBeVisible({ timeout: 20000 })
+    await execTab.click()
+
+    // 真实用户 click Pipeline Dry Run 按钮
+    const pipelineBtn = page.getByTestId('dry-run-pipeline-button')
+    await expect(pipelineBtn).toBeVisible({ timeout: 20000 })
+    await pipelineBtn.click()
+    console.log('[t6.6.3] ✓ 已执行真实用户 click')
 
     // 等待 SSE 处理
     await page.waitForTimeout(10000)

@@ -72,6 +72,12 @@ async function installLLMMock(page: any): Promise<void> {
   )
 }
 
+async function getCandidates(projectId: string): Promise<any[]> {
+  const resp = await fetch(`${BACKEND_API}/candidates/${projectId}`)
+  const data = await resp.json()
+  return data.candidates || []
+}
+
 test.describe('T6.5.9 前端 dry-run 测试入口 E2E', () => {
   let projectId: string
 
@@ -88,90 +94,77 @@ test.describe('T6.5.9 前端 dry-run 测试入口 E2E', () => {
     }
   })
 
-  test('1. Dry Run 按钮存在（开发模式）', async ({ page }) => {
+  test('1. 切换到"执行" tab → Dry Run 按钮可见', async ({ page }) => {
     await installLLMMock(page)
-
     await page.goto(`/project/${projectId}/file/${TEST_FILE_PATH}`)
     await dismissViteOverlay(page)
 
-    // 等待页面加载
-    await page.waitForTimeout(8000)
+    // 切换到"执行" tab（dev-tools 在该 tab 下）
+    const execTab = page.getByText('执行', { exact: true }).nth(0)
+    await expect(execTab).toBeVisible({ timeout: 20000 })
+    await execTab.click()
+    console.log('[t6.5.9] ✓ 已切换到"执行" tab')
 
-    // 查找 Dry Run 按钮（检查是否存在于 DOM 中）
+    // 验证 dev-dry-run-tools 区块可见
+    const devTools = page.getByTestId('dev-dry-run-tools')
+    await expect(devTools).toBeVisible({ timeout: 20000 })
+    console.log('[t6.5.9] ✓ dev-dry-run-tools 区块可见')
+
+    // 验证 Task Dry Run 按钮可见
     const dryRunButton = page.getByTestId('dry-run-task-button')
-    
-    // 等待按钮出现（attached 状态表示存在于 DOM 中）
-    await dryRunButton.waitFor({ timeout: 15000, state: 'attached' })
-    
-    // 验证按钮存在并包含正确文本
+    await expect(dryRunButton).toBeVisible({ timeout: 20000 })
     const buttonText = await dryRunButton.textContent()
-    expect(buttonText).toContain('Dry Run')
-    console.log('[t6.5.9] ✓ Dry Run 按钮存在')
+    expect(buttonText).toContain('Task Dry Run')
+    console.log('[t6.5.9] ✓ Task Dry Run 按钮可见')
   })
 
   test('2. 点击 Dry Run 按钮 → 任务创建成功 → 任务状态可见', async ({ page }) => {
     await installLLMMock(page)
-
     await page.goto(`/project/${projectId}/file/${TEST_FILE_PATH}`)
     await dismissViteOverlay(page)
 
-    // 等待页面加载
-    await page.waitForTimeout(8000)
+    // 切换到"执行" tab
+    const execTab = page.getByText('执行', { exact: true }).nth(0)
+    await expect(execTab).toBeVisible({ timeout: 20000 })
+    await execTab.click()
 
-    // 查找 Dry Run 按钮并点击
+    // 真实用户 click（不是 JS force click）
     const dryRunButton = page.getByTestId('dry-run-task-button')
-    await dryRunButton.waitFor({ timeout: 15000, state: 'attached' })
-    
-    // 使用 evaluate 直接调用按钮的点击事件
-    await page.evaluate(() => {
-      const btn = document.querySelector('[data-testid="dry-run-task-button"]')
-      if (btn) {
-        btn.click()
-      }
-    })
+    await expect(dryRunButton).toBeVisible({ timeout: 20000 })
+    await dryRunButton.click()
+    console.log('[t6.5.9] ✓ 已执行真实用户 click')
 
     // 等待任务创建（通过 API 验证）
     await page.waitForTimeout(5000)
 
     // 通过 API 查询任务状态
-    const taskList = await page.evaluate(async ({ apiBase }) => {
-      const resp = await fetch(`${apiBase}/tasks`)
-      const data = await resp.json()
-      return data.data?.tasks || []
-    }, { apiBase: BACKEND_API })
+    const resp = await fetch(`${BACKEND_API}/tasks`)
+    const data = await resp.json()
+    const taskList = data.data?.tasks || []
 
-    // 验证有任务存在
     expect(taskList.length).toBeGreaterThan(0)
     console.log(`[t6.5.9] ✓ 任务列表包含 ${taskList.length} 个任务`)
-
-    // 检查是否有 dry-run 任务
-    const dryRunTasks = taskList.filter((t: any) => t.task_id?.includes('dry') || t.template?.includes('dry'))
-    if (dryRunTasks.length > 0) {
-      console.log('[t6.5.9] ✓ 找到 dry-run 任务')
-    }
   })
 
   test('3. Dry Run 任务完成后 → 正文未被覆盖', async ({ page }) => {
     await installLLMMock(page)
-
     await page.goto(`/project/${projectId}/file/${TEST_FILE_PATH}`)
     await dismissViteOverlay(page)
 
-    // 等待页面加载
-    await page.waitForTimeout(5000)
+    // 切换到"执行" tab
+    const execTab = page.getByText('执行', { exact: true }).nth(0)
+    await expect(execTab).toBeVisible({ timeout: 20000 })
+    await execTab.click()
 
-    // 通过 evaluate 点击按钮
-    await page.evaluate(() => {
-      const btn = document.querySelector('[data-testid="dry-run-task-button"]')
-      if (btn) {
-        btn.click()
-      }
-    })
+    // 真实用户 click
+    const dryRunButton = page.getByTestId('dry-run-task-button')
+    await expect(dryRunButton).toBeVisible({ timeout: 20000 })
+    await dryRunButton.click()
 
     // 等待任务完成
     await page.waitForTimeout(8000)
 
-    // 验证文件内容未变（直接通过 API）
+    // 验证文件内容未变
     const content = await getFile(projectId, TEST_FILE_PATH)
     expect(content).toBe(INITIAL_CONTENT)
     console.log('[t6.5.9] ✓ 正文未被覆盖')
@@ -179,36 +172,26 @@ test.describe('T6.5.9 前端 dry-run 测试入口 E2E', () => {
 
   test('4. Dry Run 不生成正式 candidate', async ({ page }) => {
     await installLLMMock(page)
-
     await page.goto(`/project/${projectId}/file/${TEST_FILE_PATH}`)
     await dismissViteOverlay(page)
 
-    // 等待页面加载
-    await page.waitForTimeout(5000)
+    // 切换到"执行" tab
+    const execTab = page.getByText('执行', { exact: true }).nth(0)
+    await expect(execTab).toBeVisible({ timeout: 20000 })
+    await execTab.click()
 
-    // 通过 evaluate 点击按钮
-    await page.evaluate(() => {
-      const btn = document.querySelector('[data-testid="dry-run-task-button"]')
-      if (btn) {
-        btn.click()
-      }
-    })
+    // 真实用户 click
+    const dryRunButton = page.getByTestId('dry-run-task-button')
+    await expect(dryRunButton).toBeVisible({ timeout: 20000 })
+    await dryRunButton.click()
 
     // 等待任务完成
     await page.waitForTimeout(5000)
 
     // 验证没有生成 candidate
-    const candidatesResp = await page.evaluate(async ({ pid, apiBase }) => {
-      const resp = await fetch(`${apiBase}/candidates?project_id=${pid}`)
-      return resp.json()
-    }, { pid: projectId, apiBase: BACKEND_API })
-
-    if (candidatesResp.success && candidatesResp.data?.candidates) {
-      const newCandidates = candidatesResp.data.candidates.filter((c: any) =>
-        c.source_path === TEST_FILE_PATH
-      )
-      expect(newCandidates.length).toBe(0)
-      console.log('[t6.5.9] ✓ 未生成正式 candidate')
-    }
+    const candidates = await getCandidates(projectId)
+    const sourceCandidates = candidates.filter((c: any) => c.source_path === TEST_FILE_PATH)
+    expect(sourceCandidates.length).toBe(0)
+    console.log('[t6.5.9] ✓ 未生成正式 candidate')
   })
 })

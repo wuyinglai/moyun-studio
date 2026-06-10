@@ -21,39 +21,6 @@
         >
           <i class="fa-solid fa-trash-can" />
         </button>
-        <!-- 开发模式测试入口 -->
-        <button
-          v-if="isDevMode"
-          data-testid="dry-run-task-button"
-          class="btn-dry-run"
-          title="Dry Run 测试"
-          @click="handleDryRunTask"
-        >
-          <i class="fa-solid fa-flask-vial" />
-          Dry Run
-        </button>
-        <!-- Pipeline Dry Run 测试入口 -->
-        <button
-          v-if="isDevMode"
-          data-testid="dry-run-pipeline-button"
-          class="btn-dry-run btn-pipeline"
-          title="Pipeline Dry Run 测试"
-          @click="handleDryRunPipeline"
-        >
-          <i class="fa-solid fa-pipe-section" />
-          Pipeline Dry Run
-        </button>
-        <!-- Batch Dry Run 测试入口 -->
-        <button
-          v-if="isDevMode"
-          data-testid="dry-run-batch-button"
-          class="btn-dry-run btn-batch"
-          title="Batch Dry Run 测试"
-          @click="handleDryRunBatch"
-        >
-          <i class="fa-solid fa-list-ul" />
-          Batch Dry Run
-        </button>
       </div>
 
       <div
@@ -102,6 +69,46 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 开发测试工具区（仅 dev/test 可见） -->
+    <div
+      v-if="isDevMode"
+      class="dev-tools"
+      data-testid="dev-dry-run-tools"
+    >
+      <div class="dev-tools-header">
+        <span class="dev-tools-title">开发测试工具</span>
+      </div>
+      <div class="dev-actions">
+        <button
+          data-testid="dry-run-task-button"
+          class="btn-dry-run"
+          title="TaskQueue Dry Run 测试"
+          @click="handleDryRunTask"
+        >
+          <i class="fa-solid fa-flask-vial" />
+          Task Dry Run
+        </button>
+        <button
+          data-testid="dry-run-pipeline-button"
+          class="btn-dry-run btn-pipeline"
+          title="Pipeline Dry Run 测试"
+          @click="handleDryRunPipeline"
+        >
+          <i class="fa-solid fa-pipe-section" />
+          Pipeline Dry Run
+        </button>
+        <button
+          data-testid="dry-run-batch-button"
+          class="btn-dry-run btn-batch"
+          title="Batch Dry Run 测试"
+          @click="handleDryRunBatch"
+        >
+          <i class="fa-solid fa-list-ul" />
+          Batch Dry Run
+        </button>
       </div>
     </div>
 
@@ -715,6 +722,37 @@ async function handleDryRunBatch() {
 .btn-batch {
   background: #10b981; // green
   margin-left: 4px;
+}
+
+.dev-tools {
+  padding: 12px 16px;
+  border-top: 1px dashed var(--border-color);
+  background: var(--ink-deep);
+}
+
+.dev-tools-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.dev-tools-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-warning);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dev-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  .btn-dry-run {
+    flex-shrink: 0;
+    margin-left: 0; // reset .btn-pipeline/.btn-batch margin
+  }
 }
 
 .log-list {
