@@ -43,6 +43,17 @@
           <i class="fa-solid fa-pipe-section" />
           Pipeline Dry Run
         </button>
+        <!-- Batch Dry Run 测试入口 -->
+        <button
+          v-if="isDevMode"
+          data-testid="dry-run-batch-button"
+          class="btn-dry-run btn-batch"
+          title="Batch Dry Run 测试"
+          @click="handleDryRunBatch"
+        >
+          <i class="fa-solid fa-list-ul" />
+          Batch Dry Run
+        </button>
       </div>
 
       <div
@@ -365,6 +376,58 @@ async function handleDryRunPipeline() {
     console.error('Pipeline Dry Run error:', error)
   }
 }
+
+// ─── Batch Dry Run 测试入口 ───────────────────────
+async function handleDryRunBatch() {
+  try {
+    const projectId = route.params.projectId as string
+    if (!projectId) {
+      notification.error('未找到项目 ID')
+      return
+    }
+
+    taskStore.addLog('info', '[Batch Dry Run] 开始执行...')
+
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/generate/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: projectId,
+        volume_number: 1,
+        chapter_number: 1,
+        section_numbers: [1, 2],
+        prompt_type: 'generate/chapter',
+        dry_run: true,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok || !data?.success) {
+      taskStore.addLog('error', `[Batch Dry Run] 请求失败: ${data?.message || response.status}`)
+      notification.error('Batch Dry Run 请求失败')
+      return
+    }
+
+    const result = data.data
+    const total = result.total
+    const succeeded = result.succeeded
+
+    // 检查是否所有项都是 dry_run
+    const allDryRun = (result.tasks || []).every((t: any) => t.dry_run === true)
+    if (allDryRun) {
+      notification.success(`Batch Dry Run 完成! ${succeeded}/${total} 项`)
+      taskStore.addLog('success', `[Batch Dry Run] 完成! dry_run=true, ${succeeded}/${total} 项`)
+    } else {
+      notification.warning(`Batch Dry Run 完成，但部分项未标记 dry_run`)
+      taskStore.addLog('warning', `[Batch Dry Run] 部分项未标记 dry_run`)
+    }
+  } catch (error) {
+    notification.error('Batch Dry Run 执行失败')
+    taskStore.addLog('error', `[Batch Dry Run] 执行失败: ${error}`)
+    console.error('Batch Dry Run error:', error)
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -645,6 +708,11 @@ async function handleDryRunPipeline() {
 
 .btn-pipeline {
   background: #8b5cf6; // purple
+  margin-left: 4px;
+}
+
+.btn-batch {
+  background: #10b981; // green
   margin-left: 4px;
 }
 

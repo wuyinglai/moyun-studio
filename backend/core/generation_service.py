@@ -271,6 +271,7 @@ class GenerationService:
         chapter_number: int | None,
         section_numbers: list[int] | None,
         temperature: float = 0.8,
+        dry_run: bool = False,
     ) -> BatchGenerateResponse:
         """批量生成场景正文（sec = 单场景，默认800字，每章5场景）"""
         project_dir = self.settings.projects_path / project_id
@@ -390,6 +391,18 @@ class GenerationService:
                 messages = [{"role": "user", "content": prompt_text}]
                 # 场景级 max_tokens：单场景目标800字，约2500 tokens
                 max_output_tokens = 2500
+
+                if dry_run:
+                    # Dry-run：不调用真实 LLM，不写文件，不生成 candidate
+                    generated = "[DRY-RUN] simulated batch generation result"
+                    logger.info("[Batch dry-run] 模拟生成: %s", tgt["target_rel_path"])
+                    item.status = "dry_run"
+                    item.dry_run = True
+                    item.dry_run_content = generated
+                    tasks.append(item)
+                    succeeded += 1
+                    continue
+
                 generated = await svc.complete_sync(
                     messages, temperature=temperature, max_tokens=max_output_tokens, timeout=180
                 )

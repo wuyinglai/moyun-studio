@@ -61,11 +61,13 @@ class ChatRequest(BaseModel):
 class BatchGenerateItem(BaseModel):
     """批量生成中的单个任务"""
     target_file: str
-    status: str = "pending"  # pending | success | error | candidate | skipped
+    status: str = "pending"  # pending | success | error | candidate | skipped | dry_run
     word_count: int = 0
     error: str | None = None
     prompt: str = ""  # 渲染后的 prompt 文本（用于前端右侧面板展示）
     candidate_id: str | None = None  # 如果状态为 candidate，存储候选稿 ID
+    dry_run: bool = False  # 是否为 dry-run 模拟结果
+    dry_run_content: str = ""  # dry-run 模拟生成的内容
 
 
 class BatchGenerateResponse(BaseModel):
@@ -84,3 +86,4 @@ class BatchGenerateRequest(BaseModel):
     section_numbers: list[int] | None = Field(default=None, description="节号列表，不指定则全部节")
     prompt_type: str = Field(default="generate/chapter", description="Prompt 模板类型")
     temperature: float = Field(default=0.7, ge=0, le=2, description="生成温度")
+    dry_run: bool = Field(default=False, description="Dry-run 模式：不调用真实 LLM，不覆盖正文，不生成候选稿")

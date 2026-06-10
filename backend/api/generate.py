@@ -78,10 +78,17 @@ async def batch_generate(
         chapter_number=req.chapter_number,
         section_numbers=req.section_numbers,
         temperature=req.temperature,
+        dry_run=req.dry_run,
     )
 
     if result.total == 0:
         return ApiResponse.ok(result, message="未找到匹配的生成目标")
+
+    if req.dry_run:
+        return ApiResponse.ok(
+            result,
+            message=f"批量 dry-run 完成：{result.succeeded} 项模拟生成",
+        )
 
     return ApiResponse.ok(
         result,
