@@ -9,6 +9,7 @@
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v1.0 | 2026-06-10 | 初始版本 |
+| v1.1 | 2026-06-10 | 标记 T6.7.5 完成，补充 Batch 架构评估交付物 |
 
 ---
 
@@ -105,19 +106,27 @@ T6.7 目标不是新增大功能，而是把 T6.6 dry-run 验收暴露出的产�
 
 ---
 
-### T6.7.5：Batch 与 TaskQueue/Pipeline 架构关系评估
+### T6.7.5：Batch 与 TaskQueue/Pipeline 架构关系评估 ✅
 
 **优先级**：P1
+**状态**：已完成
+
 **目标**：评估 Batch 是否应接入 TaskQueue，是否应发布任务事件，是否应统一 candidate 策略。
 
-具体：
-- 梳理 Batch 当前架构（`backend/core/generation_service.py` / `backend/api/generate.py`）
+**完成内容**：
+- 梳理 Batch 当前架构（同步执行，不经过 TaskQueue，不发布 SSE 事件）
 - 对比 TaskQueue / Pipeline 的任务调度模型
-- 输出评估报告，结论可能是：
-  - Batch 保持独立（设计如此）
-  - Batch 应接入 TaskQueue（需较大改动）
-  - Batch 应部分复用 TaskQueue 能力（如 candidate 策略）
-- **本任务只做评估，不做实现**
+- 输出完整架构评估报告，明确不做本轮接入
+- 推荐分 6 Phase 演进（A 现状文档化 → F 真实 LLM 冒烟）
+
+**交付物**：
+- [docs/architecture/t6-7-5-batch-architecture-assessment.md](../architecture/t6-7-5-batch-architecture-assessment.md)
+
+**结论**：Batch 与 TaskQueue 架构保持独立，T6.7 不做大改动。
+
+**建议后续**：
+- T6.7.5a：Batch result schema contract 加固（可选，P2）
+- T6.7.6：真实 LLM 冒烟测试准备检查（P1）
 
 ---
 
