@@ -165,7 +165,7 @@ async def _bridge_events_to_sse(event_bus: EventBus, sse_manager) -> None:
         "file.updated": "file-updated",  # AI_GUARDRAIL_ALLOW: event name mapping
         "file.deleted": "file-deleted",
         "candidate.created": "file-created",
-        "candidate.adopted": "file-updated",
+        "candidate.adopted": "candidate-adopted",
         "pipeline.started": "task",
         "pipeline.step.started": "task",
         "pipeline.step.completed": "task",
