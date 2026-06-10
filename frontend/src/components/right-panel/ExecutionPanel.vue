@@ -32,6 +32,17 @@
           <i class="fa-solid fa-flask-vial" />
           Dry Run
         </button>
+        <!-- Pipeline Dry Run 测试入口 -->
+        <button
+          v-if="isDevMode"
+          data-testid="dry-run-pipeline-button"
+          class="btn-dry-run btn-pipeline"
+          title="Pipeline Dry Run 测试"
+          @click="handleDryRunPipeline"
+        >
+          <i class="fa-solid fa-pipe-section" />
+          Pipeline Dry Run
+        </button>
       </div>
 
       <div
@@ -262,6 +273,96 @@ async function handleDryRunTask() {
     notification.error('Dry Run 任务提交失败')
     taskStore.addLog('error', '[Dry Run] 任务提交失败')
     console.error('Dry Run error:', error)
+  }
+}
+
+// ─── Pipeline Dry Run 测试入口 ────────────────────
+
+async function handleDryRunPipeline() {
+  try {
+    const projectId = route.params.projectId as string
+    if (!projectId) {
+      notification.error('未找到项目 ID')
+      return
+    }
+
+    taskStore.addLog('info', '[Pipeline Dry Run] 开始执行...')
+
+    // 使用当前打开的文件路径，如果没有则使用默认测试路径
+    const targetFile = (route.query.file as string) || 'chapters/vol-01/ch-001/sec-001.md'
+
+    // 监听 SSE 流
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/pipeline/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pipeline: 'polish',
+        project_id: projectId,
+        target_file: targetFile,
+        dry_run: true,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      taskStore.addLog('error', `[Pipeline Dry Run] 请求失败: ${response.status} ${errorText}`)
+      notification.error('Pipeline Dry Run 请求失败')
+      return
+    }
+
+    // 读取 SSE 流
+    const reader = response.body?.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let done = false
+    let receivedDone = false
+    let isDryRun = false
+
+    while (!done) {
+      const { value, done: streamDone } = await reader!.read()
+      done = streamDone
+      if (value) {
+        buffer += decoder.decode(value, { stream: !done })
+      }
+
+      // 处理 SSE 数据
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6))
+            const event = data.event || data.type
+
+            if (event === 'done') {
+              receivedDone = true
+              isDryRun = data.dry_run === true
+              taskStore.addLog('success', `[Pipeline Dry Run] 完成! dry_run=${isDryRun}`)
+            } else if (event === 'generation') {
+              taskStore.addLog('info', `[Pipeline] generation: dry_run=${data.dry_run || false}`)
+            } else if (event === 'error') {
+              taskStore.addLog('error', `[Pipeline] 错误: ${data.message}`)
+            } else {
+              taskStore.addLog('info', `[Pipeline] ${event}`)
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+      }
+    }
+
+    if (receivedDone) {
+      notification.success(`Pipeline Dry Run 完成! dry_run=${isDryRun}`)
+    } else {
+      notification.warning('Pipeline Dry Run 未收到 done 事件')
+      taskStore.addLog('warning', '[Pipeline Dry Run] 未收到 done 事件')
+    }
+  } catch (error) {
+    notification.error('Pipeline Dry Run 执行失败')
+    taskStore.addLog('error', `[Pipeline Dry Run] 执行失败: ${error}`)
+    console.error('Pipeline Dry Run error:', error)
   }
 }
 </script>
@@ -540,6 +641,11 @@ async function handleDryRunTask() {
   i {
     font-size: 10px;
   }
+}
+
+.btn-pipeline {
+  background: #8b5cf6; // purple
+  margin-left: 4px;
 }
 
 .log-list {
