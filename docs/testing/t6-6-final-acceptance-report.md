@@ -158,7 +158,14 @@
 
 ---
 
-## 七、最终声明
+## 七、后续路线
+
+- **T6.7 — 产品化修复 / UI 清理**：见 [docs/roadmap/t6-7-productization-roadmap.md](../roadmap/t6-7-productization-roadmap.md)
+- **T6.6.5（执行）— 真实 LLM 隔离冒烟测试**：需显式 `MOYUN_ALLOW_REAL_LLM_SMOKE=1`，按 [t6-6-5-real-llm-smoke-plan.md](./t6-6-5-real-llm-smoke-plan.md) checklist 执行
+
+---
+
+## 八、最终声明
 
 **T6.6 Professional 主流程 dry-run 总验收 — 阶段性通过。**
 

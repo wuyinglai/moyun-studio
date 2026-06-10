@@ -2,6 +2,10 @@
 
 ## v0.1.x — Stabilization & Documentation
 
+- [x] **T6.6 — Professional 主流程 dry-run 总验收**（TaskQueue / Pipeline / Batch 三条 dry-run 链路 + Candidate + 安全边界）
+- [x] **T6.6.5-plan — 真实 LLM 隔离冒烟测试方案**
+- [x] **T6.7 — 产品化修复 / UI 清理**（路线图见 [docs/roadmap/t6-7-productization-roadmap.md](docs/roadmap/t6-7-productization-roadmap.md)）
+
 - [x] v0.1.0 — Initial release with core features
 - [x] v0.1.1 — Documentation and onboarding improvements
 - [ ] Improve demo novel project with richer content
