@@ -10,6 +10,7 @@
 |------|------|------|
 | v1.0 | 2026-06-10 | 初始版本 |
 | v1.1 | 2026-06-10 | 标记 T6.7.5 完成，补充 Batch 架构评估交付物 |
+| v1.2 | 2026-06-11 | 标记 T6.7.6 完成，补充真实 LLM 冒烟准备检查文档和骨架 |
 
 ---
 
@@ -130,17 +131,30 @@ T6.7 目标不是新增大功能，而是把 T6.6 dry-run 验收暴露出的产�
 
 ---
 
-### T6.7.6：真实 LLM 冒烟测试执行准备
+### T6.7.6：真实 LLM 冒烟测试准备检查 ✅
 
 **优先级**：P1（前置条件）
+**状态**：已完成
+
 **目标**：检查 `MOYUN_ALLOW_REAL_LLM_SMOKE=1` 开关、隔离项目、max_tokens、日志脱敏。
 
-具体：
-- 确认环境变量 / 开关机制存在且有效
-- 确认 `__llm_smoke_t6_6_5` 项目命名规范
-- 确认 max_tokens <= 300 限制在 API 层生效
-- 确认 API Key 不出现在日志（检查 backend 日志配置）
-- 准备 checklist（见 [T6.6.5 真实 LLM 冒烟测试方案](../testing/t6-6-5-real-llm-smoke-plan.md)）
+**完成内容**：
+- 完成 12 项静态分析，识别当前真实 LLM 调用入口和护栏现状
+- 确认 `MOYUN_ALLOW_REAL_LLM_SMOKE=1` 只存在于 T6.6.5 方案文档，代码中无读取逻辑（⚠️ 需在 T6.7.6a 新增后端 gate）
+- 确认 Batch 真实 LLM 已明确禁止（dry_run 参数 + 文档约定）
+- 确认 adopt 冲突保护已实现（expected_mtime / expected_hash）
+- 新增 `docs/testing/t6-7-6-real-llm-smoke-readiness-check.md` 准备检查文档
+- 新增 `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 骨架，默认 skip（未开开关时跳过）
+
+**交付物**：
+- [docs/testing/t6-7-6-real-llm-smoke-readiness-check.md](../testing/t6-7-6-real-llm-smoke-readiness-check.md)
+- [frontend/tests/e2e/30-real-llm-smoke.spec.ts](../../frontend/tests/e2e/30-real-llm-smoke.spec.ts)
+
+**结论**：当前代码差距 = 后端无环境变量 gate + 无 smoke 专用 max_tokens 限制。T6.7.6a 补充后端 gate 后方可执行真实 LLM 冒烟。
+
+**建议后续**：
+- T6.7.6a：新增后端 gate（`allow_real_llm_smoke`）+ E2E 骨架完善
+- T6.8.0：用户显式确认后执行真实 LLM 隔离冒烟
 
 **不改动**：不在本任务执行真实 LLM 调用
 
