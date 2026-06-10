@@ -21,6 +21,10 @@ from backend.core.file_ops import FileService
 from backend.core.generation_service import GenerationService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
+from backend.core.smoke_gate import (
+    check_batch_real_llm_smoke_gate,
+    check_real_llm_smoke_gate,
+)
 from backend.schemas.common import ApiResponse
 from backend.schemas.llm import (
     BatchGenerateRequest,
@@ -40,6 +44,12 @@ async def generate(
     settings: Settings = Depends(get_settings),
 ):
     """LLM 生成任务（流式输出，SSE 格式）"""
+    # smoke gate：smoke 隔离项目真实生成必须开启开关
+    # GenerateRequest 当前没有 dry_run 字段，隐含 dry_run=False
+    gate_err = check_real_llm_smoke_gate(settings, req.project_id, dry_run=False)
+    if gate_err is not None:
+        return gate_err
+
     svc = GenerationService(settings)
 
     async def _stream() -> AsyncGenerator[dict, None]:
@@ -70,6 +80,11 @@ async def batch_generate(
     settings: Settings = Depends(get_settings),
 ):
     """批量生成章节内容"""
+    # smoke gate：Batch 永远不允许真实 LLM smoke（批量风险高）
+    gate_err = check_batch_real_llm_smoke_gate(settings, req.project_id, dry_run=req.dry_run)
+    if gate_err is not None:
+        return gate_err
+
     svc = GenerationService(settings)
     result = await svc.batch_generate(
         project_id=req.project_id,
@@ -103,6 +118,12 @@ async def chat(
     settings: Settings = Depends(get_settings),
 ):
     """聊天对话（流式SSE），使用 chat 管线"""
+
+    # smoke gate：chat 入口无 dry_run 字段（隐含 dry_run=False）
+    # 对 __llm_smoke_* 项目真实调用同样需要显式开启开关
+    gate_err = check_real_llm_smoke_gate(settings, req.project_id, dry_run=False)
+    if gate_err is not None:
+        return gate_err
 
     async def _stream() -> AsyncGenerator[dict, None]:
         logger.info("开始聊天任务", extra={"project_id": req.project_id, "message_length": len(req.message)})

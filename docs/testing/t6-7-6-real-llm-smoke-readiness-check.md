@@ -3,12 +3,22 @@
 > **任务性质**：准备检查文档，**不执行真实 LLM 调用**。不调用真实 LLM，不使用 API Key，不执行真实生成。
 >
 > **前置基线**：T6.6（完整 dry-run 验收 + T6.6.5 方案文档）、T6.7.5a（Batch result schema contract 加固）已完成。
+>
+> **更新**：T6.7.6a 已补齐后端 gate（`backend/core/smoke_gate.py` + `config.py` 新字段 + `generate.py`/`pipeline.py` gate），并新增 `test_t6_7_6a_real_llm_smoke_gate_contract.py` 15 项 contract 测试，以及 `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 默认 skip 骨架。
 
 ---
 
 ## 一、当前结论
 
 **T6.7.6 只做准备检查，不执行真实 LLM。**
+
+**T6.7.6a 已补齐后端 gate。** 当前真实 LLM 冒烟调用路径上：
+- `POST /api/generate` → `check_real_llm_smoke_gate()`
+- `POST /api/generate/batch` → `check_batch_real_llm_smoke_gate()`（永远拒绝真实 smoke）
+- `POST /api/chat` → `check_real_llm_smoke_gate()`
+- `POST /api/pipeline/run` → `check_real_llm_smoke_gate()`
+
+仅当 `project_id.startswith("__llm_smoke_")` 且 `dry_run=False` 时，gate 才介入；非 smoke 项目和 dry-run 完全不受影响。
 
 本任务完成了对以下内容的静态分析：
 - 当前真实 LLM 调用入口（generate / batch）
@@ -27,20 +37,20 @@
 
 | # | 规则 | 当前状态 | 说明 |
 |---|------|---------|------|
-| 1 | 显式开关 `MOYUN_ALLOW_REAL_LLM_SMOKE=1` | ⚠️ **仅存在于文档** | 代码中无任何读取逻辑；后端 `config.py` 无此字段；需在 T6.7.6a 新增 |
-| 2 | 默认跳过（未开开关时测试 skip） | ⚠️ **无测试骨架** | `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 不存在；需在 T6.7.6a 新增 |
-| 3 | 测试项目命名 `__llm_smoke_t6_6_5` | ✅ **已约定在文档中** | E2E 测试用 `__e2e_*` 前缀；`__llm_smoke_*` 仅为方案约定，无代码强制 |
-| 4 | 测试文件 `chapters/vol-01/ch-001/sec-001.md` | ✅ **已约定在方案中** | 需在 T6.7.6a 测试骨架中显式创建 |
-| 5 | max_tokens <= 300 | ⚠️ **无 smoke 专用限制** | 后端默认 `llm_max_tokens=16000`；Batch 生成硬编码 2500；无 smoke <=300 限制 |
-| 6 | 只允许单场景生成 | ✅ **方案已明确** | T6.6.5 方案限制只测单场景 |
-| 7 | 不允许 Batch 真实 LLM | ✅ **已明确** | T6.6.5/T6.7.5 方案均明确禁止；`generation_service.py` 中 dry_run=True 时跳过 LLM |
+| 1 | 显式开关 `MOYUN_ALLOW_REAL_LLM_SMOKE=1` | ✅ **T6.7.6a 已补齐** | `backend/config.py` 新增 `allow_real_llm_smoke: bool = False`；`.env.example` 已更新 |
+| 2 | 默认跳过（未开开关时测试 skip） | ✅ **T6.7.6a 已补齐** | `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 已新增；`process.env.MOYUN_ALLOW_REAL_LLM_SMOKE` 未设置时 skip |
+| 3 | 测试项目命名 `__llm_smoke_t6_6_5` | ✅ **已约定在文档 + 代码强制** | `backend/core/smoke_gate.py` 中 `is_llm_smoke_project()` 强制前缀 `__llm_smoke_` |
+| 4 | 测试文件 `chapters/vol-01/ch-001/sec-001.md` | ✅ **已约定在方案中** | 需在 T6.8.0 真实冒烟中显式创建 |
+| 5 | max_tokens <= 300 | ✅ **T6.7.6a 已补齐** | `backend/config.py` 新增 `llm_smoke_max_tokens: int = 300`，范围 1-1024 |
+| 6 | 只允许单场景生成 | ✅ **方案已明确** | T6.6.5 方案限制只测单场景；Batch 永远拒绝真实 smoke |
+| 7 | 不允许 Batch 真实 LLM | ✅ **已明确** | `check_batch_real_llm_smoke_gate()` 对 smoke + dry_run=False 永远拒绝 |
 | 8 | 不允许自动覆盖正文 | ⚠️ **有条件保护** | 当 `should_create_candidate()` 返回 False 时会直接写文件（无冲突保护）；需确保测试文件有内容 |
 | 9 | 只允许生成 candidate | ✅ **有条件保护** | `should_create_candidate()` 对 rewrite/continue 等模式返回 True；需确保测试文件非空 |
 | 10 | adopt 必须人工或测试显式确认 | ✅ **已有 adopt API** | adopt 有 expected_mtime/expected_hash 冲突检测；失败时 candidate.adopted 不更新 |
 | 11 | adopt 前带冲突保护 | ✅ **已实现** | candidate adopt API 层检查冲突，返回 409 |
-| 12 | API Key 不写日志 | ⚠️ **部分风险** | litellm 内部可能打印请求；`llm.py` 中 `logger.error(f"LLM 未知错误 [{error_type}]: {e}")` 若异常含 Key 上下文则泄露 |
+| 12 | API Key 不写日志 | ⚠️ **部分风险** | litellm 内部可能打印请求；`llm.py` 中 `logger.error` 异常消息不含明文 key |
 | 13 | 失败后不得继续 adopt | ✅ **API 层保证** | adopt 失败时 HTTP 状态非 200，前端不应继续 |
-| 14 | 测试后必须清理 | ⚠️ **需在骨架中实现** | E2E 测试骨架需在 `afterAll` 中调用 delete project API |
+| 14 | 测试后必须清理 | ✅ **E2E 骨架已实现** | `30-real-llm-smoke.spec.ts` afterAll delete project |
 
 ---
 

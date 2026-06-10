@@ -59,6 +59,16 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="温度")
     llm_thinking: bool = Field(default=False, description="是否启用思考模式")
     llm_reasoning_format: str | None = Field(default=None, description="推理内容格式（如 'none' 用于将推理合并到 content）")
+    allow_real_llm_smoke: bool = Field(
+        default=False,
+        description="是否允许真实 LLM 冒烟测试（默认 False；仅 __llm_smoke_* 隔离项目参与）",
+    )
+    llm_smoke_max_tokens: int = Field(
+        default=300,
+        ge=1,
+        le=1024,
+        description="真实 LLM 冒烟测试专用 max_tokens 上限（默认 300；范围 1-1024）",
+    )
 
     # ─── 快照配置 ───────────────────────────────────────────────
     snapshot_max_versions: int = Field(default=20, description="最多保留版本数")

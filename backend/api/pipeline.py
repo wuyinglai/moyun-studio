@@ -20,6 +20,7 @@ from backend.config import Settings, get_settings
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
 from backend.core.pipeline import PipelineError, PipelineRunner
+from backend.core.smoke_gate import check_real_llm_smoke_gate
 from backend.core.trash import TrashService
 from backend.domain.events import make_pipeline_started_event
 from backend.schemas.common import ApiResponse
@@ -40,6 +41,11 @@ async def run_pipeline(
     settings: Settings = Depends(get_settings),
 ):
     """运行管线（流式 SSE）"""
+    # smoke gate：对 __llm_smoke_* 项目若 dry_run=False 需显式开关
+    gate_err = check_real_llm_smoke_gate(settings, req.project_id, dry_run=req.dry_run)
+    if gate_err is not None:
+        return gate_err
+
     event_bus = getattr(request.app.state, "event_bus", None)
 
     # 验证项目存在
