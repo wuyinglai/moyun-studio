@@ -324,6 +324,7 @@ class PipelineRunner:
         require_candidate: bool = False,
         action: str | None = None,
         scene_plan: ScenePlan | dict | None = None,
+        dry_run: bool = False,
     ) -> AsyncGenerator[dict, None]:
         """执行管线
 
@@ -520,22 +521,32 @@ class PipelineRunner:
 
                 # 通过 executor registry 执行步骤
                 executor = self.executor_registry.get_executor(step)
-                result = await executor.execute(
-                    step=step,
-                    context=pipeline_context,
-                    prompt_text=prompt_text,
-                    llm_service=self.llm_service,
-                    file_service=self.file_service,
-                    stop_event=stop_event,
-                    llm_extra_kwargs=llm_extra_kwargs,
-                )
+                if dry_run:
+                    step_output = f"[DRY-RUN] simulated output for step {step.id}"
+                    step_outputs[step.id] = step_output
+                    yield {"event": "generation", "data": json.dumps({
+                        "step_id": step.id,
+                        "task_id": task_id,
+                        "dry_run": True,
+                        "content": step_output,
+                    })}
+                else:
+                    result = await executor.execute(
+                        step=step,
+                        context=pipeline_context,
+                        prompt_text=prompt_text,
+                        llm_service=self.llm_service,
+                        file_service=self.file_service,
+                        stop_event=stop_event,
+                        llm_extra_kwargs=llm_extra_kwargs,
+                    )
 
-                # 发送执行器产生的事件
-                for event in result.events:
-                    yield event
+                    # 发送执行器产生的事件
+                    for event in result.events:
+                        yield event
 
-                step_output = result.output
-                step_outputs[step.id] = step_output
+                    step_output = result.output
+                    step_outputs[step.id] = step_output
 
                 # context 步骤完成后缓存到内存，同章后续 sec 复用
                 if step.id == "context" and target_file:
@@ -547,7 +558,7 @@ class PipelineRunner:
                         self._context_cache[cache_key] = step_output
 
                 # 如果步骤指定了 output 路径且执行器未处理，使用 FileOutputExecutor
-                if step.output and step_output and not result.candidate_id:
+                if not dry_run and step.output and step_output and not result.candidate_id:
                     file_executor = self.executor_registry.get_executor_by_name("file_output")
                     if file_executor:
                         # 更新上下文中的 step_outputs
@@ -630,7 +641,7 @@ class PipelineRunner:
         frontmatter = None
         candidate_id = None
 
-        if final_output and target_file:
+        if final_output and target_file and not dry_run:
             try:
                 orig, fm, _ = await self.file_service.read_file(f"{project_id}/{target_file}")
                 original_content = orig
@@ -689,13 +700,22 @@ class PipelineRunner:
                 # dimension_file 模式：各步骤已通过 step.output 写入各自文件
                 # 不覆写目标文件（如正文章节），跳过 final write
                 pass
+        elif final_output and target_file and dry_run:
+            yield {"event": "dry_run", "data": json.dumps({
+                "task_id": task_id,
+                "would_write_file": True,
+                "would_create_candidate": bool(target_file),
+                "output_mode": output_mode,
+                "target_file": target_file,
+                "final_output_len": len(final_output),
+            })}
 
         # 生成完成后自动更新 story-state 和 recent-context
-        if target_file and final_output and not candidate_id:
+        if target_file and final_output and not candidate_id and not dry_run:
             await self._update_after_generation(project_id, target_file, final_output, original_content)
 
         # 内容有变化时生成 AI 修改摘要
-        if original_content and final_output and final_output != original_content:
+        if original_content and final_output and final_output != original_content and not dry_run:
             try:
                 summary = await self._generate_diff_summary(
                     project_id, target_file, original_content, final_output, task_id
@@ -712,13 +732,14 @@ class PipelineRunner:
                 logger.warning("生成修改摘要失败: %s", e)
 
         logger.info(
-            "管线执行完成: %s (steps=%d, final_output_len=%d)",
-            pipeline_name, total_steps, len(final_output),
+            "管线执行完成: %s (steps=%d, final_output_len=%d, dry_run=%s)",
+            pipeline_name, total_steps, len(final_output), dry_run,
         )
 
         yield {"event": "done", "data": json.dumps({
             "task_id": task_id,
             "message": "管线执行完成",
+            "dry_run": dry_run,
         })}
 
     async def _normalize_output_mode(

@@ -28,6 +28,7 @@ class TaskSubmitRequest(BaseModel):
     target_file: str | None = Field(default=None, description="生成结果写入的目标文件")
     variables: dict = Field(default_factory=dict, description="模板变量")
     frontmatter: dict | None = Field(default=None, description="写入文件的 frontmatter 元数据")
+    dry_run: bool = Field(default=False, description="是否 dry-run：不调用 LLM，不写入文件，返回模拟结果")
 
 
 def _get_queue(request):
@@ -51,6 +52,7 @@ async def submit_task(
         "target_file": req.target_file,
         "variables": req.variables,
         "frontmatter": req.frontmatter,
+        "dry_run": req.dry_run,
     }
 
     task_id = await task_queue.enqueue(task_data)

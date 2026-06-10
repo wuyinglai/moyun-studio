@@ -66,6 +66,22 @@ class TaskExecutor:
             if token_count > 128000:
                 raise ContextLengthError(token_count, 128000)
 
+            if task.get("dry_run"):
+                result = {
+                    "task_id": task_id,
+                    "dry_run": True,
+                    "content": "[DRY-RUN] simulated generation result",
+                    "would_call_llm": True,
+                    "would_write_file": bool(task.get("target_file")),
+                    "token_count": token_count,
+                    "target_file": task.get("target_file"),
+                }
+                await self.event_bus.publish("task:completed", {
+                    "task_id": task_id,
+                    "result": result,
+                })
+                return result
+
             generated_content = await self._generate_content(
                 rendered_prompt,
                 task.get("model")

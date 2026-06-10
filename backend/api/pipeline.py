@@ -75,6 +75,7 @@ async def run_pipeline(
                 output_mode=req.output_mode,
                 extra_vars=req.extra_vars,
                 scene_plan=req.scene_plan,
+                dry_run=req.dry_run,
             ):
                 # 直接返回事件到 streaming 响应
                 yield event
