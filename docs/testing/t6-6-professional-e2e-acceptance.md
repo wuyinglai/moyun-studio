@@ -5,7 +5,7 @@
 | 版本 | 日期 | 作者 | 说明 |
 |------|------|------|------|
 | v1.0 | 2026-06-10 | E2E | 初始版本 |
-| v1.1 | 2026-06-10 | E2E | T6.6.1 ~ T6.6.4 完成状态更新，T6.6.5-plan 补充 |
+| v1.2 | 2026-06-10 | E2E | T6.6-final 阶段总结完成 |
 
 ---
 
@@ -20,6 +20,7 @@
 | T6.6.4 | Batch dry-run 能力 + UI click E2E | ✅ | Batch dry-run 后端 + UI 入口 + 真实 click |
 | T6.6.5-plan | 真实 LLM 隔离环境冒烟测试方案 | ✅ | 方案文档 + 环境开关 + 验收标准 |
 | T6.6.5 | 真实 LLM 隔离环境冒烟测试（执行） | ⚠️ 待执行 | 需要人工确认，显式开启开关 |
+| **T6.6-final** | **Professional 主流程 dry-run 总验收报告** | **✅** | **阶段总结：三条 dry-run 链路 / Candidate / 安全边界全部通过** |
 
 ---
 
@@ -147,6 +148,7 @@ __llm_smoke_t6_6_5
 | 文档/文件 | 路径 |
 |-----------|------|
 | T6.6.5 真实 LLM 冒烟测试方案 | `docs/testing/t6-6-5-real-llm-smoke-plan.md` |
+| T6.6-final 总验收报告 | `docs/testing/t6-6-final-acceptance-report.md` |
 | T6.5.5 SSE 测试 | `frontend/tests/e2e/20-sse-real-event-flow.spec.ts` |
 | T6.5.7 dry-run 契约测试 | `backend/tests/contracts/test_t6_5_7_dry_run_contract.py` |
 | T6.6.4 Batch dry-run 后端测试 | `backend/tests/contracts/test_t6_6_4_batch_dry_run_contract.py` |
@@ -156,7 +158,15 @@ __llm_smoke_t6_6_5
 
 ---
 
-## 七、下一步可选路径
+## 七、T6.6-final 阶段总结
+
+> **T6.6 Professional 主流程 dry-run 总验收 — ✅ 阶段性通过**
+>
+> 详细报告：[t6-6-final-acceptance-report.md](./t6-6-final-acceptance-report.md)
+
+---
+
+## 八、下一步可选路径
 
 | 路径 | 说明 | 风险 |
 |------|------|------|
