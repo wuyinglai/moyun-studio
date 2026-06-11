@@ -282,8 +282,18 @@ T6.7 目标不是新增大功能，而是把 T6.6 dry-run 验收暴露出的产�
 
 **记录 commit**：待提交
 
+#### T6.10.3：创建 v0.1.2 tag ✅
+- ✅ 创建 annotated tag `v0.1.2`
+- ✅ 推送 tag 到 origin
+
+#### T6.10.4：创建 GitHub Release v0.1.2 ✅
+- ✅ 使用 gh CLI 创建 Release
+- ✅ 关联 tag `v0.1.2`
+- ✅ 使用 `docs/releases/v0.1.2.md` 作为 body
+- ✅ Release URL: https://github.com/wuyinglai/moyun-studio/releases/tag/v0.1.2
+
 ### 下一步建议
-**T6.10.3：创建 v0.1.2 tag 与 GitHub Release**
+**T6 阶段收口完成** — T6 产品化发布前体验整理已全部完成。可进入 T7 阶段或进行下一个版本开发。
 
 ---
 
