@@ -14,6 +14,11 @@
       </button>
     </div>
 
+    <div class="candidate-notice">
+      <i class="fa-solid fa-circle-info" />
+      候选稿不会自动覆盖正文。你可以先预览，再决定是否采用。
+    </div>
+
     <!-- 候选稿列表 -->
     <div
       v-if="candidates.length === 0"
@@ -93,6 +98,10 @@
           <button class="btn-close" @click="closePreview">
             <i class="fa-solid fa-x" />
           </button>
+        </div>
+        <div class="preview-notice">
+          <i class="fa-solid fa-circle-info" />
+          预览只用于查看内容，不会修改正文。
         </div>
         <div class="preview-meta">
           <span class="meta-label">源文件:</span>
@@ -282,7 +291,7 @@ async function syncAdoptedSource(sourcePath: string) {
 }
 
 async function adoptCandidate(candidate: CandidateInfo) {
-  if (!confirm(`确定要采用这个候选稿吗？这将覆盖原文件 "${candidate.source_filename}"。`)) {
+  if (!confirm(`确认将该候选稿写入当前正文？此操作会替换 "${candidate.source_filename}" 的当前内容。\n\n采用前会检查正文是否被其他操作修改，避免误覆盖。`)) {
     return
   }
   
@@ -369,6 +378,25 @@ watch(() => projectStore.currentProject?.id, () => {
 .panel-title {
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.candidate-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  margin: 0 8px 4px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--accent-primary);
+  line-height: 1.4;
+}
+
+.candidate-notice i {
+  flex-shrink: 0;
+  font-size: 11px;
 }
 
 .btn-refresh {
@@ -543,6 +571,22 @@ watch(() => projectStore.currentProject?.id, () => {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
+}
+
+.preview-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(59, 130, 246, 0.06);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  font-size: 11px;
+  color: var(--accent-primary);
+  line-height: 1.4;
+}
+
+.preview-notice i {
+  flex-shrink: 0;
 }
 
 .preview-title {

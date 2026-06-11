@@ -80,6 +80,7 @@
     >
       <div class="dev-tools-header">
         <span class="dev-tools-title">开发测试工具</span>
+        <span class="dev-tools-subtitle">仅用于验证流程，不会调用真实 LLM，不会写入正文</span>
       </div>
       <div class="dev-actions">
         <button
@@ -799,7 +800,8 @@ async function handleDryRunBatch() {
 
 .dev-tools-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
@@ -809,6 +811,13 @@ async function handleDryRunBatch() {
   color: var(--accent-warning);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.dev-tools-subtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .dev-actions {

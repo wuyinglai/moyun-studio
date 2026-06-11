@@ -71,6 +71,10 @@
       >
         {{ statusText }}
       </p>
+      <p class="safety-hint">
+        <i class="fa-solid fa-shield-halved" />
+        生成结果会先保存为候选稿，不会直接覆盖正文。
+      </p>
     </section>
 
     <section class="quick-section">
@@ -259,7 +263,7 @@ async function openCurrentPlan() {
 async function runAction(label: string, runner: () => Promise<void>) {
   if (!canGenerate.value || running.value) return
   running.value = true
-  statusText.value = `${label}已发送，重写类结果会先进入候选稿。`
+  statusText.value = `${label}已发送，结果将先进入候选稿。`
   try {
     await runner()
     notification.success(statusText.value)
@@ -383,6 +387,25 @@ async function handleBoost() {
   color: var(--text-muted-ink);
   font-size: 12px;
   line-height: 1.55;
+}
+
+.safety-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 5px;
+  font-size: 11px;
+  color: var(--accent-primary);
+  line-height: 1.4;
+
+  i {
+    flex-shrink: 0;
+    font-size: 10px;
+  }
 }
 
 .action-grid {

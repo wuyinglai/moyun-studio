@@ -218,6 +218,23 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     expect(severeErrors).toEqual([])
   })
 
+  test('T6.9.2: 候选稿面板顶部有安全说明（不会自动覆盖正文）', async ({ page }) => {
+    await installMocks(page)
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+
+    // 切换到候选稿面板
+    const candidateTab = page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' })
+    await candidateTab.click()
+
+    // 验证安全说明文案
+    const notice = page.locator('.candidate-notice')
+    await expect(notice).toBeVisible({ timeout: 5000 })
+    await expect(notice).toContainText('不会自动覆盖正文')
+    await expect(notice).toContainText('可以先预览')
+    console.log('[t6.9.2] ✓ candidate-notice 文案存在且包含安全说明')
+  })
+
   test('候选稿面板不会在页面加载时弹出错误提示', async ({ page }) => {
     // 这是对之前 bug 的回归测试: 登录后不应显示"获取候选稿列表失败"
     const errors = createErrorCollector(page)
@@ -256,6 +273,15 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     const firstCandidate = page.locator('[data-testid="candidate-content"]').first()
     if (await firstCandidate.isVisible({ timeout: 3000 }).catch(() => false)) {
       await firstCandidate.click()
+    }
+
+    // T6.9.2: 预览弹窗应显示"不会修改正文"说明
+    const previewModal = page.locator('.preview-modal')
+    if (await previewModal.isVisible({ timeout: 5000 }).catch(() => false)) {
+      const previewNotice = page.locator('.preview-notice')
+      await expect(previewNotice).toBeVisible({ timeout: 3000 })
+      await expect(previewNotice).toContainText('不会修改正文')
+      console.log('[t6.9.2] ✓ preview-notice 文案存在且包含安全说明')
     }
 
     const severeErrors = filterSevereErrors(errors)

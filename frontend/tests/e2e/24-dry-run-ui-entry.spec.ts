@@ -110,6 +110,13 @@ test.describe('T6.5.9 前端 dry-run 测试入口 E2E', () => {
     await expect(devTools).toBeVisible({ timeout: 20000 })
     console.log('[t6.5.9] ✓ dev-dry-run-tools 区块可见')
 
+    // 验证开发工具说明文案（T6.9.2 新增）
+    const devToolsSubtitle = devTools.locator('.dev-tools-subtitle')
+    await expect(devToolsSubtitle).toBeVisible({ timeout: 5000 })
+    await expect(devToolsSubtitle).toContainText('不会调用真实 LLM')
+    await expect(devToolsSubtitle).toContainText('不会写入正文')
+    console.log('[t6.9.2] ✓ dev-tools-subtitle 文案存在且包含安全说明')
+
     // 验证 Task Dry Run 按钮可见
     const dryRunButton = page.getByTestId('dry-run-task-button')
     await expect(dryRunButton).toBeVisible({ timeout: 20000 })
