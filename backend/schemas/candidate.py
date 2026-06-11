@@ -55,7 +55,12 @@ class CandidateInfo(BaseModel):
     pipeline_id: str | None = Field(None, description="管线ID")
     prompt_version: str | None = Field(None, description="Prompt 版本（可选）")
     source_mode: str | None = Field(None, description="来源模式: lite 或 professional")
-    
+
+    # 连续性检查信息 — 来自 pipeline continuity gate
+    continuity: Dict[str, Any] = Field(default_factory=dict, description="连续性检查结果（has_warning/severity/message 等）")
+    source_type: str | None = Field(None, description="来源类型: llm 或 dry-run")
+    warning_message: str | None = Field(None, description="面向用户的简短警告摘要，例如'可能与前文设定不一致'")
+
     # Scene Plan provenance 字段
     generation_context: Dict[str, Any] = Field(default_factory=dict, description="生成上下文，包含 scene_plan_used 等信息")
     scene_plan_hash: str = Field("", description="生成时使用的 Scene Plan 哈希")
@@ -83,7 +88,12 @@ class CreateCandidateRequest(BaseModel):
     pipeline_id: str | None = Field(None, description="管线ID")
     prompt_version: str | None = Field(None, description="Prompt 版本")
     source_mode: str | None = Field(None, description="来源模式: lite 或 professional")
-    
+
+    # 连续性检查信息
+    continuity: Dict[str, Any] = Field(default_factory=dict, description="连续性检查结果")
+    source_type: str | None = Field(None, description="来源类型: llm 或 dry-run")
+    warning_message: str | None = Field(None, description="面向用户的简短警告摘要")
+
     # Scene Plan provenance 字段
     generation_context: Dict[str, Any] = Field(default_factory=dict, description="生成上下文")
     scene_plan_hash: str = Field("", description="Scene Plan 哈希")

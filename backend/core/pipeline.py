@@ -801,12 +801,45 @@ class PipelineRunner:
                 # 生成候选稿而不是直接覆盖
                 candidate_service = CandidateService(self.file_service)
                 action = self._infer_candidate_action(pipeline_name, output_mode, action=action)
-                
+
+                # 构建 continuity 信息（锚点保留度 + 严重等级）
+                continuity_ratio = 0.0
+                if continuity_anchors:
+                    continuity_ratio = round(continuity_hit_count / len(continuity_anchors), 2)
+                continuity_severity = "none"
+                continuity_has_warning = False
+                if continuity_anchors:
+                    if continuity_hit_count == 0:
+                        continuity_severity = "high"
+                        continuity_has_warning = True
+                    elif continuity_hit_count < continuity_required_hits:
+                        continuity_severity = "medium"
+                        continuity_has_warning = True
+                    elif continuity_hit_count < len(continuity_anchors):
+                        continuity_severity = "low"
+                    else:
+                        continuity_severity = "none"
+                continuity_info = {
+                    "has_warning": continuity_has_warning,
+                    "severity": continuity_severity,
+                    "anchors_missing": [a for a in continuity_anchors if a and a not in final_output],
+                    "anchors_preserved": [a for a in continuity_anchors if a and a in final_output],
+                    "continuity_ratio": continuity_ratio,
+                }
+                # 面向用户的简短警告摘要
+                warning_message = None
+                if continuity_has_warning:
+                    if continuity_severity == "high":
+                        warning_message = "可能与前文设定不一致，关键锚点几乎未保留，建议先预览再采纳。"
+                    else:
+                        warning_message = "部分上文关键元素未在生成结果中出现，建议先预览再采纳。"
+                source_type = "dry-run" if dry_run else "llm"
+
                 # 构建 Scene Plan provenance 信息
                 generation_context = {}
                 scene_plan_hash = ""
                 scene_plan_path = ""
-                
+
                 if scene_plan:
                     generation_context["scene_plan_used"] = True
                     if isinstance(scene_plan, dict):
@@ -816,24 +849,30 @@ class PipelineRunner:
                         scene_plan_path = scene_plan["source_path"]
                 else:
                     generation_context["scene_plan_used"] = False
-                
+
                 candidate = await candidate_service.create_candidate(
                     project_id=project_id,
                     source_path=target_file,
                     action=action,
                     content=final_output,
+                    continuity=continuity_info,
+                    source_type=source_type,
+                    warning_message=warning_message,
                     generation_context=generation_context,
                     scene_plan_hash=scene_plan_hash,
                     scene_plan_path=scene_plan_path,
                 )
                 candidate_id = candidate.id
-                logger.info("已生成候选稿: %s -> %s", target_file, candidate_id)
+                logger.info("已生成候选稿: %s -> %s (continuity=%s)", target_file, candidate_id, continuity_severity)
                 yield {"event": "candidate_created", "data": json.dumps({
                     "task_id": task_id,
                     "candidate_id": candidate_id,
                     "source_path": target_file,
                     "action": action.value,
-                })}
+                    "continuity": continuity_info,
+                    "source_type": source_type,
+                    "warning_message": warning_message,
+                }, ensure_ascii=False)}
             elif output_mode == "write_scene":
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
             elif output_mode == "append":

@@ -43,6 +43,22 @@
           <span class="candidate-action" :class="`action-${candidate.action}`">
             {{ actionLabel(candidate.action) }}
           </span>
+          <span
+            v-if="candidate.continuity && candidate.continuity.has_warning"
+            class="continuity-badge"
+            :class="`continuity-${candidate.continuity.severity || 'medium'}`"
+            title="连续性警告"
+          >
+            <i class="fa-solid fa-triangle-exclamation" />
+            连续性警告
+          </span>
+          <span
+            v-if="candidate.source_type"
+            class="source-type-badge"
+            :class="`source-${candidate.source_type}`"
+          >
+            {{ candidate.source_type === 'dry-run' ? '模拟运行' : 'AI 生成' }}
+          </span>
           <span class="candidate-status" :class="`status-${candidate.status}`">
             {{ statusLabel(candidate.status) }}
           </span>
@@ -52,6 +68,20 @@
           data-testid="candidate-content"
         >
           <div class="candidate-filename">{{ candidate.source_filename }}</div>
+          <div
+            v-if="candidate.warning_message"
+            class="candidate-warning-message"
+          >
+            <i class="fa-solid fa-circle-info" />
+            {{ candidate.warning_message }}
+          </div>
+          <div
+            v-else-if="candidate.continuity && candidate.continuity.has_warning && candidate.continuity.anchors_missing && candidate.continuity.anchors_missing.length > 0"
+            class="candidate-warning-message"
+          >
+            <i class="fa-solid fa-circle-info" />
+            可能与前文设定不一致：缺少「{{ candidate.continuity.anchors_missing.slice(0, 3).join('、') }}」等关键元素，建议先预览再采纳。
+          </div>
           <div class="candidate-meta">
             <span class="meta-item">{{ formatTime(candidate.created_at) }}</span>
             <span class="meta-item">{{ candidate.word_count }} 字</span>
@@ -110,6 +140,20 @@
           <span class="meta-value action-badge" :class="`action-${previewCandidateInfo?.action}`">
             {{ actionLabel(previewCandidateInfo?.action || '') }}
           </span>
+          <span
+            v-if="previewCandidateInfo?.source_type"
+            class="meta-value source-type-badge"
+            :class="`source-${previewCandidateInfo?.source_type}`"
+          >
+            {{ previewCandidateInfo.source_type === 'dry-run' ? '模拟运行' : 'AI 生成' }}
+          </span>
+        </div>
+        <div
+          v-if="getPreviewWarning(previewCandidateInfo)"
+          class="preview-warning"
+        >
+          <i class="fa-solid fa-triangle-exclamation" />
+          {{ getPreviewWarning(previewCandidateInfo) }}
         </div>
         <div class="preview-body">
           <textarea
@@ -290,8 +334,27 @@ async function syncAdoptedSource(sourcePath: string) {
   }
 }
 
+function getPreviewWarning(candidate: CandidateInfo | null): string {
+  if (!candidate) return ''
+  if (candidate.warning_message) return candidate.warning_message
+  if (candidate.continuity && candidate.continuity.has_warning) {
+    const missing = (candidate.continuity.anchors_missing || []).slice(0, 3)
+    if (missing.length > 0) {
+      return `可能与前文设定不一致：缺少「${missing.join('、')}」等关键元素，建议先预览再采纳。`
+    }
+    return '可能与前文设定不一致，建议先预览再采纳。'
+  }
+  return ''
+}
+
 async function adoptCandidate(candidate: CandidateInfo) {
-  if (!confirm(`确认将该候选稿写入当前正文？此操作会替换 "${candidate.source_filename}" 的当前内容。\n\n采用前会检查正文是否被其他操作修改，避免误覆盖。`)) {
+  // 构建确认消息，优先展示连续性警告
+  const warning = getPreviewWarning(candidate)
+  let confirmMsg = `确认将该候选稿写入当前正文？\n此操作会替换 "${candidate.source_filename}" 的当前内容。\n\n采用前会检查正文是否被其他操作修改，避免误覆盖。`
+  if (warning) {
+    confirmMsg = `⚠ 该候选稿存在连续性警告：\n${warning}\n\n${confirmMsg}`
+  }
+  if (!confirm(confirmMsg)) {
     return
   }
   
@@ -461,6 +524,66 @@ watch(() => projectStore.currentProject?.id, () => {
   display: flex;
   gap: 6px;
   margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.continuity-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &.continuity-high {
+    background: rgba(239, 68, 68, 0.18);
+    color: var(--accent-danger);
+  }
+  &.continuity-medium {
+    background: rgba(251, 146, 60, 0.18);
+    color: #f97316;
+  }
+  &.continuity-low {
+    background: rgba(234, 179, 8, 0.18);
+    color: var(--accent-warning);
+  }
+}
+
+.source-type-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+
+  &.source-llm {
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--accent-primary);
+  }
+  &.source-dry-run {
+    background: rgba(148, 163, 184, 0.2);
+    color: var(--text-secondary);
+  }
+}
+
+.candidate-warning-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  margin: 6px 0;
+  background: rgba(251, 146, 60, 0.1);
+  border-left: 2px solid #f97316;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+
+  i {
+    flex-shrink: 0;
+    color: #f97316;
+    margin-top: 2px;
+  }
 }
 
 .candidate-action {
@@ -613,6 +736,25 @@ watch(() => projectStore.currentProject?.id, () => {
   gap: 8px;
   padding: 10px 16px;
   background: var(--bg-card);
+  flex-wrap: wrap;
+}
+
+.preview-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(251, 146, 60, 0.1);
+  border-bottom: 1px solid rgba(251, 146, 60, 0.2);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+
+  i {
+    flex-shrink: 0;
+    color: #f97316;
+    margin-top: 3px;
+  }
 }
 
 .meta-label {

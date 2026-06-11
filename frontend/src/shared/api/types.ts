@@ -114,6 +114,16 @@ export type CandidateAction = 'rewrite' | 'continue' | 'modify' | 'chat' | 'expa
 /** 候选稿状态 */
 export type CandidateStatus = 'pending' | 'adopted' | 'rejected' | 'discarded'
 
+/** 候选稿连续性信息 — 后端 continuity gate 返回 */
+export interface ContinuityInfo {
+  has_warning: boolean
+  severity: 'low' | 'medium' | 'high'
+  anchors_missing?: string[]
+  anchors_preserved?: string[]
+  continuity_ratio?: number
+  message?: string
+}
+
 /** 候选稿信息 — 对应 backend/schemas/candidate.py CandidateInfo */
 export interface CandidateInfo {
   id: string
@@ -134,6 +144,12 @@ export interface CandidateInfo {
   prompt_version?: string | null
   source_filename?: string
   filename?: string
+  /** 连续性检查结果 — 来自后端 continuity gate */
+  continuity?: ContinuityInfo | null
+  /** 来源类型 — 真实 LLM 生成 vs dry-run 模拟 */
+  source_type?: 'llm' | 'dry-run' | null
+  /** 简短摘要 — 如"可能与前文设定不一致"，便于卡片展示 */
+  warning_message?: string | null
 }
 
 /** 候选稿详情 — 对应 backend/schemas/candidate.py CandidateDetailResponse */

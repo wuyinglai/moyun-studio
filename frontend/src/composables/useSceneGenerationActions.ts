@@ -208,6 +208,13 @@ export function useSceneGenerationActions() {
         return
       }
 
+      // 所有场景文件统一走 candidate 流程，不直接覆盖正文；项目素材文件（outline/blueprint 等）可直接写入
+      const isSceneFile = /chapters[\\/]vol-\d+[\\/]ch-\d+[\\/]sec-\d+\.md$/.test(next.path)
+      const nextOutputMode: 'candidate' | 'write_scene' = isSceneFile ? 'candidate' : 'write_scene'
+      if (isSceneFile) {
+        rightPanelStore.setActiveTab('candidate')
+      }
+
       // 检查管线的 confirm 标记（第一步是否需用户确认）
       await pipelineStore.fetchPipelineDetail(next.pipeline)
       const needConfirm = pipelineStore.currentDetail?.steps?.[0]?.confirm !== false
@@ -225,8 +232,8 @@ export function useSceneGenerationActions() {
       // 同步更新 workflow guide 步骤状态
       syncGuideStep(next.path, 'running')
 
-      // 运行对应 pipeline
-      await fileGen.runPipeline(projectId, next.path, next.pipeline, extraVars, 'write_scene')
+      // 运行对应 pipeline（场景文件强制走 candidate 模式，禁止直接覆盖正文）
+      await fileGen.runPipeline(projectId, next.path, next.pipeline, extraVars, nextOutputMode)
 
       // pipeline 完成 → 更新 guide 步骤状态为 done
       syncGuideStep(next.path, 'done')
@@ -488,19 +495,27 @@ export function useSceneGenerationActions() {
     projectId: string
     extraVars?: Record<string, unknown>
   }) {
-    const { action, targetPath, projectId, extraVars = {} } = params
+    const { action, sourcePath, targetPath, projectId, extraVars = {} } = params
 
-    // 根据动作类型决定 pipeline 和 outputMode
-    const isHighRisk = action === 'rewrite_current_scene' || action === 'polish_current_scene'
-    const pipelineName = isHighRisk
-      ? (action === 'polish_current_scene' ? 'polish' : 'rewrite')
-      : 'generate'
-    const outputMode = isHighRisk ? 'candidate' : 'write_scene'
-
-    // 高风险操作自动切换到候选稿面板
-    if (isHighRisk) {
-      rightPanelStore.setActiveTab('candidate')
+    // 读取当前场景正文作为 continuity source，确保后端能提取锚点并检测连续性。
+    // 必须在打开 targetPath 之前读取，否则编辑器切换到目标文件后 sourcePath 内容可能不可取。
+    const currentContent = editorStore.getContent(sourcePath)
+    if (currentContent && currentContent.trim().length > 0) {
+      extraVars.previous_text = currentContent
+      extraVars.current_scene_text = currentContent
     }
+
+    // 所有场景生成动作统一走 candidate 流程，不直接覆盖正文。
+    // pipelineName 保持区分（polish/rewrite/generate），但 outputMode 统一为 candidate。
+    const pipelineName = action === 'polish_current_scene'
+      ? 'polish'
+      : action === 'rewrite_current_scene'
+        ? 'rewrite'
+        : 'generate'
+    const outputMode: 'candidate' = 'candidate'
+
+    // 生成完成后切换到候选稿面板，让用户明确知道"待采纳"
+    rightPanelStore.setActiveTab('candidate')
 
     // 打开目标文件到编辑器
     const node = { name: targetPath.split('/').pop() || '', path: targetPath, type: 'file' as const }
@@ -524,9 +539,8 @@ export function useSceneGenerationActions() {
 
     syncGuideStep(targetPath, 'done')
 
-    if (isHighRisk) {
-      notification.success('已生成候选稿，采用后才会覆盖当前场景。')
-    }
+    // 所有结果均为候选稿
+    notification.success('已生成候选稿，采用后才会覆盖当前场景。')
   }
 
   /** 写下一场景：推导下一个 sec 文件并生成 */
