@@ -260,8 +260,30 @@ T6.7 目标不是新增大功能，而是把 T6.6 dry-run 验收暴露出的产�
 
 **记录 commit**：`fa28a1ed2011fa2b72fb2e13ef36fcbe8ac8187b`
 
+### T6.10：发布前最终验收与版本标记 ✅
+
+#### T6.10.0：final release gate 检查 ✅
+- ✅ 确认 smoke checklist 完整可执行
+- ✅ 确认 known issues 分类明确
+- ✅ 确认无阻断发布问题
+- ✅ 确认路线图已更新
+
+#### T6.10.1：版本号与 Release Notes 预检 ✅
+- ✅ 检查已有版本 tag（v0.1.0、v0.1.1）
+- ✅ 检查已有 release notes（v0.1.0.md、v0.1.1.md）
+- ✅ 判断下一个版本号为 v0.1.2
+- ✅ 确认 v0.1.2.md 不存在，需要创建
+
+#### T6.10.2：创建 v0.1.2 Release Notes ✅
+- ✅ 创建 `docs/releases/v0.1.2.md`
+- ✅ 记录产品化 review、smoke checklist、known issues、UI 文案、E2E 补跑内容
+- ✅ 明确无 breaking change
+- ✅ 明确默认不启用真实 LLM
+
+**记录 commit**：待提交
+
 ### 下一步建议
-**T6.10：发布前最终验收与版本标记**
+**T6.10.3：创建 v0.1.2 tag 与 GitHub Release**
 
 ---
 
