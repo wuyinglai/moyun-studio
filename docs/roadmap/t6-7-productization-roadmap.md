@@ -252,8 +252,16 @@ T6.7 目标不是新增大功能，而是把 T6.6 dry-run 验收暴露出的产�
 
 **记录 commit**：`63800ee10d85b726cabe58ceb044c48c9519a839`
 
+### T6.9.3：发布前 smoke checklist 与 known issues 整理 ✅
+- ✅ 更新 `docs/release-preflight.md`，新增 Smoke Checklist 章节（Git 状态、环境变量、端口、后端启动、E2E、build、禁止事项）
+- ✅ 更新 `docs/known-issues.md`，新增 Release Blockers（阻断发布问题）和 Non-blocking Issues（不阻断发布问题）分类
+- ✅ 阻断问题包含：构建失败、核心 E2E 失败、Git 状态不一致、真实 LLM 误启用、API Key 泄露、.env 误提交
+- ✅ 不阻断问题包含：内存端点冲突检测、同步 I/O、真实 LLM E2E 可选、多标签页编辑保护、项目 ID 语义、dry-run 可见性
+
+**记录 commit**：待提交
+
 ### 下一步建议
-**T6.9.3：发布前 smoke checklist 与 known issues 整理**
+**T6.10：发布前最终验收与版本标记**
 
 ---
 

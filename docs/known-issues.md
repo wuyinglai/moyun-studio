@@ -2,6 +2,39 @@
 
 This document tracks current limitations, common failure modes, and workarounds.
 
+---
+
+## Release Blockers / 阻断发布问题
+
+以下问题出现时必须修复才能发布：
+
+| # | Issue | Severity | Description |
+|---|-------|----------|-------------|
+| B1 | 前端构建失败 | Critical | `npm run build` 无法完成或有 fatal 错误 |
+| B2 | 核心 E2E 失败 | Critical | `14-candidate-workflow.spec.ts` 或 `24-dry-run-ui-entry.spec.ts` 失败 |
+| B3 | Git 状态不一致 | High | HEAD != origin/main 或存在未提交的代码变更 |
+| B4 | 真实 LLM 环境变量误启用 | High | `ALLOW_REAL_LLM_SMOKE` 或 `MOYUN_ALLOW_REAL_LLM_SMOKE` 被设置 |
+| B5 | API Key 泄露 | Critical | API Key 出现在日志、测试报告或提交的文件中 |
+| B6 | .env 被提交 | High | `.env` 文件出现在 git 追踪中 |
+
+---
+
+## Non-blocking Issues / 不阻断发布问题
+
+以下问题已知但不影响核心功能，可留到后续版本修复：
+
+| # | Issue | Priority | Description | Target Version |
+|---|-------|----------|-------------|----------------|
+| NB1 | 内存端点无冲突检测 | P2 | `story_state`, `style_guide`, `recent_context`, `workflows`, `materials` 端点不支持 `expected_mtime` / `expected_hash` | v0.2 |
+| NB2 | 部分非核心 API 使用同步 I/O | P3 | `llm.py`, `lite.py`, `prompts.py` 等仍使用 `Path.read_text()` / `Path.write_text()` | v0.2 |
+| NB3 | 真实 LLM E2E 为可选 | P2 | 默认 release check 不包含真实 LLM 测试 | v0.2 |
+| NB4 | 工作区 `.config.json` 明文存储 API Key | P2 | 本地优先应用有意设计，需保持 gitignored | v0.2 |
+| NB5 | 多标签页编辑无冲突保护 | P3 | 同一文件在多个浏览器标签页编辑可能导致静默覆盖 | v0.2 |
+| NB6 | 项目 ID 与名称语义易混淆 | P3 | `project_id` (UUID) 与项目显示名称不同，用户可能误解 | v0.1.x |
+| NB7 | dry-run 工具在生产构建中可见 | P3 | dev-tools 区块在非 dev 模式下仍可见（但功能被禁用） | v0.1.x |
+
+---
+
 ## Current Limitations
 
 ### 1. No conflict detection on memory/material endpoints
