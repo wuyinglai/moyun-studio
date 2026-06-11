@@ -225,7 +225,39 @@ T6.7 目标不是新增大功能，而是把 T6.6 dry-run 验收暴露出的产�
 
 ---
 
-## 七、T6.6 最终验收报告
+## 七、T6.9 产品化 review / 发布前体验整理 ✅
+
+**状态**：进行中（T6.9.0 + T6.9.1 + T6.9.2 已完成）
+
+### T6.9.0：产品化 review 报告
+- ✅ 输出产品化 review 报告，识别发布前 P0/P1/P2 问题
+- ✅ 评估用户主流程（安装、配置、创建项目、生成、candidate、adopt）
+- ✅ 验证安全边界（默认不调用真实 LLM、smoke gate、Batch 禁止等）
+
+**交付物**：
+- [docs/reviews/t6-9-0-productization-review.md](../reviews/t6-9-0-productization-review.md)
+
+### T6.9.1：README + .env.example + 启动文档统一 ✅
+- ✅ README 补充安全说明段、Ollama 本地 LLM 配置示例、FAQ
+- ✅ `.env.example` 统一变量名（`ALLOW_REAL_LLM_SMOKE` / `LLM_SMOKE_MAX_TOKENS`）
+- ✅ 修复历史测试文档中 `MOYUN_*` 前缀与实际配置不一致问题
+
+### T6.9.2：UI 文案与 candidate/adopt 提示优化 ✅
+- ✅ CandidatePanel 新增安全说明："候选稿不会自动覆盖正文"
+- ✅ 预览弹窗新增说明："预览只用于查看内容，不会修改正文"
+- ✅ adopt confirm 对话框优化：增加冲突检查说明
+- ✅ ProfessionalQuickPanel 新增生成安全提示
+- ✅ ExecutionPanel dev-tools 新增副标题说明
+- ✅ E2E 测试全部通过（14-candidate-workflow: 6 passed；24-dry-run-ui-entry: 4 passed）
+
+**记录 commit**：`63800ee10d85b726cabe58ceb044c48c9519a839`
+
+### 下一步建议
+**T6.9.3：发布前 smoke checklist 与 known issues 整理**
+
+---
+
+## 八、T6.6 最终验收报告
 
 详细 T6.6 验收内容见：[../testing/t6-6-final-acceptance-report.md](../testing/t6-6-final-acceptance-report.md)
 
