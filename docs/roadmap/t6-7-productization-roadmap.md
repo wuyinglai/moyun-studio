@@ -186,7 +186,46 @@ T6.7 目标不是新增大功能，而是把 T6.6 dry-run 验收暴露出的产�
 
 ---
 
-## 六、T6.6 最终验收报告
+## 六、T6.8 真实 LLM 隔离冒烟阶段 ✅
+
+**状态**：已完成（T6.8.0 + T6.8.1 + T6.8.2）
+
+### T6.8.0：真实 LLM 冒烟前准备检查
+- ✅ 确认后端 gate 已就绪（`allow_real_llm_smoke`）
+- ✅ 确认 max_tokens 限制已就绪（`llm_smoke_max_tokens=300`）
+- ✅ 创建隔离项目 `__llm_smoke_t6_8_1`
+- ✅ 准备测试场景文件
+
+### T6.8.1：真实 LLM 隔离冒烟验证
+- ✅ 真实 LLM 调用成功（pipeline 模式，6 个 step）
+- ✅ candidate 真实生成：`cand_1c819dfe`
+- ✅ candidate 文件存在且非空（142 chars）
+- ✅ candidate status = pending（未 adopt）
+- ✅ 原正文未被覆盖
+- ✅ 未执行 Batch（被 gate 禁止）
+- ✅ smoke 项目已清理
+
+**记录 commit**：`e8f3313d1e526b6d8985ccc0f863e78736d81e54`
+
+**交付物**：
+- [docs/testing/t6-8-1-real-llm-smoke-result.md](../testing/t6-8-1-real-llm-smoke-result.md)
+
+### T6.8.2：安全回归与文档收口
+- ✅ 安全污染检查（无残留）
+- ✅ API Key 未提交（脱敏保护正常）
+- ✅ .env 未改动
+- ✅ 回归测试全部通过（45 个 contract tests）
+- ✅ frontend build 成功
+- ✅ Playwright smoke skeleton 默认 skipped（无开关不执行）
+
+### 下一步建议
+**T6.9.0：产品化 review / 发布前体验整理**
+
+建议先做产品化 review，确认当前状态是否满足发布质量要求，再决定是否扩大真实 LLM 测试范围。
+
+---
+
+## 七、T6.6 最终验收报告
 
 详细 T6.6 验收内容见：[../testing/t6-6-final-acceptance-report.md](../testing/t6-6-final-acceptance-report.md)
 
