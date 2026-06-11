@@ -29,6 +29,13 @@ MOYUN_ALLOW_REAL_LLM_SMOKE=1
 MOYUN_LLM_SMOKE_MAX_TOKENS=300
 ```
 
+> 📌 **T6.9.1 更新：当前实际变量名说明**（2026-06-11）
+>
+> - `backend/config.py` 中 Settings **未设置 `env_prefix`**，实际读取的是 `ALLOW_REAL_LLM_SMOKE` 和 `LLM_SMOKE_MAX_TOKENS`（**不含 `MOYUN_` 前缀**）。
+> - 本文件历史记录中的 `MOYUN_ALLOW_REAL_LLM_SMOKE`/`MOYUN_LLM_SMOKE_MAX_TOKENS` 为早期设计命名，后续已简化为无前缀。
+> - **当前开发者执行真实 LLM smoke 时，请在 `.env` 中设置：`ALLOW_REAL_LLM_SMOKE=true` + `LLM_SMOKE_MAX_TOKENS=300`**。
+> - 例外：前端 E2E Playwright 测试脚本 `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 自有命名空间，仍读取 `process.env.MOYUN_ALLOW_REAL_LLM_SMOKE`。
+
 ### 2.2 执行前必须由用户明确确认
 
 ```text
@@ -80,8 +87,8 @@ file = chapters/vol-01/ch-001/sec-001.md
 
 | # | 项目 | 状态 | 说明 |
 |---|------|------|------|
-| 1 | `MOYUN_ALLOW_REAL_LLM_SMOKE` 默认 false | ✅ | `backend/config.py` `allow_real_llm_smoke: bool = Field(default=False, ...)` |
-| 2 | `MOYUN_LLM_SMOKE_MAX_TOKENS` 默认 300 | ✅ | `backend/config.py` `llm_smoke_max_tokens: int = Field(default=300, ge=1, le=1024, ...)` |
+| 1 | `MOYUN_ALLOW_REAL_LLM_SMOKE` / `ALLOW_REAL_LLM_SMOKE` 默认 false | ✅ | `backend/config.py` `allow_real_llm_smoke: bool = Field(default=False, ...)`（**当前实际变量名：`ALLOW_REAL_LLM_SMOKE`**，无 `MOYUN_` 前缀） |
+| 2 | `MOYUN_LLM_SMOKE_MAX_TOKENS` / `LLM_SMOKE_MAX_TOKENS` 默认 300 | ✅ | `backend/config.py` `llm_smoke_max_tokens: int = Field(default=300, ge=1, le=1024, ...)`（**当前实际变量名：`LLM_SMOKE_MAX_TOKENS`**，无 `MOYUN_` 前缀） |
 | 3 | smoke skeleton 未设置开关时 skipped | ✅ | `tests/e2e/30-real-llm-smoke.spec.ts` 3 skipped |
 | 4 | Batch 真实 smoke 被禁止 | ✅ | `backend/core/smoke_gate.py` `check_batch_real_llm_smoke_gate()` 永久拒绝 |
 | 5 | `/api/generate` 有 smoke gate | ✅ | `backend/api/generate.py` `check_real_llm_smoke_gate(settings, project_id, dry_run)` |

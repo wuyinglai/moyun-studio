@@ -23,6 +23,17 @@
 | Node.js | 18+ |
 | npm | 9+ |
 
+## Default Safety Behavior
+
+> ⚠️ **These defaults protect your data and API credits. Please read before starting.**
+>
+> - **默认不调用真实 LLM** — AI 功能需显式配置 `LLM_API_KEY` 才生效；未配置时所有生成操作使用 dry-run（模拟）。
+> - **高风险操作默认生成 candidate，不覆盖正文** — polish / rewrite / chat-edit 等高风险修改仅生成候选稿，需人工审核后才覆盖正文。
+> - **dry-run 不写入任何文件** — 模拟生成仅在内存中运行，不读写 `workspace/`。
+> - **真实 LLM smoke 默认关闭** — `ALLOW_REAL_LLM_SMOKE` 默认为 `false`；即使开启，也仅限 `project_id` 以 `__llm_smoke_` 为前缀的隔离项目。
+> - **Batch 真实 smoke 永久禁止** — 批量生成链路不参与真实 LLM 冒烟。
+> - **`.env` 不提交** — 已加入 `.gitignore`，请勿把 API Key 放入版本控制。
+
 ## Quick Start
 
 > Detailed guide: [docs/quick-start.md](docs/quick-start.md)
@@ -37,6 +48,9 @@ cd moyun-studio
 ### 2. Configure Environment
 
 ```bash
+# Windows PowerShell
+copy .env.example .env
+# macOS / Linux
 cp .env.example .env
 ```
 
@@ -48,7 +62,18 @@ LLM_API_BASE=https://api.openai.com/v1
 LLM_MODEL=gpt-4
 ```
 
+**本地 LLM 示例（Ollama 等 OpenAI-compatible 服务）：**
+
+```env
+LLM_PROVIDER=ollama
+LLM_API_KEY=ollama
+LLM_MODEL=qwen2.5
+LLM_API_BASE=http://localhost:11434/v1
+```
+
 Supports DeepSeek, Ollama, and other LiteLLM-compatible providers.
+
+> 🛡️ **安全提示**：`.env` 包含 API Key，已加入 `.gitignore`，**请勿提交**到版本控制。
 
 ### 3. Start Backend
 
@@ -56,7 +81,7 @@ Supports DeepSeek, Ollama, and other LiteLLM-compatible providers.
 cd backend
 python -m venv venv
 
-# Windows
+# Windows PowerShell
 .\venv\Scripts\activate
 # macOS / Linux
 source venv/bin/activate
@@ -158,6 +183,12 @@ All configuration is managed via `.env` file (copy from `.env.example`). Key set
 | `LLM_PROVIDER` | `openai` | Provider: `openai`, `anthropic`, `ollama`, `custom` |
 | `DEBUG` | `false` | Enable debug logging |
 | `WORKSPACE_PATH` | `./workspace` | Project data directory |
+| `ALLOW_REAL_LLM_SMOKE` | `false` | 允许真实 LLM 冒烟测试（需 `__llm_smoke_*` 前缀项目，普通用户请勿开启） |
+| `LLM_SMOKE_MAX_TOKENS` | `300` | 真实 LLM 冒烟测试 max_tokens 上限（1-1024） |
+
+> 📌 **变量名说明**：`backend/config.py` 中的 Settings **未设置 `env_prefix`**，因此环境变量直接使用 `ALLOW_REAL_LLM_SMOKE`（非 `MOYUN_*` 前缀）。部分历史文档提及 `MOYUN_ALLOW_REAL_LLM_SMOKE` 已过时。
+>
+> 例外：`MOYUN_DISABLE_PROXY_DETECTION` 由 `backend/main.py` 直接读取 `os.environ`，使用 `MOYUN_` 前缀。
 
 Full configuration reference: [backend/config.py](backend/config.py)
 
@@ -179,6 +210,50 @@ To use either, copy into your workspace:
 ```powershell
 Copy-Item -Recurse examples/demo-novel workspace/projects/demo-novel
 ```
+
+## FAQ / 常见问题
+
+### Q1: 端口占用（Port 8000 / 5173 被占用）
+
+Windows:
+```powershell
+# 查看占用端口的进程
+netstat -ano | findstr :8000
+# 杀进程
+taskkill /PID <PID> /F
+```
+
+macOS / Linux:
+```bash
+lsof -i :8000
+kill -9 <PID>
+```
+
+### Q2: 代理影响 git push / LLM 连接问题
+
+Windows 下如果遇到 `git push 或 LLM 调用报 SSL 错误，可临时禁用系统代理检测：
+
+```env
+MOYUN_DISABLE_PROXY_DETECTION=true
+```
+
+### Q3: 真实 LLM smoke 变量名到底是哪个？
+
+主配置变量名：`ALLOW_REAL_LLM_SMOKE`（**非** `MOYUN_ALLOW_REAL_LLM_SMOKE`）。`backend/config.py` 中的 Settings 未设置 `env_prefix`，直接读取。
+
+> 前端 E2E 测试用 `process.env.MOYUN_ALLOW_REAL_LLM_SMOKE`（前端自有命名空间，独立于后端）。
+
+### Q4: project_id 和 project name 有什么区别？
+
+- **project_id**：UUID[:8] — 系统内部使用，由前端自动生成。
+- **project name**：用户可读名称，在创建项目时自定义。
+- 真实 LLM smoke 需要 project_id 以 `__llm_smoke_` 为前缀的隔离项目，并非普通创建的项目。
+
+### Q5: 生成按钮点了没反应？
+
+1. 检查 `.env` 是否有 `LLM_API_KEY` 了吗？没有配置 API Key 时使用 dry-run（模拟）。
+2. 检查浏览器 Console 控制台，可能有错误提示。
+3. 检查 `workspace/` 是否存在。
 
 ## Known Issues
 

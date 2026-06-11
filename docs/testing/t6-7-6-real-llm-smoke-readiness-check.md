@@ -8,6 +8,7 @@
 > - T6.7.6a 已补齐后端 gate（`backend/core/smoke_gate.py` + `config.py` 新字段 + `generate.py`/`pipeline.py` gate），并新增 `test_t6_7_6a_real_llm_smoke_gate_contract.py` contract 测试，以及 `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 默认 skip 骨架。
 > - **T6.7.6b**：已完成 smoke max_tokens 强制限制。核心入口 `/api/generate`（service 层 pipeline / fallback）、`/api/chat`、`/api/pipeline/run` 均通过 `llm_extra_kwargs={"max_tokens": 300}` 注入；`batch_generate()` service 层同样注入。详见 `backend/tests/contracts/test_t6_7_6b_smoke_max_tokens_contract.py`（19 tests, all passed）。
 > - **T6.7.6c**：已完成 Pipeline 内部 `_generate_diff_summary()` 的 max_tokens 透传；并通过 contract 测试锁定 `/api/projects` 的 project_id 生成行为（`uuid[:8]`，不保留 name 前缀，name 保存在 meta.json）。详见 `backend/tests/contracts/test_t6_7_6c_pipeline_smoke_max_tokens_contract.py`。
+> - **T6.9.1**：变量名命名澄清。`backend/config.py` 中 Settings **未设置 `env_prefix`**，实际读取的是 `ALLOW_REAL_LLM_SMOKE` / `LLM_SMOKE_MAX_TOKENS`（**不含 `MOYUN_` 前缀**）。本文件及历史文档中出现的 `MOYUN_ALLOW_REAL_LLM_SMOKE` / `MOYUN_LLM_SMOKE_MAX_TOKENS` 为早期设计命名。**当前开发者执行真实 LLM smoke 时，请在 `.env` 中设置 `ALLOW_REAL_LLM_SMOKE=true` + `LLM_SMOKE_MAX_TOKENS=300`**。
 
 ---
 
@@ -54,8 +55,8 @@
 
 | # | 规则 | 当前状态 | 说明 |
 |---|------|---------|------|
-| 1 | 显式开关 `MOYUN_ALLOW_REAL_LLM_SMOKE=1` | ✅ **T6.7.6a 已补齐** | `backend/config.py` 新增 `allow_real_llm_smoke: bool = False`；`.env.example` 已更新 |
-| 2 | 默认跳过（未开开关时测试 skip） | ✅ **T6.7.6a 已补齐** | `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 已新增；`process.env.MOYUN_ALLOW_REAL_LLM_SMOKE` 未设置时 skip |
+| 1 | 显式开关 `ALLOW_REAL_LLM_SMOKE=true`（原 `MOYUN_ALLOW_REAL_LLM_SMOKE=1`） | ✅ **T6.7.6a 已补齐** | `backend/config.py` 新增 `allow_real_llm_smoke: bool = False`；`.env.example` 已更新（T6.9.1 确认变量无 `MOYUN_` 前缀） |
+| 2 | 默认跳过（未开开关时测试 skip） | ✅ **T6.7.6a 已补齐** | `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 已新增；`process.env.MOYUN_ALLOW_REAL_LLM_SMOKE`（前端测试自有命名空间）未设置时 skip |
 | 3 | 测试项目命名 `__llm_smoke_t6_6_5` | ✅ **已约定在文档 + 代码强制** | `backend/core/smoke_gate.py` 中 `is_llm_smoke_project()` 强制前缀 `__llm_smoke_` |
 | 4 | 测试文件 `chapters/vol-01/ch-001/sec-001.md` | ✅ **已约定在方案中** | 需在 T6.8.0 真实冒烟中显式创建 |
 | 5 | max_tokens <= 300 | ✅ **T6.7.6a 已补齐** | `backend/config.py` 新增 `llm_smoke_max_tokens: int = 300`，范围 1-1024 |
@@ -125,11 +126,11 @@
 
 ### 选项 B：T6.8.0 — 在用户显式确认后执行真实 LLM 隔离冒烟测试
 
-**目标**：在 T6.7.6a 完成 + 用户配置 API Key + 设置 `MOYUN_ALLOW_REAL_LLM_SMOKE=1` 后，执行最小冒烟。
+**目标**：在 T6.7.6a 完成 + 用户配置 API Key + 设置 `ALLOW_REAL_LLM_SMOKE=true` 后，执行最小冒烟。
 
 必须满足：
 - 用户显式确认（不接受自动触发）
-- `MOYUN_ALLOW_REAL_LLM_SMOKE=1` 已设置
+- `ALLOW_REAL_LLM_SMOKE=true` 已设置（T6.9.1 澄清：`backend/config.py` 实际读取的是无 `MOYUN_` 前缀的变量）
 - API Key 已配置
 - 只测单场景 candidate
 - 不测 Batch
@@ -158,8 +159,8 @@ Dry-run 路径（完全不调 LLM）：
 2. POST /api/generate/batch + dry_run=True → L395-404 模拟分支
 
 Gate 控制点：
-- 当前：dry_run=True 参数（前端传入）
-- 缺失：后端环境变量 gate（MOYUN_ALLOW_REAL_LLM_SMOKE）
+- dry_run=True 参数（前端传入）
+- 后端环境变量 gate：`ALLOW_REAL_LLM_SMOKE`（T6.9.1 澄清：`backend/config.py` 实际读取的是无 `MOYUN_` 前缀的变量；本文档历史记录中的 `MOYUN_ALLOW_REAL_LLM_SMOKE` 为早期设计命名）
 ```
 
 ---
