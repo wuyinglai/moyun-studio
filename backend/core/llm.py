@@ -110,6 +110,20 @@ def normalize_model_for_provider(model: str, api_type: str) -> str:
     return model
 
 
+def _is_agnes_base_url(api_base: str | None) -> bool:
+    """Return True when the configured OpenAI-compatible endpoint is Agnes AI."""
+    if not api_base:
+        return False
+    return "apihub.agnes-ai.com" in api_base.rstrip("/").lower()
+
+
+def _normalize_agnes_model_name(model: str) -> str:
+    """Agnes rejects provider-prefixed model names in the request body."""
+    if model.startswith("openai/"):
+        return model[len("openai/"):]
+    return model
+
+
 def _is_openai_compatible_base_url(api_base: str | None) -> bool:
     """Return True for custom providers that expose OpenAI-compatible /v1 APIs."""
     if not api_base:

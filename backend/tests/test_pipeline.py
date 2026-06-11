@@ -9,6 +9,7 @@
 6. Token 估算
 """
 
+import hashlib
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -16,7 +17,14 @@ from jinja2 import Environment, FileSystemLoader
 import pytest
 import yaml
 
-from backend.core.pipeline import REFERENCE_PATTERN, PipelineError, PipelineRunner
+from backend.core.pipeline import (
+    REFERENCE_PATTERN,
+    PipelineError,
+    PipelineRunner,
+    _LEGACY_DEFAULT_PROMPT_HASHES,
+    _continuity_anchor_hit_count,
+    _extract_continuity_anchors,
+)
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -254,6 +262,128 @@ class TestPromptRendering:
 
 
 # ─── AsyncGenerator Event Tests ──────────────────────────────────────────────
+
+    def test_render_prompt_uses_system_when_user_prompt_is_known_legacy_default(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+        monkeypatch,
+    ):
+        user_prompts = tmp_path / "workspace" / "prompts"
+        system_prompts = tmp_path / "prompts"
+        rel_path = "pipeline/generate/write.md"
+        (user_prompts / "pipeline" / "generate").mkdir(parents=True)
+        (system_prompts / "pipeline" / "generate").mkdir(parents=True)
+
+        old_default = "old default {{ name }}"
+        legacy_hash = hashlib.sha256(old_default.encode("utf-8")).hexdigest()
+        (user_prompts / rel_path).write_text(old_default, encoding="utf-8")
+        (system_prompts / rel_path).write_text("system upgraded {{ name }}", encoding="utf-8")
+        monkeypatch.setitem(_LEGACY_DEFAULT_PROMPT_HASHES, rel_path, {legacy_hash})
+
+        runner = PipelineRunner(
+            user_prompts,
+            mock_llm_service,
+            mock_file_service,
+            system_prompts_path=system_prompts,
+        )
+
+        result = runner.render_prompt(rel_path, {"name": "Prompt"})
+
+        assert result == "system upgraded Prompt"
+
+    def test_render_prompt_keeps_user_custom_prompt_even_when_system_exists(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+        monkeypatch,
+    ):
+        user_prompts = tmp_path / "workspace" / "prompts"
+        system_prompts = tmp_path / "prompts"
+        rel_path = "pipeline/generate/write.md"
+        (user_prompts / "pipeline" / "generate").mkdir(parents=True)
+        (system_prompts / "pipeline" / "generate").mkdir(parents=True)
+
+        custom_prompt = "custom user prompt {{ name }}"
+        unrelated_hash = hashlib.sha256(b"some old default").hexdigest()
+        (user_prompts / rel_path).write_text(custom_prompt, encoding="utf-8")
+        (system_prompts / rel_path).write_text("system prompt {{ name }}", encoding="utf-8")
+        monkeypatch.setitem(_LEGACY_DEFAULT_PROMPT_HASHES, rel_path, {unrelated_hash})
+
+        runner = PipelineRunner(
+            user_prompts,
+            mock_llm_service,
+            mock_file_service,
+            system_prompts_path=system_prompts,
+        )
+
+        result = runner.render_prompt(rel_path, {"name": "Prompt"})
+
+        assert result == "custom user prompt Prompt"
+
+    def test_render_prompt_inlines_legacy_default_include_from_system(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+        monkeypatch,
+    ):
+        user_prompts = tmp_path / "workspace" / "prompts"
+        system_prompts = tmp_path / "prompts"
+        main_path = "pipeline/generate/write.md"
+        include_path = "blocks/writing-rules.md"
+        (user_prompts / "pipeline" / "generate").mkdir(parents=True)
+        (user_prompts / "blocks").mkdir(parents=True)
+        (system_prompts / "pipeline" / "generate").mkdir(parents=True)
+        (system_prompts / "blocks").mkdir(parents=True)
+
+        old_block = "old block rules"
+        legacy_hash = hashlib.sha256(old_block.encode("utf-8")).hexdigest()
+        (user_prompts / main_path).write_text(
+            "main {% include 'blocks/writing-rules.md' %}",
+            encoding="utf-8",
+        )
+        (user_prompts / include_path).write_text(old_block, encoding="utf-8")
+        (system_prompts / include_path).write_text("new scene rules", encoding="utf-8")
+        monkeypatch.setitem(_LEGACY_DEFAULT_PROMPT_HASHES, include_path, {legacy_hash})
+
+        runner = PipelineRunner(
+            user_prompts,
+            mock_llm_service,
+            mock_file_service,
+            system_prompts_path=system_prompts,
+        )
+
+        result = runner.render_prompt(main_path, {})
+
+        assert result == "main new scene rules"
+
+
+class TestContinuityAnchors:
+    def test_extract_continuity_anchors_from_prior_scene(self):
+        text = (
+            "雨夜的旧港站只剩一盏坏掉的蓝灯。林澈把黑色芯片藏进袖口，"
+            "广播里响起沈知夏的声音。旧车票背面写着：黑塔计划仍在运行。"
+        )
+
+        anchors = _extract_continuity_anchors(text)
+
+        assert "林澈" in anchors
+        assert "沈知夏" in anchors
+        assert "旧港站" in anchors
+        assert "黑色芯片" in anchors
+        assert "黑塔计划" in anchors
+
+    def test_continuity_anchor_hit_count_detects_renamed_story(self):
+        anchors = ["林澈", "沈知夏", "旧港站", "黑色芯片", "黑塔计划"]
+        wrong_story = "林远靠在废弃钟楼里，攥着一枚青铜罗盘。"
+        continued_story = "林澈在旧港站攥紧黑色芯片，沈知夏的警告还在广播里回荡。"
+
+        assert _continuity_anchor_hit_count(anchors, wrong_story) == 0
+        assert _continuity_anchor_hit_count(anchors, continued_story) >= 3
+
 
 class TestPipelineRun:
     """管线执行测试"""
@@ -672,3 +802,232 @@ class TestDirectWriteBranchProtection:
 
         sec_writes = [c for c in write_calls if "sec-001.md" in c["path"]]
         assert len(sec_writes) > 0, "write_scene + 空目标应直接写入"
+
+
+# ─── Continuity Gate Tests ────────────────────────────────────────────────────
+
+class TestContinuityGate:
+    """连续性守门测试：跑偏样本不得写入正式正文，必须转为候选稿"""
+
+    @staticmethod
+    def _make_continuity_read(existing_content: str = ""):
+        """创建 mock read_file：返回已有场景内容用于连续性检查"""
+        async def mock_read(path):
+            path_str = str(path)
+            if "sec-001.md" in path_str:
+                return existing_content, None, None
+            elif ".candidates/metadata.json" in path_str:
+                return "{}", None, None
+            elif "meta.json" in path_str:
+                return json.dumps({"name": "test", "genre": "玄幻"}), None, None
+            elif "ch-meta.json" in path_str:
+                return json.dumps({"pending_foreshadowing": [], "active_quests": []}), None, None
+            elif "style-guide.md" in path_str:
+                return "# 文风\n测试", None
+            elif "story-state.md" in path_str:
+                return "# 状态\n测试", None
+            elif "recent-context.md" in path_str:
+                return "# 上下文\n测试", None
+            elif "outline.md" in path_str:
+                return "# 大纲\n测试", None
+            return "", None, None
+        return mock_read
+
+    @pytest.mark.asyncio
+    async def test_continuity_gate_deviated_sample_redirects_to_candidate(self, mock_llm_service, mock_file_service, tmp_path):
+        """生成内容跑偏（不包含上文锚点）→ 必须转为候选稿，不写入正式正文"""
+        # Setup: 上一场景包含锚点（林澈、旧港站、芯片）
+        prior_scene = (
+            "雨夜的旧港站只剩一盏坏掉的蓝灯。林澈把黑色芯片藏进袖口，"
+            "广播里响起沈知夏的声音。旧车票背面写着：黑塔计划仍在运行。"
+        )
+        mock_file_service.read_file = AsyncMock(side_effect=self._make_continuity_read(prior_scene))
+
+        write_calls = []
+        async def mock_write(path, content, frontmatter=None):
+            write_calls.append({"path": str(path), "content": content})
+        mock_file_service.write_file = AsyncMock(side_effect=mock_write)
+
+        # Mock LLM 返回跑偏内容（不包含任何锚点）
+        async def mock_deviated_complete(*args, **kwargs):
+            yield "林远靠在废弃钟楼里，攥着一枚青铜罗盘，毫无关联的新故事。"
+
+        mock_llm_service.complete = mock_deviated_complete
+        mock_llm_service.config.max_prompt_tokens = 120000
+        mock_llm_service.config.context_window = 128000
+
+        runner = PipelineRunner(
+            tmp_path / "prompts", mock_llm_service, mock_file_service,
+            system_prompts_path=tmp_path / "system_prompts",
+        )
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "cont-test"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "step1.md").write_text(
+            "{% if previous_text %}锚点：{{ previous_text[:50] }}{% endif %}",
+            encoding="utf-8",
+        )
+        yaml_path = tmp_path / "prompts" / "pipeline" / "cont-test.yaml"
+        yaml_path.write_text(
+            yaml.dump({
+                "name": "cont-test", "label": "连续性测试",
+                "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/cont-test/step1"}],
+            }),
+            encoding="utf-8",
+        )
+        runner.env = Environment(
+            loader=FileSystemLoader(str(tmp_path / "prompts")),
+            autoescape=False,
+        )
+
+        events = []
+        async for event in runner.run(
+            "cont-test", "test-project",
+            "chapters/vol-01/ch-001/sec-002.md",
+            output_mode="write_scene",
+            extra_vars={"previous_text": prior_scene},
+        ):
+            events.append(event)
+
+        # 验证：正式文件不被写入
+        sec_writes = [c for c in write_calls if "sec-002.md" in c["path"] and ".candidates" not in c["path"]]
+        assert len(sec_writes) == 0, "跑偏样本不应写入正式 sec 文件"
+
+        # 验证：发出 quality_warning 事件
+        quality_warnings = [e for e in events if e.get("event") == "quality_warning"]
+        assert len(quality_warnings) > 0, "应发出 quality_warning 事件"
+        warning_data = json.loads(quality_warnings[0]["data"])
+        assert warning_data.get("code") == "CONTINUITY_ANCHOR_MISS"
+
+        # 验证：生成候选稿
+        candidate_events = [e for e in events if e.get("event") == "candidate_created"]
+        assert len(candidate_events) > 0, "跑偏样本应转为候选稿"
+
+    @pytest.mark.asyncio
+    async def test_continuity_gate_adequate_continuity_writes_directly(self, mock_llm_service, mock_file_service, tmp_path):
+        """生成内容包含足够锚点 → 可直接写入正式正文"""
+        prior_scene = (
+            "雨夜的旧港站只剩一盏坏掉的蓝灯。林澈把黑色芯片藏进袖口，"
+            "广播里响起沈知夏的声音。旧车票背面写着：黑塔计划仍在运行。"
+        )
+        mock_file_service.read_file = AsyncMock(side_effect=self._make_continuity_read(prior_scene))
+
+        write_calls = []
+        async def mock_write(path, content, frontmatter=None):
+            write_calls.append({"path": str(path), "content": content})
+        mock_file_service.write_file = AsyncMock(side_effect=mock_write)
+
+        # Mock LLM 返回包含锚点的连续内容
+        async def mock_continuing_complete(*args, **kwargs):
+            yield "林澈在旧港站攥紧黑色芯片，沈知夏的广播警告还在回荡，蓝灯依旧闪烁。"
+
+        mock_llm_service.complete = mock_continuing_complete
+        mock_llm_service.config.max_prompt_tokens = 120000
+        mock_llm_service.config.context_window = 128000
+
+        runner = PipelineRunner(
+            tmp_path / "prompts", mock_llm_service, mock_file_service,
+            system_prompts_path=tmp_path / "system_prompts",
+        )
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "good-test"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "step1.md").write_text("生成下一场景", encoding="utf-8")
+        yaml_path = tmp_path / "prompts" / "pipeline" / "good-test.yaml"
+        yaml_path.write_text(
+            yaml.dump({
+                "name": "good-test", "label": "连续性好",
+                "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/good-test/step1"}],
+            }),
+            encoding="utf-8",
+        )
+        runner.env = Environment(
+            loader=FileSystemLoader(str(tmp_path / "prompts")),
+            autoescape=False,
+        )
+
+        events = []
+        async for event in runner.run(
+            "good-test", "test-project",
+            "chapters/vol-01/ch-001/sec-002.md",
+            output_mode="write_scene",
+            extra_vars={"previous_text": prior_scene},
+        ):
+            events.append(event)
+
+        # 验证：正式文件被写入
+        sec_writes = [c for c in write_calls if "sec-002.md" in c["path"] and ".candidates" not in c["path"]]
+        assert len(sec_writes) > 0, "包含足够锚点的生成应直接写入"
+
+        # 验证：不发出 quality_warning
+        quality_warnings = [e for e in events if e.get("event") == "quality_warning"]
+        assert len(quality_warnings) == 0, "连续性充足的生成不应发出 quality_warning"
+
+    @pytest.mark.asyncio
+    async def test_previous_text_extracted_into_continuity_anchors(self, mock_llm_service, mock_file_service, tmp_path):
+        """previous_text 中的关键元素被正确提取为 continuity_anchors"""
+        prior_scene = (
+            "雨夜的旧港站只剩一盏坏掉的蓝灯。林澈把黑色芯片藏进袖口，"
+            "广播里响起沈知夏的声音。旧车票背面写着：黑塔计划仍在运行。"
+        )
+
+        # 直接测试 _extract_continuity_anchors 函数
+        anchors = _extract_continuity_anchors(prior_scene)
+        assert "林澈" in anchors
+        assert "沈知夏" in anchors
+        assert "旧港站" in anchors
+        assert "黑色芯片" in anchors
+        assert "黑塔计划" in anchors
+
+    @pytest.mark.asyncio
+    async def test_extra_vars_previous_text_injects_continuity_anchors(self, mock_llm_service, mock_file_service, tmp_path):
+        """PipelineRunner.run 接收 previous_text 后，自动注入 continuity_anchors 到 extra_vars"""
+        prior_scene = "雨夜的旧港站，林澈把芯片藏进袖口。"
+
+        mock_file_service.read_file = AsyncMock(side_effect=self._make_continuity_read(""))
+        mock_llm_service.config.max_prompt_tokens = 120000
+        mock_llm_service.config.context_window = 128000
+
+        async def mock_complete(*args, **kwargs):
+            yield "生成内容"
+
+        mock_llm_service.complete = mock_complete
+
+        runner = PipelineRunner(
+            tmp_path / "prompts", mock_llm_service, mock_file_service,
+            system_prompts_path=tmp_path / "system_prompts",
+        )
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "anchor-inject"
+        pipeline_dir.mkdir(parents=True)
+        # prompt 中引用 continuity_anchors 变量
+        (pipeline_dir / "step1.md").write_text(
+            "{% if continuity_anchors %}锚点：{{ continuity_anchors }}{% else %}无锚点{% endif %}",
+            encoding="utf-8",
+        )
+        yaml_path = tmp_path / "prompts" / "pipeline" / "anchor-inject.yaml"
+        yaml_path.write_text(
+            yaml.dump({
+                "name": "anchor-inject", "label": "锚点注入",
+                "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/anchor-inject/step1"}],
+            }),
+            encoding="utf-8",
+        )
+        runner.env = Environment(
+            loader=FileSystemLoader(str(tmp_path / "prompts")),
+            autoescape=False,
+        )
+
+        events = []
+        async for event in runner.run(
+            "anchor-inject", "test-project",
+            "chapters/vol-01/ch-001/sec-002.md",
+            output_mode="write_scene",
+            extra_vars={"previous_text": prior_scene},
+        ):
+            events.append(event)
+
+        # 验证 prompt 事件中包含 continuity_anchors
+        prompt_events = [e for e in events if e.get("event") == "prompt"]
+        assert len(prompt_events) > 0, "应有 prompt 事件"
+        prompt_data = json.loads(prompt_events[0]["data"])
+        prompt_text = prompt_data.get("prompt", "")
+        assert "锚点" in prompt_text, "渲染后的 prompt 应包含 continuity_anchors"
+        assert "林澈" in prompt_text or "旧港站" in prompt_text, "锚点值应出现在 prompt 中"

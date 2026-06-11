@@ -179,6 +179,11 @@ export function useSceneGenerationActions() {
       if (customPrompt && customPrompt.length > 50) {
         extraVars.user_prompt = customPrompt
       }
+      const currentContent = editorStore.getContent(filePath)
+      if (currentContent && currentContent.trim().length > 0) {
+        extraVars.previous_text = currentContent
+        extraVars.current_scene_text = currentContent
+      }
 
       // L1 auto-advance 已打开但未生成的文件 → 本次点击触发生成
       if (_nextConfirmQueued) {

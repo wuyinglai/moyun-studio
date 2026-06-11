@@ -20,6 +20,7 @@ from backend.core.exceptions import LLMError
 from backend.core.llm import (
     LLMConfig,
     LLMService,
+    _normalize_agnes_model_name,
     build_litellm_kwargs,
     load_llm_config_from_workspace,
     normalize_model_for_provider,
@@ -89,6 +90,10 @@ class TestNormalizeModelForProvider:
     def test_none_api_type(self):
         result = normalize_model_for_provider("gpt-4", None)
         assert result == "gpt-4"
+
+    def test_agnes_direct_api_strips_openai_prefix(self):
+        result = _normalize_agnes_model_name("openai/agnes-2.0-flash")
+        assert result == "agnes-2.0-flash"
 
 
 class TestBuildLitellmKwargs:
@@ -213,8 +218,20 @@ class TestLLMService:
         svc = LLMService.from_workspace_config({
             "apiType": "custom",
             "apiKey": "sk-test",
+            "apiBase": "https://openai-compatible.example.com/v1",
+            "model": "gpt-compatible",
+        })
+
+        assert svc.config.provider == "openai"
+        assert svc.config.api_base == "https://openai-compatible.example.com/v1"
+        assert svc.config.model == "openai/gpt-compatible"
+
+    def test_from_workspace_config_agnes_base_uses_litellm_provider_prefix(self):
+        svc = LLMService.from_workspace_config({
+            "apiType": "custom",
+            "apiKey": "sk-test",
             "apiBase": "https://apihub.agnes-ai.com/v1",
-            "model": "agnes-2.0-flash",
+            "model": "openai/agnes-2.0-flash",
         })
 
         assert svc.config.provider == "openai"

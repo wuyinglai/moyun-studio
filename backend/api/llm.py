@@ -19,6 +19,8 @@ from fastapi import APIRouter, Depends, Request
 from backend.config import Settings, get_settings
 from backend.core.exceptions import RateLimitError
 from backend.core.llm import (
+    _is_agnes_base_url,
+    _normalize_agnes_model_name,
     load_llm_config_from_workspace,
     normalize_model_for_provider,
 )
@@ -141,13 +143,16 @@ async def test_connection(
     llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     model = llm_cfg.get("model", settings.llm_model)
     api_type = llm_cfg.get("apiType", settings.llm_provider)
-    model = normalize_model_for_provider(model, api_type)
+    api_base = (llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or "").rstrip("/")
+    if _is_agnes_base_url(api_base):
+        model = _normalize_agnes_model_name(model)
+    else:
+        model = normalize_model_for_provider(model, api_type)
 
     try:
         logger.info("开始测试LLM连接", extra={"model": model, "api_type": api_type})
 
         api_key = llm_cfg.get("apiKey") or settings.llm_api_key
-        api_base = (llm_cfg.get("apiBase") or llm_cfg.get("apiUrl") or settings.llm_api_base or "").rstrip("/")
 
         import requests as _req
         sess = _req.Session()
@@ -155,7 +160,7 @@ async def test_connection(
         resp = sess.post(
             f"{api_base}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": llm_cfg.get("model", settings.llm_model), "messages": [{"role": "user", "content": "Hi"}], "max_tokens": 5},
+            json={"model": model, "messages": [{"role": "user", "content": "Hi"}], "max_tokens": 5},
             timeout=30,
         )
         sess.close()

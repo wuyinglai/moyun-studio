@@ -51,6 +51,71 @@ from backend.schemas.scene_plan import ScenePlan
 
 logger = logging.getLogger(__name__)
 
+_LEGACY_DEFAULT_PROMPT_HASHES: dict[str, set[str]] = {
+    # Old workspace defaults can shadow upgraded system prompts forever because
+    # workspace/prompts has priority. Only bypass exact known legacy defaults;
+    # user-edited prompts keep their normal override behavior.
+    "blocks/writing-rules.md": {
+        "b6ef56de4b810f8b9089d013c3a32f1a30688547a5d7dafd4aa528ae2ea1b7d5",
+    },
+    "pipeline/generate/write.md": {
+        "a830fcadb3175f4bf965c0243abfee52e1168681310a238f0b759996e591451a",
+    },
+}
+
+_COMMON_CHINESE_SURNAMES = (
+    "赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜"
+    "戚谢邹喻柏水窦章云苏潘葛奚范彭郎鲁韦昌马苗凤花方俞任袁柳鲍史唐"
+    "费廉岑薛雷贺倪汤滕殷罗毕郝邬安常乐于时傅皮卞齐康伍余元卜顾孟平黄"
+    "和穆萧尹姚邵湛汪祁毛禹狄米贝明臧计伏成戴谈宋庞熊纪舒屈项祝董梁杜"
+    "阮蓝闵席季麻强贾路娄危江童颜郭梅盛林刁钟徐邱骆高夏蔡田胡凌霍虞万"
+    "支柯昝管卢莫经房裘缪干解应宗丁宣邓郁单杭洪包诸左石崔吉龚程嵇邢裴"
+    "陆荣翁荀羊於惠甄曲家封芮羿储靳汲邴糜松井段富巫乌焦巴弓牧隗山谷车"
+    "侯宓蓬全郗班仰秋仲伊宫宁仇栾暴甘斜厉戎祖武符刘景詹龙叶幸司韶黎"
+)
+
+_CONTINUITY_KEYWORD_PATTERN = re.compile(
+    r"[\u4e00-\u9fff]{1,8}(?:计划|项目|组织|集团|宗|门|盟|局|站|城|镇|村|港|楼|塔|芯片|车票|钥匙|罗盘|玉佩|刀|剑)"
+)
+_CHINESE_NAME_PATTERN = re.compile(fr"[{_COMMON_CHINESE_SURNAMES}][\u4e00-\u9fff]{{1,2}}")
+_QUOTED_ENTITY_PATTERN = re.compile(r"[“《]([^”》]{2,12})[”》]")
+
+
+def _extract_continuity_anchors(text: str, limit: int = 8) -> list[str]:
+    """Extract lightweight continuity anchors from prior scene text."""
+    if not text:
+        return []
+
+    candidates: list[str] = []
+    for match in _CONTINUITY_KEYWORD_PATTERN.finditer(text):
+        candidates.append(match.group(0))
+    for match in _QUOTED_ENTITY_PATTERN.finditer(text):
+        candidates.append(match.group(1))
+    for match in _CHINESE_NAME_PATTERN.finditer(text):
+        candidates.append(match.group(0))
+
+    ignored = {"第1卷", "第1章", "第1场", "下一秒", "这一刻", "那一刻", "计划", "车票", "蓝灯"}
+    trailing_noise = "把在从向被将对与和的了着过仍背里上中下内外前后"
+    anchors: list[str] = []
+    for item in candidates:
+        item = item.strip(" ：:，,。.；;、\n\t")
+        for separator in ("的", "把", "将", "攥着", "拿着", "藏进"):
+            if separator in item and len(item.rsplit(separator, 1)[-1]) >= 2:
+                item = item.rsplit(separator, 1)[-1]
+        while len(item) > 2 and item[-1] in trailing_noise:
+            item = item[:-1]
+        if len(item) < 2 or item in ignored:
+            continue
+        if item not in anchors:
+            anchors.append(item)
+        if len(anchors) >= limit:
+            break
+    return anchors
+
+
+def _continuity_anchor_hit_count(anchors: list[str], content: str) -> int:
+    return sum(1 for anchor in anchors if anchor and anchor in content)
+
 
 class PipelineError(Exception):
     pass
@@ -146,8 +211,54 @@ class PipelineRunner:
 
     def render_prompt(self, relative_path: str, variables: dict) -> str:
         """使用 Jinja2 渲染 prompt 模板"""
+        prompt_path = self._select_prompt_path(relative_path)
+        if prompt_path:
+            template_text = prompt_path.read_text(encoding="utf-8")
+            template_text = self._inline_selected_includes(template_text)
+            return self.env.from_string(template_text).render(**variables)
+
         template = self.env.get_template(relative_path)
         return template.render(**variables)
+
+    def _select_prompt_path(self, relative_path: str) -> Path | None:
+        normalized_path = relative_path.replace("\\", "/")
+        user_path = self.prompts_path / normalized_path
+        system_path = Path(self.system_prompts_path) / normalized_path if self.system_prompts_path else None
+
+        if user_path.exists():
+            if system_path and system_path.exists() and self._is_legacy_default_prompt(normalized_path, user_path):
+                logger.warning("忽略过期默认 Prompt，使用系统新版: %s", normalized_path)
+                return system_path
+            return user_path
+
+        if system_path and system_path.exists():
+            return system_path
+        return None
+
+    def _is_legacy_default_prompt(self, relative_path: str, prompt_path: Path) -> bool:
+        legacy_hashes = _LEGACY_DEFAULT_PROMPT_HASHES.get(relative_path)
+        if not legacy_hashes:
+            return False
+        try:
+            digest = hashlib.sha256(prompt_path.read_bytes()).hexdigest()
+        except OSError:
+            return False
+        return digest in legacy_hashes
+
+    def _inline_selected_includes(self, template_text: str) -> str:
+        include_pattern = re.compile(r"{%\s*include\s+['\"]([^'\"]+)['\"]\s*%}")
+
+        def replace_include(match: re.Match[str]) -> str:
+            include_path = match.group(1)
+            selected_path = self._select_prompt_path(include_path)
+            if not selected_path:
+                return match.group(0)
+            try:
+                return selected_path.read_text(encoding="utf-8")
+            except OSError:
+                return match.group(0)
+
+        return include_pattern.sub(replace_include, template_text)
 
     async def resolve_references(self, text: str, project_id: str) -> str:
         """解析 @{path} 引用为文件内容
@@ -360,6 +471,14 @@ class PipelineRunner:
         
         pipeline = self.load_pipeline(pipeline_name)
         extra_vars = extra_vars or {}
+        continuity_source = str(
+            extra_vars.get("previous_text")
+            or extra_vars.get("current_scene_text")
+            or ""
+        )
+        continuity_anchors = _extract_continuity_anchors(continuity_source)
+        if continuity_anchors and not extra_vars.get("continuity_anchors"):
+            extra_vars["continuity_anchors"] = "、".join(continuity_anchors)
         output_mode = await self._normalize_output_mode(
             pipeline_name=pipeline_name,
             project_id=project_id,
@@ -653,6 +772,30 @@ class PipelineRunner:
             should_use_candidate = output_mode == "candidate"
             if output_mode == "write_scene" and _has_substantive_content(target_file, original_content):
                 should_use_candidate = True
+            continuity_hit_count = _continuity_anchor_hit_count(continuity_anchors, final_output)
+            continuity_required_hits = min(2, len(continuity_anchors))
+            if (
+                output_mode == "write_scene"
+                and continuity_required_hits > 0
+                and continuity_hit_count < continuity_required_hits
+            ):
+                should_use_candidate = True
+                logger.warning(
+                    "生成结果连续性不足，改存候选稿: target=%s anchors=%s hits=%d/%d",
+                    target_file,
+                    continuity_anchors,
+                    continuity_hit_count,
+                    continuity_required_hits,
+                )
+                yield {"event": "quality_warning", "data": json.dumps({
+                    "task_id": task_id,
+                    "target_file": target_file,
+                    "code": "CONTINUITY_ANCHOR_MISS",
+                    "message": "生成结果未能保留足够的上文关键元素，已改存为候选稿，未写入正式场景。",
+                    "anchors": continuity_anchors,
+                    "hit_count": continuity_hit_count,
+                    "required_hits": continuity_required_hits,
+                }, ensure_ascii=False)}
 
             if should_use_candidate:
                 # 生成候选稿而不是直接覆盖
@@ -1083,13 +1226,9 @@ class PipelineRunner:
             # 优先用 step.prompt 路径（实际用于生成的模板）
             prompt_content = ""
             if step.prompt:
-                prompt_paths = [self.prompts_path / f"{step.prompt}.md"]
-                if self.system_prompts_path:
-                    prompt_paths.append(Path(self.system_prompts_path) / f"{step.prompt}.md")
-                for prompt_path in prompt_paths:
-                    if prompt_path.exists():
-                        prompt_content = prompt_path.read_text(encoding="utf-8")
-                        break
+                prompt_path = self._select_prompt_path(f"{step.prompt}.md")
+                if prompt_path:
+                    prompt_content = prompt_path.read_text(encoding="utf-8")
             # 如果 step.prompt 指向 pipeline 内置路径，补充尝试
             if not prompt_content:
                 alt_path = self._get_step_prompt_path(name, step.id)
