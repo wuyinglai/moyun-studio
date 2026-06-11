@@ -718,7 +718,8 @@ class PipelineRunner:
         if original_content and final_output and final_output != original_content and not dry_run:
             try:
                 summary = await self._generate_diff_summary(
-                    project_id, target_file, original_content, final_output, task_id
+                    project_id, target_file, original_content, final_output, task_id,
+                    llm_extra_kwargs=llm_extra_kwargs,
                 )
                 if summary:
                     yield {"event": "diff_summary", "data": json.dumps({
@@ -1007,11 +1008,14 @@ class PipelineRunner:
         original_content: str,
         modified_content: str,
         task_id: str,
+        llm_extra_kwargs: dict | None = None,
     ) -> str | None:
         """生成 AI 修改摘要
 
         使用 diff-summary 管线的 analyze 步骤 prompt，调用 LLM 分析修改内容。
         返回结构化分析报告文本，失败时返回 None。
+
+        llm_extra_kwargs：可选，用于 smoke 项目时强制 max_tokens。
         """
         try:
             # 加载 diff-summary 管线的 analyze 步骤
@@ -1031,7 +1035,8 @@ class PipelineRunner:
                 {"role": "user", "content": prompt_text},
             ]
             summary_parts = []
-            async for chunk in self.llm_service.complete(messages, timeout=60):
+            extra = llm_extra_kwargs or {}
+            async for chunk in self.llm_service.complete(messages, timeout=60, **extra):
                 summary_parts.append(chunk)
 
             summary = "".join(summary_parts)

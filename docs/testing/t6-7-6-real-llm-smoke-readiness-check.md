@@ -4,7 +4,10 @@
 >
 > **前置基线**：T6.6（完整 dry-run 验收 + T6.6.5 方案文档）、T6.7.5a（Batch result schema contract 加固）已完成。
 >
-> **更新**：T6.7.6a 已补齐后端 gate（`backend/core/smoke_gate.py` + `config.py` 新字段 + `generate.py`/`pipeline.py` gate），并新增 `test_t6_7_6a_real_llm_smoke_gate_contract.py` 15 项 contract 测试，以及 `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 默认 skip 骨架。
+> **更新**：
+> - T6.7.6a 已补齐后端 gate（`backend/core/smoke_gate.py` + `config.py` 新字段 + `generate.py`/`pipeline.py` gate），并新增 `test_t6_7_6a_real_llm_smoke_gate_contract.py` contract 测试，以及 `frontend/tests/e2e/30-real-llm-smoke.spec.ts` 默认 skip 骨架。
+> - **T6.7.6b**：已完成 smoke max_tokens 强制限制。核心入口 `/api/generate`（service 层 pipeline / fallback）、`/api/chat`、`/api/pipeline/run` 均通过 `llm_extra_kwargs={"max_tokens": 300}` 注入；`batch_generate()` service 层同样注入。详见 `backend/tests/contracts/test_t6_7_6b_smoke_max_tokens_contract.py`（19 tests, all passed）。
+> - **T6.7.6c**：已完成 Pipeline 内部 `_generate_diff_summary()` 的 max_tokens 透传；并通过 contract 测试锁定 `/api/projects` 的 project_id 生成行为（`uuid[:8]`，不保留 name 前缀，name 保存在 meta.json）。详见 `backend/tests/contracts/test_t6_7_6c_pipeline_smoke_max_tokens_contract.py`。
 
 ---
 
@@ -17,6 +20,20 @@
 - `POST /api/generate/batch` → `check_batch_real_llm_smoke_gate()`（永远拒绝真实 smoke）
 - `POST /api/chat` → `check_real_llm_smoke_gate()`
 - `POST /api/pipeline/run` → `check_real_llm_smoke_gate()`
+
+**T6.7.6b + T6.7.6c 已补齐 smoke max_tokens 透传**，覆盖以下路径：
+- `/api/generate` → `GenerationService.generate_stream()` 的管线模式 + fallback 路径
+- `/api/chat` → `PipelineRunner.run(llm_extra_kwargs=...)`
+- `/api/pipeline/run` → `PipelineRunner.run(llm_extra_kwargs=...)`
+- `PipelineRunner._generate_diff_summary()` → 新增 `llm_extra_kwargs` 参数，内部 `complete(messages, timeout=60, **extra)`
+- `GenerationService.batch_generate()`（service 层 defense-in-depth；API 层永远拒绝 smoke batch）
+
+**重要：smoke 项目标识仅基于真实 project_id 前缀**
+- `is_llm_smoke_project(project_id)` 检查 `project_id.startswith("__llm_smoke_")`
+- **`POST /api/projects` 生成的 project_id = `uuid[:8]`，不保留用户输入的 name 前缀**；name 保存在 `meta.json` 中，但不用于 gate 判定
+- 因此 smoke 测试必须：
+  - **直接在 `projects/__llm_smoke_*` 下手工创建目录**（contract 测试如此做）
+  - 或 **在 T6.8.0 中新增显式 `smoke_test=true` 请求字段**（后续可考虑）
 
 仅当 `project_id.startswith("__llm_smoke_")` 且 `dry_run=False` 时，gate 才介入；非 smoke 项目和 dry-run 完全不受影响。
 
