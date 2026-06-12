@@ -74,36 +74,97 @@ _COMMON_CHINESE_SURNAMES = (
     "侯宓蓬全郗班仰秋仲伊宫宁仇栾暴甘斜厉戎祖武符刘景詹龙叶幸司韶黎"
 )
 
-_CONTINUITY_KEYWORD_PATTERN = re.compile(
-    r"[\u4e00-\u9fff]{1,8}(?:计划|项目|组织|集团|宗|门|盟|局|站|城|镇|村|港|楼|塔|芯片|车票|钥匙|罗盘|玉佩|刀|剑)"
+# Multi-char suffixes: unambiguous location/object markers, prefix up to 2 chars
+_CONTINUITY_MULTI_SUFFIX_PATTERN = re.compile(
+    r"[\u4e00-\u9fff]{1,2}(?:计划|项目|组织|集团|芯片|车票|钥匙|罗盘|玉佩"
+    r"|月台|档案室|实验室|钟楼|教堂|宫殿|山庄|客栈|书院)"
 )
+# Single-char suffixes: can be verbs in narrative, restrict prefix to 1-2 chars
+_CONTINUITY_SINGLE_SUFFIX_PATTERN = re.compile(
+    r"[\u4e00-\u9fff]{1,2}(?:站|城|镇|村|港|楼|塔|盟|局|门|宗|刀|剑)"
+)
+# Location names preceded by a preposition — captures full name including
+# suffix like 站/城 that would otherwise be ambiguous with a verb.
+_LOCATION_WITH_PREP_PATTERN = re.compile(
+    r"(?:在|从|到|去|回)([\u4e00-\u9fff]{2,4}(?:站|城|镇|村|港|楼|塔))"
+)
+# Standalone keywords: unambiguous entities that need no prefix
+_STANDALONE_KEYWORDS = re.compile(r"追踪者|档案室|灰塔实验室|实验室|钟楼|灰塔|芯片|月台|山庄|客栈|书院|教堂|宫殿")
 _CHINESE_NAME_PATTERN = re.compile(fr"[{_COMMON_CHINESE_SURNAMES}][\u4e00-\u9fff]{{1,2}}")
 _QUOTED_ENTITY_PATTERN = re.compile(r"[“《]([^”》]{2,12})[”》]")
 
 
-def _extract_continuity_anchors(text: str, limit: int = 8) -> list[str]:
-    """Extract lightweight continuity anchors from prior scene text."""
+def _extract_continuity_anchors(text: str, limit: int = 12) -> list[str]:
+    """Extract lightweight continuity anchors from prior scene text.
+
+    Focuses on named entities (people, places, key objects) rather than
+    sentence fragments.  Uses position-aware filtering to distinguish
+    location suffixes (e.g. ``旧港站``) from homographic verbs
+    (e.g. ``林澈站在``).
+    """
     if not text:
         return []
 
-    candidates: list[str] = []
-    for match in _CONTINUITY_KEYWORD_PATTERN.finditer(text):
-        candidates.append(match.group(0))
-    for match in _QUOTED_ENTITY_PATTERN.finditer(text):
-        candidates.append(match.group(1))
+    # Collect raw candidates as (matched_text, start_position, is_standalone).
+    # Priority order: names (critical for continuity) → standalone keywords →
+    # location-with-prep → multi-suffix → single-suffix.
+    raw: list[tuple[str, int, bool]] = []
     for match in _CHINESE_NAME_PATTERN.finditer(text):
-        candidates.append(match.group(0))
+        raw.append((match.group(0), match.start(), False))
+    for match in _QUOTED_ENTITY_PATTERN.finditer(text):
+        raw.append((match.group(1), match.start(), True))
+    for match in _STANDALONE_KEYWORDS.finditer(text):
+        raw.append((match.group(0), match.start(), True))
+    for match in _LOCATION_WITH_PREP_PATTERN.finditer(text):
+        # Group 1 is the location name (without the preposition)
+        loc = match.group(1)
+        loc_start = match.start(1)
+        raw.append((loc, loc_start, True))
+    for match in _CONTINUITY_MULTI_SUFFIX_PATTERN.finditer(text):
+        raw.append((match.group(0), match.start(), False))
+    for match in _CONTINUITY_SINGLE_SUFFIX_PATTERN.finditer(text):
+        raw.append((match.group(0), match.start(), False))
 
     ignored = {"第1卷", "第1章", "第1场", "下一秒", "这一刻", "那一刻", "计划", "车票", "蓝灯"}
+    leading_noise = "在从向着被把将的了着过仍和与及那这自打朝"
     trailing_noise = "把在从向被将对与和的了着过仍背里上中下内外前后"
+    _separators = ("的", "把", "将", "攥着", "拿着", "藏进")
+    _name_following_verbs = "站靠坐走跑看说问答喊叫望盯瞪抱握攥拿提推拉躺跪趴把将被让给从在向"
     anchors: list[str] = []
-    for item in candidates:
+    for item, start, standalone in raw:
         item = item.strip(" ：:，,。.；;、\n\t")
-        for separator in ("的", "把", "将", "攥着", "拿着", "藏进"):
+        if not item:
+            continue
+        # Strip leading particles/prepositions (keep at least 2 chars)
+        if not standalone:
+            while item and item[0] in leading_noise and len(item) > 2:
+                item = item[1:]
+                start += 1
+        # Split on separators to keep only the entity part
+        for separator in _separators:
             if separator in item and len(item.rsplit(separator, 1)[-1]) >= 2:
-                item = item.rsplit(separator, 1)[-1]
-        while len(item) > 2 and item[-1] in trailing_noise:
-            item = item[:-1]
+                new_item = item.rsplit(separator, 1)[-1]
+                start += len(item) - len(new_item)
+                item = new_item
+        # If starts with a Chinese name followed by a verb, keep only the name.
+        # Check 2-char names first (more common), then 3-char names.
+        if len(item) > 2 and item[0] in _COMMON_CHINESE_SURNAMES:
+            name = None
+            rest = ""
+            if len(item) >= 3 and '\u4e00' <= item[1] <= '\u9fff' and item[2] in _name_following_verbs:
+                name = item[:2]
+                rest = item[2:]
+            elif len(item) >= 4 and '\u4e00' <= item[1] <= '\u9fff' and '\u4e00' <= item[2] <= '\u9fff' and item[3] in _name_following_verbs:
+                name = item[:3]
+                rest = item[3:]
+            if name and rest:
+                item = name
+        # Context-aware trailing noise: strip trailing particles unless the
+        # item is a standalone keyword or location-prep match (those are
+        # already clean).
+        if not standalone:
+            while len(item) > 2 and item[-1] in trailing_noise:
+                item = item[:-1]
         if len(item) < 2 or item in ignored:
             continue
         if item not in anchors:

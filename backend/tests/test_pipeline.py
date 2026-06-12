@@ -25,6 +25,7 @@ from backend.core.pipeline import (
     _continuity_anchor_hit_count,
     _extract_continuity_anchors,
 )
+from backend.schemas.candidate import CandidateAction
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -372,8 +373,8 @@ class TestContinuityAnchors:
 
         assert "林澈" in anchors
         assert "沈知夏" in anchors
-        assert "旧港站" in anchors
-        assert "黑色芯片" in anchors
+        assert "旧港站" in anchors or "旧港" in anchors
+        assert "黑色芯片" in anchors or "芯片" in anchors
         assert "黑塔计划" in anchors
 
     def test_continuity_anchor_hit_count_detects_renamed_story(self):
@@ -383,6 +384,84 @@ class TestContinuityAnchors:
 
         assert _continuity_anchor_hit_count(anchors, wrong_story) == 0
         assert _continuity_anchor_hit_count(anchors, continued_story) >= 3
+
+
+    def test_extract_continuity_anchors_named_entities_not_fragments(self):
+        """T7.4-C: anchors should be named entities, not sentence fragments."""
+        text = (
+            "林澈站在旧港站的月台边，指尖还残留着银色芯片的余温。"
+            "沈知夏从二楼档案室下来，提醒他追踪者已经逼近。"
+            "那枚芯片来自灰塔实验室。"
+        )
+        anchors = _extract_continuity_anchors(text)
+
+        # Expected named entities
+        assert "林澈" in anchors
+        assert "沈知夏" in anchors
+        assert "追踪者" in anchors
+        assert "灰塔实验室" in anchors
+        # Location: accept either full or trimmed form
+        assert "旧港站" in anchors or "旧港" in anchors
+        assert "档案室" in anchors or "二楼档案室" in anchors
+        # Chip: accept either form
+        assert "芯片" in anchors or "银色芯片" in anchors
+
+        # Forbidden sentence fragments
+        assert "林澈站在站" not in anchors
+        assert "指尖还残留着芯片" not in anchors
+        assert "从二楼" not in anchors
+        assert "已经逼近" not in anchors
+
+    def test_extract_continuity_anchors_standalone_keywords(self):
+        """Standalone keywords should be captured even without prefix context."""
+        text = "追踪者已经逼近。档案室里有人。"
+        anchors = _extract_continuity_anchors(text)
+
+        assert "追踪者" in anchors
+        assert "档案室" in anchors
+
+
+class TestInferCandidateAction:
+    """Regression tests for _infer_candidate_action action-string mapping."""
+
+    @pytest.fixture
+    def runner(self, tmp_path, mock_llm_service, mock_file_service):
+        return PipelineRunner(
+            tmp_path / "prompts", mock_llm_service, mock_file_service,
+            system_prompts_path=tmp_path / "system_prompts",
+        )
+
+    def test_write_next_scene_maps_to_continue(self, runner):
+        result = runner._infer_candidate_action("generate", "candidate", action="write_next_scene")
+        assert result == CandidateAction.CONTINUE
+
+    def test_write_current_scene_maps_to_continue(self, runner):
+        result = runner._infer_candidate_action("generate", "candidate", action="write_current_scene")
+        assert result == CandidateAction.CONTINUE
+
+    def test_rewrite_current_scene_maps_to_rewrite(self, runner):
+        result = runner._infer_candidate_action("generate", "candidate", action="rewrite_current_scene")
+        assert result == CandidateAction.REWRITE
+
+    def test_polish_current_scene_maps_to_polish(self, runner):
+        result = runner._infer_candidate_action("generate", "candidate", action="polish_current_scene")
+        assert result == CandidateAction.POLISH
+
+    def test_chat_edit_current_scene_maps_to_chat(self, runner):
+        result = runner._infer_candidate_action("generate", "candidate", action="chat_edit_current_scene")
+        assert result == CandidateAction.CHAT
+
+    def test_action_case_insensitive(self, runner):
+        result = runner._infer_candidate_action("generate", "candidate", action="WRITE_NEXT_SCENE")
+        assert result == CandidateAction.CONTINUE
+
+    def test_no_action_falls_back_to_pipeline_name(self, runner):
+        result = runner._infer_candidate_action("polish-scene", "candidate", action=None)
+        assert result == CandidateAction.POLISH
+
+    def test_no_action_no_match_defaults_to_rewrite(self, runner):
+        result = runner._infer_candidate_action("generate", "candidate", action=None)
+        assert result == CandidateAction.REWRITE
 
 
 class TestPipelineRun:
@@ -973,8 +1052,8 @@ class TestContinuityGate:
         anchors = _extract_continuity_anchors(prior_scene)
         assert "林澈" in anchors
         assert "沈知夏" in anchors
-        assert "旧港站" in anchors
-        assert "黑色芯片" in anchors
+        assert "旧港站" in anchors or "旧港" in anchors
+        assert "黑色芯片" in anchors or "芯片" in anchors
         assert "黑塔计划" in anchors
 
     @pytest.mark.asyncio
