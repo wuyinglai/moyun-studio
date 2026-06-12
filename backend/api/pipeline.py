@@ -78,6 +78,10 @@ async def run_pipeline(
             )
             await event_bus.publish(evt.type, evt.to_sse_dict())
 
+        # 从 extra_vars 提取 _action（前端 runSceneAction 写入的场景动作标识），
+        # 传给 runner.run() 使 _infer_candidate_action 能正确映射为 CONTINUE/REWRITE/POLISH 等。
+        scene_action = req.extra_vars.get("_action") if req.extra_vars else None
+
         try:
             async for event in runner.run(
                 pipeline_name=req.pipeline,
@@ -89,6 +93,7 @@ async def run_pipeline(
                 scene_plan=req.scene_plan,
                 dry_run=req.dry_run,
                 llm_extra_kwargs=pipeline_llm_extra,
+                action=scene_action,
             ):
                 # 直接返回事件到 streaming 响应
                 yield event

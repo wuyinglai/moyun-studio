@@ -109,7 +109,7 @@ export interface FileTreeNode {
 // ═══════════════════════════════════════════════════════════
 
 /** 候选稿操作类型 */
-export type CandidateAction = 'rewrite' | 'continue' | 'modify' | 'chat' | 'expand' | 'shrink' | 'polish'
+export type CandidateAction = 'rewrite' | 'continue' | 'modify' | 'chat' | 'expand' | 'shrink' | 'polish' | 'fallback_draft'
 
 /** 候选稿状态 */
 export type CandidateStatus = 'pending' | 'adopted' | 'rejected' | 'discarded'

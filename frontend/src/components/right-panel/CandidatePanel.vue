@@ -215,6 +215,7 @@ function actionLabel(action: string): string {
     expand: '扩写',
     shrink: '缩写',
     polish: '润色',
+    fallback_draft: '备用草稿',
   }
   return labels[action] || action
 }
@@ -599,6 +600,7 @@ watch(() => projectStore.currentProject?.id, () => {
   &.action-expand { background: rgba(234, 179, 8, 0.2); color: var(--accent-warning); }
   &.action-shrink { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
   &.action-polish { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
+  &.action-fallback_draft { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
 }
 
 .candidate-status {
