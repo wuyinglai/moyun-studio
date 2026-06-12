@@ -39,6 +39,7 @@ export const useTaskStore = defineStore('task', () => {
   const tasks = ref<Task[]>([])
   const queue = ref<string[]>([])
   const logs = ref<Log[]>([])
+  const activeWarnings = ref<string[]>([])
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
   function addTask(id: string, name: string) {
@@ -123,6 +124,17 @@ export const useTaskStore = defineStore('task', () => {
 
   function clearLogs() {
     logs.value = []
+  }
+
+  function addWarning(message: string) {
+    // 去重：相同消息不重复添加
+    if (!activeWarnings.value.includes(message)) {
+      activeWarnings.value.push(message)
+    }
+  }
+
+  function clearWarnings() {
+    activeWarnings.value = []
   }
 
   /**
@@ -219,6 +231,9 @@ export const useTaskStore = defineStore('task', () => {
     clearTasks,
     addLog,
     clearLogs,
+    activeWarnings,
+    addWarning,
+    clearWarnings,
     updateQueue,
     pollTasks,
     startPolling,

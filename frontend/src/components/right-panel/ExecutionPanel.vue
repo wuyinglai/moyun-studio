@@ -163,6 +163,35 @@
       </div>
     </div>
 
+    <!-- 持久警告 -->
+    <div
+      v-if="activeWarnings.length > 0"
+      class="panel-section warning-banner"
+    >
+      <div class="section-header">
+        <span class="section-title">
+          <i class="fa-solid fa-triangle-exclamation warning-icon" />
+          生成警告
+        </span>
+        <button
+          class="btn-icon"
+          title="关闭"
+          @click="clearWarnings"
+        >
+          <i class="fa-solid fa-xmark" />
+        </button>
+      </div>
+      <div class="warning-body">
+        <div
+          v-for="(msg, idx) in activeWarnings"
+          :key="idx"
+          class="warning-item"
+        >
+          {{ msg }}
+        </div>
+      </div>
+    </div>
+
     <!-- 日志 -->
     <div class="panel-section panel-section--logs">
       <div class="section-header">
@@ -240,6 +269,8 @@ const tasks = computed(() => {
   })
 })
 const logs = computed(() => taskStore.logs)
+const activeWarnings = computed(() => taskStore.activeWarnings)
+const clearWarnings = () => taskStore.clearWarnings()
 const hasRunningTasks = computed(() => tasks.value.some(t => t.status === 'running'))
 
 // ─── Dry Run 统一状态面板 ───────────────────────
@@ -956,5 +987,35 @@ async function handleDryRunBatch() {
   word-break: break-word;
   line-height: 1.6;
   margin: 0;
+}
+
+/* ─── 持久警告横幅 ─────────────────────── */
+.warning-banner {
+  background: rgba(201, 169, 110, 0.08);
+  border: 1px solid rgba(201, 169, 110, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.warning-icon {
+  color: var(--accent-warning, #c9a96e);
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.warning-body {
+  padding: 8px 12px;
+}
+
+.warning-item {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--accent-warning, #c9a96e);
+  padding: 2px 0;
+}
+
+.warning-item + .warning-item {
+  border-top: 1px solid rgba(201, 169, 110, 0.15);
+  margin-top: 4px;
+  padding-top: 6px;
 }
 </style>

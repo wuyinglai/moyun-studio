@@ -444,6 +444,7 @@ class SSEService {
         // 软警告（token 预算等，从 error+warning:true 转为 warning 事件）
         if (d.message) {
           taskStore.addLog('warning', d.message as string)
+          taskStore.addWarning(d.message as string)
           notification.warning(d.message as string)
         }
         break
@@ -452,6 +453,7 @@ class SSEService {
         // 质量警告（连续性锚点缺失等）
         if (d.message) {
           taskStore.addLog('warning', d.message as string)
+          taskStore.addWarning(d.message as string)
           notification.warning(d.message as string)
         }
         break
@@ -460,6 +462,7 @@ class SSEService {
         // 上下文预算警告（token 使用率 75%/95%）
         if (d.message) {
           taskStore.addLog('warning', d.message as string)
+          taskStore.addWarning(d.message as string)
           notification.warning(d.message as string)
         }
         break
@@ -480,6 +483,7 @@ class SSEService {
         llmStore.setGenerating(false)
         llmStore.setThinking(false)
         llmStore.currentStepLabel = ''
+        taskStore.clearWarnings()
         if (d.message) {
           taskStore.addLog('success', d.message as string)
           notification.success(d.message as string)
