@@ -166,6 +166,15 @@
           </template>
         </a-dropdown>
       </template>
+      <a-divider type="vertical" />
+      <span
+        class="generation-mode-badge"
+        :title="isDevMode
+          ? '工具栏生成按钮会调用真实 LLM；模拟运行仅在执行面板测试按钮中可用'
+          : '当前生成操作将调用真实 LLM 模型'"
+      >
+        真实 LLM
+      </span>
     </a-space>
   </div>
 </template>
@@ -188,6 +197,9 @@ const notification = useNotificationStore()
 const uiStore = useUIStore()
 const rightPanelStore = useRightPanelStore()
 const { isPreviewMode, togglePreview } = useMarkdownPreview()
+
+// 生成模式提示：isDevMode 仅影响 title 补充说明，badge 始终显示"真实 LLM"
+const isDevMode = import.meta.env.DEV
 
 const {
   isGenerating,
@@ -310,5 +322,17 @@ function handleScenePlan() { rightPanelStore.setActiveTab('scene-plan') }
 
 .editor-toolbar :deep(.ant-dropdown-trigger) {
   // 自定义管线按钮样式继承 ant-btn
+}
+
+.generation-mode-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: default;
+  flex-shrink: 0;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent-primary, #3b82f6);
 }
 </style>
