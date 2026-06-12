@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig, type AxiosError } from 'axios'
 import { useNotificationStore } from '@/stores/notification'
+import { toUserFacingMessage } from '@/utils/errorMessages'
 
 declare module 'axios' {
   interface AxiosRequestConfig {
@@ -99,12 +100,7 @@ rawApi.interceptors.response.use(
     // 只在 5xx 服务器错误或网络断连时弹出通知，4xx 由调用方自行处理
     const isServerError = !status || status >= 500 || status === 429
     if (isServerError) {
-      let message: string
-      try {
-        message = error.response?.data?.message || error.message || '请求失败'
-      } catch {
-        message = '请求失败'
-      }
+      const message = toUserFacingMessage(error, '请求失败')
       try {
         const notificationStore = useNotificationStore()
         notificationStore.addNotification({

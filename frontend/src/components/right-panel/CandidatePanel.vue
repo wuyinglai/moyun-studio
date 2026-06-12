@@ -190,6 +190,7 @@ import { useSSE } from '@/composables/useSSE'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
 import type { CandidateAdoptResult, CandidateInfo } from '@/shared/api/types'
+import { getApiErrorCode, toUserFacingMessage } from '@/utils/errorMessages'
 
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
@@ -254,9 +255,9 @@ async function fetchCandidates(silent = false) {
       source_filename: c.source_path.split('/').pop() || c.source_path,
       filename: c.candidate_path.split('/').pop() || c.candidate_path,
     }))
-  } catch {
+  } catch (error: unknown) {
     if (!silent) {
-      notification.error('获取候选稿列表失败')
+      notification.error(toUserFacingMessage(error, '获取候选稿列表失败'))
     }
   } finally {
     loading.value = false
@@ -279,8 +280,8 @@ async function previewCandidate(candidate: CandidateInfo) {
   try {
     const data = await api.get<{ content: string }>(`/candidates/${projectStore.currentProject?.id}/${candidate.id}`)
     previewContent.value = data.content || ''
-  } catch {
-    notification.error('获取候选稿内容失败')
+  } catch (error: unknown) {
+    notification.error(toUserFacingMessage(error, '获取候选稿内容失败'))
     closePreview()
   }
 }
@@ -289,31 +290,6 @@ function closePreview() {
   previewing.value = false
   previewCandidateInfo.value = null
   previewContent.value = ''
-}
-
-function getApiErrorCode(error: unknown): string | undefined {
-  const response = (error as { response?: { data?: { error?: { code?: string } } } }).response
-  return response?.data?.error?.code
-}
-
-function getApiErrorMessage(error: unknown): string {
-  const response = (error as {
-    response?: {
-      data?: {
-        error?: { message?: string }
-        message?: string
-        detail?: string | { message?: string }
-      }
-    }
-    message?: string
-  }).response
-  const detail = response?.data?.detail
-  if (typeof detail === 'string') return detail
-  return response?.data?.error?.message
-    || response?.data?.message
-    || detail?.message
-    || (error as { message?: string }).message
-    || ''
 }
 
 async function syncAdoptedSource(sourcePath: string) {
@@ -380,11 +356,11 @@ async function adoptCandidate(candidate: CandidateInfo) {
     await syncAdoptedSource(result?.file_path || candidate.source_path)
   } catch (error: unknown) {
     if ((error as { response?: { status?: number } }).response?.status === 409 || getApiErrorCode(error) === 'FILE_CONFLICT') {
-      notification.error(getApiErrorMessage(error) || '源文件已被其他操作修改，请重新生成候选稿后再采用。')
+      notification.error(toUserFacingMessage(error, '源文件已被其他操作修改，请重新生成候选稿后再采用。'))
       await fetchCandidates()
       return
     }
-    notification.error(getApiErrorMessage(error) || '采用候选稿失败')
+    notification.error(toUserFacingMessage(error, '采用候选稿失败'))
   }
 }
 
@@ -403,8 +379,8 @@ async function deleteCandidate(candidate: CandidateInfo) {
     await api.delete(API_ROUTES.candidateDetail(projectStore.currentProject?.id || '', candidate.id))
     notification.success('候选稿已成功删除')
     await fetchCandidates()
-  } catch {
-    notification.error('删除候选稿失败')
+  } catch (error: unknown) {
+    notification.error(toUserFacingMessage(error, '删除候选稿失败'))
   }
 }
 

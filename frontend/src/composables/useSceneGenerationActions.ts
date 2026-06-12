@@ -13,6 +13,7 @@ import { useTaskStore } from '@/stores/task'
 import { useFileGeneration } from '@/composables/useFileGeneration'
 import { useWorkflowGuide, type StepStatus } from '@/composables/useWorkflowGuide'
 import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
+import { toUserFacingMessage } from '@/utils/errorMessages'
 import { useFileMetaStore } from '@/stores/fileMeta'
 import { guessPromptType, getPipelineForFile } from '@/utils/promptTypes'
 import { isSceneFile as isSceneFilePath, getNextScenePath, buildScenePath } from '@/modules/scene/scenePath'
@@ -422,8 +423,8 @@ export function useSceneGenerationActions() {
     editorStore.loadContent(filePath, '')
     try {
       await fileStore.saveFile(projectId, filePath, '')
-    } catch {
-      notification.error('清空文件失败')
+    } catch (error: unknown) {
+      notification.error(toUserFacingMessage(error, '清空文件失败'))
       return
     }
 
@@ -443,7 +444,7 @@ export function useSceneGenerationActions() {
       }
       notification.success('已重新生成')
     } catch (e: unknown) {
-      notification.error((e instanceof Error ? e.message : '') || '重新生成失败')
+      notification.error(toUserFacingMessage(e, '重新生成失败'))
     }
   }
 
