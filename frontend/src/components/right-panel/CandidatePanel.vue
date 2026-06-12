@@ -349,9 +349,15 @@ function getPreviewWarning(candidate: CandidateInfo | null): string {
 }
 
 async function adoptCandidate(candidate: CandidateInfo) {
+  // 检查编辑器中是否有未保存的本地修改（仅存在于内存，后端 hash 冲突检测无法发现）
+  const hasUnsavedEdits = fileStore.unsavedFiles.has(candidate.source_path)
+
   // 构建确认消息，优先展示连续性警告
   const warning = getPreviewWarning(candidate)
   let confirmMsg = `确认将该候选稿写入当前正文？\n此操作会替换 "${candidate.source_filename}" 的当前内容。\n\n采用前会检查正文是否被其他操作修改，避免误覆盖。`
+  if (hasUnsavedEdits) {
+    confirmMsg = `⚠ 该文件有未保存的修改，采用候选稿将覆盖这些修改且无法恢复。\n\n${confirmMsg}`
+  }
   if (warning) {
     confirmMsg = `⚠ 该候选稿存在连续性警告：\n${warning}\n\n${confirmMsg}`
   }
