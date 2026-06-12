@@ -17,7 +17,7 @@
     </template>
 
     <p class="step-desc">
-      快速创建小说项目，AI 将自动生成内容
+      快速创建小说项目，AI 将自动生成初始创意。生成内容仅为起点参考，后续可随时切换至专业模式正式写作。
     </p>
 
     <a-form
@@ -322,21 +322,29 @@
     </a-form>
 
     <template #footer>
-      <a-button
-        type="primary"
-        :disabled="!wizard.params.value.genre || wizard.isGenerating.value || creatingFile"
-        :loading="wizard.isGenerating.value || creatingFile"
-        data-testid="create-project-submit"
-        @click="handleCreate"
-      >
-        <template #icon>
-          <i
-            v-if="!wizard.isGenerating.value"
-            class="fa-solid fa-magic"
-          />
-        </template>
-        {{ wizard.isGenerating.value ? '创建中...' : '生成并打开' }}
-      </a-button>
+      <div class="submit-area">
+        <a-button
+          type="primary"
+          :disabled="!wizard.params.value.genre || wizard.isGenerating.value || creatingFile"
+          :loading="wizard.isGenerating.value || creatingFile"
+          data-testid="create-project-submit"
+          @click="handleCreate"
+        >
+          <template #icon>
+            <i
+              v-if="!wizard.isGenerating.value"
+              class="fa-solid fa-magic"
+            />
+          </template>
+          {{ wizard.isGenerating.value ? '创建中...' : '生成并打开' }}
+        </a-button>
+        <p
+          v-if="!wizard.params.value.genre && !wizard.isGenerating.value"
+          class="submit-hint"
+        >
+          请先在上方选择题材后即可创建项目
+        </p>
+      </div>
     </template>
   </a-modal>
 </template>
@@ -536,5 +544,17 @@ function close() {
 
 .btn-remove-option:hover {
   color: var(--accent-danger);
+}
+
+.submit-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.submit-hint {
+  font-size: 12px;
+  color: var(--text-muted, #999);
+  margin: 0;
 }
 </style>

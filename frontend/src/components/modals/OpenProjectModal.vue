@@ -9,6 +9,7 @@
       <a-spin :spinning="isLoading">
         <a-input-search
           v-if="projects.length > 0"
+          ref="searchInputRef"
           v-model:value="query"
           class="project-search"
           placeholder="搜索项目名称、题材、作者或 ID"
@@ -68,6 +69,10 @@
                     </div>
                     <div class="project-stats">
                       <span class="meta-stat"><i class="fa-solid fa-calendar" /> {{ formatDate(item.created_at) }}</span>
+                      <span
+                        v-if="item.updated_at && item.updated_at !== item.created_at"
+                        class="meta-stat"
+                      ><i class="fa-solid fa-pen" /> {{ formatDate(item.updated_at) }}</span>
                       <span class="meta-stat"><i class="fa-solid fa-chart-line" /> {{ item.completion_rate || 0 }}%</span>
                     </div>
                     <div class="project-id">
@@ -129,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import type { Project } from '@/stores/project'
 import { useFileStore } from '@/stores/file'
@@ -149,6 +154,7 @@ const isLoading = computed(() => projectStore.isLoading)
 const projects = computed(() => projectStore.projects)
 const selectedId = ref<string | null>(null)
 const query = ref('')
+const searchInputRef = ref<{ focus: () => void } | null>(null)
 const filteredProjects = computed(() => {
   const q = query.value.trim().toLowerCase()
   const sorted = [...projects.value].sort((a, b) => {
@@ -169,6 +175,8 @@ watch(visible, async (val) => {
     await projectStore.loadProjects()
     selectedId.value = null
     query.value = ''
+    await nextTick()
+    searchInputRef.value?.focus()
   }
 })
 
