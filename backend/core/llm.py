@@ -549,13 +549,30 @@ class LLMService:
                 raise LLMError(message=f"LLM 请求超时（{model}），请检查网络连接或模型服务") from None
             except litellm.exceptions.APIError as e:
                 breaker.record_failure(breaker_key, "api_error")
-                raise LLMAPIError(model=model, reason=str(e)[:200], status_code=getattr(e, 'status_code', None)) from e
+                _status = getattr(e, 'status_code', None)
+                if _status == 503 or _status == 502:
+                    _reason = "模型服务暂时不可用，请稍后重试"
+                elif _status == 500:
+                    _reason = "模型服务端内部错误，请稍后重试"
+                elif _status and 400 <= _status < 500:
+                    _reason = f"模型 API 请求错误（{_status}），请检查配置"
+                else:
+                    _reason = "模型 API 调用异常，请检查网络连接或模型服务"
+                raise LLMAPIError(model=model, reason=_reason, status_code=_status) from e
             except Exception as e:
                 # 未知错误，记录到熔断器
                 error_type = type(e).__name__
                 self.logger.error(f"LLM 未知错误 [{error_type}]: {e}")
                 breaker.record_failure(breaker_key, error_type)
-                raise LLMError(message=f"LLM调用失败: {e!s}") from e
+                if "connection" in error_type.lower() or "Connection" in str(type(e).__mro__):
+                    _msg = "无法连接到模型服务，请检查网络连接和模型地址配置"
+                elif "ssl" in error_type.lower():
+                    _msg = "模型服务 SSL 连接失败，请检查网络环境或代理设置"
+                elif "dns" in str(e).lower() or "name resolution" in str(e).lower():
+                    _msg = "无法解析模型服务地址，请检查网络和 DNS 设置"
+                else:
+                    _msg = "模型调用遇到未知错误，请稍后重试或联系支持"
+                raise LLMError(message=_msg) from e
 
     async def _call_with_retry(self, **kwargs) -> Any:
         """带重试的调用"""

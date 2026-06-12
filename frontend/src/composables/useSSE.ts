@@ -26,6 +26,7 @@ import { useLLMStore } from '@/stores/llm'
 import { useNotificationStore } from '@/stores/notification'
 import { useChatStore } from '@/stores/chat'
 import { API_ROUTES, API_BASE } from '@/shared/api/routes'
+import { ERROR_CODE_MAP } from '@/utils/errorMessages'
 import type {
   SSEEventType,
   SSEEventData,
@@ -187,7 +188,7 @@ class SSEService {
     this._generationHandler = handler
 
     // 监听 fetch stream 中的非 generation 事件，确保候选稿和完成状态能驱动 UI。
-    const streamEventTypes = ['step_done', 'candidate_created', 'candidate-created', 'diff_summary', 'done', 'error']
+    const streamEventTypes = ['step_done', 'candidate_created', 'candidate-created', 'diff_summary', 'done', 'error', 'warning', 'quality_warning', 'context_warning']
     const streamHandler = (event: Event) => {
       const ce = event as CustomEvent
       const rawType = ce.type
@@ -430,10 +431,36 @@ class SSEService {
         break
 
       case 'error':
-        // 错误
+        // 错误 — 优先使用 error_code 翻译
         if (d.message) {
-          taskStore.addLog('error', d.message as string)
-          notification.error(d.message as string)
+          const errorCode = d.error_code as string | undefined
+          const translated = (errorCode && ERROR_CODE_MAP[errorCode]) || (d.message as string)
+          taskStore.addLog('error', translated)
+          notification.error(translated)
+        }
+        break
+
+      case 'warning':
+        // 软警告（token 预算等，从 error+warning:true 转为 warning 事件）
+        if (d.message) {
+          taskStore.addLog('warning', d.message as string)
+          notification.warning(d.message as string)
+        }
+        break
+
+      case 'quality_warning':
+        // 质量警告（连续性锚点缺失等）
+        if (d.message) {
+          taskStore.addLog('warning', d.message as string)
+          notification.warning(d.message as string)
+        }
+        break
+
+      case 'context_warning':
+        // 上下文预算警告（token 使用率 75%/95%）
+        if (d.message) {
+          taskStore.addLog('warning', d.message as string)
+          notification.warning(d.message as string)
         }
         break
 

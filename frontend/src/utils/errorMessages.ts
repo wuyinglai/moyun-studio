@@ -8,12 +8,16 @@
 
 // ─── 错误码 → 用户文案映射 ───────────────────────────────
 
-const ERROR_CODE_MAP: Record<string, string> = {
+export const ERROR_CODE_MAP: Record<string, string> = {
   FILE_CONFLICT: '正文已被其他操作修改。请先刷新或保存当前内容，再重新操作。',
   SCENE_PATH_INVALID: '场景路径无效，请检查文件名格式（如 sec-001.md）。',
   FILE_NOT_FOUND: '找不到目标文件，请确认文件是否已被删除或移动。',
   PIPELINE_NOT_FOUND: '找不到指定的管线，请检查管线名称。',
   CANDIDATE_NOT_FOUND: '候选稿不存在或已被删除。',
+  LLM_ERROR: '生成服务遇到问题，请稍后重试。如持续出现，请检查模型配置。',
+  LLM_CIRCUIT_OPEN: '模型连续失败，已临时熔断。请稍后重试或检查模型服务。',
+  LLM_API_ERROR: '模型 API 调用异常，请检查网络连接或模型服务。',
+  CONTEXT_LENGTH_ERROR: '当前内容过长，超出模型上下文限制。建议缩短前文或分段生成。',
 }
 
 // ─── HTTP 状态码 → 用户文案映射 ──────────────────────────

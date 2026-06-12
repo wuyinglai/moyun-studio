@@ -274,7 +274,12 @@ export function useFileGeneration() {
           try {
             const parsed = JSON.parse(line.slice(6))
             if (currentEvent === 'error') {
-              // 抛出错误而非仅通过 emitter
+              if (parsed.warning === true) {
+                // 软警告（如 token 预算）：不中断流，通过 emitter 分发到 UI
+                generationEmitter.emit('warning', parsed)
+                continue
+              }
+              // 真正的错误：抛出以中断流
               throw new Error(parsed.message || '管线执行出错')
             }
             // 通过 generationEmitter 分发所有事件，供 useSSE 统一处理

@@ -92,6 +92,9 @@ _LOCATION_WITH_PREP_PATTERN = re.compile(
 _STANDALONE_KEYWORDS = re.compile(r"追踪者|档案室|灰塔实验室|实验室|钟楼|灰塔|芯片|月台|山庄|客栈|书院|教堂|宫殿")
 _CHINESE_NAME_PATTERN = re.compile(fr"[{_COMMON_CHINESE_SURNAMES}][\u4e00-\u9fff]{{1,2}}")
 _QUOTED_ENTITY_PATTERN = re.compile(r"[“《]([^”》]{2,12})[”》]")
+# Known false positives from the surname-based name pattern.
+# These are common words/phrases that happen to start with a surname char.
+_NAME_NOISE_WORDS = {"余温", "余地", "余光", "余额", "余生", "余款", "余粮"}
 
 
 def _extract_continuity_anchors(text: str, limit: int = 12) -> list[str]:
@@ -167,6 +170,17 @@ def _extract_continuity_anchors(text: str, limit: int = 12) -> list[str]:
                 item = item[:-1]
         if len(item) < 2 or item in ignored:
             continue
+        # Name noise filter: eliminate false positives from the surname-based
+        # name pattern. Two complementary checks:
+        # 1. Known noise words (common words starting with a surname char)
+        # 2. 3-char candidates starting with grammar particles that never
+        #    begin real Chinese names (经/已/被/将/从/向/让)
+        if not standalone and item[0] in _COMMON_CHINESE_SURNAMES:
+            if item in _NAME_NOISE_WORDS:
+                continue
+            _name_func_prefixes = "经已被将从向让"
+            if len(item) == 3 and item[0] in _name_func_prefixes:
+                continue
         if item not in anchors:
             anchors.append(item)
         if len(anchors) >= limit:
@@ -646,6 +660,30 @@ class PipelineRunner:
                     max_prompt_tokens,
                 )
 
+                # RC1: ratio-based token budget warnings
+                _soft_threshold = int(context_window * 0.75)
+                _hard_threshold = int(context_window * 0.95)
+                _usage_pct = prompt_tokens * 100 // context_window if context_window else 0
+
+                if prompt_tokens > _hard_threshold:
+                    yield {"event": "context_warning", "data": json.dumps({
+                        "message": f"当前上下文较长（约 {prompt_tokens} tokens，占模型上下文 {_usage_pct}%），生成可能变慢或遗漏细节。建议缩短前文或分段生成。",
+                        "severity": "hard",
+                        "prompt_tokens": prompt_tokens,
+                        "context_window": context_window,
+                        "usage_pct": _usage_pct,
+                        "task_id": task_id,
+                    })}
+                elif prompt_tokens > _soft_threshold:
+                    yield {"event": "context_warning", "data": json.dumps({
+                        "message": f"当前上下文已占模型上下文的 {_usage_pct}%（约 {prompt_tokens}/{context_window} tokens），请注意生成长度。",
+                        "severity": "soft",
+                        "prompt_tokens": prompt_tokens,
+                        "context_window": context_window,
+                        "usage_pct": _usage_pct,
+                        "task_id": task_id,
+                    })}
+
                 if prompt_tokens > max_prompt_tokens:
                     warning_msg = f"Prompt 过长（约 {prompt_tokens} tokens），超出模型限制 {max_prompt_tokens} tokens"
                     if prompt_tokens > context_window:
@@ -792,9 +830,12 @@ class PipelineRunner:
                         "status": "fallback",
                     })}
                 elif is_final:
+                    _err_msg = e.message if hasattr(e, 'message') else str(e)
+                    _err_code = getattr(e, 'code', None)
                     yield {"event": "error", "data": json.dumps({
-                        "message": f"步骤 {step.label} 失败: {e}",
+                        "message": f"步骤 {step.label} 失败: {_err_msg}",
                         "task_id": task_id,
+                        "error_code": _err_code,
                     })}
                     # 用上一步的输出兜底
                     if i > 0:
@@ -803,9 +844,12 @@ class PipelineRunner:
                         return
                 else:
                     # 中间步骤失败且无 fallback，终止管线
+                    _err_msg = e.message if hasattr(e, 'message') else str(e)
+                    _err_code = getattr(e, 'code', None)
                     yield {"event": "error", "data": json.dumps({
-                        "message": f"步骤 {step.label} 失败: {e}",
+                        "message": f"步骤 {step.label} 失败: {_err_msg}",
                         "task_id": task_id,
+                        "error_code": _err_code,
                     })}
                     return
 

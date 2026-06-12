@@ -420,6 +420,30 @@ class TestContinuityAnchors:
         assert "追踪者" in anchors
         assert "档案室" in anchors
 
+    def test_extract_continuity_anchors_name_noise_filter(self):
+        """RC1: common words starting with surname chars must not appear as anchors."""
+        text = (
+            "雨夜的旧港站只剩一盏坏掉的蓝灯。林澈把黑色芯片藏进袖口，"
+            "广播里响起沈知夏的声音。余温从指尖传来，经逼近的黑暗让人窒息。"
+            "档案室的门紧锁着，追踪者的脚步声越来越近。灰塔实验室的灯还亮着。"
+            "银色芯片在月光下闪烁。"
+        )
+        anchors = _extract_continuity_anchors(text)
+
+        # Legitimate entities must survive
+        assert "林澈" in anchors
+        assert "沈知夏" in anchors
+        assert "芯片" in anchors or "黑色芯片" in anchors
+        assert "档案室" in anchors
+        assert "追踪者" in anchors
+        assert "灰塔实验室" in anchors
+
+        # Noise words must be filtered
+        assert "余温" not in anchors
+        assert "经逼近" not in anchors
+        assert "余地" not in anchors
+        assert "余光" not in anchors
+
 
 class TestInferCandidateAction:
     """Regression tests for _infer_candidate_action action-string mapping."""
@@ -593,6 +617,88 @@ class TestTokenEstimation:
     def test_estimate_tokens_empty(self, pipeline_runner):
         tokens = pipeline_runner._estimate_tokens("")
         assert tokens == 0
+
+
+class TestTokenBudgetWarning:
+    """RC1: token budget ratio-based warnings (soft 75%, hard 95%)."""
+
+    @pytest.mark.asyncio
+    async def test_soft_warning_at_75pct_context(self, pipeline_runner, mock_llm_service, tmp_path):
+        """Prompt at ~80% of context_window should emit a soft context_warning."""
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "budget-soft"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "step1.md").write_text("请根据以下大纲续写这个场景的正文内容，要求细节丰富，情感充沛。", encoding="utf-8")
+
+        import yaml as _yaml
+        yaml_path = tmp_path / "prompts" / "pipeline" / "budget-soft.yaml"
+        yaml_path.write_text(
+            _yaml.dump({
+                "name": "budget-soft", "label": "预算测试",
+                "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/budget-soft/step1"}],
+            }),
+            encoding="utf-8",
+        )
+
+        from jinja2 import Environment, FileSystemLoader
+        pipeline_runner.prompts_path = tmp_path / "prompts"
+        pipeline_runner.env = Environment(
+            loader=FileSystemLoader(str(tmp_path / "prompts")),
+            autoescape=False,
+        )
+        # Set a small context_window so the prompt exceeds 75%
+        pipeline_runner.llm_service.config.context_window = 12
+        pipeline_runner.llm_service.config.max_prompt_tokens = 10
+
+        events = []
+        async for event in pipeline_runner.run(
+            "budget-soft", "test-project",
+            "chapters/test.md",
+            output_mode="write_scene",
+        ):
+            events.append(event)
+
+        warnings = [e for e in events if e.get("event") == "context_warning"]
+        assert len(warnings) >= 1, "should emit context_warning at 75%+ usage"
+        data = json.loads(warnings[0]["data"])
+        assert data["severity"] in ("soft", "hard")
+
+    @pytest.mark.asyncio
+    async def test_no_warning_at_low_usage(self, pipeline_runner, mock_llm_service, tmp_path):
+        """Prompt at <75% of context_window should NOT emit context_warning."""
+        pipeline_dir = tmp_path / "prompts" / "pipeline" / "budget-low"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "step1.md").write_text("续写。", encoding="utf-8")
+
+        import yaml as _yaml
+        yaml_path = tmp_path / "prompts" / "pipeline" / "budget-low.yaml"
+        yaml_path.write_text(
+            _yaml.dump({
+                "name": "budget-low", "label": "预算测试",
+                "steps": [{"id": "step1", "label": "测试", "prompt": "pipeline/budget-low/step1"}],
+            }),
+            encoding="utf-8",
+        )
+
+        from jinja2 import Environment, FileSystemLoader
+        pipeline_runner.prompts_path = tmp_path / "prompts"
+        pipeline_runner.env = Environment(
+            loader=FileSystemLoader(str(tmp_path / "prompts")),
+            autoescape=False,
+        )
+        # Large context_window so short prompt is well under 75%
+        pipeline_runner.llm_service.config.context_window = 128000
+        pipeline_runner.llm_service.config.max_prompt_tokens = 120000
+
+        events = []
+        async for event in pipeline_runner.run(
+            "budget-low", "test-project",
+            "chapters/test.md",
+            output_mode="write_scene",
+        ):
+            events.append(event)
+
+        warnings = [e for e in events if e.get("event") == "context_warning"]
+        assert len(warnings) == 0, "should NOT emit context_warning at low usage"
 
 
 # ─── System Variables Tests ──────────────────────────────────────────────────
