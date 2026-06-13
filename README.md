@@ -4,7 +4,19 @@
 
 所有数据留在你的机器上，无需云数据库、无需注册账号。
 
-> **Current version: v0.1.1** — Maintenance release. See [Release Notes](docs/releases/v0.1.1.md) and [Changelog](docs/changelog.md).
+> **Current alpha target: v0.2.0-alpha** - pre-release preparation. See [Release Notes](docs/releases/v0.2.0-alpha.md), [Changelog](CHANGELOG.md), and [Known Issues](KNOWN_ISSUES.md).
+
+## Current alpha status
+
+v0.2.0-alpha focuses on the Professional writing flow:
+
+- real LLM generation through candidate drafts;
+- preview / adopt / delete workflow;
+- continuity and generation warnings;
+- user-facing LLM and generation error messages;
+- FILE_CONFLICT and candidate safety validation.
+
+This is still an alpha release. Use test projects for important experiments and keep backups of valuable writing.
 
 ## Core Features
 

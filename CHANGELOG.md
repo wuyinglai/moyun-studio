@@ -5,6 +5,37 @@ All notable changes to Moyun Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.2.0-alpha - 2026-06-13
+
+### Added
+- Professional real LLM generation path validation for scene-level writing.
+- Candidate preview / adopt / delete lifecycle verification.
+- Real LLM status visibility and smoke validation coverage.
+- User-facing error message mapping for LLM and generation failures.
+- Persistent generation warning visibility for context and quality warnings.
+- Release smoke checklist and T7.4 RC1 validation reports.
+
+### Changed
+- `write_next_scene` is treated as a continuation action and surfaces as `continue` / `续写`.
+- High-risk rewrite / polish / existing-scene generation flows remain candidate-first instead of silently overwriting formal scene text.
+- Continuity anchor extraction was reduced in noise and hardened for real LLM smoke scenarios.
+- Project list and create-project experience were validated as part of the pre-alpha frontend flow checks.
+- LLM errors are reported with friendlier messages instead of raw provider exceptions where possible.
+
+### Fixed
+- Unsaved-edit warnings before adopting candidate drafts.
+- FILE_CONFLICT protection verification for file save/adopt flows.
+- Incorrect `write_next_scene` action labeling.
+- Overly noisy continuity warning anchors.
+- SSE warning events that were easy to miss before generation completion.
+
+### Known Issues
+- Small-context models may still require stricter token truncation.
+- Long-context generation can still weaken or omit individual character details.
+- Continuity anchor extraction may still contain low-frequency noise.
+- Slow real LLM responses still need a more complete cancel / retry experience.
+- This is an alpha release and is not recommended for important long-form production drafts without backups.
+
 ## [0.1.1] - 2026-05-22
 
 ### Documentation
