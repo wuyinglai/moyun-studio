@@ -22,6 +22,8 @@ from backend.core.pipeline import (
     PipelineError,
     PipelineRunner,
     _LEGACY_DEFAULT_PROMPT_HASHES,
+    _debug_prompt_export_enabled,
+    _prompt_assembly_mode,
     _continuity_anchor_hit_count,
     _extract_continuity_anchors,
 )
@@ -1216,3 +1218,143 @@ class TestContinuityGate:
         prompt_text = prompt_data.get("prompt", "")
         assert "锚点" in prompt_text, "渲染后的 prompt 应包含 continuity_anchors"
         assert "林澈" in prompt_text or "旧港站" in prompt_text, "锚点值应出现在 prompt 中"
+
+
+class TestT82PromptAssemblyExperiment:
+    """T8.2 facts-first prompt assembly and debug prompt export safeguards."""
+
+    @staticmethod
+    def _create_generate_pipeline(tmp_path):
+        prompts_dir = tmp_path / "prompts"
+        pipeline_dir = prompts_dir / "pipeline" / "generate"
+        pipeline_dir.mkdir(parents=True)
+        (pipeline_dir / "write.md").write_text(
+            "DEFAULT TEMPLATE\nuser={{ user_input }}\nmode={{ _prompt_assembly }}",
+            encoding="utf-8",
+        )
+        (pipeline_dir / "write_facts_first.md").write_text(
+            "FACTS FIRST TEMPLATE\nfacts={{ facts_block }}\ngoal={{ scene_goal }}",
+            encoding="utf-8",
+        )
+        (prompts_dir / "pipeline" / "generate.yaml").write_text(
+            yaml.dump({
+                "name": "generate",
+                "label": "Generate",
+                "steps": [
+                    {
+                        "id": "write",
+                        "label": "Write",
+                        "prompt": "pipeline/generate/write",
+                        "fallback": None,
+                    }
+                ],
+            }, allow_unicode=True),
+            encoding="utf-8",
+        )
+        return prompts_dir
+
+    @staticmethod
+    async def _collect_events(runner, extra_vars=None, action=None):
+        events = []
+        async for event in runner.run(
+            "generate",
+            "test-project",
+            "chapters/vol-01/ch-001/sec-002.md",
+            user_input="write next scene",
+            output_mode="write_scene",
+            extra_vars=extra_vars or {},
+            action=action,
+            dry_run=True,
+        ):
+            events.append(event)
+        return events
+
+    def test_prompt_assembly_mode_is_opt_in(self):
+        assert _prompt_assembly_mode({}) == "default"
+        assert _prompt_assembly_mode({"_prompt_assembly": "current_like"}) == "default"
+        assert _prompt_assembly_mode({"_prompt_assembly": "facts_first"}) == "facts_first"
+
+    def test_debug_prompt_export_requires_explicit_flag(self):
+        assert _debug_prompt_export_enabled({}) is False
+        assert _debug_prompt_export_enabled({"_debug_prompt_export": False}) is False
+        assert _debug_prompt_export_enabled({"_debug_prompt_export": "true"}) is True
+        assert _debug_prompt_export_enabled({"_debug_prompt_export": True}) is True
+
+    @pytest.mark.asyncio
+    async def test_default_generate_prompt_template_is_unchanged(
+        self, mock_llm_service, mock_file_service, tmp_path
+    ):
+        prompts_dir = self._create_generate_pipeline(tmp_path)
+        runner = PipelineRunner(prompts_dir, mock_llm_service, mock_file_service)
+
+        events = await self._collect_events(runner)
+        prompt_events = [e for e in events if e.get("event") == "prompt"]
+        prompt_data = json.loads(prompt_events[0]["data"])
+
+        assert "DEFAULT TEMPLATE" in prompt_data["prompt"]
+        assert "FACTS FIRST TEMPLATE" not in prompt_data["prompt"]
+
+    @pytest.mark.asyncio
+    async def test_facts_first_switch_uses_experiment_template(
+        self, mock_llm_service, mock_file_service, tmp_path
+    ):
+        prompts_dir = self._create_generate_pipeline(tmp_path)
+        runner = PipelineRunner(prompts_dir, mock_llm_service, mock_file_service)
+
+        events = await self._collect_events(
+            runner,
+            extra_vars={
+                "_prompt_assembly": "facts_first",
+                "facts_block": "Injury fact: left arm cannot exert force.",
+                "scene_goal": "Reveal the scanner light anomaly.",
+            },
+        )
+        prompt_events = [e for e in events if e.get("event") == "prompt"]
+        prompt_data = json.loads(prompt_events[0]["data"])
+
+        assert "FACTS FIRST TEMPLATE" in prompt_data["prompt"]
+        assert "Injury fact" in prompt_data["prompt"]
+        assert "DEFAULT TEMPLATE" not in prompt_data["prompt"]
+
+    @pytest.mark.asyncio
+    async def test_debug_prompt_export_emits_final_prompt_payload(
+        self, mock_llm_service, mock_file_service, tmp_path
+    ):
+        prompts_dir = self._create_generate_pipeline(tmp_path)
+        runner = PipelineRunner(prompts_dir, mock_llm_service, mock_file_service)
+
+        events = await self._collect_events(
+            runner,
+            extra_vars={
+                "_prompt_assembly": "facts_first",
+                "_debug_prompt_export": True,
+                "facts_block": "Item fact: chip stays with Lin.",
+                "scene_goal": "Continue from the old port station.",
+            },
+        )
+        debug_events = [e for e in events if e.get("event") == "debug_prompt"]
+        debug_data = json.loads(debug_events[0]["data"])
+
+        assert debug_data["assembly"] == "facts_first"
+        assert debug_data["template"] == "pipeline/generate/write_facts_first.md"
+        assert "FACTS FIRST TEMPLATE" in debug_data["prompt"]
+        assert len(debug_data["prompt_sha256"]) == 64
+        assert debug_data["summary"]["has_user_input"] is True
+
+    @pytest.mark.asyncio
+    async def test_facts_first_does_not_change_write_next_scene_output_mode(
+        self, mock_llm_service, mock_file_service, tmp_path
+    ):
+        prompts_dir = self._create_generate_pipeline(tmp_path)
+        runner = PipelineRunner(prompts_dir, mock_llm_service, mock_file_service)
+
+        events = await self._collect_events(
+            runner,
+            extra_vars={"_prompt_assembly": "facts_first"},
+            action="write_next_scene",
+        )
+        dry_run_events = [e for e in events if e.get("event") == "dry_run"]
+        dry_run_data = json.loads(dry_run_events[0]["data"])
+
+        assert dry_run_data["output_mode"] == "write_scene"
+        assert dry_run_data["target_file"] == "chapters/vol-01/ch-001/sec-002.md"

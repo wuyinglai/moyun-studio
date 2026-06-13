@@ -242,6 +242,66 @@ def _has_substantive_content(path: str | None, content: str) -> bool:
     return bool(content and content.strip()) and not _is_scaffold_placeholder(path, content)
 
 
+def _prompt_assembly_mode(extra_vars: dict | None) -> str:
+    """Return the opt-in prompt assembly experiment mode."""
+    if not extra_vars:
+        return "default"
+    mode = str(extra_vars.get("_prompt_assembly") or "").strip().lower()
+    if mode == "facts_first":
+        return "facts_first"
+    return "default"
+
+
+def _debug_prompt_export_enabled(extra_vars: dict | None) -> bool:
+    """Return True only for explicit debug prompt export requests."""
+    if not extra_vars:
+        return False
+    value = extra_vars.get("_debug_prompt_export")
+    if value is True:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
+def _select_prompt_template(relative_path: str, assembly_mode: str) -> str:
+    """Map explicit experiment flags to alternate prompt templates."""
+    normalized = relative_path.replace("\\", "/")
+    if assembly_mode == "facts_first" and normalized == "pipeline/generate/write.md":
+        return "pipeline/generate/write_facts_first.md"
+    return relative_path
+
+
+def _build_debug_prompt_payload(
+    prompt_text: str,
+    prompt_relative: str,
+    assembly_mode: str,
+    task_id: str,
+    step_id: str,
+    step_vars: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a benchmark-friendly prompt export payload without secrets."""
+    return {
+        "task_id": task_id,
+        "step_id": step_id,
+        "template": prompt_relative,
+        "assembly": assembly_mode,
+        "prompt": prompt_text,
+        "prompt_sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
+        "prompt_length": len(prompt_text),
+        "summary": {
+            "has_previous_text": bool(step_vars.get("previous_text")),
+            "has_current_scene_text": bool(step_vars.get("current_scene_text")),
+            "has_continuity_anchors": bool(step_vars.get("continuity_anchors")),
+            "has_style_guide": bool(step_vars.get("style_guide")),
+            "has_story_state": bool(step_vars.get("story_state")),
+            "has_recent_context": bool(step_vars.get("recent_context")),
+            "has_outline": bool(step_vars.get("outline")),
+            "has_user_input": bool(step_vars.get("user_input")),
+        },
+    }
+
+
 REFERENCE_PATTERN = re.compile(r"@\{([^}]+)\}")
 
 
@@ -546,6 +606,8 @@ class PipelineRunner:
         
         pipeline = self.load_pipeline(pipeline_name)
         extra_vars = extra_vars or {}
+        prompt_assembly = _prompt_assembly_mode(extra_vars)
+        debug_prompt_export = _debug_prompt_export_enabled(extra_vars)
         continuity_source = str(
             extra_vars.get("previous_text")
             or extra_vars.get("current_scene_text")
@@ -636,7 +698,7 @@ class PipelineRunner:
                         step_vars.setdefault("sec", m.group(3) or "1")
 
                 # 渲染 prompt 模板（使用 step.prompt 保证与 YAML 定义一致）
-                prompt_relative = f"{step.prompt}.md"
+                prompt_relative = _select_prompt_template(f"{step.prompt}.md", prompt_assembly)
                 prompt_text = self.render_prompt(prompt_relative, step_vars)
 
                 # 解析 @{path} 引用为文件内容
@@ -648,6 +710,18 @@ class PipelineRunner:
                     "task_id": task_id,
                     "step_id": step.id,
                 })}
+                if debug_prompt_export:
+                    yield {"event": "debug_prompt", "data": json.dumps(
+                        _build_debug_prompt_payload(
+                            prompt_text=prompt_text,
+                            prompt_relative=prompt_relative,
+                            assembly_mode=prompt_assembly,
+                            task_id=task_id,
+                            step_id=step.id,
+                            step_vars=step_vars,
+                        ),
+                        ensure_ascii=False,
+                    )}
 
                 # G0118: 自动 token 检查 — 估算 prompt token 数，超限时发出警告
                 prompt_tokens = self._estimate_tokens(prompt_text)
