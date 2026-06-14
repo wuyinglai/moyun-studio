@@ -106,7 +106,13 @@ def build_generator_prompt(case: dict[str, Any]) -> str:
 
 
 def build_natural_validator_prompt(case: dict[str, Any], text: str) -> str:
-    return f"""你是小说连续性审稿人。请检查正文是否满足 required beats，并标记 forbidden violations。
+    return f"""You are a continuity validator for Chinese long-form fiction.
+
+Judge only the generated text. Do not give credit because a beat appears in the case JSON. Do not rely only on keyword presence. Accept paraphrases when the meaning is clearly present. Treat uncertain evidence as partial.
+
+When reviewing forbidden beats, distinguish what the reader is explicitly told, what a character knows, and what a character merely suspects.
+
+When terminal_position_required=true, check whether the required action is truly the final narrative beat.
 
 Case JSON:
 {json.dumps(case, ensure_ascii=False, indent=2)}
@@ -114,30 +120,34 @@ Case JSON:
 Generated text:
 {text}
 
-请用 Markdown 输出：
-
+Output Markdown:
 ## Required Beats
-
-逐条列出 id、status: satisfied / partial / missing、evidence、reason。
+For each beat: id, status satisfied / partial / missing, evidence, evidence quality exact / paraphrase / weak / absent, reason, terminal-position check if relevant, knowledge-boundary check if relevant.
 
 ## Forbidden Violations
-
-逐条列出 id、violated: yes / no、evidence。
+For each forbidden item: id, violated yes / no, evidence, evidence quality, reason, knowledge-boundary check if relevant.
 
 ## Logic Risks
-
-列出人物状态、地点、道具、时间线、新实体方面的风险。
+List character-state, location, item, timeline, new-entity, style, terminal-hook, and knowledge-boundary risks.
 
 ## Overall Status
-
-输出 satisfied / needs_repair / unusable。"""
+Output satisfied / needs_repair / unusable."""
 
 
 def build_json_validator_prompt(case: dict[str, Any], text: str) -> str:
-    return f"""你是小说连续性审稿人。只输出 JSON，不输出 Markdown 或解释。
+    return f"""You are a continuity validator for Chinese long-form fiction. Return JSON only. Do not output Markdown or commentary.
 
-请严格检查每条 required beat 是否在正文中被实际写出。
-不要因为 Case JSON 里出现了 beat 就判定 satisfied；只能依据 Generated text。
+Important judging rules:
+1. Judge only the generated text, not the case description or prompt wording.
+2. A keyword hit is not enough. Mark a required beat as satisfied only when the generated text semantically fulfills the condition.
+3. Accept clear paraphrases when they fulfill the semantic condition.
+4. If evidence is ambiguous, mark partial rather than satisfied.
+5. If there is no evidence in generated text, mark missing.
+6. Forbidden beats must appear only in forbidden_violations, never in required_beats.
+7. Distinguish reader-facing reveal, character knowledge, and character suspicion.
+8. Check knowledge_boundary when present.
+9. If terminal_position_required is true, the required action must be at the final narrative beat or final sentence; otherwise mark partial.
+10. Quote short direct evidence from generated text for satisfied, partial, or violated judgments.
 
 Case JSON:
 {json.dumps(case, ensure_ascii=False, indent=2)}
@@ -145,7 +155,7 @@ Case JSON:
 Generated text:
 {text}
 
-输出 JSON 格式：
+Return JSON exactly in this shape:
 {{
   "case_id": "{case['id']}",
   "all_required_beats_satisfied": false,
@@ -153,20 +163,27 @@ Generated text:
     {{
       "id": "beat id",
       "status": "satisfied|partial|missing",
-      "evidence": "text evidence or empty string",
-      "confidence": 0.0
+      "evidence": "short text evidence or empty string",
+      "confidence": 0.0,
+      "evidence_quality": "exact|paraphrase|weak|absent",
+      "reasoning_note": "one short reason",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
     }}
   ],
   "forbidden_violations": [
     {{
       "id": "forbidden id",
       "violated": false,
-      "evidence": ""
+      "evidence": "short text evidence or empty string",
+      "evidence_quality": "exact|paraphrase|weak|absent",
+      "reasoning_note": "one short reason",
+      "knowledge_boundary_ok": true
     }}
   ],
   "logic_risks": [
     {{
-      "type": "character_state|item|timeline|location|new_entity|style|other",
+      "type": "character_state|item|timeline|location|new_entity|style|knowledge_boundary|terminal_hook|other",
       "description": "risk description",
       "severity": "low|medium|high"
     }}
@@ -229,36 +246,78 @@ def keyword_hit(text: str, keywords: list[str]) -> bool:
     return any(keyword and keyword in text for keyword in keywords)
 
 
+def term_hits(text: str, terms: list[str]) -> list[str]:
+    return [term for term in terms if term and term in text]
+
+
+def terminal_position_ok(text: str, beat: dict[str, Any], terms: list[str]) -> bool | None:
+    if beat.get("terminal_position_required") is not True:
+        return None
+    if not text:
+        return False
+    tail_start = max(int(len(text) * 0.75), len(text) - 160, 0)
+    tail = text[tail_start:]
+    return any(term and term in tail for term in terms)
+
+
 def rule_precheck(case: dict[str, Any], text: str) -> dict[str, Any]:
     required = []
     for beat in required_beats(case):
         keywords = beat.get("keywords") or []
-        status = "satisfied" if keyword_hit(text, keywords) else "missing"
+        paraphrases = beat.get("acceptable_paraphrases") or []
+        keyword_hits = term_hits(text, keywords)
+        paraphrase_hits = term_hits(text, paraphrases)
+        terminal_ok = terminal_position_ok(text, beat, keywords + paraphrases)
+        if not keywords and not paraphrases:
+            rule_status = "unknown"
+        elif (keyword_hits or paraphrase_hits) and terminal_ok is not False:
+            rule_status = "weak_pass"
+        else:
+            rule_status = "weak_fail"
         required.append({
             "id": beat["id"],
-            "status": status,
+            "rule_status": rule_status,
+            "keyword_hit": bool(keyword_hits),
+            "paraphrase_hit": bool(paraphrase_hits),
+            "keyword_hits": keyword_hits,
+            "paraphrase_hits": paraphrase_hits,
+            "terminal_position_ok": terminal_ok,
             "keywords": keywords,
+            "acceptable_paraphrases": paraphrases,
         })
     forbidden = []
     for beat in forbidden_beats(case):
         keywords = beat.get("forbidden_keywords") or beat.get("keywords") or []
-        violated = keyword_hit(text, keywords)
+        keyword_hits = term_hits(text, keywords)
+        rule_status = "unknown" if not keywords else ("weak_fail" if keyword_hits else "weak_pass")
         forbidden.append({
             "id": beat["id"],
-            "violated": violated,
+            "rule_status": rule_status,
+            "keyword_hit": bool(keyword_hits),
+            "keyword_hits": keyword_hits,
             "keywords": keywords,
+            "violation_threshold": beat.get("violation_threshold", ""),
         })
-    required_satisfied = sum(1 for item in required if item["status"] == "satisfied")
-    forbidden_violated = sum(1 for item in forbidden if item["violated"])
+    weak_required_passed = sum(1 for item in required if item["rule_status"] == "weak_pass")
+    weak_required_failed = sum(1 for item in required if item["rule_status"] == "weak_fail")
+    weak_forbidden_hits = sum(1 for item in forbidden if item["rule_status"] == "weak_fail")
+    if weak_required_failed == 0 and weak_forbidden_hits == 0:
+        overall_signal = "weak_pass"
+    elif weak_required_failed or weak_forbidden_hits:
+        overall_signal = "weak_fail"
+    else:
+        overall_signal = "unknown"
     return {
+        "rule_is_final": False,
         "required_beats": required,
         "forbidden_violations": forbidden,
-        "required_satisfied": required_satisfied,
+        "weak_required_passed": weak_required_passed,
+        "weak_required_failed": weak_required_failed,
         "required_total": len(required),
-        "forbidden_violated": forbidden_violated,
+        "weak_forbidden_hits": weak_forbidden_hits,
         "length": len(text),
         "length_abnormal": len(text) < 200 or len(text) > 1800,
-        "overall_status": "satisfied" if required_satisfied == len(required) and forbidden_violated == 0 else "needs_repair",
+        "overall_signal": overall_signal,
     }
 
 
@@ -317,8 +376,8 @@ def json_needs_repair(validation: dict[str, Any]) -> bool:
 
 
 def status_set_from_rule(precheck: dict[str, Any]) -> set[str]:
-    missing = {item["id"] for item in precheck["required_beats"] if item["status"] != "satisfied"}
-    violated = {item["id"] for item in precheck["forbidden_violations"] if item["violated"]}
+    missing = {item["id"] for item in precheck["required_beats"] if item["rule_status"] == "weak_fail"}
+    violated = {item["id"] for item in precheck["forbidden_violations"] if item["rule_status"] == "weak_fail"}
     return missing | violated
 
 
@@ -353,31 +412,84 @@ def make_dry_text(case: dict[str, Any]) -> str:
 
 def make_dry_json_validation(case: dict[str, Any], text: str) -> dict[str, Any]:
     precheck = rule_precheck(case, text)
+    required_items = []
+    for item in precheck["required_beats"]:
+        status = "satisfied" if item["rule_status"] == "weak_pass" else "missing"
+        evidence = ""
+        if status == "satisfied":
+            hits = item["keyword_hits"] or item["paraphrase_hits"]
+            evidence = hits[0] if hits else ""
+        required_items.append({
+            "id": item["id"],
+            "status": status,
+            "evidence": evidence,
+            "confidence": 0.8 if status == "satisfied" else 0.5,
+            "evidence_quality": "exact" if item["keyword_hits"] else ("paraphrase" if item["paraphrase_hits"] else "absent"),
+            "reasoning_note": "dry-run rule-derived validator result",
+            "terminal_position_ok": item["terminal_position_ok"],
+            "knowledge_boundary_ok": None,
+        })
+    forbidden_items = []
+    for item in precheck["forbidden_violations"]:
+        violated = item["rule_status"] == "weak_fail"
+        forbidden_items.append({
+            "id": item["id"],
+            "violated": violated,
+            "evidence": item["keyword_hits"][0] if violated and item["keyword_hits"] else "",
+            "evidence_quality": "weak" if violated else "absent",
+            "reasoning_note": "dry-run weak forbidden keyword signal",
+            "knowledge_boundary_ok": None if violated else True,
+        })
+    overall_status = "satisfied" if all(item["status"] == "satisfied" for item in required_items) and not any(item["violated"] for item in forbidden_items) else "needs_repair"
     return {
         "parse_ok": True,
         "parse_error": None,
         "case_id": case["id"],
-        "all_required_beats_satisfied": precheck["overall_status"] == "satisfied",
-        "required_beats": [
-            {
-                "id": item["id"],
-                "status": item["status"],
-                "evidence": item["keywords"][0] if item["status"] == "satisfied" and item["keywords"] else "",
-                "confidence": 0.8,
-            }
-            for item in precheck["required_beats"]
-        ],
-        "forbidden_violations": [
-            {
-                "id": item["id"],
-                "violated": item["violated"],
-                "evidence": item["keywords"][0] if item["violated"] and item["keywords"] else "",
-            }
-            for item in precheck["forbidden_violations"]
-        ],
+        "all_required_beats_satisfied": overall_status == "satisfied",
+        "required_beats": required_items,
+        "forbidden_violations": forbidden_items,
         "logic_risks": [],
-        "overall_status": precheck["overall_status"],
+        "overall_status": overall_status,
     }
+
+
+def json_required_counts(validation: dict[str, Any], fallback_precheck: dict[str, Any]) -> tuple[int, int]:
+    required = validation.get("required_beats") or []
+    if validation.get("parse_ok") and required:
+        satisfied = sum(1 for item in required if item.get("status") == "satisfied")
+        return satisfied, len(required)
+    return fallback_precheck["weak_required_passed"], fallback_precheck["required_total"]
+
+
+def infer_disagreement_reason(
+    precheck: dict[str, Any],
+    json_validation: dict[str, Any],
+    natural_text: str,
+) -> tuple[list[str], str]:
+    between: list[str] = []
+    rule_set = status_set_from_rule(precheck)
+    json_set = status_set_from_json(json_validation) if json_validation.get("parse_ok") else set()
+    natural_set = {"needs_repair"} if natural_needs_repair(natural_text) else set()
+    json_signal = {"needs_repair"} if json_needs_repair(json_validation) else set()
+    if not json_validation.get("parse_ok"):
+        between.append("json_parse")
+    if rule_set != json_set:
+        between.append("rule_vs_json")
+    if bool(natural_set) != bool(json_signal):
+        between.append("natural_vs_json")
+    if bool(rule_set) != bool(natural_set):
+        between.append("rule_vs_natural")
+    if "rule_vs_json" in between and rule_set and not json_set:
+        reason = "rule_keyword_too_strict_or_terminal_false_positive"
+    elif "rule_vs_json" in between and json_set and not rule_set:
+        reason = "rule_keyword_too_loose_or_semantic_boundary_missed"
+    elif "natural_vs_json" in between:
+        reason = "semantic_validator_disagreement"
+    elif "json_parse" in between:
+        reason = "json_validator_parse_failure"
+    else:
+        reason = "none"
+    return between, reason
 
 
 def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, dry_run: bool) -> dict[str, Any]:
@@ -393,7 +505,7 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
     precheck = rule_precheck(case, generation_text)
 
     if dry_run:
-        natural_text = "## Overall Status\nneeds_repair" if precheck["overall_status"] != "satisfied" else "## Overall Status\nsatisfied"
+        natural_text = "## Overall Status\nneeds_repair" if precheck["overall_signal"] != "weak_pass" else "## Overall Status\nsatisfied"
         natural_latency = 0.0
         natural_error = None
         json_validation = make_dry_json_validation(case, generation_text)
@@ -406,13 +518,12 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
         parsed, parse_error = extract_json(json_raw)
         json_validation = normalize_json_validation(case, parsed, parse_error or json_error)
 
-    disagreement = False
-    if json_validation.get("parse_ok"):
-        disagreement = status_set_from_rule(precheck) != status_set_from_json(json_validation)
-    natural_disagrees = natural_needs_repair(natural_text) != (precheck["overall_status"] != "satisfied")
-    disagreement = disagreement or natural_disagrees
+    rule_vs_json = status_set_from_rule(precheck) != status_set_from_json(json_validation) if json_validation.get("parse_ok") else True
+    natural_disagrees = natural_needs_repair(natural_text) != json_needs_repair(json_validation)
+    between, likely_reason = infer_disagreement_reason(precheck, json_validation, natural_text)
+    disagreement = bool(between)
 
-    needs_repair = precheck["overall_status"] != "satisfied" or json_needs_repair(json_validation)
+    needs_repair = json_needs_repair(json_validation)
     repair_text = ""
     repair_latency = 0.0
     repair_error = None
@@ -445,22 +556,25 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
 
     new_errors = 0
     if repair_triggered:
-        initial_violations = precheck["forbidden_violated"]
-        final_violations = final_precheck["forbidden_violated"]
+        initial_violations = precheck["weak_forbidden_hits"]
+        final_violations = final_precheck["weak_forbidden_hits"]
         if final_violations > initial_violations:
             new_errors += 1
         if len(final_text) > max(len(generation_text) * 1.8, len(generation_text) + 600):
             new_errors += 1
 
-    final_usable = final_precheck["overall_status"] == "satisfied" and revalidation.get("overall_status") == "satisfied"
+    initial_satisfied, initial_total = json_required_counts(json_validation, precheck)
+    final_usable = revalidation.get("parse_ok") and revalidation.get("overall_status") == "satisfied"
     metrics = {
-        "initial_required_satisfied": precheck["required_satisfied"],
-        "initial_required_total": precheck["required_total"],
-        "initial_completion_rate": precheck["required_satisfied"] / max(precheck["required_total"], 1),
+        "initial_required_satisfied": initial_satisfied,
+        "initial_required_total": initial_total,
+        "initial_completion_rate": initial_satisfied / max(initial_total, 1),
+        "rule_weak_required_failed": precheck["weak_required_failed"],
+        "rule_weak_forbidden_hits": precheck["weak_forbidden_hits"],
         "json_parse_ok": bool(json_validation.get("parse_ok")),
         "disagreement": disagreement,
         "repair_triggered": repair_triggered,
-        "repair_success": repair_triggered and final_precheck["overall_status"] == "satisfied" and revalidation.get("overall_status") == "satisfied",
+        "repair_success": repair_triggered and bool(final_usable),
         "new_error_count": new_errors,
         "final_usable": final_usable,
         "total_latency": round(time.perf_counter() - started, 2),
@@ -491,8 +605,11 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
         },
         "disagreement": {
             "has_disagreement": disagreement,
-            "rule_vs_json": status_set_from_rule(precheck) != status_set_from_json(json_validation) if json_validation.get("parse_ok") else True,
+            "between": between,
+            "likely_reason": likely_reason,
+            "rule_vs_json": rule_vs_json,
             "rule_vs_natural": natural_disagrees,
+            "natural_vs_json": natural_disagrees,
         },
         "repair": {
             "triggered": repair_triggered,
@@ -586,8 +703,9 @@ def write_summary(results: list[dict[str, Any]], summary: dict[str, Any]) -> Non
             f,
             fieldnames=[
                 "run_id", "case_id", "initial_completion_rate", "json_parse_ok",
-                "disagreement", "repair_triggered", "repair_success", "new_error_count",
-                "final_usable", "total_latency",
+                "rule_weak_required_failed", "rule_weak_forbidden_hits", "disagreement",
+                "repair_triggered", "repair_success", "new_error_count", "final_usable",
+                "total_latency",
             ],
         )
         writer.writeheader()
@@ -595,7 +713,7 @@ def write_summary(results: list[dict[str, Any]], summary: dict[str, Any]) -> Non
             row = {"run_id": result["run_id"], "case_id": result["case_id"], **result["metrics"]}
             writer.writerow({key: row.get(key) for key in writer.fieldnames})
 
-    case_lines = "\n".join(f"| {r['case_id']} | {r['run_id']} | {r['metrics']['initial_completion_rate']:.2%} | {r['metrics']['json_parse_ok']} | {r['metrics']['disagreement']} | {r['metrics']['repair_triggered']} | {r['metrics']['repair_success']} | {r['metrics']['final_usable']} | {r['metrics']['total_latency']:.2f}s |" for r in results)
+    case_lines = "\n".join(f"| {r['case_id']} | {r['run_id']} | {r['metrics']['initial_completion_rate']:.2%} | {r['metrics']['json_parse_ok']} | {r['metrics']['rule_weak_required_failed']} | {r['metrics']['rule_weak_forbidden_hits']} | {r['metrics']['disagreement']} | {r['metrics']['repair_triggered']} | {r['metrics']['repair_success']} | {r['metrics']['final_usable']} | {r['metrics']['total_latency']:.2f}s |" for r in results)
     recommendation = "Productize validator warnings before automatic repair."
     if summary["validator_json_parse_rate"] < 0.9:
         recommendation = "Do not rely directly on JSON validator yet; add tolerant parsing or natural-language warnings first."
@@ -637,7 +755,7 @@ Six cases are stored as structured JSON under `cases/`:
 
 ## 4. Validators
 
-- Rule-based precheck: keyword and forbidden-keyword helper, not final authority.
+- Rule-based precheck: weak keyword/paraphrase/terminal-position signal only, not final authority and not an independent repair trigger.
 - Natural validator: Markdown evidence and overall status.
 - JSON validator: structured `satisfied / partial / missing` and forbidden violation output.
 
@@ -647,7 +765,7 @@ The benchmark uses a minimal repair prompt that asks the model to preserve most 
 
 ## 6. Scoring Method
 
-Metrics include initial beat completion, JSON parse rate, rule/natural/JSON agreement, repair trigger count, repair success, new error rate, final usable rate, and total latency.
+Metrics include JSON-derived initial beat completion, JSON parse rate, weak rule signals, rule/natural/JSON disagreement, repair trigger count, repair success, new error rate, final usable rate, and total latency.
 
 ## 7. Result Table
 
@@ -665,19 +783,19 @@ Metrics include initial beat completion, JSON parse rate, rule/natural/JSON agre
 
 ## 8. Run Detail
 
-| Case | Run | Initial completion | JSON parse | Disagreement | Repair triggered | Repair success | Final usable | Latency |
-| --- | --- | ---: | --- | --- | --- | --- | --- | ---: |
+| Case | Run | Initial completion | JSON parse | Weak required fail | Weak forbidden hit | Disagreement | Repair triggered | Repair success | Final usable | Latency |
+| --- | --- | ---: | --- | ---: | ---: | --- | --- | --- | --- | ---: |
 {case_lines}
 
 ## 9. Disagreement Analysis
 
-Disagreement is marked when rule-based missing/violation ids differ from JSON validator ids, or when the natural validator's overall repair signal differs from the rule precheck.
+Disagreement is marked when weak rule ids differ from JSON validator ids, or when natural and JSON repair signals differ.
 
-Because rule-based checks are intentionally simple, disagreement should be interpreted as an audit target, not automatic validator failure.
+Because rule-based checks are intentionally weak, disagreement should be interpreted as an audit target, not automatic validator failure.
 
 ## 10. Repair Success Analysis
 
-Repair success requires both final rule precheck and JSON re-validation to report satisfied. This is stricter than prompt-only self-check and closer to a future product safety gate.
+Repair success is decided by JSON re-validation. Weak rule signals are recorded for audit but do not block final usability.
 
 ## 11. New Error Analysis
 

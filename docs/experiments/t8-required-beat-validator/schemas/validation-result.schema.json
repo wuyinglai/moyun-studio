@@ -15,7 +15,11 @@
           "id": {"type": "string"},
           "status": {"enum": ["satisfied", "partial", "missing"]},
           "evidence": {"type": "string"},
-          "confidence": {"type": "number"}
+          "confidence": {"type": "number"},
+          "evidence_quality": {"enum": ["exact", "paraphrase", "weak", "absent"]},
+          "reasoning_note": {"type": "string"},
+          "terminal_position_ok": {"type": ["boolean", "null"]},
+          "knowledge_boundary_ok": {"type": ["boolean", "null"]}
         }
       }
     },
@@ -27,7 +31,10 @@
         "properties": {
           "id": {"type": "string"},
           "violated": {"type": "boolean"},
-          "evidence": {"type": "string"}
+          "evidence": {"type": "string"},
+          "evidence_quality": {"enum": ["exact", "paraphrase", "weak", "absent"]},
+          "reasoning_note": {"type": "string"},
+          "knowledge_boundary_ok": {"type": ["boolean", "null"]}
         }
       }
     },

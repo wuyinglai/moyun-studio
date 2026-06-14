@@ -12,35 +12,94 @@
       "id": "beat-1",
       "text": "正文必须出现“第七层协议”。",
       "must_appear": true,
-      "keywords": ["第七层协议"]
+      "keywords": [
+        "第七层协议"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "required_semantic_condition": "The generated text must mention the term 第七层协议 as a discovered/recognized clue, without explaining its full truth.",
+      "knowledge_boundary": {
+        "reader_must_not_know": [
+          "第七层协议完整真相",
+          "协议真实用途"
+        ],
+        "reader_reveal_allowed": false
+      }
     },
     {
       "id": "beat-2",
       "text": "正文必须出现银色芯片。",
       "must_appear": true,
-      "keywords": ["银色芯片"]
+      "keywords": [
+        "银色芯片"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "required_semantic_condition": "The silver chip remains part of the scene and is connected to Lin Che or the clue signal."
     },
     {
       "id": "beat-3",
       "text": "正文必须出现残缺坐标。",
       "must_appear": true,
-      "keywords": ["残缺坐标", "坐标"]
+      "keywords": [
+        "残缺坐标",
+        "坐标"
+      ],
+      "acceptable_paraphrases": [
+        "不完整坐标",
+        "断裂坐标",
+        "缺失坐标",
+        "坐标只剩一半"
+      ],
+      "terminal_position_required": false,
+      "required_semantic_condition": "The coordinates must be incomplete or damaged, not a full clear destination."
     },
     {
       "id": "beat-4",
       "text": "追踪者必须进入地下层。",
       "must_appear": true,
-      "keywords": ["追踪者", "追兵", "地下层", "地下"]
+      "keywords": [
+        "追踪者",
+        "追兵",
+        "地下层",
+        "地下"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "required_semantic_condition": "The pursuers must physically enter or be heard entering the underground level, increasing immediate pressure."
     },
     {
       "id": "forbid-1",
       "text": "不得直接揭晓第七层协议完整真相。",
       "must_appear": false,
       "type": "forbidden",
-      "forbidden_keywords": ["第七层协议其实是", "完整真相", "协议的真相"]
+      "forbidden_keywords": [
+        "第七层协议其实是",
+        "完整真相",
+        "协议的真相"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "forbidden_semantic_condition": "Do not reveal the full meaning, origin, owner, or purpose of 第七层协议 to the reader.",
+      "knowledge_boundary": {
+        "reader_must_not_know": [
+          "第七层协议完整真相",
+          "协议真实用途",
+          "幕后组织完整计划"
+        ],
+        "reader_reveal_allowed": false
+      },
+      "violation_threshold": "reader_reveal_or_full_explanation"
     }
   ],
-  "style_constraints": ["悬疑克制", "不要突然热血", "不要解释设定"],
-  "expected_risks": ["模型容易漏掉第七层协议", "模型容易提前解释协议真相"],
+  "style_constraints": [
+    "悬疑克制",
+    "不要突然热血",
+    "不要解释设定"
+  ],
+  "expected_risks": [
+    "模型容易漏掉第七层协议",
+    "模型容易提前解释协议真相"
+  ],
   "target_length": "600-1000 Chinese characters"
 }

@@ -19,6 +19,22 @@
           "must_appear": {"type": "boolean"},
           "type": {"type": "string"},
           "keywords": {"type": "array", "items": {"type": "string"}},
+          "acceptable_paraphrases": {"type": "array", "items": {"type": "string"}},
+          "required_semantic_condition": {"type": "string"},
+          "forbidden_semantic_condition": {"type": "string"},
+          "terminal_position_required": {"type": "boolean"},
+          "knowledge_boundary": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "character_may_know": {"type": "array", "items": {"type": "string"}},
+              "character_must_not_know": {"type": "array", "items": {"type": "string"}},
+              "reader_may_know": {"type": "array", "items": {"type": "string"}},
+              "reader_must_not_know": {"type": "array", "items": {"type": "string"}},
+              "reader_reveal_allowed": {"type": "boolean"}
+            }
+          },
+          "violation_threshold": {"type": "string"},
           "forbidden_keywords": {"type": "array", "items": {"type": "string"}}
         }
       }

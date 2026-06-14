@@ -12,43 +12,108 @@
       "id": "beat-1",
       "text": "只使用林澈、沈知夏、追踪者。",
       "must_appear": true,
-      "keywords": ["林澈", "沈知夏", "追踪者"]
+      "keywords": [
+        "林澈",
+        "沈知夏",
+        "追踪者"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "required_semantic_condition": "The scene should use only Lin Che, Shen Zhixia, and pursuers/tracking pressure as active entities."
     },
     {
       "id": "beat-2",
       "text": "通过已有线索推进。",
       "must_appear": true,
-      "keywords": ["银色芯片", "残缺坐标", "第七层协议", "线索"]
+      "keywords": [
+        "银色芯片",
+        "残缺坐标",
+        "第七层协议",
+        "线索"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "required_semantic_condition": "Progress should come from existing clues such as the silver chip, incomplete coordinates, Seventh Layer Protocol, or previously established traces."
     },
     {
       "id": "beat-3",
       "text": "保持第七层协议悬念。",
       "must_appear": true,
-      "keywords": ["第七层协议", "悬念", "没有答案", "不能确定"]
+      "keywords": [
+        "第七层协议",
+        "悬念",
+        "没有答案",
+        "不能确定"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "required_semantic_condition": "The Seventh Layer Protocol remains a mystery; the scene may deepen tension but not answer it fully.",
+      "knowledge_boundary": {
+        "reader_may_know": [
+          "第七层协议仍是悬念"
+        ],
+        "reader_must_not_know": [
+          "协议完整答案",
+          "幕后组织完整计划"
+        ],
+        "reader_reveal_allowed": false
+      }
     },
     {
       "id": "forbid-1",
       "text": "不得新增导师。",
       "must_appear": false,
       "type": "forbidden",
-      "forbidden_keywords": ["导师", "老师", "师父"]
+      "forbidden_keywords": [
+        "导师",
+        "老师",
+        "师父"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "forbidden_semantic_condition": "Do not introduce a mentor, teacher, master, or guide character.",
+      "violation_threshold": "explicit_new_character"
     },
     {
       "id": "forbid-2",
       "text": "不得新增神秘组织。",
       "must_appear": false,
       "type": "forbidden",
-      "forbidden_keywords": ["新组织", "神秘组织", "委员会", "联盟"]
+      "forbidden_keywords": [
+        "新组织",
+        "神秘组织",
+        "委员会",
+        "联盟"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "forbidden_semantic_condition": "Do not introduce a new organization, committee, alliance, cult, company, or unexplained faction.",
+      "violation_threshold": "explicit_new_organization"
     },
     {
       "id": "forbid-3",
       "text": "不得新增突然出现的内鬼。",
       "must_appear": false,
       "type": "forbidden",
-      "forbidden_keywords": ["内鬼现身", "真正的内鬼", "第三个人"]
+      "forbidden_keywords": [
+        "内鬼现身",
+        "真正的内鬼",
+        "第三个人"
+      ],
+      "acceptable_paraphrases": [],
+      "terminal_position_required": false,
+      "forbidden_semantic_condition": "Do not introduce a sudden insider/traitor/third person reveal.",
+      "violation_threshold": "explicit_new_traitor_reveal"
     }
   ],
-  "style_constraints": ["悬疑克制", "不新增实体", "只用已有线索推进"],
-  "expected_risks": ["模型容易新增导师或组织", "模型容易写出突然现身的内鬼"],
+  "style_constraints": [
+    "悬疑克制",
+    "不新增实体",
+    "只用已有线索推进"
+  ],
+  "expected_risks": [
+    "模型容易新增导师或组织",
+    "模型容易写出突然现身的内鬼"
+  ],
   "target_length": "600-1000 Chinese characters"
 }
