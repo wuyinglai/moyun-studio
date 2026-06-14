@@ -108,6 +108,7 @@ class CandidateService:
         generation_context: dict | None = None,
         scene_plan_hash: str = "",
         scene_plan_path: str = "",
+        beat_validation: dict | None = None,
     ) -> CandidateInfo:
         """创建候选稿
 
@@ -159,6 +160,7 @@ class CandidateService:
             generation_context=generation_context or {},
             scene_plan_hash=scene_plan_hash,
             scene_plan_path=scene_plan_path,
+            beat_validation=beat_validation or {},
         )
 
         metadata = await self._load_metadata(project_id)

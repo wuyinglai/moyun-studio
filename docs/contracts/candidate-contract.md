@@ -41,6 +41,21 @@ project/
     chapters__vol-01__ch-001__sec-001.polish.md
 ```
 
+## Optional Metadata
+
+Candidate metadata may include `beat_validation` when the caller explicitly
+sets `_enable_beat_validation=true` and provides `required_beats` or
+`forbidden_beats`.
+
+Rules:
+
+- `beat_validation.status` is `pass`, `warning`, or `unknown`.
+- `warning` and `unknown` are visible warnings only.
+- `beat_validation` must not block candidate adoption.
+- Validator failure must not fail candidate creation; store `unknown` instead.
+- The metadata must not contain raw prompts, raw model output, API keys, or full
+  workspace dumps.
+
 ## API
 
 ### POST /api/candidates

@@ -65,6 +65,7 @@ class CandidateInfo(BaseModel):
     generation_context: Dict[str, Any] = Field(default_factory=dict, description="生成上下文，包含 scene_plan_used 等信息")
     scene_plan_hash: str = Field("", description="生成时使用的 Scene Plan 哈希")
     scene_plan_path: str = Field("", description="生成时使用的 Scene Plan 文件路径（项目内相对路径）")
+    beat_validation: Dict[str, Any] = Field(default_factory=dict, description="Required beat validation metadata")
 
     @property
     def filename(self) -> str:
@@ -98,6 +99,7 @@ class CreateCandidateRequest(BaseModel):
     generation_context: Dict[str, Any] = Field(default_factory=dict, description="生成上下文")
     scene_plan_hash: str = Field("", description="Scene Plan 哈希")
     scene_plan_path: str = Field("", description="Scene Plan 文件路径")
+    beat_validation: Dict[str, Any] = Field(default_factory=dict, description="Required beat validation metadata")
 
 
 class AdoptCandidateRequest(BaseModel):

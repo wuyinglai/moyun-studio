@@ -53,6 +53,15 @@
             连续性警告
           </span>
           <span
+            v-if="candidate.beat_validation && candidate.beat_validation.status"
+            class="beat-validation-badge"
+            :class="`beat-${candidate.beat_validation.status}`"
+            :title="beatValidationLabel(candidate)"
+          >
+            <i :class="beatValidationIcon(candidate)" />
+            {{ beatValidationLabel(candidate) }}
+          </span>
+          <span
             v-if="candidate.source_type"
             class="source-type-badge"
             :class="`source-${candidate.source_type}`"
@@ -81,6 +90,14 @@
           >
             <i class="fa-solid fa-circle-info" />
             可能与前文设定不一致：缺少「{{ candidate.continuity.anchors_missing.slice(0, 3).join('、') }}」等关键元素，建议先预览再采纳。
+          </div>
+          <div
+            v-if="beatValidationMessage(candidate)"
+            class="candidate-warning-message"
+            :class="`beat-message-${candidate.beat_validation?.status || 'unknown'}`"
+          >
+            <i :class="beatValidationIcon(candidate)" />
+            {{ beatValidationMessage(candidate) }}
           </div>
           <div class="candidate-meta">
             <span class="meta-item">{{ formatTime(candidate.created_at) }}</span>
@@ -311,8 +328,51 @@ async function syncAdoptedSource(sourcePath: string) {
   }
 }
 
+function beatValidationLabel(candidate: CandidateInfo | null): string {
+  const status = candidate?.beat_validation?.status
+  if (status === 'pass') return '信息点通过'
+  if (status === 'warning') return '信息点警告'
+  if (status === 'unknown') return '信息点未知'
+  return ''
+}
+
+function beatValidationIcon(candidate: CandidateInfo | null): string {
+  const status = candidate?.beat_validation?.status
+  if (status === 'pass') return 'fa-solid fa-circle-check'
+  if (status === 'warning') return 'fa-solid fa-triangle-exclamation'
+  return 'fa-solid fa-circle-question'
+}
+
+function beatValidationWarning(candidate: CandidateInfo | null): string {
+  const validation = candidate?.beat_validation
+  if (!validation || validation.status !== 'warning') return ''
+  const missing = (validation.required_beats || [])
+    .filter((item) => item.status === 'missing' || item.status === 'partial' || item.status === 'unknown')
+    .map((item) => item.text)
+    .slice(0, 3)
+  const violations = (validation.forbidden_beats || [])
+    .filter((item) => item.violated)
+    .map((item) => item.text)
+    .slice(0, 3)
+  const details = [...missing, ...violations]
+  if (details.length > 0) {
+    return `信息点检查警告：${details.join('；')}。采用前建议先预览确认。`
+  }
+  return validation.summary || '信息点检查发现风险，采用前建议先预览确认。'
+}
+
+function beatValidationMessage(candidate: CandidateInfo | null): string {
+  const validation = candidate?.beat_validation
+  if (!validation?.status) return ''
+  if (validation.status === 'pass') return validation.summary || '必需信息点检查通过。'
+  if (validation.status === 'warning') return beatValidationWarning(candidate)
+  return validation.summary || '信息点检查未完成，请采用前人工预览确认。'
+}
+
 function getPreviewWarning(candidate: CandidateInfo | null): string {
   if (!candidate) return ''
+  const beatWarning = beatValidationWarning(candidate)
+  if (beatWarning) return beatWarning
   if (candidate.warning_message) return candidate.warning_message
   if (candidate.continuity && candidate.continuity.has_warning) {
     const missing = (candidate.continuity.anchors_missing || []).slice(0, 3)
@@ -335,7 +395,7 @@ async function adoptCandidate(candidate: CandidateInfo) {
     confirmMsg = `⚠ 该文件有未保存的修改，采用候选稿将覆盖这些修改且无法恢复。\n\n${confirmMsg}`
   }
   if (warning) {
-    confirmMsg = `⚠ 该候选稿存在连续性警告：\n${warning}\n\n${confirmMsg}`
+    confirmMsg = `⚠ 该候选稿存在采用前警告：\n${warning}\n\n${confirmMsg}`
   }
   if (!confirm(confirmMsg)) {
     return
@@ -533,6 +593,29 @@ watch(() => projectStore.currentProject?.id, () => {
   }
 }
 
+.beat-validation-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &.beat-pass {
+    background: rgba(34, 197, 94, 0.16);
+    color: var(--accent-success);
+  }
+  &.beat-warning {
+    background: rgba(251, 146, 60, 0.18);
+    color: #f97316;
+  }
+  &.beat-unknown {
+    background: rgba(148, 163, 184, 0.2);
+    color: var(--text-secondary);
+  }
+}
+
 .source-type-badge {
   font-size: 10px;
   padding: 2px 6px;
@@ -566,6 +649,29 @@ watch(() => projectStore.currentProject?.id, () => {
     flex-shrink: 0;
     color: #f97316;
     margin-top: 2px;
+  }
+}
+
+.beat-message-pass {
+  background: rgba(34, 197, 94, 0.08);
+  border-left-color: var(--accent-success);
+
+  i {
+    color: var(--accent-success);
+  }
+}
+
+.beat-message-warning {
+  background: rgba(251, 146, 60, 0.1);
+  border-left-color: #f97316;
+}
+
+.beat-message-unknown {
+  background: rgba(148, 163, 184, 0.12);
+  border-left-color: var(--text-muted);
+
+  i {
+    color: var(--text-muted);
   }
 }
 

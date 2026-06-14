@@ -24,6 +24,11 @@ from backend.domain.events import (
     make_pipeline_step_failed_event,
     make_task_completed_event,
 )
+from backend.core.beat_validator import (
+    RequiredBeatValidator,
+    extract_beat_validation_inputs,
+    is_beat_validation_enabled,
+)
 from backend.policies.candidate_policy import should_create_candidate
 from backend.schemas.llm import BatchGenerateItem, BatchGenerateResponse
 
@@ -229,11 +234,20 @@ class GenerationService:
                     try:
                         candidate_svc = CandidateService(self.file_service)
                         new_content = (content + "\n\n" + generated_text) if resolved_mode == "append" and target_exists else generated_text
+                        beat_validation = {}
+                        if is_beat_validation_enabled(extra_vars):
+                            required_beats, forbidden_beats = extract_beat_validation_inputs(extra_vars)
+                            beat_validation = await RequiredBeatValidator(self.llm_service).validate(
+                                new_content,
+                                required_beats=required_beats,
+                                forbidden_beats=forbidden_beats,
+                            )
                         candidate = await candidate_svc.create_candidate(
                             project_id=project_id,
                             source_path=file_path,
                             action=action,
                             content=new_content,
+                            beat_validation=beat_validation,
                         )
                         logger.info("Fallback %s 已保存为候选稿: %s -> %s", resolved_mode, file_path, candidate.id)
                         yield {"event": "candidate_created", "data": json.dumps({
@@ -241,6 +255,7 @@ class GenerationService:
                             "candidate_id": candidate.id,
                             "source_path": file_path,
                             "action": action.value,
+                            "beat_validation_status": beat_validation.get("status") if beat_validation else None,
                         })}
                     except Exception as e:
                         logger.warning("创建候选稿失败: %s", e)

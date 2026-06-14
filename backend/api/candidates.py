@@ -73,6 +73,17 @@ async def create_candidate(
         action=request.action,
         content=request.content,
         workflow_run_id=request.workflow_run_id,
+        model=request.model,
+        pipeline_id=request.pipeline_id,
+        prompt_version=request.prompt_version,
+        source_mode=request.source_mode,
+        continuity=request.continuity,
+        source_type=request.source_type,
+        warning_message=request.warning_message,
+        generation_context=request.generation_context,
+        scene_plan_hash=request.scene_plan_hash,
+        scene_plan_path=request.scene_plan_path,
+        beat_validation=request.beat_validation,
     )
     event_bus = getattr(http_request.app.state, "event_bus", None)
     if event_bus:

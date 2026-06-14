@@ -124,6 +124,24 @@ export interface ContinuityInfo {
   message?: string
 }
 
+export interface BeatValidationItem {
+  text: string
+  status?: 'satisfied' | 'partial' | 'missing' | 'unknown'
+  violated?: boolean | null
+  evidence?: string
+  confidence?: number
+}
+
+export interface BeatValidationInfo {
+  enabled?: boolean
+  status?: 'pass' | 'warning' | 'unknown'
+  summary?: string
+  required_beats?: BeatValidationItem[]
+  forbidden_beats?: BeatValidationItem[]
+  logic_risks?: unknown[]
+  validator?: Record<string, unknown>
+}
+
 /** 候选稿信息 — 对应 backend/schemas/candidate.py CandidateInfo */
 export interface CandidateInfo {
   id: string
@@ -150,6 +168,7 @@ export interface CandidateInfo {
   source_type?: 'llm' | 'dry-run' | null
   /** 简短摘要 — 如"可能与前文设定不一致"，便于卡片展示 */
   warning_message?: string | null
+  beat_validation?: BeatValidationInfo | null
 }
 
 /** 候选稿详情 — 对应 backend/schemas/candidate.py CandidateDetailResponse */

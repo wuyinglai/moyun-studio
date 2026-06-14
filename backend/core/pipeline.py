@@ -34,6 +34,11 @@ from backend.application.memory_service import MemoryService
 from backend.application.pipeline.context import NodeResult, PipelineContext
 from backend.application.pipeline.registry import NodeExecutorRegistry
 from backend.config import get_settings
+from backend.core.beat_validator import (
+    RequiredBeatValidator,
+    extract_beat_validation_inputs,
+    is_beat_validation_enabled,
+)
 from backend.core.candidate_service import CandidateService
 from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
@@ -1029,6 +1034,16 @@ class PipelineRunner:
                 else:
                     generation_context["scene_plan_used"] = False
 
+                beat_validation = {}
+                if is_beat_validation_enabled(extra_vars):
+                    required_beats, forbidden_beats = extract_beat_validation_inputs(extra_vars)
+                    validator = RequiredBeatValidator(self.llm_service)
+                    beat_validation = await validator.validate(
+                        final_output,
+                        required_beats=required_beats,
+                        forbidden_beats=forbidden_beats,
+                    )
+
                 candidate = await candidate_service.create_candidate(
                     project_id=project_id,
                     source_path=target_file,
@@ -1040,6 +1055,7 @@ class PipelineRunner:
                     generation_context=generation_context,
                     scene_plan_hash=scene_plan_hash,
                     scene_plan_path=scene_plan_path,
+                    beat_validation=beat_validation,
                 )
                 candidate_id = candidate.id
                 logger.info("已生成候选稿: %s -> %s (continuity=%s)", target_file, candidate_id, continuity_severity)
@@ -1051,6 +1067,7 @@ class PipelineRunner:
                     "continuity": continuity_info,
                     "source_type": source_type,
                     "warning_message": warning_message,
+                    "beat_validation_status": beat_validation.get("status") if beat_validation else None,
                 }, ensure_ascii=False)}
             elif output_mode == "write_scene":
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
