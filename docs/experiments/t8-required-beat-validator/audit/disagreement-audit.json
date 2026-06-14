@@ -1,0 +1,221 @@
+{
+  "task": "T8.2.3 Validator Disagreement Manual Audit",
+  "source_commit": "f81f4da",
+  "audited_at": "2026-06-14",
+  "scope": {
+    "runs_total": 6,
+    "disagreement_runs": 3,
+    "source_files": [
+      "docs/experiments/t8-required-beat-validator/results/scored/",
+      "docs/experiments/t8-required-beat-validator/results/raw/",
+      "docs/experiments/t8-required-beat-validator/results/validator-summary.md",
+      "docs/experiments/t8-required-beat-validator/results/validator-summary.json",
+      "docs/experiments/t8-required-beat-validator/results/validator-summary.csv"
+    ]
+  },
+  "audits": [
+    {
+      "run_id": "case-02-ending-hook-s1",
+      "case_id": "case-02-ending-hook",
+      "human_judgment": {
+        "required_beats": [
+          {
+            "beat_id": "beat-1",
+            "status": "satisfied",
+            "evidence": "皮鞋敲击水磨石地面的声音，不疾不徐。",
+            "comment": "熟悉脚步声已清楚出现。"
+          },
+          {
+            "beat_id": "beat-2",
+            "status": "satisfied",
+            "evidence": "这个频率……他在无数个深夜的梦境边缘听过这个声音。",
+            "comment": "没有使用“认出”字样，但语义上林澈已认出脚步声。"
+          },
+          {
+            "beat_id": "beat-3",
+            "status": "partial",
+            "evidence": "他缓缓抬起头，目光……投向……通风口。那里似乎有什么东西动了一下。",
+            "comment": "出现抬头，但正文没有停在抬头，而继续转向通风口新悬念。"
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "beat_id": "forbid-1",
+            "violated": false,
+            "evidence": "是那个人。那个名字在他舌尖打转，却被他强行咽回喉咙。",
+            "comment": "读者没有得知具体姓名、身份或关系。它满足“林澈认出”而不是“向读者揭晓身份”。"
+          }
+        ],
+        "overall": "needs_repair"
+      },
+      "closest_validator": "mixed",
+      "disagreement_type": "ambiguous_case",
+      "false_positives": [
+        {
+          "validator": "rule",
+          "item": "forbid-1",
+          "reason": "关键词“那是”命中普通句式，误判为身份揭晓。"
+        },
+        {
+          "validator": "json",
+          "item": "forbid-1",
+          "reason": "把“是那个人 / 那个名字”解释为身份揭晓，属于过度推断。"
+        }
+      ],
+      "false_negatives": [
+        {
+          "validator": "rule",
+          "item": "beat-3",
+          "reason": "只看到“抬起头”关键词，未检查该动作是否发生在真正结尾。"
+        }
+      ],
+      "repair_failure": {
+        "failed": false,
+        "type": "metric_false_negative",
+        "comment": "人工看修复稿基本成功：删除身份暗示并停在“他缓缓抬起头”。框架判失败主要来自 rule-based forbidden keyword 误报。"
+      },
+      "recommendation": "为 ending hook 增加 terminal_position_required 和 identity_disclosure_level 字段；rule-based 不应使用“那是”这类高频词作为 forbidden keyword。"
+    },
+    {
+      "run_id": "case-03-injury-limitation-s1",
+      "case_id": "case-03-injury-limitation",
+      "human_judgment": {
+        "required_beats": [
+          {
+            "beat_id": "beat-1",
+            "status": "satisfied",
+            "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透。",
+            "comment": "伤势明确。"
+          },
+          {
+            "beat_id": "beat-2",
+            "status": "satisfied",
+            "evidence": "更别提进行任何高强度的格斗动作。",
+            "comment": "高强度战斗限制明确。"
+          },
+          {
+            "beat_id": "beat-3",
+            "status": "satisfied",
+            "evidence": "脚步声太杂，说明他们在分头搜索……他在试探空心墙。",
+            "comment": "沈知夏通过听觉和地形分析帮助林澈，语义满足。"
+          },
+          {
+            "beat_id": "beat-4",
+            "status": "satisfied",
+            "evidence": "林澈……将闪光弹掷向走廊尽头……向维修通道方向迂回。",
+            "comment": "林澈承担主要行动。"
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "beat_id": "forbid-1",
+            "violated": false,
+            "evidence": "沈知夏留在阴影中，未攀爬、格斗或单人击退敌人。",
+            "comment": "未违反伤势限制。"
+          }
+        ],
+        "overall": "pass"
+      },
+      "closest_validator": "natural",
+      "disagreement_type": "rule_too_strict",
+      "false_positives": [
+        {
+          "validator": "rule",
+          "item": "beat-3",
+          "reason": "规则关键词缺少“说明 / 分析 / 指出 / 听出”等可接受转述，误判 missing。"
+        }
+      ],
+      "false_negatives": [],
+      "repair_failure": {
+        "failed": false,
+        "type": "unnecessary_repair",
+        "comment": "初稿人工判断已通过，repair 是由 rule-based false positive 触发；修复稿没有明显新错，但属于不必要改写。"
+      },
+      "recommendation": "required beat 应增加 acceptable_paraphrases；rule-based precheck 只能作为 weak signal，不应单独触发 repair。"
+    },
+    {
+      "run_id": "case-04-item-handover-s1",
+      "case_id": "case-04-item-handover",
+      "human_judgment": {
+        "required_beats": [
+          {
+            "beat_id": "beat-1",
+            "status": "satisfied",
+            "evidence": "沈知夏的手指紧紧扣住那支透明药剂。",
+            "comment": "药剂仍在沈知夏控制中。"
+          },
+          {
+            "beat_id": "beat-2",
+            "status": "satisfied",
+            "evidence": "他只能勉强辨认出标签上那行模糊的小字。",
+            "comment": "标签可见。"
+          },
+          {
+            "beat_id": "beat-3",
+            "status": "satisfied",
+            "evidence": "敌人似乎失去了目标……沈知夏……手中的药剂。",
+            "comment": "敌人没有拿走药剂。"
+          },
+          {
+            "beat_id": "beat-4",
+            "status": "satisfied",
+            "evidence": "药剂的副作用已经开始显现……神经系统处于崩溃边缘。",
+            "comment": "副作用暗示出现，但强度偏大。"
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "beat_id": "forbid-1",
+            "violated": false,
+            "evidence": "药剂未被敌人夺走。",
+            "comment": "无违反。"
+          },
+          {
+            "beat_id": "forbid-2",
+            "violated": true,
+            "evidence": "她知道，这支药剂能暂时屏蔽他们的生物信号，但代价是……",
+            "comment": "正文明确写出药剂用途和副作用，超出“林澈只能看到标签 / 不知道完整用途”的边界。即便主语是沈知夏，也让读者提前知道用途。"
+          }
+        ],
+        "overall": "needs_repair"
+      },
+      "closest_validator": "json",
+      "disagreement_type": "rule_too_loose",
+      "false_positives": [],
+      "false_negatives": [
+        {
+          "validator": "rule",
+          "item": "forbid-2",
+          "reason": "forbidden keyword 只覆盖“林澈已经知道药剂用途”等精确句，漏掉语义等价的用途揭晓。"
+        },
+        {
+          "validator": "natural",
+          "item": "forbid-2",
+          "reason": "natural validator 把“林澈只看见标签”当作没有违反，但忽略正文后段直接向读者解释用途。"
+        }
+      ],
+      "repair_failure": {
+        "failed": true,
+        "type": "retained_weak_logic",
+        "comment": "repair 移除了直接用途说明，但仍保留“未注射，仅接触/微量挥发就副作用显现”的牵强逻辑，JSON re-validation 仍判 needs_repair。"
+      },
+      "recommendation": "forbidden beat 需要区分 character_knowledge_boundary 与 reader_reveal_boundary；repair prompt 需要明确“删除用途解释，不替换成另一种解释”。"
+    }
+  ],
+  "aggregate": {
+    "disagreement_runs": 3,
+    "closest_validator_counts": {
+      "rule": 0,
+      "natural": 1,
+      "json": 1,
+      "mixed": 1
+    },
+    "false_positives": 4,
+    "false_negatives": 3,
+    "repair_failures": 1,
+    "unnecessary_repairs": 1,
+    "metric_false_negative_repairs": 1
+  },
+  "conclusion": "B. 暂不扩大样本，先修正 validator prompt / case schema。",
+  "next_step": "T8.2.4 should update case schema, validator prompts, and rule precheck semantics before running --samples 2."
+}

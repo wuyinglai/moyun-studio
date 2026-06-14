@@ -1,0 +1,4 @@
+run_id,case_id,human_overall,closest_validator,disagreement_type,false_positives,false_negatives,repair_failure_type,recommendation
+case-02-ending-hook-s1,case-02-ending-hook,needs_repair,mixed,ambiguous_case,2,1,metric_false_negative,"Add terminal_position_required and identity_disclosure_level; remove broad forbidden keyword for generic demonstrative phrase."
+case-03-injury-limitation-s1,case-03-injury-limitation,pass,natural,rule_too_strict,1,0,unnecessary_repair,"Add acceptable_paraphrases; rule precheck should not alone trigger repair."
+case-04-item-handover-s1,case-04-item-handover,needs_repair,json,rule_too_loose,0,2,retained_weak_logic,"Separate character knowledge boundary from reader reveal boundary; repair should delete explanation rather than replace it."
