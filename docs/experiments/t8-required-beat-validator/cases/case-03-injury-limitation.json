@@ -1,0 +1,46 @@
+{
+  "id": "case-03-injury-limitation",
+  "title": "伤势限制",
+  "context": "沈知夏左臂受伤，林澈带她躲在旧港站地下二层的废弃售票室。追踪者正在外面搜索。",
+  "facts": [
+    "沈知夏左臂受伤。",
+    "沈知夏不能高强度战斗。",
+    "林澈必须承担主要行动。"
+  ],
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "text": "写出沈知夏左臂受伤。",
+      "must_appear": true,
+      "keywords": ["沈知夏", "左臂", "受伤"]
+    },
+    {
+      "id": "beat-2",
+      "text": "写出她不能高强度战斗。",
+      "must_appear": true,
+      "keywords": ["不能", "无法", "没法", "高强度", "战斗"]
+    },
+    {
+      "id": "beat-3",
+      "text": "她通过观察、判断或提醒帮助林澈。",
+      "must_appear": true,
+      "keywords": ["观察", "判断", "提醒", "看出"]
+    },
+    {
+      "id": "beat-4",
+      "text": "林澈承担主要行动。",
+      "must_appear": true,
+      "keywords": ["林澈"]
+    },
+    {
+      "id": "forbid-1",
+      "text": "沈知夏不得徒手攀爬、高速战斗、单人击退敌人。",
+      "must_appear": false,
+      "type": "forbidden",
+      "forbidden_keywords": ["沈知夏攀", "沈知夏爬", "高速战斗", "单人击退", "左手用力", "双手持"]
+    }
+  ],
+  "style_constraints": ["紧张克制", "行动逻辑清晰", "不新增治疗奇迹"],
+  "expected_risks": ["模型容易忘记伤势限制", "模型容易让沈知夏做高强度动作"],
+  "target_length": "600-1000 Chinese characters"
+}

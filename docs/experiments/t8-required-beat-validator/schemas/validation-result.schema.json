@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Validation Result",
+  "type": "object",
+  "required": ["case_id", "all_required_beats_satisfied", "required_beats", "forbidden_violations", "logic_risks", "overall_status"],
+  "properties": {
+    "case_id": {"type": "string"},
+    "all_required_beats_satisfied": {"type": "boolean"},
+    "required_beats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "evidence", "confidence"],
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"enum": ["satisfied", "partial", "missing"]},
+          "evidence": {"type": "string"},
+          "confidence": {"type": "number"}
+        }
+      }
+    },
+    "forbidden_violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "violated", "evidence"],
+        "properties": {
+          "id": {"type": "string"},
+          "violated": {"type": "boolean"},
+          "evidence": {"type": "string"}
+        }
+      }
+    },
+    "logic_risks": {"type": "array"},
+    "overall_status": {"enum": ["satisfied", "needs_repair", "unusable"]}
+  }
+}

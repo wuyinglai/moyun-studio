@@ -1,0 +1,2135 @@
+{
+  "summary": {
+    "model": "agnes-2.0-flash",
+    "dry_run": false,
+    "runs": 6,
+    "initial_beat_completion_rate": 0.9523809523809523,
+    "validator_json_parse_rate": 1.0,
+    "validator_agreement_rate": 0.5,
+    "repair_trigger_count": 3,
+    "repair_success_rate": 0.3333333333333333,
+    "new_error_rate": 0.0,
+    "final_usable_rate": 0.6666666666666666,
+    "average_total_latency": 42.7
+  },
+  "runs": [
+    {
+      "run_id": "case-01-seventh-protocol-s1",
+      "case_id": "case-01-seventh-protocol",
+      "model": "agnes-2.0-flash",
+      "generation": {
+        "text": "广播室里的空气浑浊而凝滞，弥漫着陈年灰尘与臭氧混合的怪味。林澈靠在布满锈迹的控制台旁，呼吸急促，每一次吸气都像是在吞咽碎玻璃。他下意识地按住左胸口袋，那里硬邦邦的触感让他感到一丝虚幻的安全感——那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。\n\n沈知夏正蹲在角落，手指飞快地在便携式终端上敲击，屏幕幽蓝的光映在她苍白的脸上，勾勒出紧绷的下颌线。“信号屏蔽层撑不了多久，”她的声音压得很低，带着不容置疑的冷静，“旧港站的地下结构像迷宫，但追踪者的算法比我们要快。”\n\n林澈没有接话，他的目光死死盯着那枚芯片。就在几分钟前，当广播设备过载的瞬间，芯片内部似乎闪过一串极其晦涩的代码流。那不是普通的身份识别码，而是一段被强行嵌入的指令碎片。他在脑海中反复回放那一瞬的刺痛感，脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。这个词像是一根刺，扎在记忆的盲区里，既熟悉又陌生，带着某种令人不安的禁忌色彩。他不敢深想，只能将其归结为某种高级别的加密指令，但直觉告诉他，这背后隐藏着远超当前危机的真相。\n\n“找到了。”沈知夏突然抬起头，眼神锐利如刀。她将终端屏幕转向林澈，上面显示着一张残缺不全的地下管网图。在地图的最深处，一个红色的标记正在微弱地闪烁，旁边标注着一组乱码般的数字：“北纬31.2...东经121.4...误差值±500米。”这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。\n\n“那是唯一没有监控盲区的路径。”沈知夏站起身，将终端塞回背包，“我们必须在那之前到达。”\n\n林澈点了点头，抓起外套。然而，就在他转身准备离开广播室的瞬间，头顶上方传来了沉闷的金属撞击声。紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。那声音越来越近，每一步都像是踩在两人的心跳上。\n\n追踪者进来了。\n\n林澈猛地回头，看向那扇厚重的铁门。门缝下方，一道红色的激光扫描线缓缓划过，如同野兽睁开的眼睛。他没有犹豫，一把拉住沈知夏的手腕，压低声音说道：“走通风管道，现在。”\n\n两人迅速潜入广播室后方狭窄的检修口，身后，铁门被暴力破开的巨响震落了墙皮上的灰尘。在这幽暗的地下深处，他们带着那枚未知的芯片和残缺的坐标，向着未知的黑暗潜行，而“第七层协议”的阴影，始终如影随形。",
+        "latency": 15.67,
+        "error": null,
+        "prompt_variant": "numbered-beats+self-check"
+      },
+      "rule_precheck": {
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "keywords": [
+              "第七层协议"
+            ]
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "keywords": [
+              "银色芯片"
+            ]
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "keywords": [
+              "残缺坐标",
+              "坐标"
+            ]
+          },
+          {
+            "id": "beat-4",
+            "status": "satisfied",
+            "keywords": [
+              "追踪者",
+              "追兵",
+              "地下层",
+              "地下"
+            ]
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "keywords": [
+              "第七层协议其实是",
+              "完整真相",
+              "协议的真相"
+            ]
+          }
+        ],
+        "required_satisfied": 4,
+        "required_total": 4,
+        "forbidden_violated": 0,
+        "length": 959,
+        "length_abnormal": false,
+        "overall_status": "satisfied"
+      },
+      "natural_validator": {
+        "text": "## Required Beats\n\n- **id**: beat-1\n  - **status**: satisfied\n  - **evidence**: “他在脑海中反复回放那一瞬的刺痛感，脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。”\n  - **reason**: 正文明确出现了关键词“第七层协议”，且符合语境。\n\n- **id**: beat-2\n  - **status**: satisfied\n  - **evidence**: “那枚**银色芯片**依然在那里，表面微凉……”\n  - **reason**: 正文明确出现了关键词“银色芯片”，并描述了其状态。\n\n- **id**: beat-3\n  - **status**: satisfied\n  - **evidence**: “这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。”\n  - **reason**: 正文明确出现了关键词“残缺坐标”，并给出了具体的数值示例。\n\n- **id**: beat-4\n  - **status**: satisfied\n  - **evidence**: “头顶上方传来了沉闷的金属撞击声……追踪者进来了。”\n  - **reason**: 正文描述了追踪者（追兵）通过脚步声和激光扫描线进入地下层广播室的过程。\n\n## Forbidden Violations\n\n- **id**: forbid-1\n  - **violated**: no\n  - **evidence**: 文中仅提到“第七层协议”是一个“被刻意模糊化的词汇”、“高级别的加密指令”，并未解释其具体内容或完整真相。\n  - **reason**: 严格遵守了“不得直接揭晓第七层协议完整真相”的限制，保持了悬疑感。\n\n## Logic Risks\n\n- **人物状态**: 林澈呼吸急促、吞咽碎玻璃般的痛感，符合刚经历剧烈运动和芯片激活后的生理反应，状态合理。\n- **地点**: 始终保持在“旧港站地下层”、“广播室”、“检修口”等封闭空间，符合上下文设定。\n- **道具**: 银色芯片、便携式终端、残缺坐标均作为推动情节的关键道具出现，逻辑连贯。\n- **时间线**: 从广播室暂时安全 -> 发现坐标 -> 追踪者逼近 -> 撤离，时间流动紧凑且连续，无跳跃。\n- **新实体**: 追踪者作为既定威胁实体，其出现方式（脚步声、激光）符合科幻悬疑风格，未引入突兀的新角色。\n\n## Overall Status\n\nsatisfied",
+        "latency": 13.73,
+        "error": null,
+        "needs_repair": false
+      },
+      "json_validator": {
+        "raw": "{\n  \"case_id\": \"case-01-seventh-protocol\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"追踪者进来了。... 身后，铁门被暴力破开的巨响震落了墙皮上的灰尘。\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"文本中使用了加粗标记（**银色芯片**等），在纯文本小说中可能被视为格式错误，但不影响内容连续性。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+        "latency": 2.34,
+        "error": null,
+        "result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-01-seventh-protocol",
+          "all_required_beats_satisfied": true,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "evidence": "追踪者进来了。... 身后，铁门被暴力破开的巨响震落了墙皮上的灰尘。",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [
+            {
+              "type": "style",
+              "description": "文本中使用了加粗标记（**银色芯片**等），在纯文本小说中可能被视为格式错误，但不影响内容连续性。",
+              "severity": "low"
+            }
+          ],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-01-seventh-protocol",
+            "all_required_beats_satisfied": true,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-4",
+                "status": "satisfied",
+                "evidence": "追踪者进来了。... 身后，铁门被暴力破开的巨响震落了墙皮上的灰尘。",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [
+              {
+                "type": "style",
+                "description": "文本中使用了加粗标记（**银色芯片**等），在纯文本小说中可能被视为格式错误，但不影响内容连续性。",
+                "severity": "low"
+              }
+            ],
+            "overall_status": "satisfied"
+          }
+        }
+      },
+      "disagreement": {
+        "has_disagreement": false,
+        "rule_vs_json": false,
+        "rule_vs_natural": false
+      },
+      "repair": {
+        "triggered": false,
+        "text": "",
+        "latency": 0.0,
+        "error": null
+      },
+      "revalidation": {
+        "rule_precheck": {
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "keywords": [
+                "第七层协议"
+              ]
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "keywords": [
+                "银色芯片"
+              ]
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "keywords": [
+                "残缺坐标",
+                "坐标"
+              ]
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "keywords": [
+                "追踪者",
+                "追兵",
+                "地下层",
+                "地下"
+              ]
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "keywords": [
+                "第七层协议其实是",
+                "完整真相",
+                "协议的真相"
+              ]
+            }
+          ],
+          "required_satisfied": 4,
+          "required_total": 4,
+          "forbidden_violated": 0,
+          "length": 959,
+          "length_abnormal": false,
+          "overall_status": "satisfied"
+        },
+        "json_raw": "{\n  \"case_id\": \"case-01-seventh-protocol\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。... 追踪者进来了。\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+        "json_result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-01-seventh-protocol",
+          "all_required_beats_satisfied": true,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "evidence": "紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。... 追踪者进来了。",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-01-seventh-protocol",
+            "all_required_beats_satisfied": true,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-4",
+                "status": "satisfied",
+                "evidence": "紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。... 追踪者进来了。",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [],
+            "overall_status": "satisfied"
+          }
+        },
+        "latency": 3.84,
+        "error": null
+      },
+      "metrics": {
+        "initial_required_satisfied": 4,
+        "initial_required_total": 4,
+        "initial_completion_rate": 1.0,
+        "json_parse_ok": true,
+        "disagreement": false,
+        "repair_triggered": false,
+        "repair_success": false,
+        "new_error_count": 0,
+        "final_usable": true,
+        "total_latency": 35.58
+      }
+    },
+    {
+      "run_id": "case-02-ending-hook-s1",
+      "case_id": "case-02-ending-hook",
+      "model": "agnes-2.0-flash",
+      "generation": {
+        "text": "档案室的空气凝滞如铁锈，混合着陈年纸张发霉的酸味。林澈背靠着冰冷的铁皮柜，胸腔剧烈起伏，每一次呼吸都像是在吞咽碎玻璃。沈知夏蜷缩在角落的阴影里，双手紧紧攥着那本从书架底层抽出的硬壳笔记，指节因用力而泛白。她的目光死死盯着那扇厚重的防火门，仿佛能透过金属板看到外面游荡的黑暗。\n\n门外并没有完全安静。那种死寂只是暴风雨前的假象，一种令人窒息的真空感笼罩着走廊。\n\n突然，一阵轻微却极具节奏感的声响打破了沉默。\n\n*嗒、嗒、嗒。*\n\n皮鞋敲击水磨石地面的声音，不疾不徐，每一步之间的距离都精确得令人发指。这声音并不属于那些慌乱奔跑的追踪者，也不像是有备而来的武装人员那种沉重急促的步伐。它太从容了，从容得近乎傲慢，在这幽闭的地下空间里回荡出一种诡异的回响。\n\n林澈的瞳孔骤然收缩。他的身体比大脑先一步做出了反应，原本紧绷的肌肉瞬间僵硬，一股寒意顺着脊椎直冲头顶。这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏……他在无数个深夜的梦境边缘听过这个声音，在那些被刻意抹去的记忆碎片里，这个脚步声曾伴随着某种不可名状的恐惧。\n\n是那个人。\n\n那个名字在他舌尖打转，却被他强行咽回喉咙。不能出声，不能有任何情绪波动。林澈缓缓抬起眼皮，视线越过昏暗的光线，聚焦在那扇紧闭的门板上。门缝底下，一道狭长的光带被拉长又缩短，那是有人正站在门外，似乎在倾听，又似乎在等待。\n\n沈知夏察觉到了林澈的变化，她下意识地想要伸手去抓他的衣角，却被林澈用眼神制止。他的手指无意识地摩挲着口袋里的钥匙扣，那是唯一的防身工具，此刻却显得如此苍白无力。\n\n脚步声停了。\n\n就在门外。\n\n时间仿佛在这一刻凝固。林澈能听到自己血液流动的声音，轰鸣如雷。他没有动，连呼吸都刻意放缓到了极致。门把手没有转动，没有人敲门，也没有人说话。只有那股熟悉的、令人作呕的压迫感，透过薄薄的金属门板渗透进来，将两人困在方寸之间的绝境中。\n\n这是一种无声的宣战，也是一种猫捉老鼠般的戏弄。\n\n林澈感到一阵眩晕，但他强迫自己保持清醒。他知道，一旦表现出恐惧，游戏就结束了。他深吸一口气，肺部扩张带来轻微的刺痛，这痛感让他确认自己还活着，还在这里。\n\n他缓缓抬起头，目光穿过档案室顶部那盏忽明忽暗的应急灯，投向天花板角落那个布满灰尘的通风口。那里似乎有什么东西动了一下，细微的金属摩擦声在寂静中被无限放大。\n\n林澈的视线定格在那里，眼神中闪过一丝难以察觉的决绝。",
+        "latency": 13.28,
+        "error": null,
+        "prompt_variant": "numbered-beats+self-check"
+      },
+      "rule_precheck": {
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "keywords": [
+              "熟悉",
+              "脚步"
+            ]
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "keywords": [
+              "林澈",
+              "认出",
+              "听出"
+            ]
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "keywords": [
+              "林澈抬头",
+              "抬起头"
+            ]
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": true,
+            "keywords": [
+              "来人是",
+              "那是",
+              "父亲",
+              "导师",
+              "队长",
+              "开口说道",
+              "解释道"
+            ]
+          }
+        ],
+        "required_satisfied": 3,
+        "required_total": 3,
+        "forbidden_violated": 1,
+        "length": 1002,
+        "length_abnormal": false,
+        "overall_status": "needs_repair"
+      },
+      "natural_validator": {
+        "text": "## Required Beats\n\n- **beat-1**\n  - **status**: satisfied\n  - **evidence**: \"突然，一阵轻微却极具节奏感的声响打破了沉默。*嗒、嗒、嗒。* 皮鞋敲击水磨石地面的声音... 这声音并不属于那些慌乱奔跑的追踪者... 它太从容了\"\n  - **reason**: 文本明确描写了门后传来有节奏的脚步声，且通过对比排除了普通追踪者，符合“熟悉脚步声”的设定。\n\n- **beat-2**\n  - **status**: satisfied\n  - **evidence**: \"林澈的瞳孔骤然收缩... 这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏……他在无数个深夜的梦境边缘听过这个声音... 是那个人。\"\n  - **reason**: 林澈通过声音的节奏和频率认出了来人，虽然未直接出现“认出”二字，但“听过这个声音”、“是那个人”以及生理反应（瞳孔收缩、僵硬）充分表达了“听出/认出”这一行为。\n\n- **beat-3**\n  - **status**: satisfied\n  - **evidence**: \"他缓缓抬起头，目光穿过档案室顶部那盏忽明忽暗的应急灯，投向天花板角落那个布满灰尘的通风口。\"\n  - **reason**: 结尾处明确描写了林澈“抬起头”的动作，并定格在看向通风口的瞬间，符合结尾钩子的要求。\n\n## Forbidden Violations\n\n- **forbid-1**\n  - **violated**: no\n  - **evidence**: 文中仅使用“是那个人”、“那个名字在他舌尖打转，却被他强行咽回喉咙”来指代来人，未出现“来人是”、“那是父亲/导师/队长”等具体身份揭示词汇，也未出现“开口说道”或“解释道”等对话描写。\n\n## Logic Risks\n\n- **人物状态**: 林澈在极度紧张状态下“缓缓抬起头”看向通风口，逻辑上稍显突兀。通常面对门外威胁，主角的第一反应应是警惕门或寻找掩体，而非抬头看天花板。虽然这可以作为“钩子”引入新线索（通风口有动静），但需确保后续情节能圆回这一动作的合理性（例如：他意识到追踪者可能通过通风口进入，或通风口有异常声响盖过了脚步声）。\n- **地点**: 场景保持在旧港站档案室内部，门外的声音作为外部威胁，空间逻辑自洽。\n- **道具**: 钥匙扣作为防身工具被提及，符合设定，但未使用，无逻辑冲突。\n- **时间线**: 追踪者声音远去后，走廊安静，随后出现新脚步声，时间线连贯。\n- **新实体**: 结尾引入了“通风口”作为新的悬念点，属于合理的场景扩展，未违反“只制造下一场景悬念”的要求。\n\n## Overall Status\n\nsatisfied",
+        "latency": 5.02,
+        "error": null,
+        "needs_repair": false
+      },
+      "json_validator": {
+        "raw": "{\n  \"case_id\": \"case-02-ending-hook\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"皮鞋敲击水磨石地面的声音... 这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏\",\n      \"confidence\": 0.95\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈的瞳孔骤然收缩... 这个频率... 曾在那些被刻意抹去的记忆碎片里... 是那个人\",\n      \"confidence\": 0.9\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他缓缓抬起头，目光穿过档案室顶部那盏忽明忽暗的应急灯\",\n      \"confidence\": 0.95\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": true,\n      \"evidence\": \"是那个人。那个名字在他舌尖打转... 那个名字\"\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"文本使用了'是那个人'和'那个名字'等指代，虽然未直接说出具体身份（如父亲/导师），但违反了'不能揭晓来人身份'的严格限制，暗示了特定人物的存在，破坏了悬疑的开放性。\",\n      \"severity\": \"high\"\n    },\n    {\n      \"type\": \"style\",\n      \"description\": \"结尾动作偏离要求。要求'结尾停在林澈抬头'，但文本在林澈抬头后继续描写了'目光穿过...应急灯'、'通风口'、'决绝的眼神'等后续动作和心理活动，导致结尾不够干脆，且引入了新的视觉焦点（通风口），分散了悬念。\",\n      \"severity\": \"medium\"\n    }\n  ],\n  \"overall_status\": \"needs_repair\"\n}",
+        "latency": 15.13,
+        "error": null,
+        "result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-02-ending-hook",
+          "all_required_beats_satisfied": false,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "皮鞋敲击水磨石地面的声音... 这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏",
+              "confidence": 0.95
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "林澈的瞳孔骤然收缩... 这个频率... 曾在那些被刻意抹去的记忆碎片里... 是那个人",
+              "confidence": 0.9
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "他缓缓抬起头，目光穿过档案室顶部那盏忽明忽暗的应急灯",
+              "confidence": 0.95
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": true,
+              "evidence": "是那个人。那个名字在他舌尖打转... 那个名字"
+            }
+          ],
+          "logic_risks": [
+            {
+              "type": "style",
+              "description": "文本使用了'是那个人'和'那个名字'等指代，虽然未直接说出具体身份（如父亲/导师），但违反了'不能揭晓来人身份'的严格限制，暗示了特定人物的存在，破坏了悬疑的开放性。",
+              "severity": "high"
+            },
+            {
+              "type": "style",
+              "description": "结尾动作偏离要求。要求'结尾停在林澈抬头'，但文本在林澈抬头后继续描写了'目光穿过...应急灯'、'通风口'、'决绝的眼神'等后续动作和心理活动，导致结尾不够干脆，且引入了新的视觉焦点（通风口），分散了悬念。",
+              "severity": "medium"
+            }
+          ],
+          "overall_status": "needs_repair",
+          "raw": {
+            "case_id": "case-02-ending-hook",
+            "all_required_beats_satisfied": false,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "皮鞋敲击水磨石地面的声音... 这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏",
+                "confidence": 0.95
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "林澈的瞳孔骤然收缩... 这个频率... 曾在那些被刻意抹去的记忆碎片里... 是那个人",
+                "confidence": 0.9
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "他缓缓抬起头，目光穿过档案室顶部那盏忽明忽暗的应急灯",
+                "confidence": 0.95
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": true,
+                "evidence": "是那个人。那个名字在他舌尖打转... 那个名字"
+              }
+            ],
+            "logic_risks": [
+              {
+                "type": "style",
+                "description": "文本使用了'是那个人'和'那个名字'等指代，虽然未直接说出具体身份（如父亲/导师），但违反了'不能揭晓来人身份'的严格限制，暗示了特定人物的存在，破坏了悬疑的开放性。",
+                "severity": "high"
+              },
+              {
+                "type": "style",
+                "description": "结尾动作偏离要求。要求'结尾停在林澈抬头'，但文本在林澈抬头后继续描写了'目光穿过...应急灯'、'通风口'、'决绝的眼神'等后续动作和心理活动，导致结尾不够干脆，且引入了新的视觉焦点（通风口），分散了悬念。",
+                "severity": "medium"
+              }
+            ],
+            "overall_status": "needs_repair"
+          }
+        }
+      },
+      "disagreement": {
+        "has_disagreement": true,
+        "rule_vs_json": false,
+        "rule_vs_natural": true
+      },
+      "repair": {
+        "triggered": true,
+        "text": "档案室的空气凝滞如铁锈，混合着陈年纸张发霉的酸味。林澈背靠着冰冷的铁皮柜，胸腔剧烈起伏，每一次呼吸都像是在吞咽碎玻璃。沈知夏蜷缩在角落的阴影里，双手紧紧攥着那本从书架底层抽出的硬壳笔记，指节因用力而泛白。她的目光死死盯着那扇厚重的防火门，仿佛能透过金属板看到外面游荡的黑暗。\n\n门外并没有完全安静。那种死寂只是暴风雨前的假象，一种令人窒息的真空感笼罩着走廊。\n\n突然，一阵轻微却极具节奏感的声响打破了沉默。\n\n*嗒、嗒、嗒。*\n\n皮鞋敲击水磨石地面的声音，不疾不徐，每一步之间的距离都精确得令人发指。这声音并不属于那些慌乱奔跑的追踪者，也不像是有备而来的武装人员那种沉重急促的步伐。它太从容了，从容得近乎傲慢，在这幽闭的地下空间里回荡出一种诡异的回响。\n\n林澈的瞳孔骤然收缩。他的身体比大脑先一步做出了反应，原本紧绷的肌肉瞬间僵硬，一股寒意顺着脊椎直冲头顶。这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏……他在无数个深夜的梦境边缘听过这个声音，在那些被刻意抹去的记忆碎片里，这个脚步声曾伴随着某种不可名状的恐惧。\n\n他听出了这脚步声。\n\n那个名字在他舌尖打转，却被他强行咽回喉咙。不能出声，不能有任何情绪波动。林澈缓缓抬起眼皮，视线越过昏暗的光线，聚焦在那扇紧闭的门板上。门缝底下，一道狭长的光带被拉长又缩短，那是有人正站在门外，似乎在倾听，又似乎在等待。\n\n沈知夏察觉到了林澈的变化，她下意识地想要伸手去抓他的衣角，却被林澈用眼神制止。他的手指无意识地摩挲着口袋里的钥匙扣，那是唯一的防身工具，此刻却显得如此苍白无力。\n\n脚步声停了。\n\n就在门外。\n\n时间仿佛在这一刻凝固。林澈能听到自己血液流动的声音，轰鸣如雷。他没有动，连呼吸都刻意放缓到了极致。门把手没有转动，没有人敲门，也没有人说话。只有那股熟悉的、令人作呕的压迫感，透过薄薄的金属门板渗透进来，将两人困在方寸之间的绝境中。\n\n这是一种无声的宣战，也是一种猫捉老鼠般的戏弄。\n\n林澈感到一阵眩晕，但他强迫自己保持清醒。他知道，一旦表现出恐惧，游戏就结束了。他深吸一口气，肺部扩张带来轻微的刺痛，这痛感让他确认自己还活着，还在这里。\n\n他缓缓抬起头。",
+        "latency": 11.45,
+        "error": null
+      },
+      "revalidation": {
+        "rule_precheck": {
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "keywords": [
+                "熟悉",
+                "脚步"
+              ]
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "keywords": [
+                "林澈",
+                "认出",
+                "听出"
+              ]
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "keywords": [
+                "林澈抬头",
+                "抬起头"
+              ]
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": true,
+              "keywords": [
+                "来人是",
+                "那是",
+                "父亲",
+                "导师",
+                "队长",
+                "开口说道",
+                "解释道"
+              ]
+            }
+          ],
+          "required_satisfied": 3,
+          "required_total": 3,
+          "forbidden_violated": 1,
+          "length": 908,
+          "length_abnormal": false,
+          "overall_status": "needs_repair"
+        },
+        "json_raw": "{\n  \"case_id\": \"case-02-ending-hook\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"突然，一阵轻微却极具节奏感的声响打破了沉默。*嗒、嗒、嗒。* 皮鞋敲击水磨石地面的声音... 它太从容了... 这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏……他在无数个深夜的梦境边缘听过这个声音\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他听出了这脚步声。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他缓缓抬起头。\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"文本长度约为550字左右，略低于target_length的600字下限，但内容完整，节奏紧凑，符合悬疑克制风格。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+        "json_result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-02-ending-hook",
+          "all_required_beats_satisfied": true,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "突然，一阵轻微却极具节奏感的声响打破了沉默。*嗒、嗒、嗒。* 皮鞋敲击水磨石地面的声音... 它太从容了... 这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏……他在无数个深夜的梦境边缘听过这个声音",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "他听出了这脚步声。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "他缓缓抬起头。",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [
+            {
+              "type": "style",
+              "description": "文本长度约为550字左右，略低于target_length的600字下限，但内容完整，节奏紧凑，符合悬疑克制风格。",
+              "severity": "low"
+            }
+          ],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-02-ending-hook",
+            "all_required_beats_satisfied": true,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "突然，一阵轻微却极具节奏感的声响打破了沉默。*嗒、嗒、嗒。* 皮鞋敲击水磨石地面的声音... 它太从容了... 这个频率，这种特有的、带着轻微拖沓却又异常稳健的节奏……他在无数个深夜的梦境边缘听过这个声音",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "他听出了这脚步声。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "他缓缓抬起头。",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [
+              {
+                "type": "style",
+                "description": "文本长度约为550字左右，略低于target_length的600字下限，但内容完整，节奏紧凑，符合悬疑克制风格。",
+                "severity": "low"
+              }
+            ],
+            "overall_status": "satisfied"
+          }
+        },
+        "latency": 2.26,
+        "error": null
+      },
+      "metrics": {
+        "initial_required_satisfied": 3,
+        "initial_required_total": 3,
+        "initial_completion_rate": 1.0,
+        "json_parse_ok": true,
+        "disagreement": true,
+        "repair_triggered": true,
+        "repair_success": false,
+        "new_error_count": 0,
+        "final_usable": false,
+        "total_latency": 47.14
+      }
+    },
+    {
+      "run_id": "case-03-injury-limitation-s1",
+      "case_id": "case-03-injury-limitation",
+      "model": "agnes-2.0-flash",
+      "generation": {
+        "text": "废弃售票室的空气浑浊而凝滞，弥漫着陈年灰尘与铁锈混合的腥气。沈知夏背靠着斑驳的瓷砖墙，脸色苍白如纸。她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透，布料紧紧黏在皮肉上。每一次呼吸牵扯到伤口，都带来一阵钻心的剧痛，冷汗顺着她的额角滑落，滴在满是污垢的水泥地上。\n\n“别动。”林澈的声音低沉而急促，他迅速检查了门缝外的动静，确认追踪者的脚步声正沿着楼梯向下逼近。他转身看向沈知夏，眼神中闪过一丝担忧，但随即被冷静取代。他撕下自己衬衫的下摆，动作利落地为她重新包扎左臂，打了一个死结，试图压迫止血。\n\n沈知夏咬紧牙关，强忍着眩晕感。左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作。她深吸一口气，强迫自己冷静下来，目光扫过昏暗的房间。这里曾是旧港站的核心枢纽，如今却成了死局。\n\n“他们人数不少，至少三个。”沈知夏的声音有些颤抖，但逻辑清晰。她指了指头顶上方一处破损的通风管道格栅，那里隐约传来金属摩擦的细微声响，“脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙。”\n\n林澈眉头微皱，侧耳倾听。果然，门外传来沉闷的敲击声，伴随着粗重的喘息。\n\n“左边那面墙是空的，连通着维修通道，但入口被杂物堵死了。”沈知夏迅速分析着地形，她的右手指向房间角落一堆废弃的售票机残骸，“如果我们能制造一点动静，吸引他们的注意力，我或许能帮你挪开那些障碍物。但我现在……”她苦笑了一下，晃了晃受伤的左臂，“只能靠你了。”\n\n林澈点了点头，没有多言。他迅速从腰间摸出一枚自制的小型闪光弹，又捡起一块尖锐的金属碎片。他的动作行云流水，没有丝毫犹豫。\n\n“你在这里保持安静，无论听到什么声音，都不要出来。”林澈低声嘱咐，眼神锐利如刀。\n\n沈知夏想要反驳，但看到林澈决绝的背影，她咽下了话语。她知道，此刻任何多余的言语都是负担。她紧紧捂住左臂的伤口，将身体缩进阴影深处，目光死死盯着门口。\n\n林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出。门外传来惊呼声和混乱的脚步声，林澈利用狭窄的空间优势，以迅猛的身法规避了敌人的正面攻击，并迅速向维修通道方向迂回。\n\n沈知夏在黑暗中屏住呼吸，听着外面的打斗声。林澈的动作干净利落，每一次出击都直击要害，没有一丝多余的花哨。他知道，这是唯一的生路。",
+        "latency": 16.98,
+        "error": null,
+        "prompt_variant": "numbered-beats+self-check"
+      },
+      "rule_precheck": {
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "keywords": [
+              "沈知夏",
+              "左臂",
+              "受伤"
+            ]
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "keywords": [
+              "不能",
+              "无法",
+              "没法",
+              "高强度",
+              "战斗"
+            ]
+          },
+          {
+            "id": "beat-3",
+            "status": "missing",
+            "keywords": [
+              "观察",
+              "判断",
+              "提醒",
+              "看出"
+            ]
+          },
+          {
+            "id": "beat-4",
+            "status": "satisfied",
+            "keywords": [
+              "林澈"
+            ]
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "keywords": [
+              "沈知夏攀",
+              "沈知夏爬",
+              "高速战斗",
+              "单人击退",
+              "左手用力",
+              "双手持"
+            ]
+          }
+        ],
+        "required_satisfied": 3,
+        "required_total": 4,
+        "forbidden_violated": 0,
+        "length": 983,
+        "length_abnormal": false,
+        "overall_status": "needs_repair"
+      },
+      "natural_validator": {
+        "text": "## Required Beats\n\n- **beat-1**\n  - **status**: satisfied\n  - **evidence**: “她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透……”\n  - **reason**: 文本明确描述了沈知夏左臂受伤的状态及细节，符合关键词要求。\n\n- **beat-2**\n  - **status**: satisfied\n  - **evidence**: “左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作。”\n  - **reason**: 文本明确使用了“高强度”和“格斗动作”（对应战斗），并指出她“无法”进行，符合关键词要求。\n\n- **beat-3**\n  - **status**: satisfied\n  - **evidence**: “她指了指头顶上方一处破损的通风管道格栅……‘脚步声太杂，说明他们在分头搜索。但那个领头的……他在试探空心墙。’”以及“沈知夏迅速分析着地形……‘左边那面墙是空的……’”\n  - **reason**: 沈知夏通过观察声音和地形，做出了判断并提醒林澈敌人的分布和弱点，符合关键词要求。\n\n- **beat-4**\n  - **status**: satisfied\n  - **evidence**: “林澈……动作利落地为她重新包扎……林澈点了点头……林澈深吸一口气，猛地拉开门栓……林澈利用狭窄的空间优势……迅速向维修通道方向迂回。”\n  - **reason**: 林澈承担了包扎、决策、制造动静、突围等主要行动，符合关键词要求。\n\n## Forbidden Violations\n\n- **forbid-1**\n  - **violated**: no\n  - **evidence**: 文本中沈知夏全程处于被动状态（“背靠着斑驳的瓷砖墙”、“将身体缩进阴影深处”、“紧紧捂住左臂的伤口”），未出现攀爬、高速战斗、单人击退或左手用力的描写。\n\n## Logic Risks\n\n- **人物状态**: 沈知夏左臂受伤，文本中她使用右手包扎（“抬起右手去握拳”虽是否定句，但暗示右手可用）和指认方向，逻辑自洽。需注意“抬起右手”在剧痛下是否可行，但文本强调是“根本无法”，符合伤势限制。\n- **地点**: 旧港站地下二层废弃售票室，通风管道、维修通道、空心墙等环境要素与“旧港站”背景相符，空间逻辑清晰。\n- **道具**: 闪光弹、金属碎片、自制道具符合林澈的行动风格，未出现不合理的医疗奇迹道具。\n- **时间线**: 从躲藏、分析、准备到突围，时间流动紧凑，符合“紧张克制”的风格要求。\n- **新实体**: 未引入新的主要角色或超自然实体，追踪者作为既定威胁存在，逻辑稳定。\n\n## Overall Status\n\nsatisfied",
+        "latency": 6.86,
+        "error": null,
+        "needs_repair": false
+      },
+      "json_validator": {
+        "raw": "{\n  \"case_id\": \"case-03-injury-limitation\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她指了指头顶上方一处破损的通风管道格栅...脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"forbid-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [],\n  \"logic_risks\": [\n    {\n      \"type\": \"character_state\",\n      \"description\": \"沈知夏声称‘只能靠你了’并留在原地，但随后描述林澈独自冲出并‘利用狭窄空间优势...迅速向维修通道方向迂回’。若维修通道入口被堵且需两人合力（前文提及），林澈单人完成‘制造动静+吸引注意+挪开障碍+进入通道’的逻辑链条略显紧凑，但未直接违反‘沈知夏不得高强度动作’的限制。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+        "latency": 5.27,
+        "error": null,
+        "result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-03-injury-limitation",
+          "all_required_beats_satisfied": false,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "她指了指头顶上方一处破损的通风管道格栅...脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "evidence": "林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出",
+              "confidence": 1.0
+            },
+            {
+              "id": "forbid-1",
+              "status": "satisfied",
+              "evidence": "",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [],
+          "logic_risks": [
+            {
+              "type": "character_state",
+              "description": "沈知夏声称‘只能靠你了’并留在原地，但随后描述林澈独自冲出并‘利用狭窄空间优势...迅速向维修通道方向迂回’。若维修通道入口被堵且需两人合力（前文提及），林澈单人完成‘制造动静+吸引注意+挪开障碍+进入通道’的逻辑链条略显紧凑，但未直接违反‘沈知夏不得高强度动作’的限制。",
+              "severity": "low"
+            }
+          ],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-03-injury-limitation",
+            "all_required_beats_satisfied": false,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "她指了指头顶上方一处破损的通风管道格栅...脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-4",
+                "status": "satisfied",
+                "evidence": "林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出",
+                "confidence": 1.0
+              },
+              {
+                "id": "forbid-1",
+                "status": "satisfied",
+                "evidence": "",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [],
+            "logic_risks": [
+              {
+                "type": "character_state",
+                "description": "沈知夏声称‘只能靠你了’并留在原地，但随后描述林澈独自冲出并‘利用狭窄空间优势...迅速向维修通道方向迂回’。若维修通道入口被堵且需两人合力（前文提及），林澈单人完成‘制造动静+吸引注意+挪开障碍+进入通道’的逻辑链条略显紧凑，但未直接违反‘沈知夏不得高强度动作’的限制。",
+                "severity": "low"
+              }
+            ],
+            "overall_status": "satisfied"
+          }
+        }
+      },
+      "disagreement": {
+        "has_disagreement": true,
+        "rule_vs_json": true,
+        "rule_vs_natural": true
+      },
+      "repair": {
+        "triggered": true,
+        "text": "废弃售票室的空气浑浊而凝滞，弥漫着陈年灰尘与铁锈混合的腥气。沈知夏背靠着斑驳的瓷砖墙，脸色苍白如纸。她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透，布料紧紧黏在皮肉上。每一次呼吸牵扯到伤口，都带来一阵钻心的剧痛，冷汗顺着她的额角滑落，滴在满是污垢的水泥地上。\n\n“别动。”林澈的声音低沉而急促，他迅速检查了门缝外的动静，确认追踪者的脚步声正沿着楼梯向下逼近。他转身看向沈知夏，眼神中闪过一丝担忧，但随即被冷静取代。他撕下自己衬衫的下摆，动作利落地为她重新包扎左臂，打了一个死结，试图压迫止血。\n\n沈知夏咬紧牙关，强忍着眩晕感。左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作。她深吸一口气，强迫自己冷静下来，目光扫过昏暗的房间。这里曾是旧港站的核心枢纽，如今却成了死局。\n\n“他们人数不少，至少三个。”沈知夏的声音有些颤抖，但逻辑清晰。她指了指头顶上方一处破损的通风管道格栅，那里隐约传来金属摩擦的细微声响，“脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙。”\n\n林澈眉头微皱，侧耳倾听。果然，门外传来沉闷的敲击声，伴随着粗重的喘息。\n\n“左边那面墙是空的，连通着维修通道，但入口被杂物堵死了。”沈知夏迅速分析着地形，她的右手指向房间角落一堆废弃的售票机残骸，“如果我们能制造一点动静，吸引他们的注意力，我或许能帮你挪开那些障碍物。但我现在……”她苦笑了一下，晃了晃受伤的左臂，“只能靠你了。”\n\n林澈点了点头，没有多言。他迅速从腰间摸出一枚自制的小型闪光弹，又捡起一块尖锐的金属碎片。他的动作行云流水，没有丝毫犹豫。\n\n“你在这里保持安静，无论听到什么声音，都不要出来。”林澈低声嘱咐，眼神锐利如刀。\n\n沈知夏想要反驳，但看到林澈决绝的背影，她咽下了话语。她知道，此刻任何多余的言语都是负担。她紧紧捂住左臂的伤口，将身体缩进阴影深处，目光死死盯着门口，通过门缝观察着走廊的光影变化，随时准备在林澈需要时提供最后的判断。\n\n林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出。门外传来惊呼声和混乱的脚步声，林澈利用狭窄的空间优势，以迅猛的身法规避了敌人的正面攻击，并迅速向维修通道方向迂回。\n\n沈知夏在黑暗中屏住呼吸，听着外面的打斗声。林澈的动作干净利落，每一次出击都直击要害，没有一丝多余的花哨。他知道，这是唯一的生路。",
+        "latency": 3.93,
+        "error": null
+      },
+      "revalidation": {
+        "rule_precheck": {
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "keywords": [
+                "沈知夏",
+                "左臂",
+                "受伤"
+              ]
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "keywords": [
+                "不能",
+                "无法",
+                "没法",
+                "高强度",
+                "战斗"
+              ]
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "keywords": [
+                "观察",
+                "判断",
+                "提醒",
+                "看出"
+              ]
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "keywords": [
+                "林澈"
+              ]
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "keywords": [
+                "沈知夏攀",
+                "沈知夏爬",
+                "高速战斗",
+                "单人击退",
+                "左手用力",
+                "双手持"
+              ]
+            }
+          ],
+          "required_satisfied": 4,
+          "required_total": 4,
+          "forbidden_violated": 0,
+          "length": 1016,
+          "length_abnormal": false,
+          "overall_status": "satisfied"
+        },
+        "json_raw": "{\n  \"case_id\": \"case-03-injury-limitation\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"更别提进行任何高强度的格斗动作\",\n      \"confidence\": 0.95\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她指了指头顶上方一处破损的通风管道格栅... 沈知夏迅速分析着地形\",\n      \"confidence\": 0.9\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈深吸一口气，猛地拉开门栓... 林澈利用狭窄的空间优势... 迅速向维修通道方向迂回\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"forbid-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"文本长度约为580字左右，略低于目标长度600字的下限，但仍在可接受范围内。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+        "json_result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-03-injury-limitation",
+          "all_required_beats_satisfied": false,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "更别提进行任何高强度的格斗动作",
+              "confidence": 0.95
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "她指了指头顶上方一处破损的通风管道格栅... 沈知夏迅速分析着地形",
+              "confidence": 0.9
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "evidence": "林澈深吸一口气，猛地拉开门栓... 林澈利用狭窄的空间优势... 迅速向维修通道方向迂回",
+              "confidence": 1.0
+            },
+            {
+              "id": "forbid-1",
+              "status": "satisfied",
+              "evidence": "",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [],
+          "logic_risks": [
+            {
+              "type": "style",
+              "description": "文本长度约为580字左右，略低于目标长度600字的下限，但仍在可接受范围内。",
+              "severity": "low"
+            }
+          ],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-03-injury-limitation",
+            "all_required_beats_satisfied": false,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "更别提进行任何高强度的格斗动作",
+                "confidence": 0.95
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "她指了指头顶上方一处破损的通风管道格栅... 沈知夏迅速分析着地形",
+                "confidence": 0.9
+              },
+              {
+                "id": "beat-4",
+                "status": "satisfied",
+                "evidence": "林澈深吸一口气，猛地拉开门栓... 林澈利用狭窄的空间优势... 迅速向维修通道方向迂回",
+                "confidence": 1.0
+              },
+              {
+                "id": "forbid-1",
+                "status": "satisfied",
+                "evidence": "",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [],
+            "logic_risks": [
+              {
+                "type": "style",
+                "description": "文本长度约为580字左右，略低于目标长度600字的下限，但仍在可接受范围内。",
+                "severity": "low"
+              }
+            ],
+            "overall_status": "satisfied"
+          }
+        },
+        "latency": 12.13,
+        "error": null
+      },
+      "metrics": {
+        "initial_required_satisfied": 3,
+        "initial_required_total": 4,
+        "initial_completion_rate": 0.75,
+        "json_parse_ok": true,
+        "disagreement": true,
+        "repair_triggered": true,
+        "repair_success": true,
+        "new_error_count": 0,
+        "final_usable": true,
+        "total_latency": 45.17
+      }
+    },
+    {
+      "run_id": "case-04-item-handover-s1",
+      "case_id": "case-04-item-handover",
+      "model": "agnes-2.0-flash",
+      "generation": {
+        "text": "旧港站检修通道的空气粘稠得令人窒息，混合着铁锈味和某种难以名状的甜腥气。头顶的应急灯忽明忽暗，将两人的影子拉扯得扭曲而破碎。沈知夏的手指紧紧扣住那支透明药剂，指节因用力而泛白。那是一种近乎冷酷的冷静，仿佛她握着的不是救命稻草，而是一枚随时可能引爆的炸弹。\n\n林澈屏住呼吸，目光死死锁在那支药剂上。昏暗的光线下，他只能勉强辨认出标签上那行模糊的小字——“神经阻断剂·原型”。除此之外，再无其他信息。没有剂量说明，没有禁忌症，更没有关于长期影响的任何备注。这种未知的空白比明确的危险更让人心慌。他张了张嘴，想问这是什么，但喉咙里像是塞满了棉絮，发不出声音。他知道，此刻任何多余的询问都是对沈知夏判断力的冒犯，也是对当前局势的干扰。\n\n远处传来了沉重的脚步声，伴随着金属靴底敲击水泥地面的回响，一下又一下，像是死神的倒计时。敌人正在逼近，他们不知道沈知夏手里有什么，但这恰恰是唯一的筹码。沈知夏迅速将药剂塞回夹层口袋，动作轻得像是在处理一件易碎的瓷器。她没有看林澈，只是微微侧身，用身体挡住了通往更深处的通道口。\n\n“别动。”她的声音低哑，却带着不容置疑的威严。\n\n林澈顺从地后退半步，背靠冰冷的墙壁。他能感觉到自己的心跳如擂鼓般剧烈，每一次搏动都震得耳膜生疼。他看着沈知夏的背影，那件沾满灰尘的风衣下摆微微颤动。她似乎在等待什么，或者在权衡什么。那种权衡让空气变得更加凝重。\n\n脚步声越来越近，手电筒的光束在墙壁上扫过，最终停在了他们藏身的角落附近。沈知夏的手再次伸进口袋，指尖触碰到那支冰凉的玻璃管。那一刻，林澈注意到她的瞳孔微微收缩，额角渗出了一层细密的冷汗。那不是恐惧，而是一种生理性的排斥反应。\n\n就在光束即将扫到他们藏身之处的瞬间，沈知夏猛地转身，将林澈推向旁边的维修井口。与此同时，她咬破了舌尖，利用疼痛强行压制住体内翻涌的不适感。她知道，这支药剂能暂时屏蔽他们的生物信号，但代价是剧烈的神经刺痛和随后的幻觉。她不能现在使用它，因为敌人尚未完全进入有效范围，过早暴露药剂的存在只会引来更疯狂的搜捕。\n\n光束掠过他们刚才站立的位置，空无一物。敌人似乎失去了目标，咒骂声在通道中回荡，随即转向另一侧。沈知夏松了一口气，但随即捂住胸口，发出一声压抑的闷哼。林澈扶住她，看到她脸色苍白如纸，嘴角溢出一丝血迹。药剂的副作用已经开始显现，即便还没有注射，仅仅是接触带来的心理压力和潜在的微量挥发，就已经让她的神经系统处于崩溃边缘。\n\n危机暂时解除，但更大的阴影笼罩下来。沈知夏靠在墙上，眼神空洞地盯着前方，手中的药剂仿佛变成了烧红的烙铁。他们还有时间，但时间正在以另一种方式流逝。",
+        "latency": 11.04,
+        "error": null,
+        "prompt_variant": "numbered-beats+self-check"
+      },
+      "rule_precheck": {
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "keywords": [
+              "沈知夏",
+              "药剂",
+              "手中",
+              "掌心",
+              "握着",
+              "攥着"
+            ]
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "keywords": [
+              "林澈",
+              "标签"
+            ]
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "keywords": [
+              "药剂"
+            ]
+          },
+          {
+            "id": "beat-4",
+            "status": "satisfied",
+            "keywords": [
+              "副作用",
+              "发抖",
+              "眩晕",
+              "刺痛",
+              "发冷"
+            ]
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "keywords": [
+              "敌人夺走药剂",
+              "追踪者夺走药剂",
+              "敌人拿走药剂"
+            ]
+          },
+          {
+            "id": "forbid-2",
+            "violated": false,
+            "keywords": [
+              "林澈已经知道药剂用途",
+              "完全知道药剂用途",
+              "药剂真正作用是"
+            ]
+          }
+        ],
+        "required_satisfied": 4,
+        "required_total": 4,
+        "forbidden_violated": 0,
+        "length": 1088,
+        "length_abnormal": false,
+        "overall_status": "satisfied"
+      },
+      "natural_validator": {
+        "text": "## Required Beats\n\n- **beat-1**\n  - **status**: satisfied\n  - **evidence**: \"沈知夏的手指紧紧扣住那支透明药剂... 沈知夏迅速将药剂塞回夹层口袋... 沈知夏的手再次伸进口袋... 手中的药剂仿佛变成了烧红的烙铁。\"\n  - **reason**: 文本多次明确描述药剂始终在沈知夏的控制范围内（手中、口袋中），符合“药剂仍在沈知夏手中”的要求。\n\n- **beat-2**\n  - **status**: satisfied\n  - **evidence**: \"昏暗的光线下，他只能勉强辨认出标签上那行模糊的小字——‘神经阻断剂·原型’。除此之外，再无其他信息。\"\n  - **reason**: 林澈仅看到了标签上的名称，且文本强调“再无其他信息”，符合“林澈只能看到药剂标签”的要求。\n\n- **beat-3**\n  - **status**: satisfied\n  - **evidence**: \"敌人正在逼近... 敌人似乎失去了目标... 光束掠过他们刚才站立的位置，空无一物。\"\n  - **reason**: 敌人虽然逼近，但并未发现或获得药剂，药剂始终由沈知夏持有，符合“药剂不能被敌人拿走”的要求。\n\n- **beat-4**\n  - **status**: satisfied\n  - **evidence**: \"代价是剧烈的神经刺痛和随后的幻觉... 药剂的副作用已经开始显现... 神经系统处于崩溃边缘。\"\n  - **reason**: 文本明确提到了“神经刺痛”、“幻觉”以及“副作用已经开始显现”，符合“结尾暗示药剂有副作用”的要求。\n\n## Forbidden Violations\n\n- **forbid-1**\n  - **violated**: no\n  - **evidence**: 全文未出现敌人夺走药剂的情节，敌人最终因失去目标而离开。\n\n- **forbid-2**\n  - **violated**: no\n  - **evidence**: 林澈仅知道标签上的“神经阻断剂·原型”，且文本明确指出“没有剂量说明，没有禁忌症... 这种未知的空白比明确的危险更让人心慌”，林澈并未完全知道药剂用途。\n\n## Logic Risks\n\n- **人物状态**: 沈知夏在未注射药剂的情况下，仅因“接触带来的心理压力和潜在的微量挥发”就出现“神经系统处于崩溃边缘”、“脸色苍白如纸”、“嘴角溢血”等严重生理反应。对于一支“透明药剂”而言，这种通过皮肤接触或极微量挥发导致的即时剧烈毒性反应缺乏科学逻辑支撑，除非设定该药剂为高挥发性神经毒气，但这与“注射”或“屏蔽信号”的功能描述存在潜在冲突（通常屏蔽信号类药物不会通过接触导致如此剧烈的全身性崩溃）。\n- **道具**: 药剂被描述为既能“屏蔽生物信号”又能导致“剧烈神经刺痛和幻觉”的副作用。虽然这在科幻设定中可行，但“接触即中毒”的设定使得沈知夏持有药剂的行为本身变得极度危险且不合常理（她需要一直忍受剧痛），削弱了“冷静”的人设合理性。\n- **时间线**: 敌人脚步声逼近 -> 沈知夏塞回口袋 -> 敌人光束扫过 -> 敌人离开。时间线紧凑，逻辑基本通顺，但沈知夏在敌人离开后立刻出现严重副作用，节奏略显突兀。\n\n## Overall Status\n\nneeds_repair",
+        "latency": 10.43,
+        "error": null,
+        "needs_repair": true
+      },
+      "json_validator": {
+        "raw": "{\n  \"case_id\": \"case-04-item-handover\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"沈知夏的手指紧紧扣住那支透明药剂...沈知夏的手再次伸进口袋，指尖触碰到那支冰凉的玻璃管。\",\n      \"confidence\": 0.95\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"昏暗的光线下，他只能勉强辨认出标签上那行模糊的小字——“神经阻断剂·原型”。除此之外，再无其他信息。\",\n      \"confidence\": 0.9\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"敌人似乎失去了目标...沈知夏靠在墙上...手中的药剂仿佛变成了烧红的烙铁。\",\n      \"confidence\": 0.95\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"药剂的副作用已经开始显现...剧烈的神经刺痛...神经系统处于崩溃边缘。\",\n      \"confidence\": 0.9\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": true,\n      \"evidence\": \"林澈辨认出标签上那行模糊的小字——“神经阻断剂·原型”。...他知道，这支药剂能暂时屏蔽他们的生物信号，但代价是剧烈的神经刺痛和随后的幻觉。\"\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"character_state\",\n      \"description\": \"林澈通过标签‘神经阻断剂·原型’及沈知夏的反应，推断出药剂能‘屏蔽生物信号’，这超出了‘只看见标签’的设定，且林澈内心独白显示他完全知晓药剂用途，违反了forbid-2。\",\n      \"severity\": \"high\"\n    },\n    {\n      \"type\": \"style\",\n      \"description\": \"结尾处‘危机暂时解除’直接解决了当下的追逐危机，与style_constraints中的‘不要立刻解决危机’相悖。\",\n      \"severity\": \"medium\"\n    }\n  ],\n  \"overall_status\": \"needs_repair\"\n}",
+        "latency": 4.43,
+        "error": null,
+        "result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-04-item-handover",
+          "all_required_beats_satisfied": false,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "沈知夏的手指紧紧扣住那支透明药剂...沈知夏的手再次伸进口袋，指尖触碰到那支冰凉的玻璃管。",
+              "confidence": 0.95
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "昏暗的光线下，他只能勉强辨认出标签上那行模糊的小字——“神经阻断剂·原型”。除此之外，再无其他信息。",
+              "confidence": 0.9
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "敌人似乎失去了目标...沈知夏靠在墙上...手中的药剂仿佛变成了烧红的烙铁。",
+              "confidence": 0.95
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "evidence": "药剂的副作用已经开始显现...剧烈的神经刺痛...神经系统处于崩溃边缘。",
+              "confidence": 0.9
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-2",
+              "violated": true,
+              "evidence": "林澈辨认出标签上那行模糊的小字——“神经阻断剂·原型”。...他知道，这支药剂能暂时屏蔽他们的生物信号，但代价是剧烈的神经刺痛和随后的幻觉。"
+            }
+          ],
+          "logic_risks": [
+            {
+              "type": "character_state",
+              "description": "林澈通过标签‘神经阻断剂·原型’及沈知夏的反应，推断出药剂能‘屏蔽生物信号’，这超出了‘只看见标签’的设定，且林澈内心独白显示他完全知晓药剂用途，违反了forbid-2。",
+              "severity": "high"
+            },
+            {
+              "type": "style",
+              "description": "结尾处‘危机暂时解除’直接解决了当下的追逐危机，与style_constraints中的‘不要立刻解决危机’相悖。",
+              "severity": "medium"
+            }
+          ],
+          "overall_status": "needs_repair",
+          "raw": {
+            "case_id": "case-04-item-handover",
+            "all_required_beats_satisfied": false,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "沈知夏的手指紧紧扣住那支透明药剂...沈知夏的手再次伸进口袋，指尖触碰到那支冰凉的玻璃管。",
+                "confidence": 0.95
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "昏暗的光线下，他只能勉强辨认出标签上那行模糊的小字——“神经阻断剂·原型”。除此之外，再无其他信息。",
+                "confidence": 0.9
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "敌人似乎失去了目标...沈知夏靠在墙上...手中的药剂仿佛变成了烧红的烙铁。",
+                "confidence": 0.95
+              },
+              {
+                "id": "beat-4",
+                "status": "satisfied",
+                "evidence": "药剂的副作用已经开始显现...剧烈的神经刺痛...神经系统处于崩溃边缘。",
+                "confidence": 0.9
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-2",
+                "violated": true,
+                "evidence": "林澈辨认出标签上那行模糊的小字——“神经阻断剂·原型”。...他知道，这支药剂能暂时屏蔽他们的生物信号，但代价是剧烈的神经刺痛和随后的幻觉。"
+              }
+            ],
+            "logic_risks": [
+              {
+                "type": "character_state",
+                "description": "林澈通过标签‘神经阻断剂·原型’及沈知夏的反应，推断出药剂能‘屏蔽生物信号’，这超出了‘只看见标签’的设定，且林澈内心独白显示他完全知晓药剂用途，违反了forbid-2。",
+                "severity": "high"
+              },
+              {
+                "type": "style",
+                "description": "结尾处‘危机暂时解除’直接解决了当下的追逐危机，与style_constraints中的‘不要立刻解决危机’相悖。",
+                "severity": "medium"
+              }
+            ],
+            "overall_status": "needs_repair"
+          }
+        }
+      },
+      "disagreement": {
+        "has_disagreement": true,
+        "rule_vs_json": true,
+        "rule_vs_natural": true
+      },
+      "repair": {
+        "triggered": true,
+        "text": "旧港站检修通道的空气粘稠得令人窒息，混合着铁锈味和某种难以名状的甜腥气。头顶的应急灯忽明忽暗，将两人的影子拉扯得扭曲而破碎。沈知夏的手指紧紧扣住那支透明药剂，指节因用力而泛白。那是一种近乎冷酷的冷静，仿佛她握着的不是救命稻草，而是一枚随时可能引爆的炸弹。\n\n林澈屏住呼吸，目光死死锁在那支药剂上。昏暗的光线下，他只能勉强辨认出标签上那行模糊的小字——“神经阻断剂·原型”。除此之外，再无其他信息。没有剂量说明，没有禁忌症，更没有关于长期影响的任何备注。这种未知的空白比明确的危险更让人心慌。他张了张嘴，想问这是什么，但喉咙里像是塞满了棉絮，发不出声音。他不知道这支药剂真正的用途，更不清楚沈知夏为何对它如此忌惮。\n\n远处传来了沉重的脚步声，伴随着金属靴底敲击水泥地面的回响，一下又一下，像是死神的倒计时。敌人正在逼近，他们不知道沈知夏手里有什么，但这恰恰是唯一的筹码。沈知夏迅速将药剂塞回夹层口袋，动作轻得像是在处理一件易碎的瓷器。她没有看林澈，只是微微侧身，用身体挡住了通往更深处的通道口。\n\n“别动。”她的声音低哑，却带着不容置疑的威严。\n\n林澈顺从地后退半步，背靠冰冷的墙壁。他能感觉到自己的心跳如擂鼓般剧烈，每一次搏动都震得耳膜生疼。他看着沈知夏的背影，那件沾满灰尘的风衣下摆微微颤动。她似乎在等待什么，或者在权衡什么。那种权衡让空气变得更加凝重。\n\n脚步声越来越近，手电筒的光束在墙壁上扫过，最终停在了他们藏身的角落附近。沈知夏的手再次伸进口袋，指尖触碰到那支冰凉的玻璃管。那一刻，林澈注意到她的瞳孔微微收缩，额角渗出了一层细密的冷汗。那不是恐惧，而是一种生理性的排斥反应。\n\n就在光束即将扫到他们藏身之处的瞬间，沈知夏猛地转身，将林澈推向旁边的维修井口。与此同时，她咬破了舌尖，利用疼痛强行压制住体内翻涌的不适感。光束掠过他们刚才站立的位置，空无一物。敌人似乎失去了目标，咒骂声在通道中回荡，随即转向另一侧。\n\n沈知夏并没有因此放松警惕，反而捂住胸口，发出一声压抑的闷哼。林澈扶住她，看到她脸色苍白如纸，嘴角溢出一丝血迹。药剂的副作用已经开始显现，即便还没有注射，仅仅是接触带来的心理压力和潜在的微量挥发，就已经让她的神经系统处于崩溃边缘。她颤抖的手指依然死死攥着口袋里的药剂，仿佛那是她唯一的锚点。\n\n危机并未解除，黑暗深处仍有未知的窥视。沈知夏靠在墙上，眼神空洞地盯着前方，手中的药剂仿佛变成了烧红的烙铁。他们还有时间，但时间正在以另一种方式流逝，而那股刺骨的寒意正顺着脊椎蔓延。",
+        "latency": 11.89,
+        "error": null
+      },
+      "revalidation": {
+        "rule_precheck": {
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "keywords": [
+                "沈知夏",
+                "药剂",
+                "手中",
+                "掌心",
+                "握着",
+                "攥着"
+              ]
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "keywords": [
+                "林澈",
+                "标签"
+              ]
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "keywords": [
+                "药剂"
+              ]
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "keywords": [
+                "副作用",
+                "发抖",
+                "眩晕",
+                "刺痛",
+                "发冷"
+              ]
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "keywords": [
+                "敌人夺走药剂",
+                "追踪者夺走药剂",
+                "敌人拿走药剂"
+              ]
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "keywords": [
+                "林澈已经知道药剂用途",
+                "完全知道药剂用途",
+                "药剂真正作用是"
+              ]
+            }
+          ],
+          "required_satisfied": 4,
+          "required_total": 4,
+          "forbidden_violated": 0,
+          "length": 1048,
+          "length_abnormal": false,
+          "overall_status": "satisfied"
+        },
+        "json_raw": "{\n  \"case_id\": \"case-04-item-handover\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"沈知夏的手指紧紧扣住那支透明药剂\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他只能勉强辨认出标签上那行模糊的小字\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"敌人似乎失去了目标... 沈知夏的手再次伸进口袋... 攥着口袋里的药剂\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"药剂的副作用已经开始显现... 她颤抖的手指... 刺骨的寒意\",\n      \"confidence\": 0.9\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"character_state\",\n      \"description\": \"文本提到药剂未注射，但副作用由'接触带来的心理压力和潜在的微量挥发'引起，这在科学逻辑上略显牵强，虽符合悬疑风格，但存在逻辑瑕疵。\",\n      \"severity\": \"low\"\n    },\n    {\n      \"type\": \"style\",\n      \"description\": \"文本长度约为650字，符合600-1000字的要求，但节奏较快，部分描写略显堆砌。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"needs_repair\"\n}",
+        "json_result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-04-item-handover",
+          "all_required_beats_satisfied": false,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "沈知夏的手指紧紧扣住那支透明药剂",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "他只能勉强辨认出标签上那行模糊的小字",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "敌人似乎失去了目标... 沈知夏的手再次伸进口袋... 攥着口袋里的药剂",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-4",
+              "status": "satisfied",
+              "evidence": "药剂的副作用已经开始显现... 她颤抖的手指... 刺骨的寒意",
+              "confidence": 0.9
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [
+            {
+              "type": "character_state",
+              "description": "文本提到药剂未注射，但副作用由'接触带来的心理压力和潜在的微量挥发'引起，这在科学逻辑上略显牵强，虽符合悬疑风格，但存在逻辑瑕疵。",
+              "severity": "low"
+            },
+            {
+              "type": "style",
+              "description": "文本长度约为650字，符合600-1000字的要求，但节奏较快，部分描写略显堆砌。",
+              "severity": "low"
+            }
+          ],
+          "overall_status": "needs_repair",
+          "raw": {
+            "case_id": "case-04-item-handover",
+            "all_required_beats_satisfied": false,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "沈知夏的手指紧紧扣住那支透明药剂",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "他只能勉强辨认出标签上那行模糊的小字",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "敌人似乎失去了目标... 沈知夏的手再次伸进口袋... 攥着口袋里的药剂",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-4",
+                "status": "satisfied",
+                "evidence": "药剂的副作用已经开始显现... 她颤抖的手指... 刺骨的寒意",
+                "confidence": 0.9
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-2",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [
+              {
+                "type": "character_state",
+                "description": "文本提到药剂未注射，但副作用由'接触带来的心理压力和潜在的微量挥发'引起，这在科学逻辑上略显牵强，虽符合悬疑风格，但存在逻辑瑕疵。",
+                "severity": "low"
+              },
+              {
+                "type": "style",
+                "description": "文本长度约为650字，符合600-1000字的要求，但节奏较快，部分描写略显堆砌。",
+                "severity": "low"
+              }
+            ],
+            "overall_status": "needs_repair"
+          }
+        },
+        "latency": 6.31,
+        "error": null
+      },
+      "metrics": {
+        "initial_required_satisfied": 4,
+        "initial_required_total": 4,
+        "initial_completion_rate": 1.0,
+        "json_parse_ok": true,
+        "disagreement": true,
+        "repair_triggered": true,
+        "repair_success": false,
+        "new_error_count": 0,
+        "final_usable": false,
+        "total_latency": 44.1
+      }
+    },
+    {
+      "run_id": "case-05-location-lock-s1",
+      "case_id": "case-05-location-lock",
+      "model": "agnes-2.0-flash",
+      "generation": {
+        "text": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味，混合着地下管道渗水带来的潮湿霉气。头顶那盏接触不良的白炽灯发出滋滋的电流声，忽明忽暗的光线将林澈和沈知夏的影子拉得扭曲而细长，投射在斑驳脱落的墙皮上。\n\n林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸。这是他们在编号为“74-B”的防水铁柜底层找到的最后一组有效影像。照片上的字迹因长期浸泡而晕染开来，像是一团团化开的墨迹，但中央那个被红笔圈出的坐标依然清晰可辨：北纬31°14′，东经121°28′，地下深度未知。\n\n“是灰塔。”沈知夏凑近了些，呼吸在冰冷的空气中凝成白雾。她的声音压得很低，仿佛怕惊扰了这地下深处沉睡的幽灵。\n\n林澈没有立刻回答，而是从背包里掏出一台便携式紫外线灯，打在照片背面的空白处。随着紫外光的照射，原本空白的纸背浮现出一行极淡的蓝色手写体备注：*“坐标已校准，入口位于废弃地铁支线尽头，非授权人员禁止入内。——G.T. Lab”*\n\n“灰塔实验室……”林澈喃喃自语，眉头紧锁。他记得在之前的档案碎片中，灰塔一直是一个只存在于传闻中的影子组织，从未有过实体的记录。这张照片是第一次出现如此具体的物理指向。\n\n沈知夏拿出笔记本，快速记录下坐标和备注内容，笔尖在纸上沙沙作响。“但这只是线索，林澈。我们还在旧港站的地下，离真正的‘灰塔’还有很远的距离。这个坐标指向的是城市边缘的一个废弃区域，而不是这里。”\n\n林澈点了点头，将照片小心地放入密封袋中。他环顾四周，档案室里堆满了积灰的文件箱，四周寂静得只能听见远处地铁隧道里偶尔传来的风声。这里依然是那个封闭、压抑的地下空间，没有任何迹象表明他们能瞬间跨越空间抵达那个传说中的实验室。\n\n“我们需要更多的拼图。”林澈指着旁边另一个标有“废弃工程图”的纸箱，“这张照片上的坐标可能只是入口之一，或者是一个误导。灰塔不会把核心位置直接写在照片上，这更像是一个诱饵，或者是一个测试。”\n\n沈知夏停下笔，抬头看向林澈：“你是说，我们找到的可能不是钥匙，而是陷阱？”\n\n“或者是路标。”林澈站起身，拍了拍手上的灰尘，目光穿过昏暗的光线，望向档案室深处那扇紧闭的铁门，“不管怎样，我们得先搞清楚这个坐标背后的地理环境。灰塔实验室虽然神秘，但它必须建立在现实的土地上。而我们现在，只能在这个地下迷宫里继续挖掘，直到找到通往地面的出口，或者找到下一个线索。”\n\n灯光再次闪烁了一下，随即稳定下来。两人对视一眼，重新低下头，继续在那堆积如山的旧档案中搜寻着下一块碎片。灰塔实验室依然遥不可及，如同海市蜃楼，但线索的链条正在一点点收紧。",
+        "latency": 9.3,
+        "error": null,
+        "prompt_variant": "numbered-beats+self-check"
+      },
+      "rule_precheck": {
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "keywords": [
+              "旧港站",
+              "地下"
+            ]
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "keywords": [
+              "灰塔实验室",
+              "线索",
+              "照片",
+              "档案",
+              "坐标",
+              "影像"
+            ]
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "keywords": [
+              "档案",
+              "坐标",
+              "影像",
+              "照片"
+            ]
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "keywords": [
+              "来到灰塔实验室",
+              "抵达灰塔实验室",
+              "站在灰塔实验室",
+              "进入灰塔实验室"
+            ]
+          },
+          {
+            "id": "forbid-2",
+            "violated": false,
+            "keywords": [
+              "灰塔负责人",
+              "负责人走出",
+              "负责人开口"
+            ]
+          }
+        ],
+        "required_satisfied": 3,
+        "required_total": 3,
+        "forbidden_violated": 0,
+        "length": 1076,
+        "length_abnormal": false,
+        "overall_status": "satisfied"
+      },
+      "natural_validator": {
+        "text": "## Required Beats\n\n- **id**: beat-1\n  - **status**: satisfied\n  - **evidence**: \"旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味... 这里依然是那个封闭、压抑的地下空间\"\n  - **reason**: 文本明确描述了角色身处旧港站地下三层，且强调了环境的封闭性和压抑感，符合“角色仍在旧港站地下”的要求。\n\n- **id**: beat-2\n  - **status**: satisfied\n  - **evidence**: \"灰塔实验室……林澈喃喃自语... 这张照片是第一次出现如此具体的物理指向... 我们还在旧港站的地下，离真正的‘灰塔’还有很远的距离\"\n  - **reason**: 文本中灰塔实验室仅作为照片上的线索和讨论对象出现，明确指出了角色并未抵达该地点，且距离遥远，符合“不得突然到灰塔实验室”的要求。\n\n- **id**: beat-3\n  - **status**: satisfied\n  - **evidence**: \"林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸... 照片上的字迹因长期浸泡而晕染开来... 紫外光的照射... 浮现出一行极淡的蓝色手写体备注\"\n  - **reason**: 角色通过档案室中的照片（影像）和紫外线照射出的备注（档案/线索）获取了关于灰塔的信息，完全符合“只能通过档案、坐标或影像获得灰塔线索”的要求。\n\n## Forbidden Violations\n\n- **id**: forbid-1\n  - **violated**: no\n  - **evidence**: 全文未出现“来到灰塔实验室”、“抵达灰塔实验室”、“站在灰塔实验室”或“进入灰塔实验室”等描述。相反，文中多次强调“离真正的‘灰塔’还有很远的距离”、“灰塔实验室依然遥不可及”。\n\n- **id**: forbid-2\n  - **violated**: no\n  - **evidence**: 全文未出现“灰塔负责人”、“负责人走出”或“负责人开口”等描述。文中仅提到照片上的署名“G.T. Lab”，并未涉及任何具体的人物互动或现身。\n\n## Logic Risks\n\n- **人物状态**: 无风险。林澈和沈知夏的行为逻辑连贯，从发现线索到分析线索，再到决定下一步行动，符合侦探/调查类小说的常规节奏。\n- **地点**: 无风险。场景始终锁定在旧港站地下档案室，没有发生空间跳跃或场景混淆。\n- **道具**: 无风险。白手套、镊子、紫外线灯、密封袋、笔记本等道具的使用符合调查场景的逻辑，且道具功能（如紫外线显影）在文中得到了合理展示。\n- **时间线**: 无风险。事件发生在同一时间段内，从发现照片到分析完毕，时间流逝自然，没有突兀的时间跳跃。\n- **新实体**: 低风险。文中引入了“G.T. Lab”的署名，但这属于已有线索（照片背面）的一部分，并非新出现的实体角色或地点，符合“灰塔只存在于线索中”的设定。\n\n## Overall Status\n\nsatisfied",
+        "latency": 3.96,
+        "error": null,
+        "needs_repair": false
+      },
+      "json_validator": {
+        "raw": "{\n  \"case_id\": \"case-05-location-lock\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味... 这里依然是那个封闭、压抑的地下空间\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"照片上的字迹因长期浸泡而晕染开来... 中央那个被红笔圈出的坐标依然清晰可辨... 灰塔实验室……林澈喃喃自语... 这张照片是第一次出现如此具体的物理指向\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸... 便携式紫外线灯... 浮现出一行极淡的蓝色手写体备注... 沈知夏拿出笔记本，快速记录下坐标和备注内容\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+        "latency": 13.56,
+        "error": null,
+        "result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-05-location-lock",
+          "all_required_beats_satisfied": true,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味... 这里依然是那个封闭、压抑的地下空间",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "照片上的字迹因长期浸泡而晕染开来... 中央那个被红笔圈出的坐标依然清晰可辨... 灰塔实验室……林澈喃喃自语... 这张照片是第一次出现如此具体的物理指向",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸... 便携式紫外线灯... 浮现出一行极淡的蓝色手写体备注... 沈知夏拿出笔记本，快速记录下坐标和备注内容",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-05-location-lock",
+            "all_required_beats_satisfied": true,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味... 这里依然是那个封闭、压抑的地下空间",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "照片上的字迹因长期浸泡而晕染开来... 中央那个被红笔圈出的坐标依然清晰可辨... 灰塔实验室……林澈喃喃自语... 这张照片是第一次出现如此具体的物理指向",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸... 便携式紫外线灯... 浮现出一行极淡的蓝色手写体备注... 沈知夏拿出笔记本，快速记录下坐标和备注内容",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-2",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [],
+            "overall_status": "satisfied"
+          }
+        }
+      },
+      "disagreement": {
+        "has_disagreement": false,
+        "rule_vs_json": false,
+        "rule_vs_natural": false
+      },
+      "repair": {
+        "triggered": false,
+        "text": "",
+        "latency": 0.0,
+        "error": null
+      },
+      "revalidation": {
+        "rule_precheck": {
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "keywords": [
+                "旧港站",
+                "地下"
+              ]
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "keywords": [
+                "灰塔实验室",
+                "线索",
+                "照片",
+                "档案",
+                "坐标",
+                "影像"
+              ]
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "keywords": [
+                "档案",
+                "坐标",
+                "影像",
+                "照片"
+              ]
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "keywords": [
+                "来到灰塔实验室",
+                "抵达灰塔实验室",
+                "站在灰塔实验室",
+                "进入灰塔实验室"
+              ]
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "keywords": [
+                "灰塔负责人",
+                "负责人走出",
+                "负责人开口"
+              ]
+            }
+          ],
+          "required_satisfied": 3,
+          "required_total": 3,
+          "forbidden_violated": 0,
+          "length": 1076,
+          "length_abnormal": false,
+          "overall_status": "satisfied"
+        },
+        "json_raw": "{\n  \"case_id\": \"case-05-location-lock\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味... 这里依然是那个封闭、压抑的地下空间\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"照片上的字迹因长期浸泡而晕染开来... 中央那个被红笔圈出的坐标依然清晰可辨... 灰塔实验室……林澈喃喃自语... 这张照片是第一次出现如此具体的物理指向\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸... 从背包里掏出一台便携式紫外线灯，打在照片背面的空白处... 浮现出一行极淡的蓝色手写体备注\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"文本中直接出现了'灰塔实验室'这一实体名称，虽然语境是作为线索提及，但beat-2的forbidden_keywords中包含了'灰塔实验室'，需确认是否因上下文为'提及'而非'抵达'而豁免。根据beat-2描述'不得突然到灰塔实验室'，此处仅为提及，未违反核心逻辑，但关键词匹配存在表面冲突风险。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+        "json_result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-05-location-lock",
+          "all_required_beats_satisfied": true,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味... 这里依然是那个封闭、压抑的地下空间",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "照片上的字迹因长期浸泡而晕染开来... 中央那个被红笔圈出的坐标依然清晰可辨... 灰塔实验室……林澈喃喃自语... 这张照片是第一次出现如此具体的物理指向",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸... 从背包里掏出一台便携式紫外线灯，打在照片背面的空白处... 浮现出一行极淡的蓝色手写体备注",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [
+            {
+              "type": "style",
+              "description": "文本中直接出现了'灰塔实验室'这一实体名称，虽然语境是作为线索提及，但beat-2的forbidden_keywords中包含了'灰塔实验室'，需确认是否因上下文为'提及'而非'抵达'而豁免。根据beat-2描述'不得突然到灰塔实验室'，此处仅为提及，未违反核心逻辑，但关键词匹配存在表面冲突风险。",
+              "severity": "low"
+            }
+          ],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-05-location-lock",
+            "all_required_beats_satisfied": true,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味... 这里依然是那个封闭、压抑的地下空间",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "照片上的字迹因长期浸泡而晕染开来... 中央那个被红笔圈出的坐标依然清晰可辨... 灰塔实验室……林澈喃喃自语... 这张照片是第一次出现如此具体的物理指向",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "林澈戴着白手套，小心翼翼地用镊子夹起一张边缘已经糊成一团的相纸... 从背包里掏出一台便携式紫外线灯，打在照片背面的空白处... 浮现出一行极淡的蓝色手写体备注",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-2",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [
+              {
+                "type": "style",
+                "description": "文本中直接出现了'灰塔实验室'这一实体名称，虽然语境是作为线索提及，但beat-2的forbidden_keywords中包含了'灰塔实验室'，需确认是否因上下文为'提及'而非'抵达'而豁免。根据beat-2描述'不得突然到灰塔实验室'，此处仅为提及，未违反核心逻辑，但关键词匹配存在表面冲突风险。",
+                "severity": "low"
+              }
+            ],
+            "overall_status": "satisfied"
+          }
+        },
+        "latency": 21.28,
+        "error": null
+      },
+      "metrics": {
+        "initial_required_satisfied": 3,
+        "initial_required_total": 3,
+        "initial_completion_rate": 1.0,
+        "json_parse_ok": true,
+        "disagreement": false,
+        "repair_triggered": false,
+        "repair_success": false,
+        "new_error_count": 0,
+        "final_usable": true,
+        "total_latency": 48.1
+      }
+    },
+    {
+      "run_id": "case-06-no-new-entity-s1",
+      "case_id": "case-06-no-new-entity",
+      "model": "agnes-2.0-flash",
+      "generation": {
+        "text": "旧港站地下通道的空气粘稠得令人窒息，混合着陈年铁锈与潮湿霉菌的气味。头顶那盏接触不良的应急灯发出滋滋的电流声，忽明忽暗的光线将林澈和沈知夏的影子拉扯得扭曲而细长。身后的脚步声并未停歇，那是追踪者特有的、沉重且富有节奏的靴底摩擦声，像是一把钝刀在两人的神经上反复切割。\n\n“不能停。”林澈压低声音，一把拽住沈知夏的手臂，将她拖向通道右侧一处废弃的维修隔间。那里堆满了废弃的信号发射器残骸，正好能遮挡住大部分视线。两人紧贴着冰冷潮湿的墙壁，屏住呼吸。\n\n沈知夏的手在颤抖，但她迅速从贴身口袋里掏出那枚银色芯片。芯片表面泛着冷冽的金属光泽，在昏暗的光线下显得格外刺眼。她指尖快速滑动，调出之前解析出的残缺坐标数据。屏幕的微光映照在她苍白的脸上，眼神却异常冷静。“林澈，看这里。”她指着屏幕上跳动的一个红色标记，“这个坐标指向的不是出口，而是通道的‘盲区’。根据第七层协议的碎片信息，那里是信号屏蔽的核心区。”\n\n“盲区？”林澈眉头紧锁，目光警惕地扫视着隔间外漆黑的通道。追踪者的手电筒光束已经扫过了他们刚才藏身的角落，光柱在墙壁上晃动，带来一种即将被发现的压迫感。\n\n“对，协议里提到过，‘当光成为指引，阴影即是庇护’。”沈知夏快速回忆着脑海中那些破碎的指令，“追踪者依赖热成像和声波定位，但第七层协议的核心逻辑是‘逆向伪装’。如果我们能进入那个盲区，他们的追踪信号就会失效。”\n\n林澈深吸一口气，强迫自己冷静下来。他看了一眼沈知夏手中的芯片，又看了看通道深处那团浓重的黑暗。他知道，这不仅是赌运气，更是对“第七层协议”这一未知概念的极限试探。那个协议究竟是什么？是逃生路线，还是某种更深层的陷阱？目前没有任何确凿的证据，只有这枚芯片和残缺的坐标作为唯一的指引。\n\n“走。”林澈低喝一声，率先冲出隔间。他没有选择原路返回，而是径直冲向通道尽头那片被阴影吞噬的区域。沈知夏紧随其后，手中的芯片紧紧攥着，仿佛那是唯一的救命稻草。\n\n身后的脚步声骤然加快，追踪者似乎察觉到了他们的动向，怒吼声在空旷的通道中回荡。林澈拉着沈知夏冲进那片阴影，周围的空气仿佛瞬间凝固，那种被窥视的压迫感奇迹般地消失了。他们成功了，但也陷入了更深的未知。第七层协议的真相，依旧隐藏在黑暗深处，等待着他们去揭开，或者去毁灭。",
+        "latency": 15.32,
+        "error": null,
+        "prompt_variant": "numbered-beats+self-check"
+      },
+      "rule_precheck": {
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "keywords": [
+              "林澈",
+              "沈知夏",
+              "追踪者"
+            ]
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "keywords": [
+              "银色芯片",
+              "残缺坐标",
+              "第七层协议",
+              "线索"
+            ]
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "keywords": [
+              "第七层协议",
+              "悬念",
+              "没有答案",
+              "不能确定"
+            ]
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "keywords": [
+              "导师",
+              "老师",
+              "师父"
+            ]
+          },
+          {
+            "id": "forbid-2",
+            "violated": false,
+            "keywords": [
+              "新组织",
+              "神秘组织",
+              "委员会",
+              "联盟"
+            ]
+          },
+          {
+            "id": "forbid-3",
+            "violated": false,
+            "keywords": [
+              "内鬼现身",
+              "真正的内鬼",
+              "第三个人"
+            ]
+          }
+        ],
+        "required_satisfied": 3,
+        "required_total": 3,
+        "forbidden_violated": 0,
+        "length": 944,
+        "length_abnormal": false,
+        "overall_status": "satisfied"
+      },
+      "natural_validator": {
+        "text": "## Required Beats\n\n*   **beat-1**\n    *   **Status**: satisfied\n    *   **Evidence**: 文中仅出现“林澈”、“沈知夏”、“追踪者”三个角色/实体。无其他人类或非关键生物出场。\n    *   **Reason**: 严格遵循了“只使用林澈、沈知夏、追踪者”的限制，未引入任何新角色。\n\n*   **beat-2**\n    *   **Status**: satisfied\n    *   **Evidence**: 沈知夏掏出“银色芯片”，查看“残缺坐标数据”，并引用“第七层协议的碎片信息”判断方向。\n    *   **Reason**: 剧情推进完全依赖于题目给定的三个核心线索（芯片、坐标、协议），符合“通过已有线索推进”的要求。\n\n*   **beat-3**\n    *   **Status**: satisfied\n    *   **Evidence**: 林澈内心独白：“那个协议究竟是什么？是逃生路线，还是某种更深层的陷阱？目前没有任何确凿的证据……”结尾处写道：“第七层协议的真相，依旧隐藏在黑暗深处……”\n    *   **Reason**: 明确表达了主角对协议内容的未知和不确定性，保持了悬念，未提前揭晓谜底。\n\n## Forbidden Violations\n\n*   **forbid-1**\n    *   **Violated**: no\n    *   **Evidence**: 全文未出现“导师”、“老师”、“师父”等词汇或相关暗示。\n    *   **Reason**: 未新增导师类角色。\n\n*   **forbid-2**\n    *   **Violated**: no\n    *   **Evidence**: 全文未出现“新组织”、“神秘组织”、“委员会”、“联盟”等词汇。\n    *   **Reason**: 未新增神秘组织实体。\n\n*   **forbid-3**\n    *   **Violated**: no\n    *   **Evidence**: 全文未出现“内鬼现身”、“真正的内鬼”、“第三个人”等情节或描述。\n    *   **Reason**: 未引入突然出现的内鬼。\n\n## Logic Risks\n\n*   **人物状态**: 无明显风险。林澈和沈知夏的情绪反应（紧张、冷静）与处境相符。\n*   **地点**: 无明显风险。场景始终保持在“旧港站地下通道”及其分支（维修隔间、盲区），空间逻辑连贯。\n*   **道具**: 无明显风险。“银色芯片”和“残缺坐标”的使用方式合理，符合科幻/悬疑设定。\n*   **时间线**: 无明显风险。事件发生在连续的追逐过程中，时间流逝自然。\n*   **新实体**: 无明显风险。严格遵守了禁止新增实体的约束。\n\n## Overall Status\n\nsatisfied",
+        "latency": 3.09,
+        "error": null,
+        "needs_repair": false
+      },
+      "json_validator": {
+        "raw": "{\n  \"case_id\": \"case-06-no-new-entity\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"文中仅出现林澈、沈知夏、追踪者三人/群体，无其他角色介入。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"沈知夏掏出银色芯片，调出残缺坐标数据，并依据第七层协议的碎片信息进行判断和移动。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"文中明确写道：'那个协议究竟是什么？...目前没有任何确凿的证据...第七层协议的真相，依旧隐藏在黑暗深处'，保持了悬念。\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-3\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+        "latency": 14.54,
+        "error": null,
+        "result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-06-no-new-entity",
+          "all_required_beats_satisfied": true,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "文中仅出现林澈、沈知夏、追踪者三人/群体，无其他角色介入。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "沈知夏掏出银色芯片，调出残缺坐标数据，并依据第七层协议的碎片信息进行判断和移动。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "文中明确写道：'那个协议究竟是什么？...目前没有任何确凿的证据...第七层协议的真相，依旧隐藏在黑暗深处'，保持了悬念。",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-3",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-06-no-new-entity",
+            "all_required_beats_satisfied": true,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "文中仅出现林澈、沈知夏、追踪者三人/群体，无其他角色介入。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "沈知夏掏出银色芯片，调出残缺坐标数据，并依据第七层协议的碎片信息进行判断和移动。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "文中明确写道：'那个协议究竟是什么？...目前没有任何确凿的证据...第七层协议的真相，依旧隐藏在黑暗深处'，保持了悬念。",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-2",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-3",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [],
+            "overall_status": "satisfied"
+          }
+        }
+      },
+      "disagreement": {
+        "has_disagreement": false,
+        "rule_vs_json": false,
+        "rule_vs_natural": false
+      },
+      "repair": {
+        "triggered": false,
+        "text": "",
+        "latency": 0.0,
+        "error": null
+      },
+      "revalidation": {
+        "rule_precheck": {
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "keywords": [
+                "林澈",
+                "沈知夏",
+                "追踪者"
+              ]
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "keywords": [
+                "银色芯片",
+                "残缺坐标",
+                "第七层协议",
+                "线索"
+              ]
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "keywords": [
+                "第七层协议",
+                "悬念",
+                "没有答案",
+                "不能确定"
+              ]
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "keywords": [
+                "导师",
+                "老师",
+                "师父"
+              ]
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "keywords": [
+                "新组织",
+                "神秘组织",
+                "委员会",
+                "联盟"
+              ]
+            },
+            {
+              "id": "forbid-3",
+              "violated": false,
+              "keywords": [
+                "内鬼现身",
+                "真正的内鬼",
+                "第三个人"
+              ]
+            }
+          ],
+          "required_satisfied": 3,
+          "required_total": 3,
+          "forbidden_violated": 0,
+          "length": 944,
+          "length_abnormal": false,
+          "overall_status": "satisfied"
+        },
+        "json_raw": "{\n  \"case_id\": \"case-06-no-new-entity\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"文中仅出现林澈、沈知夏、追踪者三个角色实体，无其他人物介入。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"沈知夏掏出银色芯片，调出残缺坐标数据，依据第七层协议碎片信息判断盲区位置，推进剧情。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"文中明确写道：'那个协议究竟是什么？是逃生路线，还是某种更深层的陷阱？目前没有任何确凿的证据...第七层协议的真相，依旧隐藏在黑暗深处'，保持了悬念。\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    },\n    {\n      \"id\": \"forbid-3\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+        "json_result": {
+          "parse_ok": true,
+          "parse_error": null,
+          "case_id": "case-06-no-new-entity",
+          "all_required_beats_satisfied": true,
+          "required_beats": [
+            {
+              "id": "beat-1",
+              "status": "satisfied",
+              "evidence": "文中仅出现林澈、沈知夏、追踪者三个角色实体，无其他人物介入。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-2",
+              "status": "satisfied",
+              "evidence": "沈知夏掏出银色芯片，调出残缺坐标数据，依据第七层协议碎片信息判断盲区位置，推进剧情。",
+              "confidence": 1.0
+            },
+            {
+              "id": "beat-3",
+              "status": "satisfied",
+              "evidence": "文中明确写道：'那个协议究竟是什么？是逃生路线，还是某种更深层的陷阱？目前没有任何确凿的证据...第七层协议的真相，依旧隐藏在黑暗深处'，保持了悬念。",
+              "confidence": 1.0
+            }
+          ],
+          "forbidden_violations": [
+            {
+              "id": "forbid-1",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-2",
+              "violated": false,
+              "evidence": ""
+            },
+            {
+              "id": "forbid-3",
+              "violated": false,
+              "evidence": ""
+            }
+          ],
+          "logic_risks": [],
+          "overall_status": "satisfied",
+          "raw": {
+            "case_id": "case-06-no-new-entity",
+            "all_required_beats_satisfied": true,
+            "required_beats": [
+              {
+                "id": "beat-1",
+                "status": "satisfied",
+                "evidence": "文中仅出现林澈、沈知夏、追踪者三个角色实体，无其他人物介入。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-2",
+                "status": "satisfied",
+                "evidence": "沈知夏掏出银色芯片，调出残缺坐标数据，依据第七层协议碎片信息判断盲区位置，推进剧情。",
+                "confidence": 1.0
+              },
+              {
+                "id": "beat-3",
+                "status": "satisfied",
+                "evidence": "文中明确写道：'那个协议究竟是什么？是逃生路线，还是某种更深层的陷阱？目前没有任何确凿的证据...第七层协议的真相，依旧隐藏在黑暗深处'，保持了悬念。",
+                "confidence": 1.0
+              }
+            ],
+            "forbidden_violations": [
+              {
+                "id": "forbid-1",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-2",
+                "violated": false,
+                "evidence": ""
+              },
+              {
+                "id": "forbid-3",
+                "violated": false,
+                "evidence": ""
+              }
+            ],
+            "logic_risks": [],
+            "overall_status": "satisfied"
+          }
+        },
+        "latency": 3.14,
+        "error": null
+      },
+      "metrics": {
+        "initial_required_satisfied": 3,
+        "initial_required_total": 3,
+        "initial_completion_rate": 1.0,
+        "json_parse_ok": true,
+        "disagreement": false,
+        "repair_triggered": false,
+        "repair_success": false,
+        "new_error_count": 0,
+        "final_usable": true,
+        "total_latency": 36.1
+      }
+    }
+  ]
+}

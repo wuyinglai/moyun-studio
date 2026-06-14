@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Required Beat Validator Benchmark Result",
+  "type": "object",
+  "required": ["run_id", "case_id", "model", "generation", "rule_precheck", "natural_validator", "json_validator", "repair", "revalidation", "metrics"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "case_id": {"type": "string"},
+    "model": {"type": "string"},
+    "generation": {"type": "object"},
+    "rule_precheck": {"type": "object"},
+    "natural_validator": {"type": "object"},
+    "json_validator": {"type": "object"},
+    "repair": {"type": "object"},
+    "revalidation": {"type": "object"},
+    "metrics": {"type": "object"}
+  }
+}

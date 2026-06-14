@@ -1,0 +1,356 @@
+{
+  "run_id": "case-03-injury-limitation-s1",
+  "case_id": "case-03-injury-limitation",
+  "model": "agnes-2.0-flash",
+  "generation": {
+    "text": "废弃售票室的空气浑浊而凝滞，弥漫着陈年灰尘与铁锈混合的腥气。沈知夏背靠着斑驳的瓷砖墙，脸色苍白如纸。她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透，布料紧紧黏在皮肉上。每一次呼吸牵扯到伤口，都带来一阵钻心的剧痛，冷汗顺着她的额角滑落，滴在满是污垢的水泥地上。\n\n“别动。”林澈的声音低沉而急促，他迅速检查了门缝外的动静，确认追踪者的脚步声正沿着楼梯向下逼近。他转身看向沈知夏，眼神中闪过一丝担忧，但随即被冷静取代。他撕下自己衬衫的下摆，动作利落地为她重新包扎左臂，打了一个死结，试图压迫止血。\n\n沈知夏咬紧牙关，强忍着眩晕感。左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作。她深吸一口气，强迫自己冷静下来，目光扫过昏暗的房间。这里曾是旧港站的核心枢纽，如今却成了死局。\n\n“他们人数不少，至少三个。”沈知夏的声音有些颤抖，但逻辑清晰。她指了指头顶上方一处破损的通风管道格栅，那里隐约传来金属摩擦的细微声响，“脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙。”\n\n林澈眉头微皱，侧耳倾听。果然，门外传来沉闷的敲击声，伴随着粗重的喘息。\n\n“左边那面墙是空的，连通着维修通道，但入口被杂物堵死了。”沈知夏迅速分析着地形，她的右手指向房间角落一堆废弃的售票机残骸，“如果我们能制造一点动静，吸引他们的注意力，我或许能帮你挪开那些障碍物。但我现在……”她苦笑了一下，晃了晃受伤的左臂，“只能靠你了。”\n\n林澈点了点头，没有多言。他迅速从腰间摸出一枚自制的小型闪光弹，又捡起一块尖锐的金属碎片。他的动作行云流水，没有丝毫犹豫。\n\n“你在这里保持安静，无论听到什么声音，都不要出来。”林澈低声嘱咐，眼神锐利如刀。\n\n沈知夏想要反驳，但看到林澈决绝的背影，她咽下了话语。她知道，此刻任何多余的言语都是负担。她紧紧捂住左臂的伤口，将身体缩进阴影深处，目光死死盯着门口。\n\n林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出。门外传来惊呼声和混乱的脚步声，林澈利用狭窄的空间优势，以迅猛的身法规避了敌人的正面攻击，并迅速向维修通道方向迂回。\n\n沈知夏在黑暗中屏住呼吸，听着外面的打斗声。林澈的动作干净利落，每一次出击都直击要害，没有一丝多余的花哨。他知道，这是唯一的生路。",
+    "latency": 16.98,
+    "error": null,
+    "prompt_variant": "numbered-beats+self-check"
+  },
+  "rule_precheck": {
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "keywords": [
+          "沈知夏",
+          "左臂",
+          "受伤"
+        ]
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "keywords": [
+          "不能",
+          "无法",
+          "没法",
+          "高强度",
+          "战斗"
+        ]
+      },
+      {
+        "id": "beat-3",
+        "status": "missing",
+        "keywords": [
+          "观察",
+          "判断",
+          "提醒",
+          "看出"
+        ]
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "keywords": [
+          "林澈"
+        ]
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "keywords": [
+          "沈知夏攀",
+          "沈知夏爬",
+          "高速战斗",
+          "单人击退",
+          "左手用力",
+          "双手持"
+        ]
+      }
+    ],
+    "required_satisfied": 3,
+    "required_total": 4,
+    "forbidden_violated": 0,
+    "length": 983,
+    "length_abnormal": false,
+    "overall_status": "needs_repair"
+  },
+  "natural_validator": {
+    "text": "## Required Beats\n\n- **beat-1**\n  - **status**: satisfied\n  - **evidence**: “她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透……”\n  - **reason**: 文本明确描述了沈知夏左臂受伤的状态及细节，符合关键词要求。\n\n- **beat-2**\n  - **status**: satisfied\n  - **evidence**: “左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作。”\n  - **reason**: 文本明确使用了“高强度”和“格斗动作”（对应战斗），并指出她“无法”进行，符合关键词要求。\n\n- **beat-3**\n  - **status**: satisfied\n  - **evidence**: “她指了指头顶上方一处破损的通风管道格栅……‘脚步声太杂，说明他们在分头搜索。但那个领头的……他在试探空心墙。’”以及“沈知夏迅速分析着地形……‘左边那面墙是空的……’”\n  - **reason**: 沈知夏通过观察声音和地形，做出了判断并提醒林澈敌人的分布和弱点，符合关键词要求。\n\n- **beat-4**\n  - **status**: satisfied\n  - **evidence**: “林澈……动作利落地为她重新包扎……林澈点了点头……林澈深吸一口气，猛地拉开门栓……林澈利用狭窄的空间优势……迅速向维修通道方向迂回。”\n  - **reason**: 林澈承担了包扎、决策、制造动静、突围等主要行动，符合关键词要求。\n\n## Forbidden Violations\n\n- **forbid-1**\n  - **violated**: no\n  - **evidence**: 文本中沈知夏全程处于被动状态（“背靠着斑驳的瓷砖墙”、“将身体缩进阴影深处”、“紧紧捂住左臂的伤口”），未出现攀爬、高速战斗、单人击退或左手用力的描写。\n\n## Logic Risks\n\n- **人物状态**: 沈知夏左臂受伤，文本中她使用右手包扎（“抬起右手去握拳”虽是否定句，但暗示右手可用）和指认方向，逻辑自洽。需注意“抬起右手”在剧痛下是否可行，但文本强调是“根本无法”，符合伤势限制。\n- **地点**: 旧港站地下二层废弃售票室，通风管道、维修通道、空心墙等环境要素与“旧港站”背景相符，空间逻辑清晰。\n- **道具**: 闪光弹、金属碎片、自制道具符合林澈的行动风格，未出现不合理的医疗奇迹道具。\n- **时间线**: 从躲藏、分析、准备到突围，时间流动紧凑，符合“紧张克制”的风格要求。\n- **新实体**: 未引入新的主要角色或超自然实体，追踪者作为既定威胁存在，逻辑稳定。\n\n## Overall Status\n\nsatisfied",
+    "latency": 6.86,
+    "error": null,
+    "needs_repair": false
+  },
+  "json_validator": {
+    "raw": "{\n  \"case_id\": \"case-03-injury-limitation\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她指了指头顶上方一处破损的通风管道格栅...脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"forbid-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [],\n  \"logic_risks\": [\n    {\n      \"type\": \"character_state\",\n      \"description\": \"沈知夏声称‘只能靠你了’并留在原地，但随后描述林澈独自冲出并‘利用狭窄空间优势...迅速向维修通道方向迂回’。若维修通道入口被堵且需两人合力（前文提及），林澈单人完成‘制造动静+吸引注意+挪开障碍+进入通道’的逻辑链条略显紧凑，但未直接违反‘沈知夏不得高强度动作’的限制。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+    "latency": 5.27,
+    "error": null,
+    "result": {
+      "parse_ok": true,
+      "parse_error": null,
+      "case_id": "case-03-injury-limitation",
+      "all_required_beats_satisfied": false,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+          "confidence": 1.0
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作",
+          "confidence": 1.0
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "她指了指头顶上方一处破损的通风管道格栅...脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙",
+          "confidence": 1.0
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "evidence": "林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出",
+          "confidence": 1.0
+        },
+        {
+          "id": "forbid-1",
+          "status": "satisfied",
+          "evidence": "",
+          "confidence": 1.0
+        }
+      ],
+      "forbidden_violations": [],
+      "logic_risks": [
+        {
+          "type": "character_state",
+          "description": "沈知夏声称‘只能靠你了’并留在原地，但随后描述林澈独自冲出并‘利用狭窄空间优势...迅速向维修通道方向迂回’。若维修通道入口被堵且需两人合力（前文提及），林澈单人完成‘制造动静+吸引注意+挪开障碍+进入通道’的逻辑链条略显紧凑，但未直接违反‘沈知夏不得高强度动作’的限制。",
+          "severity": "low"
+        }
+      ],
+      "overall_status": "satisfied",
+      "raw": {
+        "case_id": "case-03-injury-limitation",
+        "all_required_beats_satisfied": false,
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+            "confidence": 1.0
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "evidence": "左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作",
+            "confidence": 1.0
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "evidence": "她指了指头顶上方一处破损的通风管道格栅...脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙",
+            "confidence": 1.0
+          },
+          {
+            "id": "beat-4",
+            "status": "satisfied",
+            "evidence": "林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出",
+            "confidence": 1.0
+          },
+          {
+            "id": "forbid-1",
+            "status": "satisfied",
+            "evidence": "",
+            "confidence": 1.0
+          }
+        ],
+        "forbidden_violations": [],
+        "logic_risks": [
+          {
+            "type": "character_state",
+            "description": "沈知夏声称‘只能靠你了’并留在原地，但随后描述林澈独自冲出并‘利用狭窄空间优势...迅速向维修通道方向迂回’。若维修通道入口被堵且需两人合力（前文提及），林澈单人完成‘制造动静+吸引注意+挪开障碍+进入通道’的逻辑链条略显紧凑，但未直接违反‘沈知夏不得高强度动作’的限制。",
+            "severity": "low"
+          }
+        ],
+        "overall_status": "satisfied"
+      }
+    }
+  },
+  "disagreement": {
+    "has_disagreement": true,
+    "rule_vs_json": true,
+    "rule_vs_natural": true
+  },
+  "repair": {
+    "triggered": true,
+    "text": "废弃售票室的空气浑浊而凝滞，弥漫着陈年灰尘与铁锈混合的腥气。沈知夏背靠着斑驳的瓷砖墙，脸色苍白如纸。她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透，布料紧紧黏在皮肉上。每一次呼吸牵扯到伤口，都带来一阵钻心的剧痛，冷汗顺着她的额角滑落，滴在满是污垢的水泥地上。\n\n“别动。”林澈的声音低沉而急促，他迅速检查了门缝外的动静，确认追踪者的脚步声正沿着楼梯向下逼近。他转身看向沈知夏，眼神中闪过一丝担忧，但随即被冷静取代。他撕下自己衬衫的下摆，动作利落地为她重新包扎左臂，打了一个死结，试图压迫止血。\n\n沈知夏咬紧牙关，强忍着眩晕感。左臂的剧痛让她根本无法抬起右手去握拳，更别提进行任何高强度的格斗动作。她深吸一口气，强迫自己冷静下来，目光扫过昏暗的房间。这里曾是旧港站的核心枢纽，如今却成了死局。\n\n“他们人数不少，至少三个。”沈知夏的声音有些颤抖，但逻辑清晰。她指了指头顶上方一处破损的通风管道格栅，那里隐约传来金属摩擦的细微声响，“脚步声太杂，说明他们在分头搜索。但那个领头的，脚步很重，而且一直在敲击墙壁，他在试探空心墙。”\n\n林澈眉头微皱，侧耳倾听。果然，门外传来沉闷的敲击声，伴随着粗重的喘息。\n\n“左边那面墙是空的，连通着维修通道，但入口被杂物堵死了。”沈知夏迅速分析着地形，她的右手指向房间角落一堆废弃的售票机残骸，“如果我们能制造一点动静，吸引他们的注意力，我或许能帮你挪开那些障碍物。但我现在……”她苦笑了一下，晃了晃受伤的左臂，“只能靠你了。”\n\n林澈点了点头，没有多言。他迅速从腰间摸出一枚自制的小型闪光弹，又捡起一块尖锐的金属碎片。他的动作行云流水，没有丝毫犹豫。\n\n“你在这里保持安静，无论听到什么声音，都不要出来。”林澈低声嘱咐，眼神锐利如刀。\n\n沈知夏想要反驳，但看到林澈决绝的背影，她咽下了话语。她知道，此刻任何多余的言语都是负担。她紧紧捂住左臂的伤口，将身体缩进阴影深处，目光死死盯着门口，通过门缝观察着走廊的光影变化，随时准备在林澈需要时提供最后的判断。\n\n林澈深吸一口气，猛地拉开门栓。就在门缝开启的瞬间，他将闪光弹掷向走廊尽头，同时身形如猎豹般窜出。门外传来惊呼声和混乱的脚步声，林澈利用狭窄的空间优势，以迅猛的身法规避了敌人的正面攻击，并迅速向维修通道方向迂回。\n\n沈知夏在黑暗中屏住呼吸，听着外面的打斗声。林澈的动作干净利落，每一次出击都直击要害，没有一丝多余的花哨。他知道，这是唯一的生路。",
+    "latency": 3.93,
+    "error": null
+  },
+  "revalidation": {
+    "rule_precheck": {
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "keywords": [
+            "沈知夏",
+            "左臂",
+            "受伤"
+          ]
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "keywords": [
+            "不能",
+            "无法",
+            "没法",
+            "高强度",
+            "战斗"
+          ]
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "keywords": [
+            "观察",
+            "判断",
+            "提醒",
+            "看出"
+          ]
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "keywords": [
+            "林澈"
+          ]
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "keywords": [
+            "沈知夏攀",
+            "沈知夏爬",
+            "高速战斗",
+            "单人击退",
+            "左手用力",
+            "双手持"
+          ]
+        }
+      ],
+      "required_satisfied": 4,
+      "required_total": 4,
+      "forbidden_violated": 0,
+      "length": 1016,
+      "length_abnormal": false,
+      "overall_status": "satisfied"
+    },
+    "json_raw": "{\n  \"case_id\": \"case-03-injury-limitation\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"更别提进行任何高强度的格斗动作\",\n      \"confidence\": 0.95\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她指了指头顶上方一处破损的通风管道格栅... 沈知夏迅速分析着地形\",\n      \"confidence\": 0.9\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈深吸一口气，猛地拉开门栓... 林澈利用狭窄的空间优势... 迅速向维修通道方向迂回\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"forbid-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"文本长度约为580字左右，略低于目标长度600字的下限，但仍在可接受范围内。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+    "json_result": {
+      "parse_ok": true,
+      "parse_error": null,
+      "case_id": "case-03-injury-limitation",
+      "all_required_beats_satisfied": false,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+          "confidence": 1.0
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "更别提进行任何高强度的格斗动作",
+          "confidence": 0.95
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "她指了指头顶上方一处破损的通风管道格栅... 沈知夏迅速分析着地形",
+          "confidence": 0.9
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "evidence": "林澈深吸一口气，猛地拉开门栓... 林澈利用狭窄的空间优势... 迅速向维修通道方向迂回",
+          "confidence": 1.0
+        },
+        {
+          "id": "forbid-1",
+          "status": "satisfied",
+          "evidence": "",
+          "confidence": 1.0
+        }
+      ],
+      "forbidden_violations": [],
+      "logic_risks": [
+        {
+          "type": "style",
+          "description": "文本长度约为580字左右，略低于目标长度600字的下限，但仍在可接受范围内。",
+          "severity": "low"
+        }
+      ],
+      "overall_status": "satisfied",
+      "raw": {
+        "case_id": "case-03-injury-limitation",
+        "all_required_beats_satisfied": false,
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血渍浸透",
+            "confidence": 1.0
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "evidence": "更别提进行任何高强度的格斗动作",
+            "confidence": 0.95
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "evidence": "她指了指头顶上方一处破损的通风管道格栅... 沈知夏迅速分析着地形",
+            "confidence": 0.9
+          },
+          {
+            "id": "beat-4",
+            "status": "satisfied",
+            "evidence": "林澈深吸一口气，猛地拉开门栓... 林澈利用狭窄的空间优势... 迅速向维修通道方向迂回",
+            "confidence": 1.0
+          },
+          {
+            "id": "forbid-1",
+            "status": "satisfied",
+            "evidence": "",
+            "confidence": 1.0
+          }
+        ],
+        "forbidden_violations": [],
+        "logic_risks": [
+          {
+            "type": "style",
+            "description": "文本长度约为580字左右，略低于目标长度600字的下限，但仍在可接受范围内。",
+            "severity": "low"
+          }
+        ],
+        "overall_status": "satisfied"
+      }
+    },
+    "latency": 12.13,
+    "error": null
+  },
+  "metrics": {
+    "initial_required_satisfied": 3,
+    "initial_required_total": 4,
+    "initial_completion_rate": 0.75,
+    "json_parse_ok": true,
+    "disagreement": true,
+    "repair_triggered": true,
+    "repair_success": true,
+    "new_error_count": 0,
+    "final_usable": true,
+    "total_latency": 45.17
+  }
+}

@@ -1,0 +1,7 @@
+run_id,case_id,initial_completion_rate,json_parse_ok,disagreement,repair_triggered,repair_success,new_error_count,final_usable,total_latency
+case-01-seventh-protocol-s1,case-01-seventh-protocol,1.0,True,False,False,False,0,True,35.58
+case-02-ending-hook-s1,case-02-ending-hook,1.0,True,True,True,False,0,False,47.14
+case-03-injury-limitation-s1,case-03-injury-limitation,0.75,True,True,True,True,0,True,45.17
+case-04-item-handover-s1,case-04-item-handover,1.0,True,True,True,False,0,False,44.1
+case-05-location-lock-s1,case-05-location-lock,1.0,True,False,False,False,0,True,48.1
+case-06-no-new-entity-s1,case-06-no-new-entity,1.0,True,False,False,False,0,True,36.1

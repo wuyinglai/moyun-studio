@@ -1,0 +1,369 @@
+# case-01-seventh-protocol-s1
+
+Case: `case-01-seventh-protocol`
+Model: `agnes-2.0-flash`
+
+## Generation
+
+广播室里的空气浑浊而凝滞，弥漫着陈年灰尘与臭氧混合的怪味。林澈靠在布满锈迹的控制台旁，呼吸急促，每一次吸气都像是在吞咽碎玻璃。他下意识地按住左胸口袋，那里硬邦邦的触感让他感到一丝虚幻的安全感——那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。
+
+沈知夏正蹲在角落，手指飞快地在便携式终端上敲击，屏幕幽蓝的光映在她苍白的脸上，勾勒出紧绷的下颌线。“信号屏蔽层撑不了多久，”她的声音压得很低，带着不容置疑的冷静，“旧港站的地下结构像迷宫，但追踪者的算法比我们要快。”
+
+林澈没有接话，他的目光死死盯着那枚芯片。就在几分钟前，当广播设备过载的瞬间，芯片内部似乎闪过一串极其晦涩的代码流。那不是普通的身份识别码，而是一段被强行嵌入的指令碎片。他在脑海中反复回放那一瞬的刺痛感，脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。这个词像是一根刺，扎在记忆的盲区里，既熟悉又陌生，带着某种令人不安的禁忌色彩。他不敢深想，只能将其归结为某种高级别的加密指令，但直觉告诉他，这背后隐藏着远超当前危机的真相。
+
+“找到了。”沈知夏突然抬起头，眼神锐利如刀。她将终端屏幕转向林澈，上面显示着一张残缺不全的地下管网图。在地图的最深处，一个红色的标记正在微弱地闪烁，旁边标注着一组乱码般的数字：“北纬31.2...东经121.4...误差值±500米。”这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。
+
+“那是唯一没有监控盲区的路径。”沈知夏站起身，将终端塞回背包，“我们必须在那之前到达。”
+
+林澈点了点头，抓起外套。然而，就在他转身准备离开广播室的瞬间，头顶上方传来了沉闷的金属撞击声。紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。那声音越来越近，每一步都像是踩在两人的心跳上。
+
+追踪者进来了。
+
+林澈猛地回头，看向那扇厚重的铁门。门缝下方，一道红色的激光扫描线缓缓划过，如同野兽睁开的眼睛。他没有犹豫，一把拉住沈知夏的手腕，压低声音说道：“走通风管道，现在。”
+
+两人迅速潜入广播室后方狭窄的检修口，身后，铁门被暴力破开的巨响震落了墙皮上的灰尘。在这幽暗的地下深处，他们带着那枚未知的芯片和残缺的坐标，向着未知的黑暗潜行，而“第七层协议”的阴影，始终如影随形。
+
+## Rule Precheck
+
+```json
+{
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "status": "satisfied",
+      "keywords": [
+        "第七层协议"
+      ]
+    },
+    {
+      "id": "beat-2",
+      "status": "satisfied",
+      "keywords": [
+        "银色芯片"
+      ]
+    },
+    {
+      "id": "beat-3",
+      "status": "satisfied",
+      "keywords": [
+        "残缺坐标",
+        "坐标"
+      ]
+    },
+    {
+      "id": "beat-4",
+      "status": "satisfied",
+      "keywords": [
+        "追踪者",
+        "追兵",
+        "地下层",
+        "地下"
+      ]
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "violated": false,
+      "keywords": [
+        "第七层协议其实是",
+        "完整真相",
+        "协议的真相"
+      ]
+    }
+  ],
+  "required_satisfied": 4,
+  "required_total": 4,
+  "forbidden_violated": 0,
+  "length": 959,
+  "length_abnormal": false,
+  "overall_status": "satisfied"
+}
+```
+
+## Natural Validator
+
+## Required Beats
+
+- **id**: beat-1
+  - **status**: satisfied
+  - **evidence**: “他在脑海中反复回放那一瞬的刺痛感，脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。”
+  - **reason**: 正文明确出现了关键词“第七层协议”，且符合语境。
+
+- **id**: beat-2
+  - **status**: satisfied
+  - **evidence**: “那枚**银色芯片**依然在那里，表面微凉……”
+  - **reason**: 正文明确出现了关键词“银色芯片”，并描述了其状态。
+
+- **id**: beat-3
+  - **status**: satisfied
+  - **evidence**: “这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。”
+  - **reason**: 正文明确出现了关键词“残缺坐标”，并给出了具体的数值示例。
+
+- **id**: beat-4
+  - **status**: satisfied
+  - **evidence**: “头顶上方传来了沉闷的金属撞击声……追踪者进来了。”
+  - **reason**: 正文描述了追踪者（追兵）通过脚步声和激光扫描线进入地下层广播室的过程。
+
+## Forbidden Violations
+
+- **id**: forbid-1
+  - **violated**: no
+  - **evidence**: 文中仅提到“第七层协议”是一个“被刻意模糊化的词汇”、“高级别的加密指令”，并未解释其具体内容或完整真相。
+  - **reason**: 严格遵守了“不得直接揭晓第七层协议完整真相”的限制，保持了悬疑感。
+
+## Logic Risks
+
+- **人物状态**: 林澈呼吸急促、吞咽碎玻璃般的痛感，符合刚经历剧烈运动和芯片激活后的生理反应，状态合理。
+- **地点**: 始终保持在“旧港站地下层”、“广播室”、“检修口”等封闭空间，符合上下文设定。
+- **道具**: 银色芯片、便携式终端、残缺坐标均作为推动情节的关键道具出现，逻辑连贯。
+- **时间线**: 从广播室暂时安全 -> 发现坐标 -> 追踪者逼近 -> 撤离，时间流动紧凑且连续，无跳跃。
+- **新实体**: 追踪者作为既定威胁实体，其出现方式（脚步声、激光）符合科幻悬疑风格，未引入突兀的新角色。
+
+## Overall Status
+
+satisfied
+
+## JSON Validator
+
+```json
+{
+  "parse_ok": true,
+  "parse_error": null,
+  "case_id": "case-01-seventh-protocol",
+  "all_required_beats_satisfied": true,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "status": "satisfied",
+      "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+      "confidence": 1.0
+    },
+    {
+      "id": "beat-2",
+      "status": "satisfied",
+      "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+      "confidence": 1.0
+    },
+    {
+      "id": "beat-3",
+      "status": "satisfied",
+      "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+      "confidence": 1.0
+    },
+    {
+      "id": "beat-4",
+      "status": "satisfied",
+      "evidence": "追踪者进来了。... 身后，铁门被暴力破开的巨响震落了墙皮上的灰尘。",
+      "confidence": 1.0
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "violated": false,
+      "evidence": ""
+    }
+  ],
+  "logic_risks": [
+    {
+      "type": "style",
+      "description": "文本中使用了加粗标记（**银色芯片**等），在纯文本小说中可能被视为格式错误，但不影响内容连续性。",
+      "severity": "low"
+    }
+  ],
+  "overall_status": "satisfied",
+  "raw": {
+    "case_id": "case-01-seventh-protocol",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+        "confidence": 1.0
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+        "confidence": 1.0
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+        "confidence": 1.0
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "evidence": "追踪者进来了。... 身后，铁门被暴力破开的巨响震落了墙皮上的灰尘。",
+        "confidence": 1.0
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": ""
+      }
+    ],
+    "logic_risks": [
+      {
+        "type": "style",
+        "description": "文本中使用了加粗标记（**银色芯片**等），在纯文本小说中可能被视为格式错误，但不影响内容连续性。",
+        "severity": "low"
+      }
+    ],
+    "overall_status": "satisfied"
+  }
+}
+```
+
+## Repair
+
+Not triggered.
+
+## Revalidation
+
+```json
+{
+  "rule_precheck": {
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "keywords": [
+          "第七层协议"
+        ]
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "keywords": [
+          "银色芯片"
+        ]
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "keywords": [
+          "残缺坐标",
+          "坐标"
+        ]
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "keywords": [
+          "追踪者",
+          "追兵",
+          "地下层",
+          "地下"
+        ]
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "keywords": [
+          "第七层协议其实是",
+          "完整真相",
+          "协议的真相"
+        ]
+      }
+    ],
+    "required_satisfied": 4,
+    "required_total": 4,
+    "forbidden_violated": 0,
+    "length": 959,
+    "length_abnormal": false,
+    "overall_status": "satisfied"
+  },
+  "json_raw": "{\n  \"case_id\": \"case-01-seventh-protocol\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。\",\n      \"confidence\": 1.0\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。... 追踪者进来了。\",\n      \"confidence\": 1.0\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\"\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+  "json_result": {
+    "parse_ok": true,
+    "parse_error": null,
+    "case_id": "case-01-seventh-protocol",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+        "confidence": 1.0
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+        "confidence": 1.0
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+        "confidence": 1.0
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "evidence": "紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。... 追踪者进来了。",
+        "confidence": 1.0
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": ""
+      }
+    ],
+    "logic_risks": [],
+    "overall_status": "satisfied",
+    "raw": {
+      "case_id": "case-01-seventh-protocol",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "脑海中浮现出一个被刻意模糊化的词汇——**第七层协议**。",
+          "confidence": 1.0
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "那枚**银色芯片**依然在那里，表面微凉，仿佛刚刚被激活时残留的余温尚未完全散去。",
+          "confidence": 1.0
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "这是一组**残缺坐标**，指向旧港站地下最深层的废弃维护通道。",
+          "confidence": 1.0
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "evidence": "紧接着，是整齐划一、沉重且急促的脚步声，沿着螺旋楼梯向下蔓延。... 追踪者进来了。",
+          "confidence": 1.0
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": ""
+        }
+      ],
+      "logic_risks": [],
+      "overall_status": "satisfied"
+    }
+  },
+  "latency": 3.84,
+  "error": null
+}
+```

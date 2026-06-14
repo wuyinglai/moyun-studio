@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Required Beat Validator Case",
+  "type": "object",
+  "required": ["id", "title", "context", "facts", "required_beats", "style_constraints", "expected_risks", "target_length"],
+  "properties": {
+    "id": {"type": "string"},
+    "title": {"type": "string"},
+    "context": {"type": "string"},
+    "facts": {"type": "array", "items": {"type": "string"}},
+    "required_beats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "must_appear"],
+        "properties": {
+          "id": {"type": "string"},
+          "text": {"type": "string"},
+          "must_appear": {"type": "boolean"},
+          "type": {"type": "string"},
+          "keywords": {"type": "array", "items": {"type": "string"}},
+          "forbidden_keywords": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "style_constraints": {"type": "array", "items": {"type": "string"}},
+    "expected_risks": {"type": "array", "items": {"type": "string"}},
+    "target_length": {"type": "string"}
+  }
+}
