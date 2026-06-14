@@ -6,6 +6,20 @@
   "properties": {
     "id": {"type": "string"},
     "title": {"type": "string"},
+    "difficulty": {"enum": ["easy", "medium", "hard"]},
+    "beat_type": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "explicit_keyword",
+          "semantic_condition",
+          "knowledge_boundary",
+          "terminal_hook",
+          "forbidden_entity",
+          "state_constraint"
+        ]
+      }
+    },
     "context": {"type": "string"},
     "facts": {"type": "array", "items": {"type": "string"}},
     "required_beats": {

@@ -1,6 +1,12 @@
 {
   "id": "case-06-no-new-entity",
   "title": "禁止新增实体",
+  "difficulty": "medium",
+  "beat_type": [
+    "semantic_condition",
+    "knowledge_boundary",
+    "forbidden_entity"
+  ],
   "context": "旧港站地下通道里，林澈和沈知夏被追踪者逼近。两人只能依靠此前得到的银色芯片、残缺坐标和第七层协议这个名字继续判断方向。",
   "facts": [
     "本场只能使用林澈、沈知夏、追踪者。",

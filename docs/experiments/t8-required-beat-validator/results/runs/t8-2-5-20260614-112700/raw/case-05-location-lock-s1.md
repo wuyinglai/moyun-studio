@@ -1,0 +1,545 @@
+# case-05-location-lock-s1
+
+Case: `case-05-location-lock`
+Sample: `s1`
+Model: `agnes-2.0-flash`
+
+## Generation
+
+旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味，混合着地下管道渗水带来的潮湿霉气。头顶那盏接触不良的白炽灯发出滋滋的电流声，忽明忽暗的光线将林澈和沈知夏的影子拉得扭曲而细长，投射在斑驳脱落的墙皮上。这里没有出口，只有堆积如山的废弃档案盒，像是一座座沉默的墓碑，封锁着这座地下车站最后的秘密。
+
+林澈蹲在一个标有“1998-2002 废弃工程”的纸箱前，手套上沾满了灰白色的粉尘。他小心翼翼地翻开一叠被水泡得发胀、字迹模糊的图纸，眉头紧锁。沈知夏站在他身后，手中的强光手电光束扫过周围昏暗的角落，试图在混乱的纸堆中寻找一丝逻辑的线索。
+
+“这里不对劲。”林澈的声音低沉，带着一丝压抑的兴奋。他抽出一张边缘焦黑的照片，照片上是一片漆黑的深海，但在照片的右下角，用红笔潦草地标注着一组坐标：北纬31°14′，东经121°28′，以及一个被反复圈画的代号——“灰塔”。
+
+沈知夏凑近看去，眉头微蹙：“灰塔？我在之前的加密通讯记录里见过这个词，但从未见过具体的实体描述。它是指一座建筑，还是一个组织？”
+
+“更像是某种‘存在’。”林澈指着照片背面的一行小字，那行字是用防水墨水写的，尽管纸张破损，依然清晰可辨：“‘当潮汐退去，灰塔显现。坐标已校准，入口在旧港站地基之下。’”
+
+沈知夏感到背脊一阵发凉。她环顾四周，这里只是旧港站废弃的档案室，四周是冰冷的混凝土墙壁和生锈的铁架，根本没有任何通往地下的新入口迹象。“这只是一个线索，林澈。它告诉我们灰塔可能就在我们脚下，或者与这个车站有着某种深层的联系，但它本身并不在这里。”
+
+林澈点了点头，将照片小心翼翼地放入密封袋中。他站起身，拍了拍膝盖上的灰尘，目光扫过周围堆积如山的档案盒。他知道，灰塔实验室只是一个存在于线索中的幽灵，一个需要他们通过层层解密才能触及的目标。此刻，他们依然被困在这潮湿、阴暗的地下空间里，周围只有无尽的纸张和沉默的黑暗。
+
+“我们需要更多的坐标验证。”林澈说道，声音在空旷的档案室里回荡，“这张照片只是冰山一角。灰塔不会轻易现身，它藏在这些被遗忘的数据里。”
+
+沈知夏关掉手电，黑暗瞬间吞噬了他们，只有那盏忽明忽暗的白炽灯还在顽强地闪烁着。在这死寂的地下深处，两人对视一眼，都从对方眼中看到了对未知的警惕与决心。他们不能离开，也不能前进，只能在这有限的空间里，从这些破碎的线索中拼凑出通往真相的地图。灰塔依然遥不可及，但它已不再是虚无缥缈的传说，而是悬在头顶的达摩克利斯之剑，等待着他们揭开最后一层迷雾。
+
+## Rule Precheck
+
+```json
+{
+  "rule_is_final": false,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "旧港站",
+        "地下"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "旧港站",
+        "地下"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-2",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "灰塔实验室",
+        "线索",
+        "照片",
+        "档案",
+        "坐标"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "灰塔实验室",
+        "线索",
+        "照片",
+        "档案",
+        "坐标",
+        "影像"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-3",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "档案",
+        "坐标",
+        "照片"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "档案",
+        "坐标",
+        "影像",
+        "照片"
+      ],
+      "acceptable_paraphrases": []
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "来到灰塔实验室",
+        "抵达灰塔实验室",
+        "站在灰塔实验室",
+        "进入灰塔实验室"
+      ],
+      "violation_threshold": "explicit_location_transfer"
+    },
+    {
+      "id": "forbid-2",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "灰塔负责人",
+        "负责人走出",
+        "负责人开口"
+      ],
+      "violation_threshold": "explicit_new_person_or_direct_contact"
+    }
+  ],
+  "weak_required_passed": 3,
+  "weak_required_failed": 0,
+  "required_total": 3,
+  "weak_forbidden_hits": 0,
+  "length": 1036,
+  "length_abnormal": false,
+  "overall_signal": "weak_pass"
+}
+```
+
+## Natural Validator
+
+## Required Beats
+
+**Beat-1: 角色仍在旧港站地下。**
+*   **Status:** Satisfied
+*   **Evidence:** “旧港站地下三层的空气...”、“这里只是旧港站废弃的档案室...四周是冰冷的混凝土墙壁”、“此刻，他们依然被困在这潮湿、阴暗的地下空间里”。
+*   **Evidence Quality:** Exact
+*   **Reason:** 文本明确描述了角色身处旧港站地下三层档案室，且强调了环境的封闭性（“没有出口”、“被困”），符合语义条件。
+*   **Terminal-position check:** N/A (false)
+
+**Beat-2: 不得突然到灰塔实验室。**
+*   **Status:** Satisfied
+*   **Evidence:** “灰塔实验室只是一个存在于线索中的幽灵”、“灰塔依然遥不可及”、“它本身并不在这里”。
+*   **Evidence Quality:** Exact
+*   **Reason:** 文本多次强调灰塔是“线索”、“幽灵”、“遥不可及”，并明确否定其物理在场（“它本身并不在这里”）。读者仅通过角色对话和内心独白得知灰塔的存在，未获知任何内部场景或负责人信息。
+*   **Knowledge-boundary check:** 读者仅知道线索内容，未获知灰塔内部或负责人身份，符合边界要求。
+
+**Beat-3: 只能通过档案、坐标或影像获得灰塔线索。**
+*   **Status:** Satisfied
+*   **Evidence:** “抽出一张边缘焦黑的照片...标注着一组坐标...代号——‘灰塔’”、“照片背面的一行小字...‘坐标已校准’”。
+*   **Evidence Quality:** Exact
+*   **Reason:** 线索来源明确为“照片”（影像）和“图纸/档案盒”，其中包含坐标和文字记录，完全符合间接媒介的要求。
+
+## Forbidden Violations
+
+**Forbid-1: 角色不得瞬移到灰塔实验室。**
+*   **Violated:** No
+*   **Evidence:** 全文无“来到”、“抵达”、“进入”等动词搭配灰塔实验室。相反，文本强调“不能离开，也不能前进”、“灰塔依然遥不可及”。
+*   **Evidence Quality:** Exact
+*   **Reason:** 角色始终停留在旧港站地下，未发生位置转移至灰塔。
+
+**Forbid-2: 不得直接见到灰塔负责人。**
+*   **Violated:** No
+*   **Evidence:** 文中未出现任何名为“负责人”的角色，也未有任何人走出或开口提及具体负责人身份。
+*   **Evidence Quality:** Exact
+*   **Reason:** 场景中仅有林澈和沈知夏两人，无第三方人物介入。
+
+## Logic Risks
+
+*   **Character-state:** 无异常。角色状态符合探索情境（蹲下、翻阅、讨论）。
+*   **Location:** 无异常。地点始终锁定在旧港站地下档案室，无跳场。
+*   **Item:** 无异常。照片、档案盒、手电筒等物品使用逻辑自洽。
+*   **Timeline:** 无异常。场景为连续的当下时刻。
+*   **New-entity:** 无异常。未引入新的实体人物或超自然存在。
+*   **Style:** 符合“地点连续”、“线索推进”、“不要跳场”的要求。氛围描写细腻，符合悬疑风格。
+*   **Terminal-hook:** 结尾以“等待揭开最后一层迷雾”收束，符合章节结尾的张力要求，且未提前揭示核心谜底。
+*   **Knowledge-boundary:** 严格遵循了“灰塔仅作为线索”的限制，未泄露超出当前场景认知的信息。
+
+## Overall Status
+
+satisfied
+
+## JSON Validator
+
+```json
+{
+  "parse_ok": true,
+  "parse_error": null,
+  "case_id": "case-05-location-lock",
+  "all_required_beats_satisfied": true,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "status": "satisfied",
+      "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "文本明确描述角色位于旧港站地下三层档案室，且全程未离开。",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-2",
+      "status": "satisfied",
+      "evidence": "灰塔实验室只是一个存在于线索中的幽灵",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "文本明确界定灰塔为线索/幽灵，未出现其内部场景或负责人。",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-3",
+      "status": "satisfied",
+      "evidence": "他抽出一张边缘焦黑的照片...标注着一组坐标...以及一个被反复圈画的代号——“灰塔”",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "灰塔线索通过照片和坐标获得，符合间接媒介要求。",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "violated": false,
+      "evidence": "",
+      "evidence_quality": "absent",
+      "reasoning_note": "文本中无任何角色进入或抵达灰塔实验室的描述。",
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "forbid-2",
+      "violated": false,
+      "evidence": "",
+      "evidence_quality": "absent",
+      "reasoning_note": "文本中未出现灰塔负责人或其直接互动的描写。",
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "logic_risks": [],
+  "overall_status": "satisfied",
+  "raw": {
+    "case_id": "case-05-location-lock",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "文本明确描述角色位于旧港站地下三层档案室，且全程未离开。",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "灰塔实验室只是一个存在于线索中的幽灵",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "文本明确界定灰塔为线索/幽灵，未出现其内部场景或负责人。",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "他抽出一张边缘焦黑的照片...标注着一组坐标...以及一个被反复圈画的代号——“灰塔”",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "灰塔线索通过照片和坐标获得，符合间接媒介要求。",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "文本中无任何角色进入或抵达灰塔实验室的描述。",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-2",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "文本中未出现灰塔负责人或其直接互动的描写。",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [],
+    "overall_status": "satisfied"
+  }
+}
+```
+
+## Repair
+
+Not triggered.
+
+## Revalidation
+
+```json
+{
+  "rule_precheck": {
+    "rule_is_final": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "旧港站",
+          "地下"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "旧港站",
+          "地下"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "灰塔实验室",
+          "线索",
+          "照片",
+          "档案",
+          "坐标"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "灰塔实验室",
+          "线索",
+          "照片",
+          "档案",
+          "坐标",
+          "影像"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-3",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "档案",
+          "坐标",
+          "照片"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "档案",
+          "坐标",
+          "影像",
+          "照片"
+        ],
+        "acceptable_paraphrases": []
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "来到灰塔实验室",
+          "抵达灰塔实验室",
+          "站在灰塔实验室",
+          "进入灰塔实验室"
+        ],
+        "violation_threshold": "explicit_location_transfer"
+      },
+      {
+        "id": "forbid-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "灰塔负责人",
+          "负责人走出",
+          "负责人开口"
+        ],
+        "violation_threshold": "explicit_new_person_or_direct_contact"
+      }
+    ],
+    "weak_required_passed": 3,
+    "weak_required_failed": 0,
+    "required_total": 3,
+    "weak_forbidden_hits": 0,
+    "length": 1036,
+    "length_abnormal": false,
+    "overall_signal": "weak_pass"
+  },
+  "json_raw": "{\n  \"case_id\": \"case-05-location-lock\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"明确提及角色位于旧港站地下三层，符合地点锁定要求。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"灰塔实验室只是一个存在于线索中的幽灵\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"文本明确区分了线索与实体，未出现灰塔内部场景或负责人，符合知识边界。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他抽出一张边缘焦黑的照片...标注着一组坐标...以及一个被反复圈画的代号——“灰塔”\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"通过照片、坐标和档案记录获取线索，符合间接媒介要求。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"文本中无任何角色进入或抵达灰塔实验室的描述。\",\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"文本中未出现灰塔负责人或其直接互动的描写。\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+  "json_result": {
+    "parse_ok": true,
+    "parse_error": null,
+    "case_id": "case-05-location-lock",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "明确提及角色位于旧港站地下三层，符合地点锁定要求。",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "灰塔实验室只是一个存在于线索中的幽灵",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "文本明确区分了线索与实体，未出现灰塔内部场景或负责人，符合知识边界。",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "他抽出一张边缘焦黑的照片...标注着一组坐标...以及一个被反复圈画的代号——“灰塔”",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "通过照片、坐标和档案记录获取线索，符合间接媒介要求。",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "文本中无任何角色进入或抵达灰塔实验室的描述。",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-2",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "文本中未出现灰塔负责人或其直接互动的描写。",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [],
+    "overall_status": "satisfied",
+    "raw": {
+      "case_id": "case-05-location-lock",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "旧港站地下三层的空气里弥漫着陈年纸张发霉的酸腐味",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "明确提及角色位于旧港站地下三层，符合地点锁定要求。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "灰塔实验室只是一个存在于线索中的幽灵",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "文本明确区分了线索与实体，未出现灰塔内部场景或负责人，符合知识边界。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "他抽出一张边缘焦黑的照片...标注着一组坐标...以及一个被反复圈画的代号——“灰塔”",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "通过照片、坐标和档案记录获取线索，符合间接媒介要求。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "文本中无任何角色进入或抵达灰塔实验室的描述。",
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "forbid-2",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "文本中未出现灰塔负责人或其直接互动的描写。",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "logic_risks": [],
+      "overall_status": "satisfied"
+    }
+  },
+  "latency": 39.93,
+  "error": null
+}
+```
+
+## Failure Taxonomy
+
+```json
+{
+  "missing_required_beat": 0,
+  "partial_required_beat": 0,
+  "forbidden_violation": 0,
+  "knowledge_boundary_violation": 0,
+  "terminal_position_failure": 0,
+  "repair_failed": false,
+  "repair_introduced_new_error": false,
+  "validator_disagreement": false
+}
+```

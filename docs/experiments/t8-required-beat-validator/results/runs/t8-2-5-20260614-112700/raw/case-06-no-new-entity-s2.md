@@ -1,0 +1,606 @@
+# case-06-no-new-entity-s2
+
+Case: `case-06-no-new-entity`
+Sample: `s2`
+Model: `agnes-2.0-flash`
+
+## Generation
+
+旧港站地下通道的空气粘稠得令人窒息，混合着陈年铁锈与潮湿霉变的气味。头顶那盏接触不良的应急灯发出滋滋的电流声，忽明忽暗的光线将林澈和沈知夏的影子拉扯得扭曲而细长。身后，沉重的脚步声如同死神的倒计时，由远及近，每一步都踩在两人紧绷的神经上。
+
+“不能停。”林澈压低声音，一把拽住沈知夏的手腕，将她拖向通道右侧一处废弃的维修隔间。那里堆满了生锈的工具箱和断裂的电缆，空间狭窄，仅容一人侧身通过。沈知夏踉跄了一下，随即稳住身形，背靠着冰冷的水泥墙，胸口剧烈起伏。
+
+追踪者的手电筒光束扫过隔间入口，光柱在黑暗中切割出锐利的几何形状。林澈屏住呼吸，从口袋里掏出那块银色芯片。芯片表面冰凉，边缘有些磨损，但在昏暗的光线下，它依然反射着冷冽的微光。这是他们目前唯一的希望，也是最大的谜团。
+
+“坐标还是对不上。”沈知夏盯着芯片背面那行几乎被磨平的刻痕，眉头紧锁，“之前的推算显示第七层应该在正下方，但这里的结构图显示下面是承重墙。”
+
+“也许不是物理意义上的‘下’。”林澈迅速扫视四周，目光落在墙壁上一块松动的砖石上。他想起之前在某处档案中瞥见的片段——第七层协议并非指代楼层，而是某种加密层级或数据协议。他试探性地用手指敲击那块砖石，节奏遵循着芯片上隐约可见的凹槽纹路。
+
+笃、笃笃、笃。
+
+沉闷的回响在狭小的空间内回荡。身后的脚步声突然停滞，似乎察觉到了异样。追踪者正在靠近，靴底摩擦地面的声音清晰可闻。
+
+“快点。”沈知夏的声音带着一丝颤抖，但她没有退缩，反而凑近观察林澈的动作。
+
+随着最后一声敲击，砖石后的暗格发出一声轻微的咔哒声，弹开了一条缝隙。里面没有金银财宝，也没有武器，只有一张泛黄的纸条，上面用红笔潦草地写着一个数字：7。
+
+林澈拿起纸条，心脏猛地一跳。这不仅是数字，更像是一个确认码。然而，关于“第七层协议”的具体内容，这张纸条并未给出任何解释。它只是一个引子，指向更深的黑暗。
+
+“他们来了。”沈知夏低声警告。
+
+手电筒的光束再次扫来，这次停留的时间更长。林澈迅速将纸条塞回暗格，重新盖好砖石，拉着沈知夏退入隔间更深处的阴影中。追踪者站在隔间外，似乎在犹豫，又似乎在等待什么指令。
+
+在这令人窒息的沉默中，林澈紧紧握着芯片，感受着它传来的微弱温度。第七层协议依旧笼罩在迷雾之中，像是一个巨大的黑洞，吞噬着所有的已知信息。他们不知道接下来等待的是什么，只知道必须继续向前，直到揭开那层协议背后的真相，或者被真相彻底淹没。
+
+## Rule Precheck
+
+```json
+{
+  "rule_is_final": false,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "林澈",
+        "沈知夏",
+        "追踪者"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "林澈",
+        "沈知夏",
+        "追踪者"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-2",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "银色芯片",
+        "第七层协议"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "银色芯片",
+        "残缺坐标",
+        "第七层协议",
+        "线索"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-3",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "第七层协议"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "第七层协议",
+        "悬念",
+        "没有答案",
+        "不能确定"
+      ],
+      "acceptable_paraphrases": []
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "导师",
+        "老师",
+        "师父"
+      ],
+      "violation_threshold": "explicit_new_character"
+    },
+    {
+      "id": "forbid-2",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "新组织",
+        "神秘组织",
+        "委员会",
+        "联盟"
+      ],
+      "violation_threshold": "explicit_new_organization"
+    },
+    {
+      "id": "forbid-3",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "内鬼现身",
+        "真正的内鬼",
+        "第三个人"
+      ],
+      "violation_threshold": "explicit_new_traitor_reveal"
+    }
+  ],
+  "weak_required_passed": 3,
+  "weak_required_failed": 0,
+  "required_total": 3,
+  "weak_forbidden_hits": 0,
+  "length": 1015,
+  "length_abnormal": false,
+  "overall_signal": "weak_pass"
+}
+```
+
+## Natural Validator
+
+## Required Beats
+
+**Beat-1: 只使用林澈、沈知夏、追踪者。**
+*   **Status:** Satisfied
+*   **Evidence:** 文本中明确出现的角色仅有“林澈”、“沈知夏”和“追踪者”（及其脚步声、手电筒光束等具象化表现）。
+*   **Evidence Quality:** Exact
+*   **Reason:** 场景内没有任何其他人类角色介入或对话。追踪者作为压迫性力量存在，符合“active entities”的定义，但未引入新个体。
+*   **Terminal-position check:** N/A
+
+**Beat-2: 通过已有线索推进。**
+*   **Status:** Satisfied
+*   **Evidence:** 林澈使用“银色芯片”上的凹槽纹路敲击砖石；沈知夏分析芯片背面的刻痕和“第七层”的概念；两人依靠这些线索打开了暗格。
+*   **Evidence Quality:** Exact
+*   **Reason:** 情节推进完全依赖于JSON中指定的“银色芯片”和“第七层协议”相关线索，没有引入新的道具或外部帮助。
+*   **Terminal-position check:** N/A
+
+**Beat-3: 保持第七层协议悬念。**
+*   **Status:** Satisfied
+*   **Evidence:** 纸条上仅有一个数字“7”，林澈内心独白提到“关于‘第七层协议’的具体内容，这张纸条并未给出任何解释”，结尾强调“第七层协议依旧笼罩在迷雾之中”。
+*   **Evidence Quality:** Exact
+*   **Reason:** 线索仅提供了确认码或方向，未揭示协议的具体内容、幕后组织或完整计划，符合“reader_must_not_know”的限制。
+*   **Knowledge-boundary check:** 读者仅知道有一个数字7和协议存在，不知道协议内容，符合边界设定。
+
+## Forbidden Violations
+
+**Forbid-1: 不得新增导师。**
+*   **Violated:** No
+*   **Evidence:** 文本中无“导师”、“老师”、“师父”等称呼或角色。
+*   **Evidence Quality:** Exact
+*   **Reason:** 全程无此类角色出现。
+
+**Forbid-2: 不得新增神秘组织。**
+*   **Violated:** No
+*   **Evidence:** 文本中仅提及“追踪者”和“他们”（指代追踪者所属方），未出现“新组织”、“委员会”、“联盟”等具体名称或实体。
+*   **Evidence Quality:** Exact
+*   **Reason:** 未引入新的组织实体，仅维持原有的敌对压力。
+
+**Forbid-3: 不得新增突然出现的内鬼。**
+*   **Violated:** No
+*   **Evidence:** 文本中无“内鬼现身”、“真正的内鬼”或“第三个人”的揭示。
+*   **Evidence Quality:** Exact
+*   **Reason:** 林澈和沈知夏是唯二的主角，追踪者是外部威胁，无内部背叛情节。
+
+## Logic Risks
+
+*   **Character-state:** 林澈和沈知夏处于高度紧张状态，行为逻辑（躲藏、利用线索、敲击试探）符合当前情境。
+*   **Location:** 旧港站地下通道、维修隔间、暗格，位置转换合理，无突兀跳跃。
+*   **Item:** 银色芯片、残缺坐标（提及推算）、第七层协议（概念）、纸条（新发现但由旧线索触发），物品使用连贯。
+*   **Timeline:** 实时推进，无时间断层。
+*   **New-entity:** 无新增实体。
+*   **Style:** 悬疑克制，描写集中在感官细节和心理压力，符合风格约束。
+*   **Terminal-hook:** 结尾停留在“必须继续向前”的决心和未知的迷雾中，未给出最终答案，符合悬念保持。
+*   **Knowledge-boundary:** 严格遵守了不泄露协议完整答案的限制。
+
+## Overall Status
+
+Satisfied
+
+## JSON Validator
+
+```json
+{
+  "parse_ok": true,
+  "parse_error": null,
+  "case_id": "case-06-no-new-entity",
+  "all_required_beats_satisfied": true,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "status": "satisfied",
+      "evidence": "林澈和沈知夏...追踪者",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Scene strictly features Lin Che, Shen Zhixia, and pursuers as active entities.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-2",
+      "status": "satisfied",
+      "evidence": "银色芯片...残缺坐标...第七层协议",
+      "confidence": 0.95,
+      "evidence_quality": "exact",
+      "reasoning_note": "Progress is driven by the silver chip, coordinate analysis, and protocol interpretation.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-3",
+      "status": "satisfied",
+      "evidence": "第七层协议依旧笼罩在迷雾之中...并未给出任何解释",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "The protocol remains a mystery; no full answer or organization reveal is provided.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "violated": false,
+      "evidence": "",
+      "evidence_quality": "absent",
+      "reasoning_note": "No mentor, teacher, or master character introduced.",
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "forbid-2",
+      "violated": false,
+      "evidence": "",
+      "evidence_quality": "absent",
+      "reasoning_note": "No new organization, committee, or alliance introduced.",
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "forbid-3",
+      "violated": false,
+      "evidence": "",
+      "evidence_quality": "absent",
+      "reasoning_note": "No sudden insider or third-person traitor reveal.",
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "logic_risks": [],
+  "overall_status": "satisfied",
+  "raw": {
+    "case_id": "case-06-no-new-entity",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "林澈和沈知夏...追踪者",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Scene strictly features Lin Che, Shen Zhixia, and pursuers as active entities.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "银色芯片...残缺坐标...第七层协议",
+        "confidence": 0.95,
+        "evidence_quality": "exact",
+        "reasoning_note": "Progress is driven by the silver chip, coordinate analysis, and protocol interpretation.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "第七层协议依旧笼罩在迷雾之中...并未给出任何解释",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "The protocol remains a mystery; no full answer or organization reveal is provided.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No mentor, teacher, or master character introduced.",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-2",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No new organization, committee, or alliance introduced.",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-3",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No sudden insider or third-person traitor reveal.",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [],
+    "overall_status": "satisfied"
+  }
+}
+```
+
+## Repair
+
+Not triggered.
+
+## Revalidation
+
+```json
+{
+  "rule_precheck": {
+    "rule_is_final": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "林澈",
+          "沈知夏",
+          "追踪者"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "林澈",
+          "沈知夏",
+          "追踪者"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "银色芯片",
+          "第七层协议"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "银色芯片",
+          "残缺坐标",
+          "第七层协议",
+          "线索"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-3",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "第七层协议"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "第七层协议",
+          "悬念",
+          "没有答案",
+          "不能确定"
+        ],
+        "acceptable_paraphrases": []
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "导师",
+          "老师",
+          "师父"
+        ],
+        "violation_threshold": "explicit_new_character"
+      },
+      {
+        "id": "forbid-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "新组织",
+          "神秘组织",
+          "委员会",
+          "联盟"
+        ],
+        "violation_threshold": "explicit_new_organization"
+      },
+      {
+        "id": "forbid-3",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "内鬼现身",
+          "真正的内鬼",
+          "第三个人"
+        ],
+        "violation_threshold": "explicit_new_traitor_reveal"
+      }
+    ],
+    "weak_required_passed": 3,
+    "weak_required_failed": 0,
+    "required_total": 3,
+    "weak_forbidden_hits": 0,
+    "length": 1015,
+    "length_abnormal": false,
+    "overall_signal": "weak_pass"
+  },
+  "json_raw": "{\n  \"case_id\": \"case-06-no-new-entity\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈和沈知夏...追踪者\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Scene contains only Lin Che, Shen Zhixia, and pursuers as active entities.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"银色芯片...残缺坐标...第七层协议\",\n      \"confidence\": 0.95,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Progress is driven by the silver chip, coordinate analysis, and the Seventh Layer Protocol concept.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"第七层协议依旧笼罩在迷雾之中...并未给出任何解释\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"The protocol remains a mystery; no full answer or organization plan is revealed.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"No mentor, teacher, or master character introduced.\",\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"No new organization, committee, or alliance introduced.\",\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"forbid-3\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"No sudden insider or third person reveal.\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+  "json_result": {
+    "parse_ok": true,
+    "parse_error": null,
+    "case_id": "case-06-no-new-entity",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "林澈和沈知夏...追踪者",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Scene contains only Lin Che, Shen Zhixia, and pursuers as active entities.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "银色芯片...残缺坐标...第七层协议",
+        "confidence": 0.95,
+        "evidence_quality": "exact",
+        "reasoning_note": "Progress is driven by the silver chip, coordinate analysis, and the Seventh Layer Protocol concept.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "第七层协议依旧笼罩在迷雾之中...并未给出任何解释",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "The protocol remains a mystery; no full answer or organization plan is revealed.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No mentor, teacher, or master character introduced.",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-2",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No new organization, committee, or alliance introduced.",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-3",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No sudden insider or third person reveal.",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [],
+    "overall_status": "satisfied",
+    "raw": {
+      "case_id": "case-06-no-new-entity",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "林澈和沈知夏...追踪者",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Scene contains only Lin Che, Shen Zhixia, and pursuers as active entities.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "银色芯片...残缺坐标...第七层协议",
+          "confidence": 0.95,
+          "evidence_quality": "exact",
+          "reasoning_note": "Progress is driven by the silver chip, coordinate analysis, and the Seventh Layer Protocol concept.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "第七层协议依旧笼罩在迷雾之中...并未给出任何解释",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "The protocol remains a mystery; no full answer or organization plan is revealed.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "No mentor, teacher, or master character introduced.",
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "forbid-2",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "No new organization, committee, or alliance introduced.",
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "forbid-3",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "No sudden insider or third person reveal.",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "logic_risks": [],
+      "overall_status": "satisfied"
+    }
+  },
+  "latency": 3.53,
+  "error": null
+}
+```
+
+## Failure Taxonomy
+
+```json
+{
+  "missing_required_beat": 0,
+  "partial_required_beat": 0,
+  "forbidden_violation": 0,
+  "knowledge_boundary_violation": 0,
+  "terminal_position_failure": 0,
+  "repair_failed": false,
+  "repair_introduced_new_error": false,
+  "validator_disagreement": false
+}
+```

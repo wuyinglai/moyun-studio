@@ -1,6 +1,11 @@
 {
   "id": "case-03-injury-limitation",
   "title": "伤势限制",
+  "difficulty": "hard",
+  "beat_type": [
+    "semantic_condition",
+    "state_constraint"
+  ],
   "context": "沈知夏左臂受伤，林澈带她躲在旧港站地下二层的废弃售票室。追踪者正在外面搜索。",
   "facts": [
     "沈知夏左臂受伤。",

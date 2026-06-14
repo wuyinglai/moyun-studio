@@ -1,6 +1,12 @@
 {
   "id": "case-04-item-handover",
   "title": "道具交接",
+  "difficulty": "hard",
+  "beat_type": [
+    "semantic_condition",
+    "knowledge_boundary",
+    "state_constraint"
+  ],
   "context": "旧港站检修通道里，沈知夏从夹层取出一支透明药剂。林澈只来得及看见药剂上的标签。",
   "facts": [
     "药剂仍在沈知夏手中。",

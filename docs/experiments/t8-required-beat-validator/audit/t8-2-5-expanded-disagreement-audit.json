@@ -1,0 +1,46 @@
+{
+  "run_id": "t8-2-5-20260614-112700",
+  "audit_count": 4,
+  "items": [
+    {
+      "run_id": "case-02-ending-hook-s1",
+      "case_id": "case-02-ending-hook",
+      "sample_id": "s1",
+      "human_overall": "pass",
+      "closest_validator": "natural/json",
+      "disagreement_type": "rule_too_strict",
+      "repair_should_be_auto_applied": false,
+      "human_notes": "Generated text satisfies familiar footstep, Lin Che recognition, and terminal head-raise. Rule weak_fail is caused by broad forbidden keyword ?? inside a non-identity phrase; no visitor identity is revealed."
+    },
+    {
+      "run_id": "case-02-ending-hook-s2",
+      "case_id": "case-02-ending-hook",
+      "sample_id": "s2",
+      "human_overall": "pass",
+      "closest_validator": "natural/json",
+      "disagreement_type": "rule_too_strict",
+      "repair_should_be_auto_applied": false,
+      "human_notes": "Terminal hook is clean and identity remains hidden. Rule weak signal is still useful for audit, but this specific forbidden keyword pattern is too broad for automatic judgment."
+    },
+    {
+      "run_id": "case-04-item-handover-s1",
+      "case_id": "case-04-item-handover",
+      "sample_id": "s1",
+      "human_overall": "needs_repair",
+      "closest_validator": "json",
+      "disagreement_type": "ambiguous_case",
+      "repair_should_be_auto_applied": false,
+      "human_notes": "Original sample completes beats but has a real pronoun/ownership ambiguity: ????????? contradicts Shen Zhixia holding the medicine. JSON catches the issue and repair fixes it safely, but auto-apply should remain disabled."
+    },
+    {
+      "run_id": "case-04-item-handover-s2",
+      "case_id": "case-04-item-handover",
+      "sample_id": "s2",
+      "human_overall": "needs_repair",
+      "closest_validator": "mixed",
+      "disagreement_type": "ambiguous_case",
+      "repair_should_be_auto_applied": false,
+      "human_notes": "Required beats are present, but the side-effect causality is under-specified: text says no injection, then shows symptoms. Natural validator is closer on the logic gap; JSON is correct that the hard beats pass. This should become a warning/candidate, not automatic repair."
+    }
+  ]
+}

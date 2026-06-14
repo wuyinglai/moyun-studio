@@ -1,4 +1,4 @@
-"""T8.2.2 reusable required-beat validator benchmark.
+"""Reusable T8 required-beat validator benchmark runner.
 
 This is experiment tooling only. It does not import or modify Moyun product
 code. It reads local LLM configuration but never prints or writes API keys.
@@ -11,6 +11,7 @@ import csv
 import json
 import os
 import re
+import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -24,8 +25,17 @@ ROOT = Path(__file__).resolve().parent
 REPO_ROOT = ROOT.parents[2]
 CASES_DIR = ROOT / "cases"
 RESULTS_DIR = ROOT / "results"
-RAW_DIR = RESULTS_DIR / "raw"
-SCORED_DIR = RESULTS_DIR / "scored"
+RUNS_DIR = RESULTS_DIR / "runs"
+
+CASE_SCHEMA_VERSION = "t8-required-beat-case-v2"
+VALIDATOR_PROMPT_VERSION = "t8-validator-semantic-v2"
+REPAIR_PROMPT_VERSION = "t8-repair-minimal-v1"
+
+BASELINE_T8_2_2 = {
+    "validator_agreement_rate": 0.50,
+    "repair_success_rate": 0.3333,
+    "final_usable_rate": 0.6667,
+}
 
 
 @dataclass
@@ -42,7 +52,31 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def git_commit() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        return result.stdout.strip()
+    except Exception:
+        return "unknown"
+
+
+def utc_timestamp() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def make_run_id(prefix: str = "t8-2-5") -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return f"{prefix}-{stamp}"
 
 
 def read_llm_config(timeout: int) -> LLMConfig:
@@ -76,6 +110,13 @@ def numbered(items: list[str]) -> str:
 def build_generator_prompt(case: dict[str, Any]) -> str:
     required = [beat["text"] for beat in required_beats(case)]
     forbidden = [beat["text"] for beat in forbidden_beats(case)]
+    semantic = []
+    for beat in case["required_beats"]:
+        if beat.get("must_appear"):
+            detail = beat.get("required_semantic_condition") or beat["text"]
+        else:
+            detail = beat.get("forbidden_semantic_condition") or beat["text"]
+        semantic.append(f"{beat['id']}: {detail}")
     return f"""你是严谨的中文长篇小说场景写作者。
 
 上文：
@@ -90,6 +131,9 @@ def build_generator_prompt(case: dict[str, Any]) -> str:
 【禁止事项】
 {numbered(forbidden)}
 
+【语义边界】
+{numbered(semantic)}
+
 风格要求：
 {numbered(case['style_constraints'])}
 
@@ -99,7 +143,8 @@ def build_generator_prompt(case: dict[str, Any]) -> str:
 1. 所有 required beats 是否自然写入正文；
 2. forbidden beats 是否没有被违反；
 3. 是否引入了新人物、新组织、新道具或新设定；
-4. 是否保持上文地点、人物状态、道具归属和悬念边界。
+4. 是否保持地点、人物状态、道具归属、知识边界和悬念边界；
+5. 如果 terminal_position_required=true，结尾是否真的停在该动作。
 
 如果任一 required beat 缺失，请先在内部修正，再输出最终正文。
 最终只输出正文，不输出检查过程、标题、编号或解释。"""
@@ -207,8 +252,8 @@ Validator result:
 要求：
 - 保留原文大部分内容；
 - 只补齐缺失 beat 或修正 violation；
-- 不大幅重写；
-- 不新增人物、组织、系统、道具或新设定；
+- 不要大幅重写；
+- 不新增人物、组织、系统、道具或设定；
 - 不提前揭晓秘密；
 - 不改变已经完成的 beat；
 - 最终只输出修复后的正文。"""
@@ -240,10 +285,6 @@ def call_llm(config: LLMConfig, prompt: str, max_tokens: int = 1100) -> tuple[st
         return data["choices"][0]["message"]["content"].strip(), round(time.perf_counter() - start, 2), None
     except (urllib.error.URLError, TimeoutError, RuntimeError) as exc:
         return "", round(time.perf_counter() - start, 2), f"{type(exc).__name__}: {str(exc)[:500]}"
-
-
-def keyword_hit(text: str, keywords: list[str]) -> bool:
-    return any(keyword and keyword in text for keyword in keywords)
 
 
 def term_hits(text: str, terms: list[str]) -> list[str]:
@@ -400,8 +441,6 @@ def natural_needs_repair(text: str) -> bool:
 
 
 def make_dry_text(case: dict[str, Any]) -> str:
-    if case["id"] == "case-02-ending-hook":
-        return "门后传来熟悉脚步声。林澈屏住呼吸，却没有说出他是否认出了那声音。黑暗里，他慢慢抬起头。"
     required_terms = []
     for beat in required_beats(case):
         keywords = beat.get("keywords") or []
@@ -415,14 +454,11 @@ def make_dry_json_validation(case: dict[str, Any], text: str) -> dict[str, Any]:
     required_items = []
     for item in precheck["required_beats"]:
         status = "satisfied" if item["rule_status"] == "weak_pass" else "missing"
-        evidence = ""
-        if status == "satisfied":
-            hits = item["keyword_hits"] or item["paraphrase_hits"]
-            evidence = hits[0] if hits else ""
+        hits = item["keyword_hits"] or item["paraphrase_hits"]
         required_items.append({
             "id": item["id"],
             "status": status,
-            "evidence": evidence,
+            "evidence": hits[0] if status == "satisfied" and hits else "",
             "confidence": 0.8 if status == "satisfied" else 0.5,
             "evidence_quality": "exact" if item["keyword_hits"] else ("paraphrase" if item["paraphrase_hits"] else "absent"),
             "reasoning_note": "dry-run rule-derived validator result",
@@ -492,8 +528,74 @@ def infer_disagreement_reason(
     return between, reason
 
 
+def failure_taxonomy(result: dict[str, Any]) -> dict[str, Any]:
+    json_result = result["json_validator"]["result"]
+    revalidation = result["revalidation"]["json_result"]
+    required = json_result.get("required_beats") or []
+    forbidden = json_result.get("forbidden_violations") or []
+    missing = sum(1 for beat in required if beat.get("status") == "missing")
+    partial = sum(1 for beat in required if beat.get("status") == "partial")
+    violations = sum(1 for item in forbidden if item.get("violated") is True)
+    knowledge = 0
+    terminal = 0
+    for beat in required:
+        if beat.get("knowledge_boundary_ok") is False:
+            knowledge += 1
+        if beat.get("terminal_position_ok") is False:
+            terminal += 1
+    for item in forbidden:
+        if item.get("violated") is True and item.get("knowledge_boundary_ok") is False:
+            knowledge += 1
+    repair_failed = bool(result["repair"]["triggered"] and revalidation.get("overall_status") != "satisfied")
+    return {
+        "missing_required_beat": missing,
+        "partial_required_beat": partial,
+        "forbidden_violation": violations,
+        "knowledge_boundary_violation": knowledge,
+        "terminal_position_failure": terminal,
+        "repair_failed": repair_failed,
+        "repair_introduced_new_error": result["metrics"]["new_error_count"] > 0,
+        "validator_disagreement": result["metrics"]["disagreement"],
+    }
+
+
+def low_json_confidence(result: dict[str, Any], threshold: float = 0.7) -> bool:
+    for beat in result["json_validator"]["result"].get("required_beats", []):
+        confidence = beat.get("confidence")
+        if isinstance(confidence, int | float) and confidence < threshold:
+            return True
+    return False
+
+
+def json_status(result: dict[str, Any]) -> str:
+    return result["json_validator"]["result"].get("overall_status", "unknown")
+
+
+def natural_status(result: dict[str, Any]) -> str:
+    return "needs_repair" if result["natural_validator"].get("needs_repair") else "satisfied"
+
+
+def rule_status(result: dict[str, Any]) -> str:
+    return result["rule_precheck"].get("overall_signal", "unknown")
+
+
+def classify_repair_risk(result: dict[str, Any]) -> str:
+    if not result["repair"]["triggered"]:
+        return "not_triggered"
+    if result["metrics"]["new_error_count"] > 0:
+        return "harmful_repair"
+    if not result["metrics"]["repair_success"]:
+        return "failed_repair"
+    original_len = len(result["generation"]["text"])
+    repair_len = len(result["repair"]["text"])
+    if repair_len > max(original_len * 1.45, original_len + 350):
+        return "risky_repair"
+    return "safe_repair"
+
+
 def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, dry_run: bool) -> dict[str, Any]:
-    run_id = f"{case['id']}-s{sample_index + 1}"
+    sample_id = f"s{sample_index + 1}"
+    result_id = f"{case['id']}-{sample_id}"
     started = time.perf_counter()
     if dry_run:
         generation_text = make_dry_text(case)
@@ -504,11 +606,19 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
 
     precheck = rule_precheck(case, generation_text)
 
-    if dry_run:
-        natural_text = "## Overall Status\nneeds_repair" if precheck["overall_signal"] != "weak_pass" else "## Overall Status\nsatisfied"
+    if generation_error:
+        natural_text = ""
+        natural_latency = 0.0
+        natural_error = "skipped_after_generation_error"
+        json_raw = ""
+        json_latency = 0.0
+        json_error = "skipped_after_generation_error"
+        json_validation = normalize_json_validation(case, None, generation_error)
+    elif dry_run:
+        json_validation = make_dry_json_validation(case, generation_text)
+        natural_text = "## Overall Status\nneeds_repair" if json_needs_repair(json_validation) else "## Overall Status\nsatisfied"
         natural_latency = 0.0
         natural_error = None
-        json_validation = make_dry_json_validation(case, generation_text)
         json_raw = json.dumps(json_validation, ensure_ascii=False)
         json_latency = 0.0
         json_error = None
@@ -545,6 +655,11 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
         revalidation_raw = json.dumps(revalidation, ensure_ascii=False)
         revalidation_latency = 0.0
         revalidation_error = None
+    elif repair_error:
+        revalidation = normalize_json_validation(case, None, repair_error)
+        revalidation_raw = ""
+        revalidation_latency = 0.0
+        revalidation_error = "skipped_after_repair_error"
     else:
         revalidation_raw, revalidation_latency, revalidation_error = call_llm(
             config,
@@ -556,15 +671,13 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
 
     new_errors = 0
     if repair_triggered:
-        initial_violations = precheck["weak_forbidden_hits"]
-        final_violations = final_precheck["weak_forbidden_hits"]
-        if final_violations > initial_violations:
+        if final_precheck["weak_forbidden_hits"] > precheck["weak_forbidden_hits"]:
             new_errors += 1
         if len(final_text) > max(len(generation_text) * 1.8, len(generation_text) + 600):
             new_errors += 1
 
     initial_satisfied, initial_total = json_required_counts(json_validation, precheck)
-    final_usable = revalidation.get("parse_ok") and revalidation.get("overall_status") == "satisfied"
+    final_usable = bool(revalidation.get("parse_ok") and revalidation.get("overall_status") == "satisfied")
     metrics = {
         "initial_required_satisfied": initial_satisfied,
         "initial_required_total": initial_total,
@@ -574,21 +687,26 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
         "json_parse_ok": bool(json_validation.get("parse_ok")),
         "disagreement": disagreement,
         "repair_triggered": repair_triggered,
-        "repair_success": repair_triggered and bool(final_usable),
+        "repair_success": repair_triggered and final_usable,
         "new_error_count": new_errors,
         "final_usable": final_usable,
         "total_latency": round(time.perf_counter() - started, 2),
     }
 
-    return {
-        "run_id": run_id,
+    result = {
+        "run_id": result_id,
         "case_id": case["id"],
+        "sample_id": sample_id,
         "model": config.model if config else "dry-run",
+        "case_meta": {
+            "difficulty": case.get("difficulty", "unknown"),
+            "beat_type": case.get("beat_type", []),
+        },
         "generation": {
             "text": generation_text,
             "latency": generation_latency,
             "error": generation_error,
-            "prompt_variant": "numbered-beats+self-check",
+            "prompt_variant": "numbered-beats+self-check+semantic-boundary",
         },
         "rule_precheck": precheck,
         "natural_validator": {
@@ -608,7 +726,7 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
             "between": between,
             "likely_reason": likely_reason,
             "rule_vs_json": rule_vs_json,
-            "rule_vs_natural": natural_disagrees,
+            "rule_vs_natural": bool(rule_status_from_set(status_set_from_rule(precheck)) != natural_status_from_text(natural_text)),
             "natural_vs_json": natural_disagrees,
         },
         "repair": {
@@ -626,13 +744,25 @@ def run_case(case: dict[str, Any], sample_index: int, config: LLMConfig | None, 
         },
         "metrics": metrics,
     }
+    result["failure_taxonomy"] = failure_taxonomy(result)
+    result["repair_risk"] = classify_repair_risk(result)
+    return result
 
 
-def write_raw(result: dict[str, Any]) -> None:
+def rule_status_from_set(items: set[str]) -> str:
+    return "needs_repair" if items else "satisfied"
+
+
+def natural_status_from_text(text: str) -> str:
+    return "needs_repair" if natural_needs_repair(text) else "satisfied"
+
+
+def write_raw(result: dict[str, Any], raw_dir: Path) -> None:
     lines = [
         f"# {result['run_id']}",
         "",
         f"Case: `{result['case_id']}`",
+        f"Sample: `{result['sample_id']}`",
         f"Model: `{result['model']}`",
         "",
         "## Generation",
@@ -665,9 +795,15 @@ def write_raw(result: dict[str, Any]) -> None:
         json.dumps(result["revalidation"], ensure_ascii=False, indent=2),
         "```",
         "",
+        "## Failure Taxonomy",
+        "",
+        "```json",
+        json.dumps(result["failure_taxonomy"], ensure_ascii=False, indent=2),
+        "```",
+        "",
     ]
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
-    (RAW_DIR / f"{result['run_id']}.md").write_text("\n".join(lines), encoding="utf-8")
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    (raw_dir / f"{result['run_id']}.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def summarize(results: list[dict[str, Any]], model: str, dry_run: bool) -> dict[str, Any]:
@@ -680,7 +816,8 @@ def summarize(results: list[dict[str, Any]], model: str, dry_run: bool) -> dict[
     new_errors = sum(1 for r in results if r["metrics"]["new_error_count"] > 0)
     final_usable = sum(1 for r in results if r["metrics"]["final_usable"])
     avg_latency = round(sum(r["metrics"]["total_latency"] for r in results) / max(len(results), 1), 2)
-    return {
+    repair_breakdown = aggregate_counts(results, lambda r: r["repair_risk"])
+    summary = {
         "model": model,
         "dry_run": dry_run,
         "runs": len(results),
@@ -692,124 +829,301 @@ def summarize(results: list[dict[str, Any]], model: str, dry_run: bool) -> dict[
         "new_error_rate": new_errors / max(repairs, 1) if repairs else 0.0,
         "final_usable_rate": final_usable / max(len(results), 1),
         "average_total_latency": avg_latency,
+        "repair_risk_breakdown": repair_breakdown,
+    }
+    summary["baseline_comparison"] = {
+        "validator_agreement_delta": summary["validator_agreement_rate"] - BASELINE_T8_2_2["validator_agreement_rate"],
+        "repair_success_delta": summary["repair_success_rate"] - BASELINE_T8_2_2["repair_success_rate"],
+        "final_usable_delta": summary["final_usable_rate"] - BASELINE_T8_2_2["final_usable_rate"],
+    }
+    summary["difficulty_analysis"] = grouped_metrics(results, lambda r: r["case_meta"].get("difficulty", "unknown"))
+    summary["beat_type_analysis"] = grouped_metrics_multi(results, lambda r: r["case_meta"].get("beat_type", []))
+    return summary
+
+
+def aggregate_counts(results: list[dict[str, Any]], key_fn) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for result in results:
+        key = key_fn(result)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def grouped_metrics(results: list[dict[str, Any]], key_fn) -> dict[str, Any]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for result in results:
+        groups.setdefault(key_fn(result), []).append(result)
+    return {key: summarize_group(items) for key, items in sorted(groups.items())}
+
+
+def grouped_metrics_multi(results: list[dict[str, Any]], key_fn) -> dict[str, Any]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for result in results:
+        keys = key_fn(result) or ["unknown"]
+        for key in keys:
+            groups.setdefault(key, []).append(result)
+    return {key: summarize_group(items) for key, items in sorted(groups.items())}
+
+
+def summarize_group(items: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "runs": len(items),
+        "agreement_rate": sum(1 for r in items if not r["metrics"]["disagreement"]) / max(len(items), 1),
+        "final_usable_rate": sum(1 for r in items if r["metrics"]["final_usable"]) / max(len(items), 1),
+        "repair_trigger_count": sum(1 for r in items if r["metrics"]["repair_triggered"]),
+        "average_latency": round(sum(r["metrics"]["total_latency"] for r in items) / max(len(items), 1), 2),
     }
 
 
-def write_summary(results: list[dict[str, Any]], summary: dict[str, Any]) -> None:
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    write_json(RESULTS_DIR / "validator-summary.json", {"summary": summary, "runs": results})
-    with (RESULTS_DIR / "validator-summary.csv").open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=[
-                "run_id", "case_id", "initial_completion_rate", "json_parse_ok",
-                "rule_weak_required_failed", "rule_weak_forbidden_hits", "disagreement",
-                "repair_triggered", "repair_success", "new_error_count", "final_usable",
-                "total_latency",
-            ],
-        )
+def audit_reasons(result: dict[str, Any]) -> list[str]:
+    reasons = []
+    taxonomy = result["failure_taxonomy"]
+    if result["metrics"]["disagreement"]:
+        reasons.append("disagreement")
+    if result["repair"]["triggered"] and not result["metrics"]["repair_success"]:
+        reasons.append("repair_failed")
+    if low_json_confidence(result):
+        reasons.append("json_confidence_low")
+    if taxonomy["forbidden_violation"] > 0:
+        reasons.append("forbidden_violation")
+    if not result["metrics"]["final_usable"]:
+        reasons.append("final_unusable")
+    if result["disagreement"].get("natural_vs_json"):
+        reasons.append("natural_json_conflict")
+    rule_fail_json_pass = (
+        result["rule_precheck"]["weak_required_failed"] + result["rule_precheck"]["weak_forbidden_hits"] > 0
+        and not json_needs_repair(result["json_validator"]["result"])
+    )
+    if rule_fail_json_pass:
+        reasons.append("rule_weak_fail_json_pass")
+    return reasons
+
+
+def audit_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    for result in results:
+        reasons = audit_reasons(result)
+        if not reasons:
+            continue
+        rows.append({
+            "run_id": result["run_id"],
+            "case_id": result["case_id"],
+            "sample_id": result["sample_id"],
+            "reason": ";".join(reasons),
+            "rule_status": rule_status(result),
+            "json_status": json_status(result),
+            "natural_status": natural_status(result),
+            "repair_triggered": result["metrics"]["repair_triggered"],
+            "repair_success": result["metrics"]["repair_success"],
+            "final_usable": result["metrics"]["final_usable"],
+        })
+    return rows
+
+
+def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        for result in results:
-            row = {"run_id": result["run_id"], "case_id": result["case_id"], **result["metrics"]}
-            writer.writerow({key: row.get(key) for key in writer.fieldnames})
+        for row in rows:
+            writer.writerow({key: row.get(key) for key in fieldnames})
 
-    case_lines = "\n".join(f"| {r['case_id']} | {r['run_id']} | {r['metrics']['initial_completion_rate']:.2%} | {r['metrics']['json_parse_ok']} | {r['metrics']['rule_weak_required_failed']} | {r['metrics']['rule_weak_forbidden_hits']} | {r['metrics']['disagreement']} | {r['metrics']['repair_triggered']} | {r['metrics']['repair_success']} | {r['metrics']['final_usable']} | {r['metrics']['total_latency']:.2f}s |" for r in results)
-    recommendation = "Productize validator warnings before automatic repair."
-    if summary["validator_json_parse_rate"] < 0.9:
-        recommendation = "Do not rely directly on JSON validator yet; add tolerant parsing or natural-language warnings first."
-    elif summary["final_usable_rate"] >= 0.8 and summary["repair_success_rate"] >= 0.8 and summary["new_error_rate"] <= 0.2:
-        recommendation = "T8.3 product design can start, but automatic repair should still require human confirmation."
-    elif summary["validator_agreement_rate"] < 0.7:
-        recommendation = "Do not productize validator yet; continue prompt, case, and model comparison."
 
-    markdown = f"""# T8.2.2 Required Beat Validator Benchmark Summary
+def percent(value: float) -> str:
+    return f"{value:.2%}"
+
+
+def group_table(groups: dict[str, Any]) -> str:
+    lines = ["| Group | Runs | Agreement | Final usable | Repair triggers | Avg latency |", "| --- | ---: | ---: | ---: | ---: | ---: |"]
+    for key, value in groups.items():
+        lines.append(
+            f"| {key} | {value['runs']} | {percent(value['agreement_rate'])} | "
+            f"{percent(value['final_usable_rate'])} | {value['repair_trigger_count']} | {value['average_latency']:.2f}s |"
+        )
+    return "\n".join(lines)
+
+
+def repair_breakdown_table(summary: dict[str, Any]) -> str:
+    rows = summary["repair_risk_breakdown"]
+    order = ["not_triggered", "safe_repair", "risky_repair", "failed_repair", "harmful_repair"]
+    lines = ["| Type | Count |", "| --- | ---: |"]
+    for key in order:
+        lines.append(f"| {key} | {rows.get(key, 0)} |")
+    return "\n".join(lines)
+
+
+def write_summary(results: list[dict[str, Any]], summary: dict[str, Any], manifest: dict[str, Any], run_dir: Path) -> None:
+    write_json(run_dir / "summary.json", {"manifest": manifest, "summary": summary, "runs": results})
+    summary_rows = []
+    for result in results:
+        row = {
+            "run_id": result["run_id"],
+            "case_id": result["case_id"],
+            "sample_id": result["sample_id"],
+            "difficulty": result["case_meta"]["difficulty"],
+            "beat_type": ";".join(result["case_meta"]["beat_type"]),
+            **result["metrics"],
+            "repair_risk": result["repair_risk"],
+            "failure_taxonomy": json.dumps(result["failure_taxonomy"], ensure_ascii=False, separators=(",", ":")),
+        }
+        summary_rows.append(row)
+    write_csv(
+        run_dir / "summary.csv",
+        summary_rows,
+        [
+            "run_id", "case_id", "sample_id", "difficulty", "beat_type", "initial_completion_rate",
+            "json_parse_ok", "rule_weak_required_failed", "rule_weak_forbidden_hits", "disagreement",
+            "repair_triggered", "repair_success", "new_error_count", "final_usable", "total_latency",
+            "repair_risk", "failure_taxonomy",
+        ],
+    )
+    audit = audit_rows(results)
+    write_csv(
+        run_dir / "audit-candidates.csv",
+        audit,
+        [
+            "run_id", "case_id", "sample_id", "reason", "rule_status", "json_status",
+            "natural_status", "repair_triggered", "repair_success", "final_usable",
+        ],
+    )
+    case_lines = "\n".join(
+        f"| {r['case_id']} | {r['sample_id']} | {percent(r['metrics']['initial_completion_rate'])} | "
+        f"{r['metrics']['json_parse_ok']} | {r['metrics']['disagreement']} | "
+        f"{r['metrics']['repair_triggered']} | {r['metrics']['repair_success']} | "
+        f"{r['metrics']['final_usable']} | {r['repair_risk']} | {r['metrics']['total_latency']:.2f}s |"
+        for r in results
+    )
+    comparison = summary["baseline_comparison"]
+    markdown = f"""# T8.2.5 Expanded Required Beat Validator Benchmark
 
 ## 1. Background
 
-T8.2.1 showed that prompt-only required-beat strategies still miss mandatory scene information. T8.2.2 builds a reusable benchmark for validator + repair + re-validation.
+T8.2.2 created the validator benchmark, T8.2.3 audited disagreement, and T8.2.4 refined schema, prompt, and weak-rule semantics. T8.2.5 hardens the regression framework and expands the run to two samples per six cases.
 
-This task did not modify product code, production prompts, pipeline, frontend/backend business logic, release tags, or API-key configuration.
+## 2. Run Manifest
 
-## 2. Experiment Framework
+- Run ID: `{manifest['run_id']}`
+- Timestamp: `{manifest['timestamp']}`
+- Model: `{manifest['model']}`
+- Samples: `{manifest['samples']}`
+- Cases: `{', '.join(manifest['cases'])}`
+- Commit: `{manifest['commit']}`
+- Case schema version: `{manifest['case_schema_version']}`
+- Validator prompt version: `{manifest['validator_prompt_version']}`
+- Repair prompt version: `{manifest['repair_prompt_version']}`
 
-Each run executes:
-
-1. Generate scene text with numbered beats + self-check.
-2. Rule-based precheck.
-3. Natural-language LLM validator.
-4. Strict JSON LLM validator.
-5. Disagreement check.
-6. Repair if missing / partial / forbidden violation exists.
-7. Rule + JSON re-validation.
-
-## 3. Cases
-
-Six cases are stored as structured JSON under `cases/`:
-
-- case-01-seventh-protocol
-- case-02-ending-hook
-- case-03-injury-limitation
-- case-04-item-handover
-- case-05-location-lock
-- case-06-no-new-entity
-
-## 4. Validators
-
-- Rule-based precheck: weak keyword/paraphrase/terminal-position signal only, not final authority and not an independent repair trigger.
-- Natural validator: Markdown evidence and overall status.
-- JSON validator: structured `satisfied / partial / missing` and forbidden violation output.
-
-## 5. Repair Prompts
-
-The benchmark uses a minimal repair prompt that asks the model to preserve most of the original text and only repair missing beats or violations. Additional prompt variants are documented under `repair-prompts/`.
-
-## 6. Scoring Method
-
-Metrics include JSON-derived initial beat completion, JSON parse rate, weak rule signals, rule/natural/JSON disagreement, repair trigger count, repair success, new error rate, final usable rate, and total latency.
-
-## 7. Result Table
+## 3. Summary Metrics
 
 | Metric | Value |
 | --- | ---: |
 | Runs | {summary['runs']} |
-| Initial beat completion rate | {summary['initial_beat_completion_rate']:.2%} |
-| Validator JSON parse rate | {summary['validator_json_parse_rate']:.2%} |
-| Validator agreement rate | {summary['validator_agreement_rate']:.2%} |
+| Initial beat completion rate | {percent(summary['initial_beat_completion_rate'])} |
+| JSON parse rate | {percent(summary['validator_json_parse_rate'])} |
+| Validator agreement rate | {percent(summary['validator_agreement_rate'])} |
 | Repair trigger count | {summary['repair_trigger_count']} |
-| Repair success rate | {summary['repair_success_rate']:.2%} |
-| New error rate | {summary['new_error_rate']:.2%} |
-| Final usable rate | {summary['final_usable_rate']:.2%} |
+| Repair success rate | {percent(summary['repair_success_rate'])} |
+| New error rate | {percent(summary['new_error_rate'])} |
+| Final usable rate | {percent(summary['final_usable_rate'])} |
 | Average total latency | {summary['average_total_latency']:.2f}s |
 
-## 8. Run Detail
+## 4. Comparison With T8.2.2 Baseline
 
-| Case | Run | Initial completion | JSON parse | Weak required fail | Weak forbidden hit | Disagreement | Repair triggered | Repair success | Final usable | Latency |
-| --- | --- | ---: | --- | ---: | ---: | --- | --- | --- | --- | ---: |
+| Metric | T8.2.2 | T8.2.5 | Delta |
+| --- | ---: | ---: | ---: |
+| Validator agreement | 50.00% | {percent(summary['validator_agreement_rate'])} | {comparison['validator_agreement_delta']:+.2%} |
+| Repair success | 33.33% | {percent(summary['repair_success_rate'])} | {comparison['repair_success_delta']:+.2%} |
+| Final usable | 66.67% | {percent(summary['final_usable_rate'])} | {comparison['final_usable_delta']:+.2%} |
+
+## 5. Difficulty Analysis
+
+{group_table(summary['difficulty_analysis'])}
+
+## 6. Beat Type Analysis
+
+{group_table(summary['beat_type_analysis'])}
+
+## 7. Repair Risk Breakdown
+
+{repair_breakdown_table(summary)}
+
+Decision defaults:
+
+- automatic repair: not allowed
+- repair candidate: allowed with user preview/adopt only
+- validator warning only: recommended
+
+## 8. Run Details
+
+| Case | Sample | Initial completion | JSON parse | Disagreement | Repair triggered | Repair success | Final usable | Repair risk | Latency |
+| --- | --- | ---: | --- | --- | --- | --- | --- | --- | ---: |
 {case_lines}
 
-## 9. Disagreement Analysis
+## 9. Audit Candidates
 
-Disagreement is marked when weak rule ids differ from JSON validator ids, or when natural and JSON repair signals differ.
+Audit candidates: {len(audit)}
 
-Because rule-based checks are intentionally weak, disagreement should be interpreted as an audit target, not automatic validator failure.
+See `audit-candidates.csv` for samples requiring manual review.
 
-## 10. Repair Success Analysis
+## 10. Productization Reading
 
-Repair success is decided by JSON re-validation. Weak rule signals are recorded for audit but do not block final usability.
+JSON validator warnings are the strongest productization candidate. Rule-based precheck remains useful as a weak audit signal, not a blocker. Natural validator explanations may be useful for user-facing explanations but should not be the only machine gate.
 
-## 11. New Error Analysis
-
-New errors are counted when repair increases forbidden violations or expands the text far beyond the original, which indicates broad rewriting rather than minimal repair.
-
-## 12. Productization Recommendation
-
-{recommendation}
-
-## 13. Next Step
-
-Before T8.3, run at least 2 samples per case and manually audit disagreement cases. If validator remains stable but repair is risky, productize warnings before automatic repair.
+Automatic repair is not recommended. Repair candidate generation may be useful if the user previews and adopts it manually.
 """
-    (RESULTS_DIR / "validator-summary.md").write_text(markdown, encoding="utf-8")
+    (run_dir / "summary.md").write_text(markdown, encoding="utf-8")
+
+
+def write_latest_expanded(summary: dict[str, Any], manifest: dict[str, Any], run_dir: Path, audit_count: int) -> None:
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    write_json(RESULTS_DIR / "t8-2-5-expanded-summary.json", {"manifest": manifest, "summary": summary, "run_dir": str(run_dir.relative_to(ROOT))})
+    write_csv(
+        RESULTS_DIR / "t8-2-5-expanded-summary.csv",
+        [{
+            "run_id": manifest["run_id"],
+            "model": summary["model"],
+            "runs": summary["runs"],
+            "json_parse_rate": summary["validator_json_parse_rate"],
+            "validator_agreement_rate": summary["validator_agreement_rate"],
+            "repair_trigger_count": summary["repair_trigger_count"],
+            "repair_success_rate": summary["repair_success_rate"],
+            "new_error_rate": summary["new_error_rate"],
+            "final_usable_rate": summary["final_usable_rate"],
+            "average_total_latency": summary["average_total_latency"],
+            "audit_candidates": audit_count,
+        }],
+        [
+            "run_id", "model", "runs", "json_parse_rate", "validator_agreement_rate",
+            "repair_trigger_count", "repair_success_rate", "new_error_rate",
+            "final_usable_rate", "average_total_latency", "audit_candidates",
+        ],
+    )
+    md = f"""# T8.2.5 Expanded Summary
+
+Run-specific artifacts: `results/runs/{manifest['run_id']}/`
+
+| Metric | Value |
+| --- | ---: |
+| Runs | {summary['runs']} |
+| JSON parse rate | {percent(summary['validator_json_parse_rate'])} |
+| Validator agreement rate | {percent(summary['validator_agreement_rate'])} |
+| Repair trigger count | {summary['repair_trigger_count']} |
+| Repair success rate | {percent(summary['repair_success_rate'])} |
+| New error rate | {percent(summary['new_error_rate'])} |
+| Final usable rate | {percent(summary['final_usable_rate'])} |
+| Average total latency | {summary['average_total_latency']:.2f}s |
+| Audit candidates | {audit_count} |
+
+## Comparison With T8.2.2
+
+- Agreement delta: {summary['baseline_comparison']['validator_agreement_delta']:+.2%}
+- Repair success delta: {summary['baseline_comparison']['repair_success_delta']:+.2%}
+- Final usable delta: {summary['baseline_comparison']['final_usable_delta']:+.2%}
+
+## Productization Summary
+
+Validator warning only is recommended. Repair candidate can be considered with explicit user preview/adopt. Automatic repair is not recommended.
+"""
+    (RESULTS_DIR / "t8-2-5-expanded-summary.md").write_text(md, encoding="utf-8")
 
 
 def load_cases(case_ids: list[str] | None) -> list[dict[str, Any]]:
@@ -821,11 +1135,13 @@ def load_cases(case_ids: list[str] | None) -> list[dict[str, Any]]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run T8.2.2 required beat validator benchmark.")
+    parser = argparse.ArgumentParser(description="Run T8 required beat validator benchmark.")
     parser.add_argument("--dry-run", action="store_true", help="Use deterministic local mock outputs and no network.")
     parser.add_argument("--samples", type=int, default=1, help="Samples per case.")
     parser.add_argument("--cases", nargs="*", help="Optional case ids to run.")
     parser.add_argument("--timeout", type=int, default=180, help="LLM request timeout in seconds.")
+    parser.add_argument("--run-id", help="Optional stable run id.")
+    parser.add_argument("--notes", default="", help="Optional manifest notes.")
     return parser.parse_args()
 
 
@@ -836,20 +1152,40 @@ def main() -> None:
         raise SystemExit("No cases selected.")
     config = None if args.dry_run else read_llm_config(args.timeout)
     model = "dry-run" if args.dry_run else config.model
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
-    SCORED_DIR.mkdir(parents=True, exist_ok=True)
+    run_id = args.run_id or make_run_id()
+    run_dir = RUNS_DIR / run_id
+    raw_dir = run_dir / "raw"
+    scored_dir = run_dir / "scored"
+    run_dir.mkdir(parents=True, exist_ok=False)
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    scored_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "run_id": run_id,
+        "timestamp": utc_timestamp(),
+        "model": model,
+        "samples": args.samples,
+        "cases": [case["id"] for case in cases],
+        "commit": git_commit(),
+        "case_schema_version": CASE_SCHEMA_VERSION,
+        "validator_prompt_version": VALIDATOR_PROMPT_VERSION,
+        "repair_prompt_version": REPAIR_PROMPT_VERSION,
+        "notes": args.notes,
+    }
+    write_json(run_dir / "manifest.json", manifest)
 
     results: list[dict[str, Any]] = []
     for case in cases:
         for sample_index in range(args.samples):
             result = run_case(case, sample_index, config, args.dry_run)
             results.append(result)
-            write_raw(result)
-            write_json(SCORED_DIR / f"{result['run_id']}.json", result)
+            write_raw(result, raw_dir)
+            write_json(scored_dir / f"{result['run_id']}.json", result)
 
     summary = summarize(results, model, args.dry_run)
-    write_summary(results, summary)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    write_summary(results, summary, manifest, run_dir)
+    audit_count = len(audit_rows(results))
+    write_latest_expanded(summary, manifest, run_dir, audit_count)
+    print(json.dumps({"manifest": manifest, "summary": summary, "run_dir": str(run_dir)}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

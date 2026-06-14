@@ -1,0 +1,588 @@
+# case-01-seventh-protocol-s2
+
+Case: `case-01-seventh-protocol`
+Sample: `s2`
+Model: `agnes-2.0-flash`
+
+## Generation
+
+旧港站的地下层空气浑浊，弥漫着陈年铁锈与潮湿霉菌混合的气味。应急灯忽明忽暗，将两人的影子拉扯得扭曲而细长。林澈靠在布满灰尘的控制台旁，呼吸急促，胸口剧烈起伏。他低头看向自己的左手腕，那里嵌着一枚冰冷的银色芯片。它并未完全熄灭，而是以一种极微弱、近乎诡异的频率闪烁着幽蓝的光，仿佛某种活体生物的心跳。
+
+沈知夏迅速检查着广播室的门缝，确认追踪者的脚步声尚未逼近，才转过身来，目光落在林澈的手腕上。“它还在？”她的声音压得很低，带着不易察觉的颤抖。
+
+“没掉。”林澈握紧拳头，试图掩盖那刺骨的寒意，“刚才广播信号过载的时候，它好像……回应了一下。”
+
+沈知夏没有立刻回答，而是从口袋里掏出一个便携式解码器，屏幕上的数据流疯狂滚动。她盯着屏幕，眉头紧锁，指尖在键盘上快速敲击，试图解析刚才那一瞬间芯片释放出的残留信号。“不对劲，”她喃喃自语，“这不是普通的定位信标。它的加密层级太高了，高到超出了常规监控系统的范畴。”
+
+随着解码器的进度条缓慢推进，一行行乱码逐渐重组，最终定格在一组残缺的数字上。那是一串坐标，但末尾的部分被严重的噪点吞噬，只剩下前半段清晰可见。
+
+“是坐标吗？”林澈凑近了些，目光死死锁住那串数字。
+
+“不完整。”沈知夏摇了摇头，眼神中闪过一丝困惑与警惕，“像是被人为截断过，或者是传输过程中受到了强烈的干扰。但这串数字的格式……我从未见过。”她抬起头，直视林澈的眼睛，“林澈，这枚芯片里可能藏着‘第七层协议’的碎片。我只在那些被销毁的档案边缘瞥见过这个词，但它具体意味着什么，没人说得清。”
+
+提到“第七层协议”时，沈知夏的声音不自觉地压低，仿佛害怕惊动某种沉睡的危险。林澈心中一凛，那股寒意顺着脊椎蔓延。他不知道这个协议是什么，但他能感觉到，这枚芯片不仅仅是一个追踪器，更是一个钥匙，一把可能打开潘多拉魔盒的钥匙。
+
+就在这时，头顶上方传来了沉重的金属撞击声。
+
+*咚。*
+
+紧接着是靴底踩在混凝土台阶上的回响，由远及近，每一步都像是踩在两人的心弦上。追踪者来了。他们不仅找到了地面入口，而且已经突破了外围防线，正一步步向下逼近。
+
+“他们进来了。”沈知夏猛地关掉解码器，脸色苍白。
+
+林澈抓起桌上的半瓶矿泉水，狠狠砸向角落的通风管道，制造出声响以混淆视听，随即拉住沈知夏的手臂：“走！去维修通道！”
+
+脚步声在广播室门外戛然而止，门锁处传来了电子锁被强制破解的滋滋声。黑暗深处，红色的激光扫描线透过门缝投射进来，切割着两人惊恐的面容。
+
+## Rule Precheck
+
+```json
+{
+  "rule_is_final": false,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "第七层协议"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "第七层协议"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-2",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "银色芯片"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "银色芯片"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-3",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "坐标"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "残缺坐标",
+        "坐标"
+      ],
+      "acceptable_paraphrases": [
+        "不完整坐标",
+        "断裂坐标",
+        "缺失坐标",
+        "坐标只剩一半"
+      ]
+    },
+    {
+      "id": "beat-4",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "追踪者",
+        "地下层",
+        "地下"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "追踪者",
+        "追兵",
+        "地下层",
+        "地下"
+      ],
+      "acceptable_paraphrases": []
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "第七层协议其实是",
+        "完整真相",
+        "协议的真相"
+      ],
+      "violation_threshold": "reader_reveal_or_full_explanation"
+    }
+  ],
+  "weak_required_passed": 4,
+  "weak_required_failed": 0,
+  "required_total": 4,
+  "weak_forbidden_hits": 0,
+  "length": 1027,
+  "length_abnormal": false,
+  "overall_signal": "weak_pass"
+}
+```
+
+## Natural Validator
+
+## Required Beats
+
+**Beat-1: "第七层协议" (Explicit Keyword)**
+*   **Status:** Satisfied
+*   **Evidence:** “林澈，这枚芯片里可能藏着‘第七层协议’的碎片。我只在那些被销毁的档案边缘瞥见过这个词...”
+*   **Evidence Quality:** Exact
+*   **Reason:** The exact phrase "第七层协议" appears in the dialogue. It is presented as a fragment/clue found in archives, not fully explained.
+*   **Terminal Position Check:** N/A (not required).
+*   **Knowledge Boundary Check:** Satisfied. The text explicitly states "nobody can say clearly what it means," preventing the reader from knowing the full truth.
+
+**Beat-2: Silver Chip (Semantic Condition)**
+*   **Status:** Satisfied
+*   **Evidence:** “他低头看向自己的左手腕，那里嵌着一枚冰冷的银色芯片... 它并未完全熄灭，而是以一种极微弱、近乎诡异的频率闪烁着幽蓝的光...”
+*   **Evidence Quality:** Exact
+*   **Reason:** The silver chip is present on Lin Che's wrist, described visually and functionally (responding to broadcast signals).
+*   **Terminal Position Check:** N/A.
+*   **Knowledge Boundary Check:** N/A.
+
+**Beat-3: Incomplete Coordinates (Semantic Condition)**
+*   **Status:** Satisfied
+*   **Evidence:** “那是一串坐标，但末尾的部分被严重的噪点吞噬，只剩下前半段清晰可见。” / “不完整。”
+*   **Evidence Quality:** Paraphrase (Semantic match)
+*   **Reason:** While the exact keyword "残缺坐标" is not used, the semantic condition requires the coordinates to be incomplete/damaged. The text explicitly describes them as having the end swallowed by noise and being "incomplete." This satisfies the requirement.
+*   **Terminal Position Check:** N/A.
+*   **Knowledge Boundary Check:** N/A.
+
+**Beat-4: Pursuers Enter Underground (Semantic Condition)**
+*   **Status:** Satisfied
+*   **Evidence:** “紧接着是靴底踩在混凝土台阶上的回响，由远及近... 追踪者来了。他们不仅找到了地面入口，而且已经突破了外围防线，正一步步向下逼近。” / “脚步声在广播室门外戛然而止...”
+*   **Evidence Quality:** Exact
+*   **Reason:** The text confirms pursuers are physically entering the underground level (stairs, approaching the door).
+*   **Terminal Position Check:** N/A.
+*   **Knowledge Boundary Check:** N/A.
+
+## Forbidden Violations
+
+**Forbid-1: Reveal Full Truth of Seventh Protocol**
+*   **Violated:** No
+*   **Evidence:** “但它具体意味着什么，没人说得清。” / “林澈心中一凛... 他不知道这个协议是什么...”
+*   **Evidence Quality:** Exact
+*   **Reason:** The text explicitly maintains the mystery. Characters do not know the full meaning, and the narrator does not explain it. The "Pandora's box" metaphor is vague and does not constitute a revelation of facts.
+*   **Knowledge Boundary Check:** Satisfied. Reader knowledge is restricted to the existence of the protocol and its connection to the chip, but not its content or purpose.
+
+## Logic Risks
+
+*   **Character-State:** Lin Che is breathing heavily and feels cold/chills, consistent with recent exertion and stress. Shen Zhixia is trembling slightly but focused. Consistent.
+*   **Location:** Old Port Station underground layer/broadcast room. Consistent with context.
+*   **Item:** Silver chip on wrist, portable decoder used. Consistent.
+*   **Timeline:** Immediate aftermath of broadcast activation -> decoding -> pursuers arrive. Logical flow.
+*   **New-Entity:** Pursuers are identified as external threat entering the space. No unexplained entities introduced.
+*   **Style:** Suspenseful, restrained tone. No sudden heroism or exposition dumps. Consistent with constraints.
+*   **Terminal-Hook:** Ends with immediate physical threat (laser scan, forced lock). Good tension.
+*   **Knowledge-Boundary:** Strictly adhered to. No leaks regarding the protocol's true nature.
+
+## Overall Status
+
+satisfied
+
+## JSON Validator
+
+```json
+{
+  "parse_ok": true,
+  "parse_error": null,
+  "case_id": "case-01-seventh-protocol",
+  "all_required_beats_satisfied": true,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "status": "satisfied",
+      "evidence": "这枚芯片里可能藏着‘第七层协议’的碎片。",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Keyword appears exactly; semantic condition met as it is mentioned as a clue without revealing full truth.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-2",
+      "status": "satisfied",
+      "evidence": "那里嵌着一枚冰冷的银色芯片。",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Keyword appears exactly; chip is connected to Lin Che and the signal.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-3",
+      "status": "satisfied",
+      "evidence": "那是一串坐标，但末尾的部分被严重的噪点吞噬，只剩下前半段清晰可见。",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Coordinates are explicitly described as incomplete/damaged.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-4",
+      "status": "satisfied",
+      "evidence": "他们不仅找到了地面入口，而且已经突破了外围防线，正一步步向下逼近。",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Pursuers are physically entering the underground level, increasing pressure.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "violated": false,
+      "evidence": "",
+      "evidence_quality": "absent",
+      "reasoning_note": "No full truth or origin of the protocol is revealed; only mentioned as a fragment/clue.",
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "logic_risks": [
+    {
+      "type": "style",
+      "description": "The phrase '打开潘多拉魔盒' is a common idiom, slightly less restrained than requested, but acceptable in context.",
+      "severity": "low"
+    }
+  ],
+  "overall_status": "satisfied",
+  "raw": {
+    "case_id": "case-01-seventh-protocol",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "这枚芯片里可能藏着‘第七层协议’的碎片。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Keyword appears exactly; semantic condition met as it is mentioned as a clue without revealing full truth.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "那里嵌着一枚冰冷的银色芯片。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Keyword appears exactly; chip is connected to Lin Che and the signal.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "那是一串坐标，但末尾的部分被严重的噪点吞噬，只剩下前半段清晰可见。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Coordinates are explicitly described as incomplete/damaged.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "evidence": "他们不仅找到了地面入口，而且已经突破了外围防线，正一步步向下逼近。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Pursuers are physically entering the underground level, increasing pressure.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No full truth or origin of the protocol is revealed; only mentioned as a fragment/clue.",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [
+      {
+        "type": "style",
+        "description": "The phrase '打开潘多拉魔盒' is a common idiom, slightly less restrained than requested, but acceptable in context.",
+        "severity": "low"
+      }
+    ],
+    "overall_status": "satisfied"
+  }
+}
+```
+
+## Repair
+
+Not triggered.
+
+## Revalidation
+
+```json
+{
+  "rule_precheck": {
+    "rule_is_final": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "第七层协议"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "第七层协议"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "银色芯片"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "银色芯片"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-3",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "坐标"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "残缺坐标",
+          "坐标"
+        ],
+        "acceptable_paraphrases": [
+          "不完整坐标",
+          "断裂坐标",
+          "缺失坐标",
+          "坐标只剩一半"
+        ]
+      },
+      {
+        "id": "beat-4",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "追踪者",
+          "地下层",
+          "地下"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "追踪者",
+          "追兵",
+          "地下层",
+          "地下"
+        ],
+        "acceptable_paraphrases": []
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "第七层协议其实是",
+          "完整真相",
+          "协议的真相"
+        ],
+        "violation_threshold": "reader_reveal_or_full_explanation"
+      }
+    ],
+    "weak_required_passed": 4,
+    "weak_required_failed": 0,
+    "required_total": 4,
+    "weak_forbidden_hits": 0,
+    "length": 1027,
+    "length_abnormal": false,
+    "overall_signal": "weak_pass"
+  },
+  "json_raw": "{\n  \"case_id\": \"case-01-seventh-protocol\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"这枚芯片里可能藏着‘第七层协议’的碎片。我只在那些被销毁的档案边缘瞥见过这个词，但它具体意味着什么，没人说得清。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Keyword appears explicitly; semantic condition met as it is treated as a mysterious clue without full explanation.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他低头看向自己的左手腕，那里嵌着一枚冰冷的银色芯片。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Keyword appears explicitly; chip is physically present on Lin Che and connected to the signal.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"那是一串坐标，但末尾的部分被严重的噪点吞噬，只剩下前半段清晰可见。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Keyword '坐标' appears; semantic condition met as it is described as incomplete/damaged.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"脚步声在广播室门外戛然而止，门锁处传来了电子锁被强制破解的滋滋声。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Pursuers are confirmed to have entered the underground level and are at the door.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"No full truth or origin of the protocol is revealed; it remains a mystery.\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"The phrase '潘多拉魔盒' is a common metaphor but slightly cliché for a 'suspense/restrained' style, though not a violation.\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+  "json_result": {
+    "parse_ok": true,
+    "parse_error": null,
+    "case_id": "case-01-seventh-protocol",
+    "all_required_beats_satisfied": true,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "这枚芯片里可能藏着‘第七层协议’的碎片。我只在那些被销毁的档案边缘瞥见过这个词，但它具体意味着什么，没人说得清。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Keyword appears explicitly; semantic condition met as it is treated as a mysterious clue without full explanation.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "他低头看向自己的左手腕，那里嵌着一枚冰冷的银色芯片。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Keyword appears explicitly; chip is physically present on Lin Che and connected to the signal.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "那是一串坐标，但末尾的部分被严重的噪点吞噬，只剩下前半段清晰可见。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Keyword '坐标' appears; semantic condition met as it is described as incomplete/damaged.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "evidence": "脚步声在广播室门外戛然而止，门锁处传来了电子锁被强制破解的滋滋声。",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Pursuers are confirmed to have entered the underground level and are at the door.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No full truth or origin of the protocol is revealed; it remains a mystery.",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [
+      {
+        "type": "style",
+        "description": "The phrase '潘多拉魔盒' is a common metaphor but slightly cliché for a 'suspense/restrained' style, though not a violation.",
+        "severity": "low"
+      }
+    ],
+    "overall_status": "satisfied",
+    "raw": {
+      "case_id": "case-01-seventh-protocol",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "这枚芯片里可能藏着‘第七层协议’的碎片。我只在那些被销毁的档案边缘瞥见过这个词，但它具体意味着什么，没人说得清。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Keyword appears explicitly; semantic condition met as it is treated as a mysterious clue without full explanation.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "他低头看向自己的左手腕，那里嵌着一枚冰冷的银色芯片。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Keyword appears explicitly; chip is physically present on Lin Che and connected to the signal.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "那是一串坐标，但末尾的部分被严重的噪点吞噬，只剩下前半段清晰可见。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Keyword '坐标' appears; semantic condition met as it is described as incomplete/damaged.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "evidence": "脚步声在广播室门外戛然而止，门锁处传来了电子锁被强制破解的滋滋声。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Pursuers are confirmed to have entered the underground level and are at the door.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "No full truth or origin of the protocol is revealed; it remains a mystery.",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "logic_risks": [
+        {
+          "type": "style",
+          "description": "The phrase '潘多拉魔盒' is a common metaphor but slightly cliché for a 'suspense/restrained' style, though not a violation.",
+          "severity": "low"
+        }
+      ],
+      "overall_status": "satisfied"
+    }
+  },
+  "latency": 24.01,
+  "error": null
+}
+```
+
+## Failure Taxonomy
+
+```json
+{
+  "missing_required_beat": 0,
+  "partial_required_beat": 0,
+  "forbidden_violation": 0,
+  "knowledge_boundary_violation": 0,
+  "terminal_position_failure": 0,
+  "repair_failed": false,
+  "repair_introduced_new_error": false,
+  "validator_disagreement": false
+}
+```

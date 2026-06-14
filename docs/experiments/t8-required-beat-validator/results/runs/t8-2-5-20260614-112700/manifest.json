@@ -1,0 +1,19 @@
+{
+  "run_id": "t8-2-5-20260614-112700",
+  "timestamp": "2026-06-14T11:27:00Z",
+  "model": "agnes-2.0-flash",
+  "samples": 2,
+  "cases": [
+    "case-01-seventh-protocol",
+    "case-02-ending-hook",
+    "case-03-injury-limitation",
+    "case-04-item-handover",
+    "case-05-location-lock",
+    "case-06-no-new-entity"
+  ],
+  "commit": "487c361c35ebc8848e45bae80f13fb9afd8e5f12",
+  "case_schema_version": "t8-required-beat-case-v2",
+  "validator_prompt_version": "t8-validator-semantic-v2",
+  "repair_prompt_version": "t8-repair-minimal-v1",
+  "notes": "T8.2.5 expanded 6-case 2-sample regression"
+}

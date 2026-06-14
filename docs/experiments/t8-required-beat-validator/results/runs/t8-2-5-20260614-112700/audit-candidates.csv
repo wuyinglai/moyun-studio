@@ -1,0 +1,5 @@
+run_id,case_id,sample_id,reason,rule_status,json_status,natural_status,repair_triggered,repair_success,final_usable
+case-02-ending-hook-s1,case-02-ending-hook,s1,disagreement;rule_weak_fail_json_pass,weak_fail,satisfied,satisfied,False,False,True
+case-02-ending-hook-s2,case-02-ending-hook,s2,disagreement;rule_weak_fail_json_pass,weak_fail,satisfied,satisfied,False,False,True
+case-04-item-handover-s1,case-04-item-handover,s1,disagreement;natural_json_conflict,weak_fail,needs_repair,satisfied,True,True,True
+case-04-item-handover-s2,case-04-item-handover,s2,disagreement;natural_json_conflict,weak_pass,satisfied,needs_repair,False,False,True

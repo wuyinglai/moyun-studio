@@ -1,6 +1,12 @@
 {
   "id": "case-01-seventh-protocol",
   "title": "第七层协议",
+  "difficulty": "medium",
+  "beat_type": [
+    "explicit_keyword",
+    "semantic_condition",
+    "knowledge_boundary"
+  ],
   "context": "旧港站广播室里，林澈和沈知夏暂时摆脱追踪者。林澈身上的银色芯片刚刚被广播设备短暂激活。",
   "facts": [
     "林澈和沈知夏仍在旧港站地下层。",

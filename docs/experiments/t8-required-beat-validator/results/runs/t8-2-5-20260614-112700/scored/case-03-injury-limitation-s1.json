@@ -1,0 +1,550 @@
+{
+  "run_id": "case-03-injury-limitation-s1",
+  "case_id": "case-03-injury-limitation",
+  "sample_id": "s1",
+  "model": "agnes-2.0-flash",
+  "case_meta": {
+    "difficulty": "hard",
+    "beat_type": [
+      "semantic_condition",
+      "state_constraint"
+    ]
+  },
+  "generation": {
+    "text": "废弃售票室的空气浑浊而凝滞，弥漫着铁锈与霉变纸张混合的刺鼻气味。沈知夏背靠着斑驳的瓷砖墙，脸色苍白如纸。她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透，布料黏连在皮肉上，每一次细微的呼吸牵动伤口，都带来一阵钻心的剧痛。她咬紧牙关，额角渗出细密的冷汗，强忍着不让自己发出呻吟。\n\n门外传来沉重的脚步声，皮靴踩在积灰的地面上，发出令人牙酸的摩擦声。那是追踪者的节奏，缓慢、谨慎，带着猫捉老鼠般的戏谑。\n\n“别动。”林澈压低声音，目光如鹰隼般扫视着昏暗的空间。他迅速检查了沈知夏的伤口，眉头紧锁，但动作极轻，避免造成二次伤害。“左臂肌腱受损，不能用力。”他断言道，随即从腰间抽出一把战术匕首，反握在右手中，另一只手迅速从背包里掏出几枚闪光弹和一枚烟雾弹，检查引信。\n\n沈知夏深吸一口气，强迫自己冷静下来。她不能战斗，甚至无法站立太久，但她的大脑必须保持清醒。她侧耳倾听，捕捉着门外那杂乱脚步声中的细微差异。\n\n“左边……有回声差异。”沈知夏的声音微弱却清晰，她指了指售票室左侧那扇破损的通风窗，“他们分成了两组。一组在正门试探，另一组……绕到了通风管道上方。脚步声很轻，但金属摩擦声掩盖不住。”\n\n林澈眼神一凛，迅速转向通风口方向。果然，头顶传来极其轻微的金属刮擦声，那是战术靴底橡胶与铁网接触的声音。\n\n“只有两秒。”林澈低语，他在计算距离和角度，“烟雾弹能制造混乱，但无法阻止他们从上方突入。我需要你帮我争取时间。”\n\n“怎么做？”沈知夏问，尽管她的左臂已经麻木，但她的眼神依然坚定。\n\n“拉下那个红色的紧急断电闸。”林澈指了指墙角一个布满灰尘的控制箱，“那里连接着旧港站备用照明系统。断电后，应急灯会亮起三秒，然后彻底黑暗。在那三秒里，视觉会被强光致盲，随后陷入绝对黑暗。这是唯一的盲区。”\n\n沈知夏点了点头。她不能去拉闸，因为那需要双手发力，且身体需要前倾，这会撕裂她的伤口。她看向林澈，用眼神示意。\n\n林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出。在应急灯亮起的瞬间，刺眼的白光充斥整个空间，门外和上方的敌人必然会出现短暂的视觉停滞。林澈借着这转瞬即逝的光亮，精准地投掷出烟雾弹，同时一脚踹开侧面的维修通道门，利用烟雾的掩护，迅速潜入地下更深的维修夹层。\n\n沈知夏独自留在售票室。她靠在墙上，听着外面传来的惊呼与混乱，以及林澈在黑暗中移动的脚步声。她紧紧按住左臂的伤口，指节因用力而发白，但她没有退缩。她知道，林澈是她的刀，而她，是这把刀唯一的眼睛。在这死寂与喧嚣交织的黑暗中，她屏住呼吸，等待着林澈带回下一个指令。",
+    "latency": 5.33,
+    "error": null,
+    "prompt_variant": "numbered-beats+self-check+semantic-boundary"
+  },
+  "rule_precheck": {
+    "rule_is_final": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "沈知夏",
+          "左臂"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "沈知夏",
+          "左臂",
+          "受伤"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "不能",
+          "无法",
+          "战斗"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "不能",
+          "无法",
+          "没法",
+          "高强度",
+          "战斗"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-3",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "paraphrase_hit": true,
+        "keyword_hits": [],
+        "paraphrase_hits": [
+          "指了指"
+        ],
+        "terminal_position_ok": null,
+        "keywords": [
+          "观察",
+          "判断",
+          "提醒",
+          "看出"
+        ],
+        "acceptable_paraphrases": [
+          "说明",
+          "分析",
+          "听出",
+          "看出",
+          "指了指",
+          "低声提醒",
+          "判断",
+          "意识到",
+          "从声音里分辨"
+        ]
+      },
+      {
+        "id": "beat-4",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "林澈"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "林澈"
+        ],
+        "acceptable_paraphrases": []
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "沈知夏攀",
+          "沈知夏爬",
+          "高速战斗",
+          "单人击退",
+          "左手用力",
+          "双手持"
+        ],
+        "violation_threshold": "clear_physical_action_contradicting_injury"
+      }
+    ],
+    "weak_required_passed": 4,
+    "weak_required_failed": 0,
+    "required_total": 4,
+    "weak_forbidden_hits": 0,
+    "length": 1062,
+    "length_abnormal": false,
+    "overall_signal": "weak_pass"
+  },
+  "natural_validator": {
+    "text": "## Required Beats\n\n**Beat-1: 写出沈知夏左臂受伤**\n- **Status**: Satisfied\n- **Evidence**: \"她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透... 左臂肌腱受损\"\n- **Evidence Quality**: Exact\n- **Reason**: 文本明确描述了沈知夏左臂受伤的状态（无力、血迹、肌腱受损），符合事实要求。\n\n**Beat-2: 写出她不能高强度战斗**\n- **Status**: Satisfied\n- **Evidence**: \"她不能战斗，甚至无法站立太久... 她不能去拉闸，因为那需要双手发力... 这会撕裂她的伤口\"\n- **Evidence Quality**: Exact\n- **Reason**: 文本通过角色内心独白和动作限制（无法站立、无法双手发力）明确表达了其无法进行高强度战斗或剧烈动作的状态。\n\n**Beat-3: 她通过观察、判断或提醒帮助林澈**\n- **Status**: Satisfied\n- **Evidence**: \"她侧耳倾听... '左边……有回声差异。'... '他们分成了两组... 另一组……绕到了通风管道上方'\"\n- **Evidence Quality**: Exact\n- **Reason**: 沈知夏通过听觉观察和逻辑判断，指出了敌人的具体位置和分组情况，为林澈提供了关键情报，符合“通过观察、判断帮助”的要求。\n\n**Beat-4: 林澈承担主要行动**\n- **Status**: Satisfied\n- **Evidence**: \"林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出... 精准地投掷出烟雾弹... 迅速潜入地下更深的维修夹层\"\n- **Evidence Quality**: Exact\n- **Reason**: 林澈执行了投掷烟雾弹、踹门、潜入等所有高风险物理行动，沈知夏留守后方，符合林澈承担主要行动的要求。\n\n**Forbidden-1: 沈知夏不得徒手攀爬、高速战斗、单人击退敌人**\n- **Violated**: No\n- **Evidence**: 沈知夏全程靠在墙上，仅通过言语提供情报。文本明确写道“她不能去拉闸... 看向林澈，用眼神示意”，随后由林澈执行行动。\n- **Evidence Quality**: Exact\n- **Reason**: 沈知夏没有任何攀爬、高速移动或单独对抗敌人的行为。她的行动仅限于观察和言语提醒，完全符合伤势限制。\n\n## Logic Risks\n\n1.  **Character-State**: 沈知夏的伤势描述（肌腱受损、剧痛、冷汗）与她的行为（冷静分析、清晰指挥）保持一致，没有出现“带伤超人”的逻辑漏洞。\n2.  **Location**: 场景始终在“废弃售票室”及其直接关联的通风口/维修通道，空间逻辑清晰，没有突兀的场景跳跃。\n3.  **Item**: 林澈使用的装备（战术匕首、闪光弹、烟雾弹、断电闸）均在上下文中有合理铺垫或符合特工/战术人员设定，未出现凭空出现的“机械降神”道具。\n4.  **Timeline**: 动作序列（听声辨位 -> 确认敌人位置 -> 制定断电计划 -> 执行突袭）时间线紧凑且连贯，符合“紧张克制”的风格要求。\n5.  **New-Entity**: 未引入新的未解释角色或超自然元素。\n6.  **Style**: 文风紧张、克制，侧重于感官细节（气味、声音、痛感）和心理博弈，符合预期风格。\n7.  **Terminal-Hook**: 结尾停留在沈知夏等待指令的状态，为后续情节留出接口，未强行终结故事。\n8.  **Knowledge-Boundary**: 沈知夏仅知道她听到的和看到的，林澈仅执行她提供的信息，双方信息交换逻辑自洽，没有角色全知或信息泄露的bug。\n\n## Overall Status\n\nsatisfied",
+    "latency": 77.78,
+    "error": null,
+    "needs_repair": false
+  },
+  "json_validator": {
+    "raw": "{\n  \"case_id\": \"case-03-injury-limitation\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"明确描述了左臂受伤及状态。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"不能用力\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"林澈明确诊断并指出无法用力，且后文沈知夏因需双手发力而放弃行动，符合限制。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她侧耳倾听... '左边……有回声差异。'... '他们分成了两组。'\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"通过听觉观察和判断提供关键情报，符合非体力辅助要求。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出... 投掷出烟雾弹... 迅速潜入\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"林澈执行了主要的战术行动和物理移动。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"沈知夏未进行攀爬、高速战斗或单人击退，仅负责观察和留守。\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"style\",\n      \"description\": \"结尾处'她，是这把刀唯一的眼睛'略显文艺，但符合紧张克制下的心理描写，未破坏整体基调。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+    "latency": 4.61,
+    "error": null,
+    "result": {
+      "parse_ok": true,
+      "parse_error": null,
+      "case_id": "case-03-injury-limitation",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "明确描述了左臂受伤及状态。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "不能用力",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "林澈明确诊断并指出无法用力，且后文沈知夏因需双手发力而放弃行动，符合限制。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "她侧耳倾听... '左边……有回声差异。'... '他们分成了两组。'",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "通过听觉观察和判断提供关键情报，符合非体力辅助要求。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "evidence": "林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出... 投掷出烟雾弹... 迅速潜入",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "林澈执行了主要的战术行动和物理移动。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "沈知夏未进行攀爬、高速战斗或单人击退，仅负责观察和留守。",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [],
+      "logic_risks": [
+        {
+          "type": "style",
+          "description": "结尾处'她，是这把刀唯一的眼睛'略显文艺，但符合紧张克制下的心理描写，未破坏整体基调。",
+          "severity": "low"
+        }
+      ],
+      "overall_status": "satisfied",
+      "raw": {
+        "case_id": "case-03-injury-limitation",
+        "all_required_beats_satisfied": true,
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "明确描述了左臂受伤及状态。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "evidence": "不能用力",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "林澈明确诊断并指出无法用力，且后文沈知夏因需双手发力而放弃行动，符合限制。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "evidence": "她侧耳倾听... '左边……有回声差异。'... '他们分成了两组。'",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "通过听觉观察和判断提供关键情报，符合非体力辅助要求。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-4",
+            "status": "satisfied",
+            "evidence": "林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出... 投掷出烟雾弹... 迅速潜入",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "林澈执行了主要的战术行动和物理移动。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "evidence": "",
+            "evidence_quality": "absent",
+            "reasoning_note": "沈知夏未进行攀爬、高速战斗或单人击退，仅负责观察和留守。",
+            "knowledge_boundary_ok": true
+          }
+        ],
+        "logic_risks": [
+          {
+            "type": "style",
+            "description": "结尾处'她，是这把刀唯一的眼睛'略显文艺，但符合紧张克制下的心理描写，未破坏整体基调。",
+            "severity": "low"
+          }
+        ],
+        "overall_status": "satisfied"
+      }
+    }
+  },
+  "disagreement": {
+    "has_disagreement": false,
+    "between": [],
+    "likely_reason": "none",
+    "rule_vs_json": false,
+    "rule_vs_natural": false,
+    "natural_vs_json": false
+  },
+  "repair": {
+    "triggered": false,
+    "text": "",
+    "latency": 0.0,
+    "error": null
+  },
+  "revalidation": {
+    "rule_precheck": {
+      "rule_is_final": false,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "rule_status": "weak_pass",
+          "keyword_hit": true,
+          "paraphrase_hit": false,
+          "keyword_hits": [
+            "沈知夏",
+            "左臂"
+          ],
+          "paraphrase_hits": [],
+          "terminal_position_ok": null,
+          "keywords": [
+            "沈知夏",
+            "左臂",
+            "受伤"
+          ],
+          "acceptable_paraphrases": []
+        },
+        {
+          "id": "beat-2",
+          "rule_status": "weak_pass",
+          "keyword_hit": true,
+          "paraphrase_hit": false,
+          "keyword_hits": [
+            "不能",
+            "无法",
+            "战斗"
+          ],
+          "paraphrase_hits": [],
+          "terminal_position_ok": null,
+          "keywords": [
+            "不能",
+            "无法",
+            "没法",
+            "高强度",
+            "战斗"
+          ],
+          "acceptable_paraphrases": []
+        },
+        {
+          "id": "beat-3",
+          "rule_status": "weak_pass",
+          "keyword_hit": false,
+          "paraphrase_hit": true,
+          "keyword_hits": [],
+          "paraphrase_hits": [
+            "指了指"
+          ],
+          "terminal_position_ok": null,
+          "keywords": [
+            "观察",
+            "判断",
+            "提醒",
+            "看出"
+          ],
+          "acceptable_paraphrases": [
+            "说明",
+            "分析",
+            "听出",
+            "看出",
+            "指了指",
+            "低声提醒",
+            "判断",
+            "意识到",
+            "从声音里分辨"
+          ]
+        },
+        {
+          "id": "beat-4",
+          "rule_status": "weak_pass",
+          "keyword_hit": true,
+          "paraphrase_hit": false,
+          "keyword_hits": [
+            "林澈"
+          ],
+          "paraphrase_hits": [],
+          "terminal_position_ok": null,
+          "keywords": [
+            "林澈"
+          ],
+          "acceptable_paraphrases": []
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "rule_status": "weak_pass",
+          "keyword_hit": false,
+          "keyword_hits": [],
+          "keywords": [
+            "沈知夏攀",
+            "沈知夏爬",
+            "高速战斗",
+            "单人击退",
+            "左手用力",
+            "双手持"
+          ],
+          "violation_threshold": "clear_physical_action_contradicting_injury"
+        }
+      ],
+      "weak_required_passed": 4,
+      "weak_required_failed": 0,
+      "required_total": 4,
+      "weak_forbidden_hits": 0,
+      "length": 1062,
+      "length_abnormal": false,
+      "overall_signal": "weak_pass"
+    },
+    "json_raw": "{\n  \"case_id\": \"case-03-injury-limitation\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"明确描述了左臂受伤及状态。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"不能用力\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"林澈明确诊断并指出不能用力，且后文沈知夏因无法双手发力而放弃行动，符合语义条件。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"她侧耳倾听... '左边……有回声差异。'... '他们分成了两组。'\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"通过听觉观察和判断，提供了关键战术信息，符合非体力辅助条件。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出... 投掷出烟雾弹... 迅速潜入\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"林澈执行了主要的物理行动和战术决策执行。\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"沈知夏未进行攀爬、高速战斗或单人击退，仅负责观察和留守。\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"timeline\",\n      \"description\": \"林澈在断电瞬间投掷烟雾弹并踹门潜入，动作连贯性极高，但在绝对黑暗和强光致盲的极端条件下，精准投掷和踹门的物理可行性略存疑，不过符合小说夸张逻辑。\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+    "json_result": {
+      "parse_ok": true,
+      "parse_error": null,
+      "case_id": "case-03-injury-limitation",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "明确描述了左臂受伤及状态。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "不能用力",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "林澈明确诊断并指出不能用力，且后文沈知夏因无法双手发力而放弃行动，符合语义条件。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "她侧耳倾听... '左边……有回声差异。'... '他们分成了两组。'",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "通过听觉观察和判断，提供了关键战术信息，符合非体力辅助条件。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "evidence": "林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出... 投掷出烟雾弹... 迅速潜入",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "林澈执行了主要的物理行动和战术决策执行。",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "沈知夏未进行攀爬、高速战斗或单人击退，仅负责观察和留守。",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [],
+      "logic_risks": [
+        {
+          "type": "timeline",
+          "description": "林澈在断电瞬间投掷烟雾弹并踹门潜入，动作连贯性极高，但在绝对黑暗和强光致盲的极端条件下，精准投掷和踹门的物理可行性略存疑，不过符合小说夸张逻辑。",
+          "severity": "low"
+        }
+      ],
+      "overall_status": "satisfied",
+      "raw": {
+        "case_id": "case-03-injury-limitation",
+        "all_required_beats_satisfied": true,
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "evidence": "她的左臂无力地垂在身侧，袖口已被暗红色的血迹浸透",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "明确描述了左臂受伤及状态。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "evidence": "不能用力",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "林澈明确诊断并指出不能用力，且后文沈知夏因无法双手发力而放弃行动，符合语义条件。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "evidence": "她侧耳倾听... '左边……有回声差异。'... '他们分成了两组。'",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "通过听觉观察和判断，提供了关键战术信息，符合非体力辅助条件。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-4",
+            "status": "satisfied",
+            "evidence": "林澈心领神会。他没有丝毫犹豫，身形如猎豹般窜出... 投掷出烟雾弹... 迅速潜入",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "林澈执行了主要的物理行动和战术决策执行。",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "evidence": "",
+            "evidence_quality": "absent",
+            "reasoning_note": "沈知夏未进行攀爬、高速战斗或单人击退，仅负责观察和留守。",
+            "knowledge_boundary_ok": true
+          }
+        ],
+        "logic_risks": [
+          {
+            "type": "timeline",
+            "description": "林澈在断电瞬间投掷烟雾弹并踹门潜入，动作连贯性极高，但在绝对黑暗和强光致盲的极端条件下，精准投掷和踹门的物理可行性略存疑，不过符合小说夸张逻辑。",
+            "severity": "low"
+          }
+        ],
+        "overall_status": "satisfied"
+      }
+    },
+    "latency": 15.85,
+    "error": null
+  },
+  "metrics": {
+    "initial_required_satisfied": 4,
+    "initial_required_total": 5,
+    "initial_completion_rate": 0.8,
+    "rule_weak_required_failed": 0,
+    "rule_weak_forbidden_hits": 0,
+    "json_parse_ok": true,
+    "disagreement": false,
+    "repair_triggered": false,
+    "repair_success": false,
+    "new_error_count": 0,
+    "final_usable": true,
+    "total_latency": 103.56
+  },
+  "failure_taxonomy": {
+    "missing_required_beat": 0,
+    "partial_required_beat": 0,
+    "forbidden_violation": 0,
+    "knowledge_boundary_violation": 0,
+    "terminal_position_failure": 0,
+    "repair_failed": false,
+    "repair_introduced_new_error": false,
+    "validator_disagreement": false
+  },
+  "repair_risk": "not_triggered"
+}

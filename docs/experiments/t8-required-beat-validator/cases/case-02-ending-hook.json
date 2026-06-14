@@ -1,6 +1,12 @@
 {
   "id": "case-02-ending-hook",
   "title": "结尾钩子",
+  "difficulty": "hard",
+  "beat_type": [
+    "semantic_condition",
+    "knowledge_boundary",
+    "terminal_hook"
+  ],
   "context": "林澈和沈知夏躲进旧港站档案室，门外追踪者的声音渐渐远去。走廊深处忽然安静下来。",
   "facts": [
     "林澈和沈知夏仍在旧港站地下层。",

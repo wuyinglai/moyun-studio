@@ -1,0 +1,2 @@
+run_id,model,runs,json_parse_rate,validator_agreement_rate,repair_trigger_count,repair_success_rate,new_error_rate,final_usable_rate,average_total_latency,audit_candidates
+t8-2-5-20260614-112700,agnes-2.0-flash,12,1.0,0.6666666666666666,1,1.0,0.0,1.0,67.94,4

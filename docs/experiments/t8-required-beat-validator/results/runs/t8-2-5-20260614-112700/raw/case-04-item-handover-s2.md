@@ -1,0 +1,653 @@
+# case-04-item-handover-s2
+
+Case: `case-04-item-handover`
+Sample: `s2`
+Model: `agnes-2.0-flash`
+
+## Generation
+
+旧港站检修通道的空气里弥漫着铁锈与陈年机油混合的腥气，头顶昏黄的应急灯忽明忽暗，将两人的影子拉扯得扭曲而细长。沈知夏背靠着冰冷潮湿的混凝土墙壁，手指微微颤抖，那支透明药剂在她掌心折射出冷冽的光。
+
+林澈屏住呼吸，目光死死锁住她手中的物体。药剂瓶身修长，内部液体清澈如水，但在瓶身侧面，一行极小的黑色标签在阴影中若隐若现。他只能看清标签上印着的几个模糊字符，像是某种化学式缩写，又像是代号，但具体的含义如同被迷雾笼罩，他无法解读，更无法知晓这瓶液体究竟是用来救命，还是另一种形式的催命符。
+
+“别动。”沈知夏的声音低哑，带着一种近乎决绝的冷静。她并没有将药剂收起，而是紧紧攥在手中，指节因为用力而泛白。这种姿态本身就是一种无声的警告——药剂仍在她手中，且她绝不会轻易交出控制权。
+
+通道深处传来了沉重的脚步声，伴随着金属靴底敲击地面的回响，敌人正在逼近。那声音越来越近，每一步都像是踩在林澈紧绷的神经上。沈知夏的眼神没有看向来路，而是死死盯着手中的药剂，仿佛在通过某种无声的交流与它对话。她没有注射，也没有丢弃，只是将其作为最后的筹码，或是某种未完成的仪式。
+
+林澈感到喉咙发干，他想问，但喉咙里像是塞满了棉花。他不知道这药剂的完整用途，标签上的信息不足以拼凑出全貌。他只知道，一旦敌人冲进来，这支药剂就是唯一的变数，而沈知夏显然打算将它留到最后时刻。
+
+脚步声在拐角处戛然而止。
+
+沈知夏深吸一口气，将药剂迅速塞入贴身口袋，动作快得几乎看不清残影。然而，就在她完成这个动作的瞬间，她的脸色骤然苍白，额头上渗出一层细密的冷汗。她捂住胸口，身体微微佝偻，似乎有一股无形的力量正在从内部撕裂她的理智。
+
+那不是解脱，而是另一种痛苦的开始。
+
+林澈看着她痛苦的表情，心中涌起一股不祥的预感。药剂还在她身上，敌人尚未现身，但某种更深层的危机已经悄然降临。他不知道这副作用是什么，也不知道它会在何时爆发，只能眼睁睁看着沈知夏在沉默中承受着未知的折磨，而通道的黑暗深处，那双窥视的眼睛正缓缓睁开。
+
+## Rule Precheck
+
+```json
+{
+  "rule_is_final": false,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "沈知夏",
+        "药剂",
+        "手中",
+        "掌心"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "沈知夏",
+        "药剂",
+        "手中",
+        "掌心",
+        "握着",
+        "攥着"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-2",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "林澈",
+        "标签"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "林澈",
+        "标签"
+      ],
+      "acceptable_paraphrases": [
+        "只看见标签",
+        "只辨认出标签",
+        "瞥见标签",
+        "标签上的字"
+      ]
+    },
+    {
+      "id": "beat-3",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "药剂"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "药剂"
+      ],
+      "acceptable_paraphrases": []
+    },
+    {
+      "id": "beat-4",
+      "rule_status": "weak_pass",
+      "keyword_hit": true,
+      "paraphrase_hit": false,
+      "keyword_hits": [
+        "副作用"
+      ],
+      "paraphrase_hits": [],
+      "terminal_position_ok": null,
+      "keywords": [
+        "副作用",
+        "发抖",
+        "眩晕",
+        "刺痛",
+        "发冷"
+      ],
+      "acceptable_paraphrases": []
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "敌人夺走药剂",
+        "追踪者夺走药剂",
+        "敌人拿走药剂"
+      ],
+      "violation_threshold": "explicit_enemy_control"
+    },
+    {
+      "id": "forbid-2",
+      "rule_status": "weak_pass",
+      "keyword_hit": false,
+      "keyword_hits": [],
+      "keywords": [
+        "林澈已经知道药剂用途",
+        "完全知道药剂用途",
+        "药剂真正作用是"
+      ],
+      "violation_threshold": "reader_reveal_or_character_full_knowledge"
+    }
+  ],
+  "weak_required_passed": 4,
+  "weak_required_failed": 0,
+  "required_total": 4,
+  "weak_forbidden_hits": 0,
+  "length": 841,
+  "length_abnormal": false,
+  "overall_signal": "weak_pass"
+}
+```
+
+## Natural Validator
+
+## Required Beats
+
+**Beat-1: 药剂仍在沈知夏手中**
+*   **Status**: **satisfied**
+*   **Evidence**: “那支透明药剂在她掌心折射出冷冽的光”、“紧紧攥在手中”、“将药剂迅速塞入贴身口袋”、“药剂还在她身上”。
+*   **Evidence Quality**: **exact**
+*   **Reason**: 文本明确描述了沈知夏从掌心攥持到塞入贴身口袋的动作，物理控制权始终未脱离沈知夏。
+*   **Terminal-position check**: N/A (false).
+
+**Beat-2: 林澈只能看到药剂标签**
+*   **Status**: **satisfied**
+*   **Evidence**: “他只能看清标签上印着的几个模糊字符……具体的含义如同被迷雾笼罩，他无法解读”。
+*   **Evidence Quality**: **exact**
+*   **Reason**: 文本明确限制了林澈的认知范围，仅能看见模糊字符，无法解读完整用途，符合“只能看到标签”且“不知道完整用途”的要求。
+*   **Knowledge-boundary check**: 林澈知道标签存在，但不知道用途；读者也仅通过林澈视角得知标签模糊，符合边界设定。
+
+**Beat-3: 药剂不能被敌人拿走**
+*   **Status**: **satisfied**
+*   **Evidence**: “沈知夏迅速塞入贴身口袋”、“药剂还在她身上，敌人尚未现身”。
+*   **Evidence Quality**: **exact**
+*   **Reason**: 敌人尚未进入接触范围，药剂已被沈知夏贴身隐藏，敌人未获得控制权。
+*   **Terminal-position check**: N/A (false).
+
+**Beat-4: 结尾暗示药剂有副作用**
+*   **Status**: **satisfied**
+*   **Evidence**: “脸色骤然苍白，额头上渗出一层细密的冷汗。她捂住胸口……似乎有一股无形的力量正在从内部撕裂她的理智”、“某种更深层的危机已经悄然降临……承受着未知的折磨”。
+*   **Evidence Quality**: **paraphrase**
+*   **Reason**: 虽然未直接使用“副作用”一词，但通过沈知夏注射/接触药剂后的剧烈生理反应（苍白、冷汗、痛苦、理智撕裂），明确暗示了药剂带来的负面后果/副作用。符合“暗示”而非“解释机制”的要求。
+*   **Knowledge-boundary check**: 读者仅看到症状，未得知具体机制，符合边界。
+
+## Forbidden Violations
+
+**Forbid-1: 药剂不得突然被敌人夺走**
+*   **Violated**: **no**
+*   **Evidence**: 文本中敌人仅“脚步声在拐角处戛然而止”，并未出现夺取动作。
+*   **Evidence Quality**: **exact**
+*   **Reason**: 敌人未接触药剂，未获得控制权。
+
+**Forbid-2: 林澈不得已经完全知道药剂用途**
+*   **Violated**: **no**
+*   **Evidence**: “他不知道这药剂的完整用途，标签上的信息不足以拼凑出全貌”、“他无法解读，更无法知晓这瓶液体究竟是用来救命，还是另一种形式的催命符”。
+*   **Evidence Quality**: **exact**
+*   **Reason**: 文本明确声明林澈不知道完整用途，且读者也未获知完整用途。
+
+## Logic Risks
+
+*   **Character-state**: 沈知夏在“塞入贴身口袋”前是否有注射动作？文本前文说“她没有注射”，后文突然产生剧烈副作用。若未注射，副作用来源不明（是接触皮肤？还是心理作用？）。若隐含了“接触即生效”或“刚才的‘攥着’导致了微量渗透/心理暗示”，则逻辑需更严密。目前“没有注射”与“突然发病”之间存在微小的逻辑断层，建议明确副作用触发机制（如：紧握导致皮肤吸收，或心理暗示引发的躯体化反应）。
+*   **Location**: 旧港站检修通道，环境描写一致。
+*   **Item**: 药剂状态从“掌心”到“贴身口袋”，逻辑连贯。
+*   **Timeline**: 敌人逼近 -> 沈知夏藏药 -> 沈知夏发病 -> 敌人未现身。时间线紧凑，符合悬疑节奏。
+*   **New-entity**: 敌人作为背景威胁存在，未实体化，符合“保留道具压力”的风格。
+*   **Style**: 悬疑克制，未解决危机，保留了压力。
+*   **Terminal-hook**: 结尾以沈知夏的痛苦和敌人窥视的眼睛结束，悬念保留良好。
+*   **Knowledge-boundary**: 严格遵循了信息封锁，未泄露药剂真相。
+
+## Overall Status
+
+**needs_repair**
+
+**Reason**: 虽然所有Required Beats和Forbidden Violations均通过，但存在一个细微的逻辑风险：文本明确写道“她没有注射”，但随后沈知夏产生了剧烈的生理副作用。在科幻/悬疑语境下，若药剂非注射类，需明确其生效方式（如：皮肤接触、吸入、或心理暗示）。目前“没有注射”与“剧烈副作用”之间的因果链条略显断裂，建议微调以明确副作用触发机制（例如：“指尖的颤抖让药剂瓶身渗出微量液体，渗入皮肤”或“仅仅是握紧它，那股寒意便顺着血脉蔓延”），以消除逻辑上的不确定性。
+
+## JSON Validator
+
+```json
+{
+  "parse_ok": true,
+  "parse_error": null,
+  "case_id": "case-04-item-handover",
+  "all_required_beats_satisfied": false,
+  "required_beats": [
+    {
+      "id": "beat-1",
+      "status": "satisfied",
+      "evidence": "那支透明药剂在她掌心折射出冷冽的光",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Text explicitly states the medicine is in Shen Zhixia's palm.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-2",
+      "status": "satisfied",
+      "evidence": "他只能看清标签上印着的几个模糊字符...他无法解读",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Lin Che only sees the label and cannot interpret its full meaning.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-3",
+      "status": "satisfied",
+      "evidence": "药剂仍在她身上，敌人尚未现身",
+      "confidence": 1.0,
+      "evidence_quality": "exact",
+      "reasoning_note": "Enemy has not appeared and has not taken the medicine.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "beat-4",
+      "status": "satisfied",
+      "evidence": "脸色骤然苍白...身体微微佝偻...未知的折磨",
+      "confidence": 0.9,
+      "evidence_quality": "paraphrase",
+      "reasoning_note": "Physical symptoms indicate side effects without explaining the mechanism.",
+      "terminal_position_ok": true,
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "forbidden_violations": [
+    {
+      "id": "forbid-1",
+      "violated": false,
+      "evidence": "",
+      "evidence_quality": "absent",
+      "reasoning_note": "Enemy did not seize the medicine.",
+      "knowledge_boundary_ok": true
+    },
+    {
+      "id": "forbid-2",
+      "violated": false,
+      "evidence": "他不知道这药剂的完整用途",
+      "evidence_quality": "exact",
+      "reasoning_note": "Lin Che explicitly does not know the full purpose.",
+      "knowledge_boundary_ok": true
+    }
+  ],
+  "logic_risks": [
+    {
+      "type": "knowledge_boundary",
+      "description": "The text explicitly states 'He does not know the side effects' (他不知道这副作用是什么), which slightly contradicts the narrative showing clear physical symptoms of side effects. While the character's internal knowledge is restricted, the narrative voice reveals the existence of side effects too directly, potentially violating the 'reader must not know' nuance if interpreted strictly as 'reader must not know side effects exist'. However, it aligns with 'reader may know side effect signs'.",
+      "severity": "low"
+    }
+  ],
+  "overall_status": "satisfied",
+  "raw": {
+    "case_id": "case-04-item-handover",
+    "all_required_beats_satisfied": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "那支透明药剂在她掌心折射出冷冽的光",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Text explicitly states the medicine is in Shen Zhixia's palm.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "他只能看清标签上印着的几个模糊字符...他无法解读",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Lin Che only sees the label and cannot interpret its full meaning.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "药剂仍在她身上，敌人尚未现身",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Enemy has not appeared and has not taken the medicine.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "evidence": "脸色骤然苍白...身体微微佝偻...未知的折磨",
+        "confidence": 0.9,
+        "evidence_quality": "paraphrase",
+        "reasoning_note": "Physical symptoms indicate side effects without explaining the mechanism.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "Enemy did not seize the medicine.",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-2",
+        "violated": false,
+        "evidence": "他不知道这药剂的完整用途",
+        "evidence_quality": "exact",
+        "reasoning_note": "Lin Che explicitly does not know the full purpose.",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [
+      {
+        "type": "knowledge_boundary",
+        "description": "The text explicitly states 'He does not know the side effects' (他不知道这副作用是什么), which slightly contradicts the narrative showing clear physical symptoms of side effects. While the character's internal knowledge is restricted, the narrative voice reveals the existence of side effects too directly, potentially violating the 'reader must not know' nuance if interpreted strictly as 'reader must not know side effects exist'. However, it aligns with 'reader may know side effect signs'.",
+        "severity": "low"
+      }
+    ],
+    "overall_status": "satisfied"
+  }
+}
+```
+
+## Repair
+
+Not triggered.
+
+## Revalidation
+
+```json
+{
+  "rule_precheck": {
+    "rule_is_final": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "沈知夏",
+          "药剂",
+          "手中",
+          "掌心"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "沈知夏",
+          "药剂",
+          "手中",
+          "掌心",
+          "握着",
+          "攥着"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "林澈",
+          "标签"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "林澈",
+          "标签"
+        ],
+        "acceptable_paraphrases": [
+          "只看见标签",
+          "只辨认出标签",
+          "瞥见标签",
+          "标签上的字"
+        ]
+      },
+      {
+        "id": "beat-3",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "药剂"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "药剂"
+        ],
+        "acceptable_paraphrases": []
+      },
+      {
+        "id": "beat-4",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "副作用"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "副作用",
+          "发抖",
+          "眩晕",
+          "刺痛",
+          "发冷"
+        ],
+        "acceptable_paraphrases": []
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "敌人夺走药剂",
+          "追踪者夺走药剂",
+          "敌人拿走药剂"
+        ],
+        "violation_threshold": "explicit_enemy_control"
+      },
+      {
+        "id": "forbid-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": false,
+        "keyword_hits": [],
+        "keywords": [
+          "林澈已经知道药剂用途",
+          "完全知道药剂用途",
+          "药剂真正作用是"
+        ],
+        "violation_threshold": "reader_reveal_or_character_full_knowledge"
+      }
+    ],
+    "weak_required_passed": 4,
+    "weak_required_failed": 0,
+    "required_total": 4,
+    "weak_forbidden_hits": 0,
+    "length": 841,
+    "length_abnormal": false,
+    "overall_signal": "weak_pass"
+  },
+  "json_raw": "{\n  \"case_id\": \"case-04-item-handover\",\n  \"all_required_beats_satisfied\": false,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"那支透明药剂在她掌心折射出冷冽的光\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Text explicitly states the medicine is in Shen Zhixia's palm.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他只能看清标签上印着的几个模糊字符...他无法解读\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Lin Che only sees the label and cannot understand its full meaning.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"药剂仍在她身上，敌人尚未现身\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Enemy has not appeared and has not taken the medicine.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-4\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"脸色骤然苍白...身体微微佝偻...承受着未知的折磨\",\n      \"confidence\": 0.9,\n      \"evidence_quality\": \"paraphrase\",\n      \"reasoning_note\": \"Physical symptoms (pale, hunched) imply side effects without explaining the mechanism.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"No evidence of enemy taking the medicine.\",\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"forbid-2\",\n      \"violated\": false,\n      \"evidence\": \"他不知道这药剂的完整用途\",\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Text explicitly states Lin Che does not know the full purpose.\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [\n    {\n      \"type\": \"knowledge_boundary\",\n      \"description\": \"The text explicitly states 'He does not know the full purpose of this medicine', which is a direct statement of fact rather than a narrative implication. While it satisfies the constraint, it is slightly expository.\",\n      \"severity\": \"low\"\n    }\n  ],\n  \"overall_status\": \"satisfied\"\n}",
+  "json_result": {
+    "parse_ok": true,
+    "parse_error": null,
+    "case_id": "case-04-item-handover",
+    "all_required_beats_satisfied": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "status": "satisfied",
+        "evidence": "那支透明药剂在她掌心折射出冷冽的光",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Text explicitly states the medicine is in Shen Zhixia's palm.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-2",
+        "status": "satisfied",
+        "evidence": "他只能看清标签上印着的几个模糊字符...他无法解读",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Lin Che only sees the label and cannot understand its full meaning.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-3",
+        "status": "satisfied",
+        "evidence": "药剂仍在她身上，敌人尚未现身",
+        "confidence": 1.0,
+        "evidence_quality": "exact",
+        "reasoning_note": "Enemy has not appeared and has not taken the medicine.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "beat-4",
+        "status": "satisfied",
+        "evidence": "脸色骤然苍白...身体微微佝偻...承受着未知的折磨",
+        "confidence": 0.9,
+        "evidence_quality": "paraphrase",
+        "reasoning_note": "Physical symptoms (pale, hunched) imply side effects without explaining the mechanism.",
+        "terminal_position_ok": true,
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "violated": false,
+        "evidence": "",
+        "evidence_quality": "absent",
+        "reasoning_note": "No evidence of enemy taking the medicine.",
+        "knowledge_boundary_ok": true
+      },
+      {
+        "id": "forbid-2",
+        "violated": false,
+        "evidence": "他不知道这药剂的完整用途",
+        "evidence_quality": "exact",
+        "reasoning_note": "Text explicitly states Lin Che does not know the full purpose.",
+        "knowledge_boundary_ok": true
+      }
+    ],
+    "logic_risks": [
+      {
+        "type": "knowledge_boundary",
+        "description": "The text explicitly states 'He does not know the full purpose of this medicine', which is a direct statement of fact rather than a narrative implication. While it satisfies the constraint, it is slightly expository.",
+        "severity": "low"
+      }
+    ],
+    "overall_status": "satisfied",
+    "raw": {
+      "case_id": "case-04-item-handover",
+      "all_required_beats_satisfied": false,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "那支透明药剂在她掌心折射出冷冽的光",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Text explicitly states the medicine is in Shen Zhixia's palm.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "他只能看清标签上印着的几个模糊字符...他无法解读",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Lin Che only sees the label and cannot understand its full meaning.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "药剂仍在她身上，敌人尚未现身",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Enemy has not appeared and has not taken the medicine.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-4",
+          "status": "satisfied",
+          "evidence": "脸色骤然苍白...身体微微佝偻...承受着未知的折磨",
+          "confidence": 0.9,
+          "evidence_quality": "paraphrase",
+          "reasoning_note": "Physical symptoms (pale, hunched) imply side effects without explaining the mechanism.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "No evidence of enemy taking the medicine.",
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "forbid-2",
+          "violated": false,
+          "evidence": "他不知道这药剂的完整用途",
+          "evidence_quality": "exact",
+          "reasoning_note": "Text explicitly states Lin Che does not know the full purpose.",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "logic_risks": [
+        {
+          "type": "knowledge_boundary",
+          "description": "The text explicitly states 'He does not know the full purpose of this medicine', which is a direct statement of fact rather than a narrative implication. While it satisfies the constraint, it is slightly expository.",
+          "severity": "low"
+        }
+      ],
+      "overall_status": "satisfied"
+    }
+  },
+  "latency": 8.74,
+  "error": null
+}
+```
+
+## Failure Taxonomy
+
+```json
+{
+  "missing_required_beat": 0,
+  "partial_required_beat": 0,
+  "forbidden_violation": 0,
+  "knowledge_boundary_violation": 0,
+  "terminal_position_failure": 0,
+  "repair_failed": false,
+  "repair_introduced_new_error": false,
+  "validator_disagreement": true
+}
+```

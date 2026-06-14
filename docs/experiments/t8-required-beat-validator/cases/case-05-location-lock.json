@@ -1,6 +1,12 @@
 {
   "id": "case-05-location-lock",
   "title": "地点锁定",
+  "difficulty": "medium",
+  "beat_type": [
+    "semantic_condition",
+    "knowledge_boundary",
+    "state_constraint"
+  ],
   "context": "旧港站地下层的档案室里，林澈和沈知夏找到一组被水泡坏的坐标照片。灰塔实验室只存在于线索中。",
   "facts": [
     "角色仍在旧港站地下。",

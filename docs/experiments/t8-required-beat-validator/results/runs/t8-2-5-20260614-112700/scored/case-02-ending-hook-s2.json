@@ -1,0 +1,468 @@
+{
+  "run_id": "case-02-ending-hook-s2",
+  "case_id": "case-02-ending-hook",
+  "sample_id": "s2",
+  "model": "agnes-2.0-flash",
+  "case_meta": {
+    "difficulty": "hard",
+    "beat_type": [
+      "semantic_condition",
+      "knowledge_boundary",
+      "terminal_hook"
+    ]
+  },
+  "generation": {
+    "text": "档案室里的空气凝滞如铁，只有灰尘在昏黄的应急灯光柱中无声翻滚。林澈背靠着冰冷的金属档案柜，胸口剧烈起伏，每一次呼吸都带着铁锈般的血腥味。沈知夏蜷缩在角落的阴影里，双手紧紧捂住嘴，眼神惊恐地望向那扇厚重的防火门。\n\n门外，走廊深处的死寂并未持续太久。\n\n起初，是一阵极轻微的摩擦声，像是鞋底橡胶与陈旧水磨石地面接触时的低吟。那声音并不急促，甚至带着一种令人不安的从容，一步步逼近。林澈的瞳孔骤然收缩，他屏住呼吸，身体紧绷如弓弦，手指下意识地摸向腰间——那里空空如也，唯一的武器早已在之前的追逐中遗失。\n\n脚步声近了。\n\n哒。哒。哒。\n\n节奏稳定，步幅均匀，每一步落下的力度都精准得可怕。林澈的脑海中闪过无数张面孔，但随即又被一一否定。这不是追踪者那种杂乱无章、充满杀意的奔跑声，也不是沈知夏那种慌乱细碎的步子。这声音太熟悉了，熟悉到让他感到一阵从脊椎升起的寒意，仿佛某种被刻意遗忘的记忆碎片突然刺破了现实的薄膜。\n\n他认得这个节奏。\n\n那是某种特定步态留下的听觉印记，混合着一种特有的、几乎不可察觉的重心偏移。这种声音曾出现在无数个深夜的走廊，曾伴随着咖啡杯轻碰桌面的脆响，曾在他最放松警惕的时刻悄然响起。它不属于敌人，至少不完全是；它也不属于盟友，因为盟友的脚步里总带着试探或急切。\n\n这是一种属于“知情者”的步伐，冷静、疏离，且带着某种居高临下的审视。\n\n林澈的喉结滚动了一下，冷汗顺着额角滑落，滴在地板上，发出微不可闻的声响。他不敢出声，甚至不敢眨眼，死死盯着那扇门的底部缝隙。门外的脚步声在距离门口三步远的地方停住了。\n\n没有敲门声，没有询问，也没有任何言语的交流。\n\n只有死一般的寂静，以及门把手上那枚铜质旋钮极其缓慢、极其轻微地转动了一毫米的声响。那声音在空旷的档案室里被无限放大，像是一声尖锐的耳鸣，直接刺入林澈的耳膜。\n\n沈知夏的身体剧烈颤抖起来，她死死抓住林澈的衣袖，指甲几乎嵌入他的肉里，但林澈没有回头。他的目光越过昏暗的光线，越过积满灰尘的地面，直直地投向那扇紧闭的门。\n\n在那一瞬间，林澈缓缓抬起头。",
+    "latency": 9.96,
+    "error": null,
+    "prompt_variant": "numbered-beats+self-check+semantic-boundary"
+  },
+  "rule_precheck": {
+    "rule_is_final": false,
+    "required_beats": [
+      {
+        "id": "beat-1",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "熟悉",
+          "脚步"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "熟悉",
+          "脚步"
+        ],
+        "acceptable_paraphrases": [
+          "熟悉的步子",
+          "听过的脚步",
+          "那阵步声很熟",
+          "门外的脚步像旧记忆"
+        ]
+      },
+      {
+        "id": "beat-2",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "林澈"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": null,
+        "keywords": [
+          "林澈",
+          "认出",
+          "听出"
+        ],
+        "acceptable_paraphrases": [
+          "他听出了这脚步声",
+          "不用看也知道那是谁的步子",
+          "那步伐他太熟了",
+          "这频率他曾听过"
+        ]
+      },
+      {
+        "id": "beat-3",
+        "rule_status": "weak_pass",
+        "keyword_hit": true,
+        "paraphrase_hit": false,
+        "keyword_hits": [
+          "抬起头"
+        ],
+        "paraphrase_hits": [],
+        "terminal_position_ok": true,
+        "keywords": [
+          "林澈抬头",
+          "抬起头"
+        ],
+        "acceptable_paraphrases": [
+          "他缓缓抬头",
+          "林澈慢慢抬起头",
+          "林澈抬眼",
+          "他抬起视线"
+        ]
+      }
+    ],
+    "forbidden_violations": [
+      {
+        "id": "forbid-1",
+        "rule_status": "weak_fail",
+        "keyword_hit": true,
+        "keyword_hits": [
+          "那是"
+        ],
+        "keywords": [
+          "来人是",
+          "那是",
+          "父亲",
+          "导师",
+          "队长",
+          "开口说道",
+          "解释道"
+        ],
+        "violation_threshold": "explicit_name_role_or_specific_identity_hint"
+      }
+    ],
+    "weak_required_passed": 3,
+    "weak_required_failed": 0,
+    "required_total": 3,
+    "weak_forbidden_hits": 1,
+    "length": 861,
+    "length_abnormal": false,
+    "overall_signal": "weak_fail"
+  },
+  "natural_validator": {
+    "text": "## Required Beats\n\n**Beat 1: 门后传来熟悉脚步声**\n- **Status**: Satisfied\n- **Evidence**: \"起初，是一阵极轻微的摩擦声... 脚步声近了。哒。哒。哒。\"\n- **Evidence Quality**: Exact\n- **Reason**: 文本明确描述了门外的脚步声逼近，且使用了“熟悉”、“太熟悉了”等词汇描述其性质，符合语义条件。\n- **Terminal-position check**: N/A (Not terminal)\n- **Knowledge-boundary check**: N/A\n\n**Beat 2: 林澈认出脚步声**\n- **Status**: Satisfied\n- **Evidence**: \"他认得这个节奏。\" / \"这声音太熟悉了... 仿佛某种被刻意遗忘的记忆碎片突然刺破了现实的薄膜。\"\n- **Evidence Quality**: Exact\n- **Reason**: 文本明确陈述林澈识别出了该步态的节奏和特征，并排除了其他可能性（追踪者、沈知夏），符合“认出”的语义。\n- **Terminal-position check**: N/A\n- **Knowledge-boundary check**: Satisfied. 林澈知道这是熟人/知情者，但文本未向读者揭示具体姓名、身份或关系，仅通过“知情者”、“冷静、疏离”等抽象描述维持悬念。\n\n**Beat 3: 结尾停在林澈抬头**\n- **Status**: Satisfied\n- **Evidence**: \"在那一瞬间，林澈缓缓抬起头。\"\n- **Evidence Quality**: Exact\n- **Reason**: 文本最后一句明确描写林澈抬头的动作，且作为段落结束，符合终端钩子要求。\n- **Terminal-position check**: Satisfied. 该动作是文本的最后一个叙事节拍，没有后续动作或对话打破悬念。\n- **Knowledge-boundary check**: N/A\n\n## Forbidden Violations\n\n**Forbid 1: 不能揭晓来人身份**\n- **Violated**: No\n- **Evidence**: 文本中仅出现“知情者”、“敌人”、“盟友”等泛指词汇，未出现任何具体姓名、职位（如父亲、导师、队长）或具体关系描述。\n- **Evidence Quality**: Exact\n- **Reason**: 严格遵守了知识边界。虽然林澈内心有判断，但读者无法得知具体是谁。\n- **Knowledge-boundary check**: Satisfied. 读者不知道来人姓名、身份职位、组织归属或亲属关系。\n\n## Logic Risks\n\n- **Character-state**: 林澈处于高度紧张状态（瞳孔收缩、屏息、冷汗），符合躲藏情境。\n- **Location**: 旧港站档案室，金属柜、防火门、水磨石地面等细节与上下文一致。\n- **Item**: 武器遗失的描述与“追逐中遗失”的背景逻辑自洽。\n- **Timeline**: 追踪者远去 -> 安静 -> 新脚步声出现，时间线流畅。\n- **New-entity**: 新出现的脚步声来源者身份保持神秘，未引入未定义的实体。\n- **Style**: 悬疑克制，无突然煽情或段子化语言，氛围营造符合“悬疑克制”要求。\n- **Terminal-hook**: 结尾停在动作瞬间，有效制造悬念。\n- **Knowledge-boundary**: 成功区分了林澈的“认知”（认出节奏）和读者的“无知”（不知是谁），未越界。\n\n## Overall Status\nsatisfied",
+    "latency": 6.03,
+    "error": null,
+    "needs_repair": false
+  },
+  "json_validator": {
+    "raw": "{\n  \"case_id\": \"case-02-ending-hook\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"脚步声近了。哒。哒。哒。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Text explicitly describes familiar footstep sounds approaching from outside the door.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他认得这个节奏。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Lin Che recognizes the rhythm, satisfying the semantic condition without revealing identity to the reader.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"在那一瞬间，林澈缓缓抬起头。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"The text ends exactly with Lin Che raising his head, fulfilling the terminal hook requirement.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"No specific identity, name, or role is revealed to the reader; only subjective description of the gait is provided.\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+    "latency": 4.94,
+    "error": null,
+    "result": {
+      "parse_ok": true,
+      "parse_error": null,
+      "case_id": "case-02-ending-hook",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "脚步声近了。哒。哒。哒。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Text explicitly describes familiar footstep sounds approaching from outside the door.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "他认得这个节奏。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Lin Che recognizes the rhythm, satisfying the semantic condition without revealing identity to the reader.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "在那一瞬间，林澈缓缓抬起头。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "The text ends exactly with Lin Che raising his head, fulfilling the terminal hook requirement.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "No specific identity, name, or role is revealed to the reader; only subjective description of the gait is provided.",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "logic_risks": [],
+      "overall_status": "satisfied",
+      "raw": {
+        "case_id": "case-02-ending-hook",
+        "all_required_beats_satisfied": true,
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "evidence": "脚步声近了。哒。哒。哒。",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "Text explicitly describes familiar footstep sounds approaching from outside the door.",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "evidence": "他认得这个节奏。",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "Lin Che recognizes the rhythm, satisfying the semantic condition without revealing identity to the reader.",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "evidence": "在那一瞬间，林澈缓缓抬起头。",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "The text ends exactly with Lin Che raising his head, fulfilling the terminal hook requirement.",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "evidence": "",
+            "evidence_quality": "absent",
+            "reasoning_note": "No specific identity, name, or role is revealed to the reader; only subjective description of the gait is provided.",
+            "knowledge_boundary_ok": true
+          }
+        ],
+        "logic_risks": [],
+        "overall_status": "satisfied"
+      }
+    }
+  },
+  "disagreement": {
+    "has_disagreement": true,
+    "between": [
+      "rule_vs_json",
+      "rule_vs_natural"
+    ],
+    "likely_reason": "rule_keyword_too_strict_or_terminal_false_positive",
+    "rule_vs_json": true,
+    "rule_vs_natural": true,
+    "natural_vs_json": false
+  },
+  "repair": {
+    "triggered": false,
+    "text": "",
+    "latency": 0.0,
+    "error": null
+  },
+  "revalidation": {
+    "rule_precheck": {
+      "rule_is_final": false,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "rule_status": "weak_pass",
+          "keyword_hit": true,
+          "paraphrase_hit": false,
+          "keyword_hits": [
+            "熟悉",
+            "脚步"
+          ],
+          "paraphrase_hits": [],
+          "terminal_position_ok": null,
+          "keywords": [
+            "熟悉",
+            "脚步"
+          ],
+          "acceptable_paraphrases": [
+            "熟悉的步子",
+            "听过的脚步",
+            "那阵步声很熟",
+            "门外的脚步像旧记忆"
+          ]
+        },
+        {
+          "id": "beat-2",
+          "rule_status": "weak_pass",
+          "keyword_hit": true,
+          "paraphrase_hit": false,
+          "keyword_hits": [
+            "林澈"
+          ],
+          "paraphrase_hits": [],
+          "terminal_position_ok": null,
+          "keywords": [
+            "林澈",
+            "认出",
+            "听出"
+          ],
+          "acceptable_paraphrases": [
+            "他听出了这脚步声",
+            "不用看也知道那是谁的步子",
+            "那步伐他太熟了",
+            "这频率他曾听过"
+          ]
+        },
+        {
+          "id": "beat-3",
+          "rule_status": "weak_pass",
+          "keyword_hit": true,
+          "paraphrase_hit": false,
+          "keyword_hits": [
+            "抬起头"
+          ],
+          "paraphrase_hits": [],
+          "terminal_position_ok": true,
+          "keywords": [
+            "林澈抬头",
+            "抬起头"
+          ],
+          "acceptable_paraphrases": [
+            "他缓缓抬头",
+            "林澈慢慢抬起头",
+            "林澈抬眼",
+            "他抬起视线"
+          ]
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "rule_status": "weak_fail",
+          "keyword_hit": true,
+          "keyword_hits": [
+            "那是"
+          ],
+          "keywords": [
+            "来人是",
+            "那是",
+            "父亲",
+            "导师",
+            "队长",
+            "开口说道",
+            "解释道"
+          ],
+          "violation_threshold": "explicit_name_role_or_specific_identity_hint"
+        }
+      ],
+      "weak_required_passed": 3,
+      "weak_required_failed": 0,
+      "required_total": 3,
+      "weak_forbidden_hits": 1,
+      "length": 861,
+      "length_abnormal": false,
+      "overall_signal": "weak_fail"
+    },
+    "json_raw": "{\n  \"case_id\": \"case-02-ending-hook\",\n  \"all_required_beats_satisfied\": true,\n  \"required_beats\": [\n    {\n      \"id\": \"beat-1\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"脚步声近了。哒。哒。哒。节奏稳定，步幅均匀\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Text explicitly describes familiar footstep sounds approaching the door.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-2\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"他认得这个节奏。那是某种特定步态留下的听觉印记... 这声音太熟悉了\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"Lin Che recognizes the rhythm and gait, fulfilling the semantic condition of recognition without naming the person.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    },\n    {\n      \"id\": \"beat-3\",\n      \"status\": \"satisfied\",\n      \"evidence\": \"在那一瞬间，林澈缓缓抬起头。\",\n      \"confidence\": 1.0,\n      \"evidence_quality\": \"exact\",\n      \"reasoning_note\": \"The text ends exactly with Lin Che raising his head, satisfying the terminal hook requirement.\",\n      \"terminal_position_ok\": true,\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"forbidden_violations\": [\n    {\n      \"id\": \"forbid-1\",\n      \"violated\": false,\n      \"evidence\": \"\",\n      \"evidence_quality\": \"absent\",\n      \"reasoning_note\": \"No specific identity, name, or role is revealed to the reader. The visitor is described only as a 'knower' with a familiar gait.\",\n      \"knowledge_boundary_ok\": true\n    }\n  ],\n  \"logic_risks\": [],\n  \"overall_status\": \"satisfied\"\n}",
+    "json_result": {
+      "parse_ok": true,
+      "parse_error": null,
+      "case_id": "case-02-ending-hook",
+      "all_required_beats_satisfied": true,
+      "required_beats": [
+        {
+          "id": "beat-1",
+          "status": "satisfied",
+          "evidence": "脚步声近了。哒。哒。哒。节奏稳定，步幅均匀",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Text explicitly describes familiar footstep sounds approaching the door.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-2",
+          "status": "satisfied",
+          "evidence": "他认得这个节奏。那是某种特定步态留下的听觉印记... 这声音太熟悉了",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "Lin Che recognizes the rhythm and gait, fulfilling the semantic condition of recognition without naming the person.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        },
+        {
+          "id": "beat-3",
+          "status": "satisfied",
+          "evidence": "在那一瞬间，林澈缓缓抬起头。",
+          "confidence": 1.0,
+          "evidence_quality": "exact",
+          "reasoning_note": "The text ends exactly with Lin Che raising his head, satisfying the terminal hook requirement.",
+          "terminal_position_ok": true,
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "forbidden_violations": [
+        {
+          "id": "forbid-1",
+          "violated": false,
+          "evidence": "",
+          "evidence_quality": "absent",
+          "reasoning_note": "No specific identity, name, or role is revealed to the reader. The visitor is described only as a 'knower' with a familiar gait.",
+          "knowledge_boundary_ok": true
+        }
+      ],
+      "logic_risks": [],
+      "overall_status": "satisfied",
+      "raw": {
+        "case_id": "case-02-ending-hook",
+        "all_required_beats_satisfied": true,
+        "required_beats": [
+          {
+            "id": "beat-1",
+            "status": "satisfied",
+            "evidence": "脚步声近了。哒。哒。哒。节奏稳定，步幅均匀",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "Text explicitly describes familiar footstep sounds approaching the door.",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-2",
+            "status": "satisfied",
+            "evidence": "他认得这个节奏。那是某种特定步态留下的听觉印记... 这声音太熟悉了",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "Lin Che recognizes the rhythm and gait, fulfilling the semantic condition of recognition without naming the person.",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          },
+          {
+            "id": "beat-3",
+            "status": "satisfied",
+            "evidence": "在那一瞬间，林澈缓缓抬起头。",
+            "confidence": 1.0,
+            "evidence_quality": "exact",
+            "reasoning_note": "The text ends exactly with Lin Che raising his head, satisfying the terminal hook requirement.",
+            "terminal_position_ok": true,
+            "knowledge_boundary_ok": true
+          }
+        ],
+        "forbidden_violations": [
+          {
+            "id": "forbid-1",
+            "violated": false,
+            "evidence": "",
+            "evidence_quality": "absent",
+            "reasoning_note": "No specific identity, name, or role is revealed to the reader. The visitor is described only as a 'knower' with a familiar gait.",
+            "knowledge_boundary_ok": true
+          }
+        ],
+        "logic_risks": [],
+        "overall_status": "satisfied"
+      }
+    },
+    "latency": 3.37,
+    "error": null
+  },
+  "metrics": {
+    "initial_required_satisfied": 3,
+    "initial_required_total": 3,
+    "initial_completion_rate": 1.0,
+    "rule_weak_required_failed": 0,
+    "rule_weak_forbidden_hits": 1,
+    "json_parse_ok": true,
+    "disagreement": true,
+    "repair_triggered": false,
+    "repair_success": false,
+    "new_error_count": 0,
+    "final_usable": true,
+    "total_latency": 24.31
+  },
+  "failure_taxonomy": {
+    "missing_required_beat": 0,
+    "partial_required_beat": 0,
+    "forbidden_violation": 0,
+    "knowledge_boundary_violation": 0,
+    "terminal_position_failure": 0,
+    "repair_failed": false,
+    "repair_introduced_new_error": false,
+    "validator_disagreement": true
+  },
+  "repair_risk": "not_triggered"
+}
