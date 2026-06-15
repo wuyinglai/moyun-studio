@@ -60,6 +60,22 @@ async function installMocks(page: Page, options: MockOptions = {}) {
       preview: '已采用的内容',
       created_at: new Date(Date.now() - 120000).toISOString(),
     },
+    {
+      id: 'cand-004',
+      source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
+      candidate_path: `${projectId}/candidates/cand-004.md`,
+      action: 'continue',
+      status: 'pending',
+      preview: '续写内容...',
+      created_at: new Date(Date.now() - 180000).toISOString(),
+      beat_validation: {
+        enabled: true,
+        status: 'unknown',
+        summary: '信息点检查未能完成',
+        required_beats: [{ id: 'beat-1', text: '正文必须提到第七层协议', status: 'unknown' }],
+        forbidden_beats: [],
+      },
+    },
   ]
   const findCandidate = (candidateId: string) => candidates.find((item) => item.id === candidateId)
 
@@ -344,7 +360,8 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     await page.getByTestId('candidate-revision-feedback').fill('加强冲突，不要新增人物')
     await page.getByTestId('candidate-revision-submit').click()
 
-    await expect(page.locator('.candidate-card').filter({ hasText: '反馈再生成' })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('[data-testid="candidate-revision-summary"]').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('[data-testid="candidate-revision-summary"]').first()).toContainText('第 1 版')
 
     const severeErrors = filterSevereErrors(errors)
     expect(severeErrors).toEqual([])
@@ -525,5 +542,60 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     await page.getByTestId('candidate-revise-button').first().click()
     await expect(page.getByTestId('candidate-revision-beat-inheritance')).toContainText('必须信息点', { timeout: 5000 })
     await expect(page.getByTestId('candidate-revision-beat-inheritance')).toContainText('禁止项')
+  })
+
+  test('T8.7: 质量检查区展示 beat warning 状态和缺失详情', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const qualitySection = page.locator('[data-testid="candidate-quality-section"]').first()
+    await expect(qualitySection).toBeVisible({ timeout: 5000 })
+    await expect(qualitySection).toContainText('信息点有警告')
+    await expect(qualitySection).toContainText('正文必须提到第七层协议')
+    console.log('[t8.7] ✓ quality section shows warning + missing beat detail')
+  })
+
+  test('T8.7: 质量检查区展示 unknown 状态并说明不影响采用', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const unknownQuality = page.locator('.quality-item.quality-unknown')
+    await expect(unknownQuality).toBeVisible({ timeout: 5000 })
+    await expect(unknownQuality).toContainText('不影响采用')
+    console.log('[t8.7] ✓ quality section shows unknown state with advisory text')
+  })
+
+  test('T8.7: 反馈再生成 modal 说明不会覆盖正文', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    const modal = page.locator('.revision-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    await expect(modal.locator('.revision-notice')).toContainText('不会覆盖正文')
+    console.log('[t8.7] ✓ revision modal copy mentions no overwrite')
+  })
+
+  test('T8.7: 无 beat_validation 的候选稿不展示质量检查区', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-002 has no beat_validation, no continuity, no warning_message
+    const cand002Card = page.locator('.candidate-card').filter({ hasText: '重写' }).first()
+    await expect(cand002Card).toBeVisible({ timeout: 5000 })
+    await expect(cand002Card.locator('[data-testid="candidate-quality-section"]')).toHaveCount(0)
+    console.log('[t8.7] ✓ quality section hidden for candidate without validation data')
   })
 })

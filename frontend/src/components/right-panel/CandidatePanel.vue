@@ -44,24 +44,6 @@
             {{ actionLabel(candidate.action) }}
           </span>
           <span
-            v-if="candidate.continuity && candidate.continuity.has_warning"
-            class="continuity-badge"
-            :class="`continuity-${candidate.continuity.severity || 'medium'}`"
-            title="连续性警告"
-          >
-            <i class="fa-solid fa-triangle-exclamation" />
-            连续性警告
-          </span>
-          <span
-            v-if="candidate.beat_validation && candidate.beat_validation.status"
-            class="beat-validation-badge"
-            :class="`beat-${candidate.beat_validation.status}`"
-            :title="beatValidationLabel(candidate)"
-          >
-            <i :class="beatValidationIcon(candidate)" />
-            {{ beatValidationLabel(candidate) }}
-          </span>
-          <span
             v-if="candidate.source_type"
             class="source-type-badge"
             :class="`source-${candidate.source_type}`"
@@ -72,40 +54,58 @@
             {{ statusLabel(candidate.status) }}
           </span>
         </div>
+        <!-- 质量检查区 -->
         <div
-          class="card-body"
-          data-testid="candidate-content"
+          v-if="hasQualityInfo(candidate)"
+          class="card-quality"
+          data-testid="candidate-quality-section"
         >
-          <div class="candidate-filename">{{ candidate.source_filename }}</div>
           <div
-            v-if="isFeedbackRevision(candidate)"
-            class="candidate-revision-summary"
-            data-testid="candidate-revision-summary"
+            v-if="candidate.beat_validation && candidate.beat_validation.status === 'pass'"
+            class="quality-item quality-pass"
           >
-            <i class="fa-solid fa-code-branch" />
-            <div>
-              <strong>反馈修订稿 · 第 {{ revisionIndexLabel(candidate) }} 版</strong>
-              <span v-if="revisionParentLabel(candidate)">来自 {{ revisionParentLabel(candidate) }}</span>
-              <span v-if="revisionFeedbackSummary(candidate)">反馈：{{ revisionFeedbackSummary(candidate) }}</span>
-            </div>
+            <i class="fa-solid fa-circle-check" />
+            <span>信息点检查通过</span>
+          </div>
+          <div
+            v-if="candidate.beat_validation && candidate.beat_validation.status === 'warning'"
+            class="quality-item quality-warning"
+          >
+            <i class="fa-solid fa-triangle-exclamation" />
+            <span>信息点有警告</span>
+          </div>
+          <div
+            v-if="candidate.beat_validation && candidate.beat_validation.status === 'unknown'"
+            class="quality-item quality-unknown"
+          >
+            <i class="fa-solid fa-circle-question" />
+            <span>信息点未确认 — 不影响采用，请预览确认</span>
+          </div>
+          <div
+            v-if="candidate.continuity && candidate.continuity.has_warning"
+            class="quality-item quality-continuity"
+            :class="`continuity-${candidate.continuity.severity || 'medium'}`"
+          >
+            <i class="fa-solid fa-triangle-exclamation" />
+            <span>连续性警告</span>
           </div>
           <div
             v-if="candidate.warning_message"
-            class="candidate-warning-message"
+            class="quality-detail quality-warning-detail"
           >
             <i class="fa-solid fa-circle-info" />
             {{ candidate.warning_message }}
           </div>
           <div
             v-else-if="candidate.continuity && candidate.continuity.has_warning && candidate.continuity.anchors_missing && candidate.continuity.anchors_missing.length > 0"
-            class="candidate-warning-message"
+            class="quality-detail quality-continuity-detail"
           >
             <i class="fa-solid fa-circle-info" />
             可能与前文设定不一致：缺少「{{ candidate.continuity.anchors_missing.slice(0, 3).join('、') }}」等关键元素，建议先预览再采纳。
           </div>
           <div
             v-if="beatValidationMessage(candidate)"
-            class="candidate-warning-message"
+            class="quality-detail candidate-warning-message"
             :class="`beat-message-${candidate.beat_validation?.status || 'unknown'}`"
           >
             <i :class="beatValidationIcon(candidate)" />
@@ -124,28 +124,62 @@
               </ul>
             </div>
           </div>
+        </div>
+        <!-- 修订来源区 -->
+        <div
+          v-if="isFeedbackRevision(candidate)"
+          class="card-revision"
+          data-testid="candidate-revision-section"
+        >
+          <div
+            class="candidate-revision-summary"
+            data-testid="candidate-revision-summary"
+          >
+            <i class="fa-solid fa-code-branch" />
+            <div>
+              <strong>反馈修订稿 · 第 {{ revisionIndexLabel(candidate) }} 版</strong>
+              <span v-if="revisionParentLabel(candidate)">来自 {{ revisionParentLabel(candidate) }}</span>
+              <span v-if="revisionFeedbackSummary(candidate)">反馈：{{ revisionFeedbackSummary(candidate) }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="card-body"
+          data-testid="candidate-content"
+        >
+          <div class="candidate-filename">{{ candidate.source_filename }}</div>
           <div class="candidate-meta">
             <span class="meta-item">{{ formatTime(candidate.created_at) }}</span>
             <span class="meta-item">{{ candidate.word_count }} 字</span>
           </div>
         </div>
         <div class="card-actions">
-          <button
-            class="action-btn"
-            title="预览"
-            @click.stop="previewCandidate(candidate)"
-          >
-            <i class="fa-solid fa-eye" />
-          </button>
-          <button
-            v-if="candidate.status === 'pending'"
-            class="action-btn action-adopt"
-            title="采用"
-            data-testid="candidate-adopt-button"
-            @click.stop="adoptCandidate(candidate)"
-          >
-            <i class="fa-solid fa-check" />
-          </button>
+          <div class="card-actions-primary">
+            <button
+              class="action-btn"
+              title="预览"
+              @click.stop="previewCandidate(candidate)"
+            >
+              <i class="fa-solid fa-eye" />
+            </button>
+            <button
+              v-if="candidate.status === 'pending'"
+              class="action-btn action-adopt"
+              title="采用"
+              data-testid="candidate-adopt-button"
+              @click.stop="adoptCandidate(candidate)"
+            >
+              <i class="fa-solid fa-check" />
+            </button>
+            <button
+              class="action-btn action-delete"
+              title="删除"
+              data-testid="candidate-reject-button"
+              @click.stop="deleteCandidate(candidate)"
+            >
+              <i class="fa-solid fa-trash-can" />
+            </button>
+          </div>
           <button
             v-if="candidate.status === 'pending'"
             class="action-btn action-revise"
@@ -154,14 +188,7 @@
             @click.stop="openRevisionModal(candidate)"
           >
             <i class="fa-solid fa-wand-magic-sparkles" />
-          </button>
-          <button
-            class="action-btn action-delete"
-            title="删除"
-            data-testid="candidate-reject-button"
-            @click.stop="deleteCandidate(candidate)"
-          >
-            <i class="fa-solid fa-trash-can" />
+            <span class="action-revise-label">按反馈再生成</span>
           </button>
         </div>
       </div>
@@ -247,7 +274,7 @@
         </div>
         <div class="revision-notice">
           <i class="fa-solid fa-shield-halved" />
-          会生成一个新的候选稿，原候选稿和正式正文都不会被自动修改。
+          告诉 AI 你想怎么改这个候选稿。新内容会作为新的候选稿生成，不会覆盖正文。
         </div>
         <div class="revision-parent">
           <span>父候选稿</span>
@@ -382,6 +409,14 @@ const canSubmitRevision = computed(() => (
 
 const revisionBeatCounts = computed(() => getInheritedBeatCounts(revisionParent.value))
 
+function hasQualityInfo(candidate: CandidateInfo): boolean {
+  const bv = candidate.beat_validation
+  const hasBeatValidation = !!bv && !!bv.status
+  const hasContinuity = !!(candidate.continuity && candidate.continuity.has_warning)
+  const hasWarningMsg = !!candidate.warning_message
+  return hasBeatValidation || hasContinuity || hasWarningMsg
+}
+
 function actionLabel(action: string): string {
   const labels: Record<string, string> = {
     rewrite: '重写',
@@ -485,14 +520,6 @@ async function syncAdoptedSource(sourcePath: string) {
     editorStore.loadContent(sourcePath, latest.content)
     fileStore.unsavedFiles.delete(sourcePath)
   }
-}
-
-function beatValidationLabel(candidate: CandidateInfo | null): string {
-  const status = candidate?.beat_validation?.status
-  if (status === 'pass') return '信息点通过'
-  if (status === 'warning') return '信息点警告'
-  if (status === 'unknown') return '信息点未知'
-  return ''
 }
 
 function beatValidationIcon(candidate: CandidateInfo | null): string {
@@ -1047,7 +1074,89 @@ watch(() => projectStore.currentProject?.id, () => {
   color: var(--text-muted);
 }
 
+.card-quality {
+  margin: 6px 0;
+  padding: 6px 8px;
+  background: rgba(148, 163, 184, 0.06);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 4px;
+}
+
+.quality-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+
+  i { flex-shrink: 0; font-size: 11px; }
+
+  &.quality-pass {
+    color: var(--accent-success);
+    i { color: var(--accent-success); }
+  }
+  &.quality-warning {
+    color: #f97316;
+    i { color: #f97316; }
+  }
+  &.quality-unknown {
+    color: var(--text-muted);
+    i { color: var(--text-muted); }
+  }
+  &.quality-continuity {
+    &.continuity-high { color: var(--accent-danger); i { color: var(--accent-danger); } }
+    &.continuity-medium { color: #f97316; i { color: #f97316; } }
+    &.continuity-low { color: var(--accent-warning); i { color: var(--accent-warning); } }
+  }
+}
+
+.quality-detail {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.quality-warning-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(251, 146, 60, 0.1);
+  border-left: 2px solid #f97316;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+
+  i { flex-shrink: 0; color: #f97316; margin-top: 2px; }
+}
+
+.quality-continuity-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(251, 146, 60, 0.1);
+  border-left: 2px solid #f97316;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+
+  i { flex-shrink: 0; color: #f97316; margin-top: 2px; }
+}
+
+.card-revision {
+  margin: 6px 0;
+}
+
 .card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.card-actions-primary {
   display: flex;
   gap: 4px;
 }
@@ -1060,12 +1169,12 @@ watch(() => projectStore.currentProject?.id, () => {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
-  
+
   &:hover {
     background: var(--border-color);
     color: var(--text-primary);
   }
-  
+
   &.action-adopt {
     background: rgba(34, 197, 94, 0.1);
     color: var(--accent-success);
@@ -1074,7 +1183,7 @@ watch(() => projectStore.currentProject?.id, () => {
       color: white;
     }
   }
-  
+
   &.action-delete {
     &:hover {
       background: var(--accent-danger);
@@ -1083,13 +1192,23 @@ watch(() => projectStore.currentProject?.id, () => {
   }
 
   &.action-revise {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
     background: rgba(139, 92, 246, 0.12);
     color: #8b5cf6;
+    font-size: 11px;
     &:hover {
       background: #8b5cf6;
       color: white;
     }
   }
+}
+
+.action-revise-label {
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* 预览弹窗 */
