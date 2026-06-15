@@ -1,315 +1,319 @@
 # T9 阶段规划：产品化收口与下一阶段稳定规划
 
-> **阶段**: T9 (Product Stabilization & Next Stage Planning)
-> **状态**: 规划中
-> **创建日期**: 2026-06-16
-> **前置依赖**: T8 写作质量闭环已归档 (`d6a8a7a`)
+> 阶段：T9
+> 类型：Stage Planning / Documentation
+> 风险等级：Risk C
+> 状态：规划完成
+> 日期：2026-06-16
+> 前置依赖：T8 写作质量闭环已归档，见 `docs/archives/t8-writing-quality-closure.md`
 
----
+## 1. T8 收口状态
 
-## 一、T8 收口状态
+T8 阶段已经完成“写作质量闭环”的主线收口，不建议继续在 T8 内无限延伸 prompt、validator、polish、repair 或 Scene Plan 相关工作。
 
-T8 阶段已正式归档（`docs/archives/t8-writing-quality-closure.md`）。最终测试基线：
+T8 已完成的核心能力：
 
-- Backend tests: 85 passed
-- Frontend build: ✓ passed
-- Focused E2E: 16 passed
-- Full E2E: 62 passed / 93 skipped / 0 failed
-- Real LLM smoke: 3/3 passed
-- Git: clean
+- required / forbidden beats 最小输入 UI。
+- required / forbidden beats 条件注入生成 prompt。
+- required beat validator metadata 写入 candidate。
+- CandidatePanel 显示 pass / warning / unknown。
+- warning adopt 前确认，但不阻断用户决策。
+- feedback revision candidate 闭环。
+- child candidate 保留 parent 关系，不自动 adopt，不覆盖正式正文。
+- 真实 LLM rewrite / polish dogfood。
+- Polish 微动作与隐性连续性 prompt tuning。
+- 中文 prompt 链路 in-product dogfood。
+- T8 写作质量闭环归档。
 
-**核心判断：T8 已完成，不应继续在 T8 内无限打磨。** T8 交付了完整的写作质量闭环，包括 beats 输入/注入/validator/warning/feedback revision/multi-round lineage/conservative rules/真实中文链路/真实 LLM smoke。
+已知验证基线：
 
----
+- Backend tests: passed。
+- Frontend build: passed。
+- Focused E2E: passed。
+- Full E2E: 有大量 skipped，但阻断性失败已清理。
+- Real LLM smoke: passed。
+- Git 状态：T8 收口时为 clean。
 
-## 二、T9 总目标
+关键判断：
 
-T9 不是继续盲目新增功能，而是：
+T8 的主要价值已经形成：AI 生成结果默认进入 candidate，用户通过 preview / adopt / delete / feedback revision 控制正式正文。后续不应继续在 T8 内做大范围功能扩张，而应进入 T9 的产品化、测试治理和下一阶段设计。
 
-**产品化收口 → 测试债务治理 → 长文连续性最小设计 → 后续写作质量增强规划**
+## 2. T9 总目标
 
-阶段命名：**T9 — 产品化收口与下一阶段稳定规划**
+T9 的目标不是继续盲目新增写作功能，而是把已经可用的写作质量闭环变成更可发布、更可维护、更可验证的产品基线。
 
-核心判断：
+T9 总目标分为四类：
 
-1. T8 已经完成，不能继续在 T8 内无限打磨
-2. T9 第一优先级应该是 Release Candidate / 维护版收口
-3. 测试债务需要治理，但不一定全部阻断 release
-4. 长文连续性是下一阶段核心价值，但必须先做最小设计
-5. 写作质量增强可以规划，但不应优先于 release 和测试债务
-6. Scene Plan 大系统暂缓，不作为 T9 立即开发目标
+1. 产品化收口：准备一个稳定的 Release Candidate 或维护版。
+2. 测试债务治理：把当前 skipped / fragile / mock 分散的问题梳理清楚。
+3. 长文连续性设计：围绕 Story State / Continuity Anchors 做最小设计，而不是立刻上大纲系统。
+4. 写作质量增强规划：设计下一轮 repair、score、comparison、warning explanation，但不急于实现。
 
----
+## 3. 当前产品能力基线
 
-## 三、当前产品能力基线
+当前 Moyun Studio 已经具备以下产品能力：
 
-### 已交付能力（T8 成果）
+- Professional 主工作台可以打开项目、读取场景文件、编辑正文、保存文件。
+- `sec-*.md` 被定义为单场景，是 AI 生成、重写、润色、审查的最小单位。
+- 高风险写作操作默认生成 candidate，不直接覆盖正式正文。
+- candidate 支持 preview / adopt / delete。
+- candidate adopt 前保留安全检查，不绕过 hash / mtime / FILE_CONFLICT 机制。
+- required / forbidden beats 可以作为生成前约束进入 prompt。
+- validator 结果以 metadata 形式附加到 candidate，用于 advisory warning。
+- feedback revision 可以基于 pending candidate 生成 child candidate。
+- Lite 和 Professional 的关键写作链路已经被多轮 dogfood 覆盖。
+- 真实 LLM 链路已可用于受控 smoke，不再只是 mock 流程。
 
-- Required / forbidden beats 输入（Professional 面板）
-- Generate / rewrite / polish / revise prompt 注入（beat-constraints.md）
-- Beat validator metadata（pass / warning / unknown）
-- CandidatePanel 质量区展示（beat validation + continuity + warning）
-- Adopt 前 warning confirm（advisory，不阻断）
-- Feedback revision child candidate（pending → child）
-- Multi-round revision lineage（revision_group_id + revision_index）
-- Polish conservative rules（polish-conservative-rules.md）
-- 真实中文后端链路（无乱码、无 mojibake）
-- 真实 UI + 真实 LLM smoke（agnes-2.0-flash，3/3 通过）
-- Candidate-only 安全边界（AI 不自动覆盖正文）
+当前仍存在的产品限制：
 
-### 已交付基础设施
+- 长篇连续性仍主要依赖 prompt、recent context 和人工控制，没有形成完整的 Story State 操作界面。
+- full E2E 仍有较多 skipped，需要分类治理。
+- warning 后还没有 automatic repair，只能通过用户反馈再生成 candidate。
+- candidate comparison / quality score / explanation 仍处于设计前阶段。
+- release 文档、版本定位和 known issues 需要统一。
 
-- LiteLLM 统一模型调用
-- 本地文件系统存储（无数据库）
-- SSE 实时事件推送
-- Candidate 安全生命周期（pending → adopted / discarded）
-- FileService 并发控制（expected_mtime / expected_hash / FILE_CONFLICT）
-- Pipeline YAML 工作流（generate / rewrite / polish）
-- CodeMirror 6 编辑器
-- Vue 3 + TypeScript + Pinia 前端架构
-- FastAPI + async 后端架构
+## 4. 候选方向与优先级
 
----
+### Priority 1：T9.1 Release Candidate / 维护版收口
 
-## 四、四个候选方向与优先级排序
+这是 T9 的第一优先级。
 
-### Priority 1：T9.1 — Release Candidate / 维护版收口
+目标是把 T8 已完成的能力整理成一个可交付、可说明、可回归的版本，而不是继续堆功能。
 
-**优先级：最高**
+建议内容：
 
-**原因**：T8 已经形成完整阶段成果，现在应该先固化成一个稳定版本。用户和团队都需要一个明确的里程碑来确认"这些功能是稳定的、可用的"。
+- 明确版本定位：`v0.1.3` 维护版或 `v0.2.0` RC。
+- 更新 README。
+- 更新 CHANGELOG。
+- 新增或更新 KNOWN_ISSUES。
+- 新增 Release checklist。
+- 新增 Preflight checklist。
+- 新增 Smoke checklist。
+- 汇总 T8 capability summary。
+- 明确已知限制和不承诺项。
 
-**建议内容**：
+阶段目标：
 
-- 版本定位：v0.1.3 维护版或 v0.2.0 正式版
-- README 更新（安装、快速开始、功能列表）
-- CHANGELOG 更新（T7→T8 变更汇总）
-- KNOWN_ISSUES 更新（remaining issues 列表）
-- Release checklist（发布前检查清单）
-- Preflight checklist（环境检查清单）
-- Smoke checklist（冒烟测试清单）
-- T8 能力摘要（面向用户的功能说明）
-- 已知限制说明
+- 让外部用户或未来维护者能理解当前版本能做什么、不能做什么。
+- 让发布前检查有固定清单。
+- 让当前能力形成一个稳定 baseline。
 
-**重点问题**：
+风险等级：Risk C / Risk B。文档为主，涉及 release checklist 时为中低风险。
 
-- 是否把 T8 成果作为 v0.1.3 维护版（推荐：是）
-- 是否升级为 v0.2.0（需要评估破坏性变更）
-- Release 前必须补哪些文档
-- 哪些 remaining issues 进入 KNOWN_ISSUES
+### Priority 2：T9.2 测试债务专项
 
-**判断**：T9.1 应该作为 T9 第一批任务。
+第二优先级是测试债务治理。
 
----
+当前 full E2E 已能跑通主要链路，但 skipped 数量仍然较多。T9.2 应先做分类和治理设计，再逐步修复。
 
-### Priority 2：T9.2 — 测试债务专项
+建议内容：
 
-**优先级：高**
+- 分类 skipped E2E：环境依赖、真实 LLM、历史流程、缺 mock、已废弃流程。
+- 提取通用 mock helpers。
+- 清理不必要的 `waitForTimeout`。
+- 统一 `spec 99` mock / smoke 规范。
+- 分层 real backend smoke。
+- 分层 real LLM smoke。
+- 明确哪些测试进入 CI，哪些保留为手动 release gate。
 
-**当前状态**：full E2E 62 passed / 93 skipped / 0 failed
+阶段目标：
 
-**建议内容**：
+- 降低 E2E 维护成本。
+- 减少“看似通过但实际没覆盖”的测试假象。
+- 把真实 LLM 测试从日常 CI 中分离成可控 smoke。
 
-- 恢复 skipped E2E 分类（93 个 skipped 逐个审计）
-- Mock helper 抽离（减少 copy-paste）
-- waitForTimeout 清理（改用 wait-for-condition）
-- Spec 99 标准 mock 化
-- Real backend smoke 分层（unit / integration / smoke）
-- Real LLM smoke 分层（快速冒烟 / 完整验证）
+风险等级：Risk C / Risk B。先做报告为 Risk C；修改测试基础设施为 Risk B。
 
-**重点问题**：
+### Priority 3：T9.3 长文连续性 / Story State 最小设计
 
-- 哪些 skipped 是合理跳过（real LLM guard、phase smoke）
-- 哪些 skipped 是旧测试债务（过时用例、环境依赖）
-- 哪些 release 前必须恢复
-- 哪些可以 release 后治理
+第三优先级是长文连续性设计，但不建议立即实现大系统。
 
-**判断**：T9.2 应该排在 release 收口之后，作为稳定性专项。
+当前更适合先设计 `docs/design/t9-3-continuity-anchors.md`，聚焦“用户可控的连续性锚点”，而不是完整 Scene Plan 或自动全书规划。
 
----
+建议关注：
 
-### Priority 3：T9.3 — 长文连续性 / Story State 最小设计
+- 当前场景发生前必须记住的事实。
+- 人物状态锚点。
+- 道具归属锚点。
+- 地点 / 时间锚点。
+- 伏笔状态锚点。
+- 用户可以手动确认、修改、删除的 continuity anchors。
+- anchors 如何进入 prompt。
+- anchors 如何影响 validator 或 candidate warning。
 
-**优先级：中高**
+不建议此阶段直接做：
 
-**注意**：不要直接做 Scene Plan 大系统。
+- 全书自动规划。
+- 大纲强依赖。
+- 自动改写 story-state。
+- 自动 repair 正文。
 
-**建议方向**：
+阶段目标：
 
-- Story State Anchors（故事状态锚点）
-- Continuity Anchors（连续性锚点）
-- 角色状态追踪
-- 线索状态追踪
-- 地点状态追踪
-- 关系状态追踪
-- 用户可控入口（不是全自动）
-- Candidate 生成时引用（prompt 注入）
+- 找到比 Scene Plan 更轻、更可控的长文连续性方案。
+- 让用户能理解并掌控 AI 需要记住什么。
 
-**核心原则**：先做用户可控的 continuity anchors，不做自动规划全书。
+风险等级：Risk C。设计优先，不直接改产品代码。
 
-**T9.3 不应马上开发大功能，应该先做设计文档**：
+### Priority 4：T9.4 写作质量增强规划
 
-```
-docs/design/t9-3-continuity-anchors.md
-```
+第四优先级是下一轮写作质量增强规划。
 
-**判断**：T9.3 是下一阶段真正价值点，但必须先设计，不能直接开写代码。
+它应该建立在 T9.1 发布收口、T9.2 测试治理和 T9.3 continuity design 之后。
 
----
+候选方向：
 
-### Priority 4：T9.4 — 写作质量增强
+- repair candidate。
+- validator categories。
+- quality score。
+- candidate comparison。
+- warning explanation。
+- “为什么不建议 adopt” 的解释型 UI。
+- 多候选稿横向比较。
 
-**优先级：中**
+阶段目标：
 
-**可能内容**：
+- 明确哪些增强真正有助于用户决策。
+- 避免直接走 automatic repair 或复杂 dashboard。
 
-- Repair candidate（自动修复候选稿 — 注意：仍然只生成 candidate）
-- Better validator categories（更细粒度的 beat 分类）
-- Quality score（综合质量评分 — 展示用，不做硬判断）
-- Candidate comparison（候选稿对比视图）
-- More helpful warning explanation（更有用的 warning 说明）
+风险等级：Risk C。只做规划；若实现则升为 Risk B+。
 
-**必须遵守**：
+## 5. 暂缓事项
 
-- Repair 也只能生成 candidate
-- Validator 不能直接改正文
-- Quality score 不能变成硬判断
-- 不能 automatic repair
-- 不能 auto adopt
+以下方向不建议在 T9 起步阶段立即推进：
 
-**判断**：T9.4 可以规划，但不应优先于 T9.1 / T9.2 / T9.3。
+- Scene Plan 大系统。
+- automatic text repair。
+- 自动全书规划。
+- 多模型仲裁。
+- adopted candidate revision。
+- 复杂质量 dashboard。
+- 自动修改正式正文。
+- 自动 adopt。
+- 大范围 prompt 架构重写。
 
----
+原因：
 
-## 五、暂缓事项
+这些方向都会显著增加状态复杂度、测试成本和用户误操作风险。当前更重要的是把已有 candidate 安全闭环、真实 LLM dogfood 和测试基线稳定下来。
 
-以下方向明确**不在 T9 阶段立即开发**：
+## 6. 推荐执行顺序
 
-- **Scene Plan 大系统** — 复杂度过高，容易破坏 candidate-only 安全边界
-- **自动修文** — 与 candidate-only 原则冲突
-- **自动规划全书** — 需要更成熟的故事理解能力
-- **多模型裁判** — 成本和复杂度高于当前收益
-- **Adopted candidate revision** — 违反安全边界
-- **复杂质量仪表盘** — CandidatePanel 质量区已满足需求
+推荐 T9 执行顺序：
 
-**原因**：这些功能会显著增加系统复杂度，容易破坏 T8 已经稳定的 candidate-only 安全边界。
+1. T9.0：阶段方向评估与优先级排序。
+2. T9.1：Release Candidate / 维护版收口。
+3. T9.1-final：Release preflight / smoke checklist。
+4. T9.2：测试债务专项。
+5. T9.3：Continuity Anchors 最小设计。
+6. T9.4：写作质量增强规划。
 
----
+该顺序的核心理由：
 
-## 六、推荐执行顺序
+- 先发布收口，避免在未稳定的基线上继续扩张。
+- 再治理测试债务，提升后续开发安全性。
+- 再设计长文连续性，避免过早进入大纲或 Scene Plan 系统。
+- 最后规划更复杂的质量增强。
 
-```
-T9.0  → 阶段规划文档（本文档）              ✅ 已完成
-T9.1  → Release Candidate / 维护版收口       ⏭ 第一优先级
-T9.1-final → Release preflight / smoke checklist
-T9.2  → 测试债务专项                         ⏭ 第二优先级
-T9.3  → 长文连续性最小设计                    ⏭ 第三优先级（先设计）
-T9.4  → 写作质量增强规划                      📋 仅规划，暂不实现
-```
+## 7. 第一批任务建议
 
-执行原则：
+### T9.1a：Version positioning and release docs audit
 
-- T9.1 是第一优先级
-- T9.3 必须先设计再开发
-- T9.4 暂不进入实现
+风险等级：Risk C。
 
----
+目标：
 
-## 七、第一批任务建议
+- 决定版本定位：`v0.1.3` maintenance release 或 `v0.2.0` RC。
+- 审计 README / CHANGELOG / release notes / known issues。
+- 列出需要补齐的发布文档。
 
-### T9.1a：版本定位与 Release 文档审查
+### T9.1b：Release docs update
 
-| 属性 | 值 |
-|------|------|
-| Risk | Risk C / Documentation Review |
-| 目标 | 确认 v0.1.3 / v0.2.0 版本定位 |
-| 输入 | T8 归档文档、当前 README、CHANGELOG |
-| 输出 | 版本定位决策、必须更新项清单 |
-| 预估 | 1 个任务 |
+风险等级：Risk B。
 
-### T9.1b：Release 文档更新
+目标：
 
-| 属性 | 值 |
-|------|------|
-| Risk | Risk B / Documentation + Release Prep |
-| 目标 | 更新全部 release 相关文档 |
-| 输入 | T9.1a 决策 |
-| 输出 | 更新后的 README / CHANGELOG / KNOWN_ISSUES / RELEASE_CHECKLIST + T8 能力摘要 |
-| 预估 | 1-2 个任务 |
+- 更新 README。
+- 更新 CHANGELOG。
+- 新增或更新 KNOWN_ISSUES。
+- 补充 T8 capability summary。
+- 明确 known limits。
 
-### T9.1c：Preflight 与 Smoke Checklist
+### T9.1c：Preflight and smoke checklist
 
-| 属性 | 值 |
-|------|------|
-| Risk | Risk B / Release Validation |
-| 目标 | 跑全部测试并整理 release checklist |
-| 输入 | T9.1b 完成的文档 |
-| 输出 | 测试结果报告、release checklist 逐项确认 |
-| 预估 | 1 个任务 |
+风险等级：Risk B。
 
-### T9.2a：Skipped E2E 分类报告
+目标：
 
-| 属性 | 值 |
-|------|------|
-| Risk | Risk C / Test Audit |
-| 目标 | 把 93 skipped 分类 |
-| 输入 | E2E 测试文件和 skip 注释 |
-| 输出 | 分类报告（合理跳过 / 旧债务 / 应恢复） |
-| 预估 | 1 个任务 |
+- 固化发布前检查命令。
+- 固化 browser smoke 路径。
+- 固化 real LLM smoke 边界。
+- 明确哪些测试失败应阻断 release。
 
-### T9.3a：Continuity Anchors 设计文档
+### T9.2a：Skipped E2E classification report
 
-| 属性 | 值 |
-|------|------|
-| Risk | Risk C / Design Only |
-| 目标 | 设计用户可控的 story state / continuity anchors |
-| 输入 | T8 story-state / continuity anchors 现有实现 |
-| 输出 | 设计文档（不写代码、不做 Scene Plan） |
-| 预估 | 1-2 个任务 |
+风险等级：Risk C。
 
----
+目标：
 
-## 八、T9 必须继续遵守的安全边界
+- 列出当前 skipped E2E。
+- 按原因分类。
+- 标记应恢复、应重写、应删除、应保留手动验证的测试。
 
-以下边界从 T8 继承，在 T9 全部子任务中**不可违反**：
+### T9.3a：Continuity Anchors design doc
 
-1. **不自动覆盖正文** — AI 输出永远不直接写入正式场景文件
-2. **不自动 adopt** — 正文只在用户明确点击 adopt 后才改变
-3. **所有 AI 输出必须先进入 candidate** — 包括 repair、revision、任何新操作
-4. **Adopt 前正式正文不变** — source 文件在 adopt 操作前保持原样
-5. **Delete 不影响正文** — 删除 candidate 不修改任何正式文件
-6. **Parent candidate 不被 child 修改** — revision 只创建新的 child candidate
-7. **Validator 只能提示，不能直接改正文** — beat validation 结果是 advisory
-8. **Repair 只能生成 candidate** — 即使未来实现自动修复，也必须通过 candidate 流程
-9. **不能绕过 FILE_CONFLICT / hash / expected_mtime** — 并发安全机制不可绕过
-10. **不能泄露 API Key** — prompt 事件、日志、测试报告中不含敏感信息
+风险等级：Risk C。
 
----
+目标：
 
-## 九、每个任务的风险等级汇总
+- 新增 `docs/design/t9-3-continuity-anchors.md`。
+- 定义最小 continuity anchors。
+- 设计用户可控的修改入口。
+- 设计 anchors 与 prompt / candidate / validator 的关系。
 
-| 任务 | 风险等级 | 类型 | 是否改代码 |
-|------|----------|------|-----------|
-| T9.0 阶段规划 | Risk C | Documentation | ❌ |
-| T9.1a 版本定位 | Risk C | Doc Review | ❌ |
-| T9.1b 文档更新 | Risk B | Doc + Release | ❌ |
-| T9.1c Preflight | Risk B | Validation | ❌ |
-| T9.2a Skipped 分类 | Risk C | Test Audit | ❌ |
-| T9.2b 恢复 skipped | Risk B | Test Fix | ✅ |
-| T9.2c Mock 抽离 | Risk B | Refactor | ✅ |
-| T9.3a Anchors 设计 | Risk C | Design | ❌ |
-| T9.3b Anchors 实现 | Risk A | Feature | ✅ |
-| T9.4a 质量增强规划 | Risk C | Planning | ❌ |
+## 8. 每个任务的风险等级
 
----
+| Task | 目标 | 风险等级 | 是否改代码 |
+| --- | --- | --- | --- |
+| T9.0 | 阶段规划 | Risk C | No |
+| T9.1a | 版本定位与发布文档审计 | Risk C | No |
+| T9.1b | 发布文档更新 | Risk B | No |
+| T9.1c | Preflight / smoke checklist | Risk B | No |
+| T9.2a | skipped E2E 分类 | Risk C | No |
+| T9.2b | E2E mock helper 清理 | Risk B | Yes, tests only |
+| T9.2c | real backend / real LLM smoke 分层 | Risk B+ | Possibly |
+| T9.3a | Continuity Anchors 设计 | Risk C | No |
+| T9.4a | 写作质量增强规划 | Risk C | No |
 
-## 十、最终建议
+## 9. T9 必须遵守的安全边界
 
-T9 阶段应以**稳定优先、增量规划**为原则：
+T9 期间必须继续遵守以下边界：
 
-1. **第一步**（T9.1）：把 T8 成果固化为稳定版本，让用户和团队看到明确的里程碑
-2. **第二步**（T9.2）：治理测试债务，提升 CI/CD 信心和可维护性
-3. **第三步**（T9.3）：设计长文连续性方案，为下一阶段核心价值做准备
-4. **第四步**（T9.4）：规划写作质量增强，但暂不进入实现
+- 不自动覆盖正式正文。
+- 不自动 adopt。
+- 所有 AI 输出默认先进入 candidate。
+- adopt 前正式正文保持不变。
+- delete candidate 不影响正式正文。
+- child candidate 不修改 parent candidate。
+- validator 只做 advisory warning，不能直接修改正文。
+- repair 只能创建 candidate，不能直接改正式正文。
+- 不能绕过 FILE_CONFLICT / hash / expected_mtime。
+- candidate source_path 必须是项目内相对路径。
+- 不泄露 API Key。
+- 不把 API Key 写入 localStorage、日志、截图或测试报告。
+- 不修改 `workspace/` 用户数据。
+- 不修改 `_misc/archive/` 归档数据。
 
-T9 不应追求大量新功能，而应确保已有功能**稳定、可用、可发布**，同时为下一阶段做好**设计和规划储备**。
+## 10. 最终建议
+
+建议 T9 立即进入 T9.1 Release Candidate / 维护版收口，而不是继续追加写作功能。
+
+推荐路线：
+
+1. 先完成 T9.1a / T9.1b / T9.1c，把当前能力变成可发布基线。
+2. 再进入 T9.2，清理测试债务，尤其是 skipped E2E 和真实 LLM smoke 分层。
+3. 然后进入 T9.3，用 Continuity Anchors 设计解决长文连续性，而不是直接引入重型 Scene Plan。
+4. 最后进入 T9.4，规划 repair candidate、quality score、candidate comparison 等增强。
+
+结论：
+
+T8 已经完成“写作质量闭环”的基本产品能力。T9 的第一目标应是产品化和稳定化，而不是继续扩大生成链路复杂度。
