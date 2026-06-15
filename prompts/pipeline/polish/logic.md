@@ -7,6 +7,8 @@
 ## 原文
 {{ previous_output }}
 
+{% include 'blocks/beat-constraints.md' %}
+
 ## 检查维度
 {% include 'blocks/logic-rules.md' %}
 

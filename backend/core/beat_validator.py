@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+from difflib import SequenceMatcher
 from typing import Any
 
 from backend.core.llm import LLMService
@@ -62,6 +64,85 @@ def _normalize_beat_list(value: Any) -> list[str]:
     return [str(value).strip()] if str(value).strip() else []
 
 
+def _normalize_text(value: Any) -> str:
+    """Normalize beat text for alignment without introducing dependencies."""
+    text = str(value or "").lower()
+    text = re.sub(r"[\s\-_*`~!！?？,，.。;；:：、\"'“”‘’《》()\[\]{}（）【】<>]", "", text)
+    return text
+
+
+def _extract_beat_id(value: dict[str, Any]) -> str:
+    return str(value.get("id") or value.get("beat_id") or value.get("key") or "").strip()
+
+
+def _extract_beat_text(value: dict[str, Any]) -> str:
+    return str(value.get("text") or value.get("beat") or value.get("description") or "").strip()
+
+
+def _similarity_score(left: str, right: str) -> float:
+    left_norm = _normalize_text(left)
+    right_norm = _normalize_text(right)
+    if not left_norm or not right_norm:
+        return 0.0
+    return SequenceMatcher(None, left_norm, right_norm).ratio()
+
+
+def _align_beat_result(
+    expected_text: str,
+    raw_items: list[dict[str, Any]],
+    expected_index: int,
+    expected_id: str,
+    used_indexes: set[int],
+    similarity_threshold: float = 0.62,
+) -> tuple[dict[str, Any], str, float]:
+    """Align one expected beat to one model-returned item.
+
+    Order is deliberately the last fallback. The validator should never silently
+    attach a low-similarity model result to a different required beat.
+    """
+    if expected_id:
+        for index, item in enumerate(raw_items):
+            if index in used_indexes:
+                continue
+            if _extract_beat_id(item) == expected_id:
+                used_indexes.add(index)
+                return item, "id", 1.0
+
+    expected_norm = _normalize_text(expected_text)
+    if expected_norm:
+        for index, item in enumerate(raw_items):
+            if index in used_indexes:
+                continue
+            item_norm = _normalize_text(_extract_beat_text(item))
+            if item_norm and item_norm == expected_norm:
+                used_indexes.add(index)
+                return item, "text_exact", 1.0
+
+    best_index = -1
+    best_score = 0.0
+    for index, item in enumerate(raw_items):
+        if index in used_indexes:
+            continue
+        score = _similarity_score(expected_text, _extract_beat_text(item))
+        if score > best_score:
+            best_score = score
+            best_index = index
+    if best_index >= 0 and best_score >= similarity_threshold:
+        used_indexes.add(best_index)
+        return raw_items[best_index], "similarity", round(best_score, 4)
+
+    # Preserve old behavior only when the model omitted text/id entirely but
+    # returned an item at the same index. This keeps simple validators working
+    # while still marking the alignment as weak for review.
+    if expected_index < len(raw_items) and expected_index not in used_indexes:
+        item = raw_items[expected_index]
+        if not _extract_beat_id(item) and not _extract_beat_text(item):
+            used_indexes.add(expected_index)
+            return item, "index_unlabeled", 0.0
+
+    return {}, "unknown", 0.0
+
+
 def extract_beat_validation_inputs(extra_vars: dict | None) -> tuple[list[str], list[str]]:
     """Extract required/forbidden beat lists from pipeline extra_vars."""
     if not extra_vars:
@@ -83,24 +164,44 @@ def unknown_beat_validation(
     required_beats: list[str],
     forbidden_beats: list[str],
     reason: str = "validator_failed",
+    retry_count: int = 0,
+    last_error_type: str = "",
 ) -> dict[str, Any]:
     return {
         "enabled": True,
         "status": "unknown",
         "summary": "信息点检查未完成，请采用前人工预览确认。",
         "required_beats": [
-            {"text": beat, "status": "unknown", "evidence": "", "confidence": 0}
-            for beat in required_beats
+            {
+                "id": f"beat-{idx + 1}",
+                "text": beat,
+                "status": "unknown",
+                "evidence": "",
+                "confidence": 0,
+                "alignment": "unknown",
+                "alignment_score": 0,
+            }
+            for idx, beat in enumerate(required_beats)
         ],
         "forbidden_beats": [
-            {"text": beat, "violated": None, "evidence": "", "confidence": 0}
-            for beat in forbidden_beats
+            {
+                "id": f"forbid-{idx + 1}",
+                "text": beat,
+                "violated": None,
+                "evidence": "",
+                "confidence": 0,
+                "alignment": "unknown",
+                "alignment_score": 0,
+            }
+            for idx, beat in enumerate(forbidden_beats)
         ],
         "logic_risks": [],
         "validator": {
             "type": "llm-json",
             "version": VALIDATOR_VERSION,
             "reason": reason,
+            "retry_count": retry_count,
+            "last_error_type": last_error_type or reason,
         },
     }
 
@@ -123,6 +224,8 @@ def normalize_beat_validation_result(
     required_beats: list[str],
     forbidden_beats: list[str],
     model: str | None = None,
+    retry_count: int = 0,
+    last_error_type: str = "",
 ) -> dict[str, Any]:
     required_raw = raw.get("required_beats")
     if not isinstance(required_raw, list):
@@ -132,8 +235,16 @@ def normalize_beat_validation_result(
         forbidden_raw = []
 
     required_items: list[dict[str, Any]] = []
+    used_required_indexes: set[int] = set()
     for index, beat in enumerate(required_beats):
-        source = required_raw[index] if index < len(required_raw) and isinstance(required_raw[index], dict) else {}
+        expected_id = f"beat-{index + 1}"
+        source, alignment_method, alignment_score = _align_beat_result(
+            expected_text=beat,
+            raw_items=[item for item in required_raw if isinstance(item, dict)],
+            expected_index=index,
+            expected_id=expected_id,
+            used_indexes=used_required_indexes,
+        )
         status = str(source.get("status") or source.get("result") or "unknown").strip().lower()
         if status in {"pass", "passed", "satisfied", "hit", "yes"}:
             status = "satisfied"
@@ -144,29 +255,47 @@ def normalize_beat_validation_result(
         else:
             status = "unknown"
         required_items.append({
-            "text": str(source.get("text") or source.get("beat") or beat),
+            "id": str(source.get("id") or expected_id),
+            "text": beat,
             "status": status,
             "evidence": str(source.get("evidence") or ""),
             "confidence": source.get("confidence", 0),
+            "alignment": alignment_method,
+            "alignment_score": alignment_score,
+            "model_text": _extract_beat_text(source),
         })
 
     forbidden_items: list[dict[str, Any]] = []
+    used_forbidden_indexes: set[int] = set()
     for index, beat in enumerate(forbidden_beats):
-        source = forbidden_raw[index] if index < len(forbidden_raw) and isinstance(forbidden_raw[index], dict) else {}
+        expected_id = f"forbid-{index + 1}"
+        source, alignment_method, alignment_score = _align_beat_result(
+            expected_text=beat,
+            raw_items=[item for item in forbidden_raw if isinstance(item, dict)],
+            expected_index=index,
+            expected_id=expected_id,
+            used_indexes=used_forbidden_indexes,
+        )
         violated = source.get("violated")
         if violated is None:
             status = str(source.get("status") or "").strip().lower()
             violated = status in {"violated", "fail", "failed", "yes", "true"}
+        if alignment_method == "unknown":
+            violated = None
         forbidden_items.append({
-            "text": str(source.get("text") or source.get("beat") or beat),
-            "violated": bool(violated),
+            "id": str(source.get("id") or expected_id),
+            "text": beat,
+            "violated": None if violated is None else bool(violated),
             "evidence": str(source.get("evidence") or ""),
             "confidence": source.get("confidence", 0),
+            "alignment": alignment_method,
+            "alignment_score": alignment_score,
+            "model_text": _extract_beat_text(source),
         })
 
     logic_risks = raw.get("logic_risks") if isinstance(raw.get("logic_risks"), list) else []
     has_warning = any(item["status"] in {"missing", "partial", "unknown"} for item in required_items)
-    has_warning = has_warning or any(item["violated"] for item in forbidden_items)
+    has_warning = has_warning or any(item["violated"] is not False for item in forbidden_items)
     status = "warning" if has_warning else "pass"
     summary = str(raw.get("summary") or ("存在信息点风险，请采用前预览确认。" if has_warning else "必需信息点检查通过。"))
 
@@ -181,6 +310,8 @@ def normalize_beat_validation_result(
             "type": "llm-json",
             "version": VALIDATOR_VERSION,
             "model": model or "",
+            "retry_count": retry_count,
+            "last_error_type": last_error_type,
         },
     }
 
@@ -202,31 +333,46 @@ class RequiredBeatValidator:
             return unknown_beat_validation(required_beats, forbidden_beats, "no_beats")
 
         prompt = self._build_prompt(content, required_beats, forbidden_beats)
-        try:
-            response = await self.llm_service.complete_sync(
-                [
-                    {"role": "system", "content": "你是小说正文信息点校验器，只输出 JSON。"},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0,
-                max_tokens=1600,
-                timeout=60,
-            )
-            raw = _safe_json_loads(response)
-            return normalize_beat_validation_result(
-                raw,
-                required_beats,
-                forbidden_beats,
-                model=getattr(self.llm_service.config, "model", None),
-            )
-        except Exception as exc:
-            logger.warning("required beat validation failed: %s", type(exc).__name__)
-            return unknown_beat_validation(required_beats, forbidden_beats, type(exc).__name__)
+        last_error_type = ""
+        for attempt in range(2):
+            try:
+                response = await self.llm_service.complete_sync(
+                    [
+                        {"role": "system", "content": "你是小说正文信息点校验器，只输出 JSON。"},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0,
+                    max_tokens=1600,
+                    timeout=60,
+                )
+                raw = _safe_json_loads(response)
+                return normalize_beat_validation_result(
+                    raw,
+                    required_beats,
+                    forbidden_beats,
+                    model=getattr(self.llm_service.config, "model", None),
+                    retry_count=attempt,
+                    last_error_type=last_error_type,
+                )
+            except Exception as exc:
+                last_error_type = type(exc).__name__
+                logger.warning(
+                    "required beat validation failed (attempt=%s): %s",
+                    attempt + 1,
+                    last_error_type,
+                )
+        return unknown_beat_validation(
+            required_beats,
+            forbidden_beats,
+            last_error_type,
+            retry_count=1,
+            last_error_type=last_error_type,
+        )
 
     @staticmethod
     def _build_prompt(content: str, required_beats: list[str], forbidden_beats: list[str]) -> str:
-        required_lines = "\n".join(f"{idx + 1}. {beat}" for idx, beat in enumerate(required_beats)) or "无"
-        forbidden_lines = "\n".join(f"{idx + 1}. {beat}" for idx, beat in enumerate(forbidden_beats)) or "无"
+        required_lines = "\n".join(f"beat-{idx + 1}. {beat}" for idx, beat in enumerate(required_beats)) or "无"
+        forbidden_lines = "\n".join(f"forbid-{idx + 1}. {beat}" for idx, beat in enumerate(forbidden_beats)) or "无"
         return (
             "请检查候选正文是否满足必需信息点，并检查是否触犯禁止信息点。\n"
             "不要改写正文，不要给写作建议，只返回 JSON。\n\n"
@@ -239,8 +385,8 @@ class RequiredBeatValidator:
             "返回 JSON 格式：\n"
             "{\n"
             '  "summary": "一句中文结论",\n'
-            '  "required_beats": [{"text": "...", "status": "satisfied|partial|missing", "evidence": "...", "confidence": 0.0}],\n'
-            '  "forbidden_beats": [{"text": "...", "violated": false, "evidence": "...", "confidence": 0.0}],\n'
+            '  "required_beats": [{"id": "beat-1", "text": "...", "status": "satisfied|partial|missing", "evidence": "...", "confidence": 0.0}],\n'
+            '  "forbidden_beats": [{"id": "forbid-1", "text": "...", "violated": false, "evidence": "...", "confidence": 0.0}],\n'
             '  "logic_risks": []\n'
             "}"
         )

@@ -7,6 +7,8 @@
 ## 原文
 {{ previous_output }}
 
+{% include 'blocks/beat-constraints.md' %}
+
 ## 要求
 {% include 'blocks/depai-rules.md' %}
 

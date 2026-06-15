@@ -11,6 +11,7 @@
 
 import hashlib
 import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 from jinja2 import Environment, FileSystemLoader
@@ -262,6 +263,82 @@ class TestPromptRendering:
         # Jinja2 默认会忽略缺失的变量
         result = pipeline_runner.render_prompt("test.md", {})
         assert "Hello" in result
+
+    def _system_prompt_runner(self, mock_llm_service, mock_file_service, tmp_path):
+        user_prompts = tmp_path / "workspace" / "prompts"
+        user_prompts.mkdir(parents=True)
+        return PipelineRunner(
+            user_prompts,
+            mock_llm_service,
+            mock_file_service,
+            system_prompts_path=Path("prompts").resolve(),
+        )
+
+    def test_rewrite_prompt_includes_required_and_forbidden_beats(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+    ):
+        runner = self._system_prompt_runner(mock_llm_service, mock_file_service, tmp_path)
+
+        result = runner.render_prompt(
+            "pipeline/rewrite/draft.md",
+            {
+                "file_content": "原文",
+                "style_guide": "文风",
+                "required_beats": ["第七层协议必须被提及"],
+                "forbidden_beats": ["不能揭晓完整真相"],
+            },
+        )
+
+        assert "本次必须保留 / 补上的信息点" in result
+        assert "第七层协议必须被提及" in result
+        assert "本次禁止新增 / 禁止揭晓" in result
+        assert "不能揭晓完整真相" in result
+
+    def test_polish_prompt_includes_required_and_forbidden_beats(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+    ):
+        runner = self._system_prompt_runner(mock_llm_service, mock_file_service, tmp_path)
+
+        result = runner.render_prompt(
+            "pipeline/polish/prose.md",
+            {
+                "previous_output": "润色前正文",
+                "required_beats": ["银色芯片仍在林澈手中"],
+                "forbidden_beats": ["不要新增导师角色"],
+            },
+        )
+
+        assert "本次必须保留 / 补上的信息点" in result
+        assert "银色芯片仍在林澈手中" in result
+        assert "本次禁止新增 / 禁止揭晓" in result
+        assert "不要新增导师角色" in result
+
+    def test_rewrite_prompt_omits_empty_beat_sections(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+    ):
+        runner = self._system_prompt_runner(mock_llm_service, mock_file_service, tmp_path)
+
+        result = runner.render_prompt(
+            "pipeline/rewrite/draft.md",
+            {
+                "file_content": "原文",
+                "style_guide": "文风",
+                "required_beats": [],
+                "forbidden_beats": [],
+            },
+        )
+
+        assert "本次必须保留 / 补上的信息点" not in result
+        assert "本次禁止新增 / 禁止揭晓" not in result
 
 
 # ─── AsyncGenerator Event Tests ──────────────────────────────────────────────

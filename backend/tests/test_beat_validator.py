@@ -33,6 +33,22 @@ class FakeValidatorLLM:
         return self.response
 
 
+class SequentialValidatorLLM(FakeValidatorLLM):
+    def __init__(self, responses: list[object]):
+        super().__init__("")
+        self.responses = list(responses)
+        self.calls = 0
+
+    async def complete_sync(self, *args, **kwargs):
+        self.calls += 1
+        if not self.responses:
+            return ""
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return str(response)
+
+
 def test_beat_validation_is_opt_in_only():
     assert is_beat_validation_enabled({}) is False
     assert is_beat_validation_enabled({"_enable_beat_validation": False}) is False
@@ -70,6 +86,88 @@ def test_normalize_beat_validation_result_marks_warning_for_missing_required():
     assert result["required_beats"][1]["status"] == "missing"
 
 
+def test_normalize_beat_validation_result_aligns_by_id_when_order_shuffled():
+    result = normalize_beat_validation_result(
+        {
+            "summary": "order shuffled",
+            "required_beats": [
+                {"id": "beat-2", "text": "silver chip", "status": "missing"},
+                {"id": "beat-1", "text": "seventh protocol", "status": "satisfied"},
+            ],
+            "forbidden_beats": [
+                {"id": "forbid-1", "text": "reveal full truth", "violated": False},
+            ],
+        },
+        ["seventh protocol", "silver chip"],
+        ["reveal full truth"],
+        model="fake",
+    )
+
+    assert result["required_beats"][0]["text"] == "seventh protocol"
+    assert result["required_beats"][0]["status"] == "satisfied"
+    assert result["required_beats"][0]["alignment"] == "id"
+    assert result["required_beats"][1]["text"] == "silver chip"
+    assert result["required_beats"][1]["status"] == "missing"
+    assert result["required_beats"][1]["alignment"] == "id"
+
+
+def test_normalize_beat_validation_result_aligns_by_text_exact_without_id():
+    result = normalize_beat_validation_result(
+        {
+            "required_beats": [
+                {"text": "silver chip", "status": "missing"},
+                {"text": "seventh protocol", "status": "satisfied"},
+            ],
+        },
+        ["seventh protocol", "silver chip"],
+        [],
+        model="fake",
+    )
+
+    assert result["required_beats"][0]["status"] == "satisfied"
+    assert result["required_beats"][0]["alignment"] == "text_exact"
+    assert result["required_beats"][1]["status"] == "missing"
+
+
+def test_normalize_beat_validation_result_aligns_by_similarity():
+    result = normalize_beat_validation_result(
+        {
+            "required_beats": [
+                {"text": "seventh layer protocol", "status": "satisfied"},
+            ],
+        },
+        ["seventh protocol"],
+        [],
+        model="fake",
+    )
+
+    assert result["required_beats"][0]["status"] == "satisfied"
+    assert result["required_beats"][0]["alignment"] == "similarity"
+    assert result["required_beats"][0]["alignment_score"] >= 0.62
+
+
+def test_normalize_beat_validation_result_low_similarity_is_unknown():
+    result = normalize_beat_validation_result(
+        {
+            "required_beats": [
+                {"text": "unrelated mentor arrives", "status": "satisfied"},
+            ],
+            "forbidden_beats": [
+                {"text": "unrelated place", "violated": False},
+            ],
+        },
+        ["seventh protocol"],
+        ["reveal full truth"],
+        model="fake",
+    )
+
+    assert result["status"] == "warning"
+    assert result["required_beats"][0]["status"] == "unknown"
+    assert result["required_beats"][0]["alignment"] == "unknown"
+    assert result["forbidden_beats"][0]["violated"] is None
+    assert result["forbidden_beats"][0]["alignment"] == "unknown"
+
+
 @pytest.mark.asyncio
 async def test_validator_json_parse_failure_returns_unknown():
     validator = RequiredBeatValidator(FakeValidatorLLM("not json"))
@@ -82,6 +180,46 @@ async def test_validator_json_parse_failure_returns_unknown():
 
     assert result["status"] == "unknown"
     assert result["required_beats"][0]["status"] == "unknown"
+    assert result["validator"]["retry_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_validator_retries_once_and_succeeds():
+    validator = RequiredBeatValidator(SequentialValidatorLLM([
+        RuntimeError("temporary"),
+        json.dumps({
+            "summary": "pass on retry",
+            "required_beats": [{"id": "beat-1", "text": "seventh protocol", "status": "satisfied"}],
+            "forbidden_beats": [],
+        }),
+    ]))
+
+    result = await validator.validate(
+        "body with seventh protocol",
+        required_beats=["seventh protocol"],
+        forbidden_beats=[],
+    )
+
+    assert result["status"] == "pass"
+    assert result["validator"]["retry_count"] == 1
+    assert result["validator"]["last_error_type"] == "RuntimeError"
+
+
+@pytest.mark.asyncio
+async def test_validator_two_failures_returns_unknown_with_retry_metadata():
+    llm = SequentialValidatorLLM([RuntimeError("first"), RuntimeError("second")])
+    validator = RequiredBeatValidator(llm)
+
+    result = await validator.validate(
+        "body",
+        required_beats=["seventh protocol"],
+        forbidden_beats=[],
+    )
+
+    assert llm.calls == 2
+    assert result["status"] == "unknown"
+    assert result["validator"]["retry_count"] == 1
+    assert result["validator"]["last_error_type"] == "RuntimeError"
 
 
 @pytest.mark.asyncio

@@ -7,6 +7,8 @@
 ## 原文
 {{ previous_output }}
 
+{% include 'blocks/beat-constraints.md' %}
+
 ## 检查要点
 {% include 'blocks/logic-rules.md' %}
 

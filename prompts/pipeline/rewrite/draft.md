@@ -15,6 +15,8 @@
 - 关键线索
 - 场景结尾承接点
 
+{% include 'blocks/beat-constraints.md' %}
+
 ## 允许优化
 - 开头切入角度
 - 动作细节
