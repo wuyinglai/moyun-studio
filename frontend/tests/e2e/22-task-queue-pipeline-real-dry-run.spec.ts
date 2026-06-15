@@ -12,6 +12,9 @@
  * 8. 测试项目清理
  */
 import { test, expect } from '@playwright/test'
+// ── Gate：需要真实后端 ──────────────────────────────────────────
+const REAL_BACKEND_AVAILABLE = process.env.MOYUN_E2E_REAL_BACKEND === '1'
+
 
 const BACKEND_API = 'http://127.0.0.1:8000/api'
 const TEST_PROJECT_NAME = '__e2e_t6_5_7_dry_run'
@@ -43,6 +46,11 @@ async function apiCall(
 }
 
 test.describe('T6.5.7 Task Queue / Pipeline API dry-run E2E', () => {
+  test.skip(
+    !REAL_BACKEND_AVAILABLE,
+    'MOYUN_E2E_REAL_BACKEND=1 未设置，跳过需要真实后端的测试',
+  )
+
   let projectId: string
 
   test.beforeAll(async ({ request }) => {

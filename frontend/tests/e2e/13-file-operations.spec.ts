@@ -97,6 +97,14 @@ async function installMocks(page: Page) {
 }
 
 test.describe('文件操作流程 - 模拟人类操作', () => {
+  // ── 清理 Pinia 持久化状态，防止 spec 间 localStorage 泄漏 ──
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear()
+      sessionStorage.clear()
+    })
+  })
+
   test('打开项目后，点击文件加载到编辑器', async ({ page }) => {
     const errors = createErrorCollector(page)
     await installMocks(page)

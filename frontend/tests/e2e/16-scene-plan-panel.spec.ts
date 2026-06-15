@@ -244,6 +244,14 @@ async function installMockApi(page: Page) {
 }
 
 test.describe('T6.5.2 Scene Plan 面板 E2E', () => {
+  // ── 清理 Pinia 持久化状态，防止 spec 间 localStorage 泄漏 ──
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear()
+      sessionStorage.clear()
+    })
+  })
+
   test('1. 打开项目 → 切到"场景计划"tab → 面板挂载', async ({ page }) => {
     const errors = createErrorCollector(page)
     await installMockApi(page)

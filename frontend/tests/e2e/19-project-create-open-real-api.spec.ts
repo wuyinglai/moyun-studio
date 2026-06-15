@@ -15,6 +15,9 @@
  *  - 不调用 llm / generate 等接口
  */
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test'
+// ── Gate：需要真实后端 ──────────────────────────────────────────
+const REAL_BACKEND_AVAILABLE = process.env.MOYUN_E2E_REAL_BACKEND === '1'
+
 import { dismissViteOverlay } from './helpers/e2eUtils'
 
 // ======================== 常量 ========================
@@ -111,6 +114,11 @@ async function forceLLMConnected(page: Page): Promise<void> {
 
 // ======================== 测试套件 ========================
 test.describe('T6.5.4 项目创建 / 打开 / 列表真实 E2E', () => {
+  test.skip(
+    !REAL_BACKEND_AVAILABLE,
+    'MOYUN_E2E_REAL_BACKEND=1 未设置，跳过需要真实后端的测试',
+  )
+
   let projectId: string
   let cleaned = false
 

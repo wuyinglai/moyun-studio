@@ -12,6 +12,10 @@
  * 8. 尝试生成
  */
 import { test, expect, chromium, type Page } from '@playwright/test'
+
+// ── Gate：Phase T3-A 冒烟测试需要真实环境 ──────────────────────────
+const PHASE_SMOKE_ENABLED = process.env.MOYUN_E2E_ALLOW_PHASE_SMOKE === '1'
+
 import { fileURLToPath } from 'url'
 import path from 'path'
 
@@ -20,6 +24,11 @@ const __dirname = path.dirname(__filename)
 const screenshotDir = path.resolve(__dirname, '../../../docs/testing/screenshots')
 
 test.describe('Phase T3-A FlowPanel UI 冒烟测试', () => {
+  test.skip(
+    !PHASE_SMOKE_ENABLED,
+    'MOYUN_E2E_ALLOW_PHASE_SMOKE=1 未设置，跳过 Phase T3-A 冒烟测试（无 mock，需要真实环境）',
+  )
+
   let page: Page
   let consoleErrors: string[] = []
 

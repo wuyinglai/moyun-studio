@@ -10,6 +10,9 @@
  * 本测试验证"浏览器内 API → 后端 dry-run → 任务可见"链路。
  */
 import { test, expect, type Page } from '@playwright/test'
+// ── Gate：需要真实后端 ──────────────────────────────────────────
+const REAL_BACKEND_AVAILABLE = process.env.MOYUN_E2E_REAL_BACKEND === '1'
+
 import { dismissViteOverlay } from './helpers/e2eUtils'
 
 // 使用 Vite proxy 时用 '/api'，直接后端时用 'http://127.0.0.1:8000/api'
@@ -75,6 +78,11 @@ async function installLLMMock(page: Page): Promise<void> {
 }
 
 test.describe('T6.5.8 Pipeline / TaskQueue dry-run 前端可见性 E2E', () => {
+  test.skip(
+    !REAL_BACKEND_AVAILABLE,
+    'MOYUN_E2E_REAL_BACKEND=1 未设置，跳过需要真实后端的测试',
+  )
+
   let projectId: string
   let cleaned = false
 

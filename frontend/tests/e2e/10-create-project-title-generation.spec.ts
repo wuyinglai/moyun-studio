@@ -91,6 +91,14 @@ async function installCreateProjectMocks(page: Page, generationRequests: unknown
 }
 
 test.describe('create project title generation flow', () => {
+  // ── 清理 Pinia 持久化状态，防止 spec 间 localStorage 泄漏 ──
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear()
+      sessionStorage.clear()
+    })
+  })
+
   test('streams the first generated idea into the editor, not the chat panel', async ({ page }) => {
     const generationRequests: unknown[] = []
     await installCreateProjectMocks(page, generationRequests)

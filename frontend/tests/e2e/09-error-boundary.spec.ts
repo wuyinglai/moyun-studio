@@ -15,6 +15,9 @@ import { installMockApi } from './helpers/mockApi'
 
 test.describe('ErrorBoundary 回归测试', () => {
   test.beforeEach(async ({ page }) => {
+    // 清理 Pinia 持久化状态，防止 spec 间 localStorage 泄漏
+    await page.addInitScript(() => { localStorage.clear(); sessionStorage.clear() })
+
     await installMockApi(page)
   })
 

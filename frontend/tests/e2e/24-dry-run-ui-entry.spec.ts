@@ -9,6 +9,9 @@
  * 5. dry-run 不生成 candidate
  */
 import { test, expect } from '@playwright/test'
+// ── Gate：需要真实后端 ──────────────────────────────────────────
+const REAL_BACKEND_AVAILABLE = process.env.MOYUN_E2E_REAL_BACKEND === '1'
+
 import { dismissViteOverlay } from './helpers/e2eUtils'
 
 const BACKEND_API = 'http://127.0.0.1:8000/api'
@@ -79,6 +82,11 @@ async function getCandidates(projectId: string): Promise<any[]> {
 }
 
 test.describe('T6.5.9 前端 dry-run 测试入口 E2E', () => {
+  test.skip(
+    !REAL_BACKEND_AVAILABLE,
+    'MOYUN_E2E_REAL_BACKEND=1 未设置，跳过需要真实后端的测试',
+  )
+
   let projectId: string
 
   test.beforeAll(async () => {

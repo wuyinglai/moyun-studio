@@ -121,6 +121,14 @@ async function installRightPanelMocks(page: Page) {
 }
 
 test.describe('right panel tabs', () => {
+  // ── 清理 Pinia 持久化状态，防止 spec 间 localStorage 泄漏 ──
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.clear()
+      sessionStorage.clear()
+    })
+  })
+
   test('opens every professional right panel tab without crashing', async ({ page }) => {
     const errors = createErrorCollector(page)
     await installRightPanelMocks(page)

@@ -12,6 +12,9 @@
  */
 
 import { test, expect } from '@playwright/test'
+// ── Gate：需要真实 LLM ──────────────────────────────────────────
+const REAL_LLM_ENABLED = process.env.MOYUN_ALLOW_REAL_LLM_SMOKE === '1'
+
 import * as fs from 'fs'
 import * as path from 'path'
 import { openLiteEntry, openMainEntry } from './helpers/entryHelpers'
@@ -22,6 +25,11 @@ import { evaluateFictionScene } from './helpers/qualityRubric'
 const llmEnv = getLLMEnv()
 
 test.describe('轻量入口真实 LLM 测试', () => {
+  test.skip(
+    !REAL_LLM_ENABLED,
+    'MOYUN_ALLOW_REAL_LLM_SMOKE=1 未设置，跳过真实 LLM 测试',
+  )
+
   test.skip(shouldSkipLLMTests(), '需要 MOYUN_E2E_REAL_LLM=true')
 
   // ── 测试 1：轻量入口打开 ──────────────────────────────
