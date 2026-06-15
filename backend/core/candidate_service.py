@@ -235,17 +235,19 @@ class CandidateService:
 
         return required, forbidden
 
-    async def _next_revision_index(self, project_id: str, parent_candidate_id: str) -> int:
+    async def _next_revision_index(self, project_id: str, revision_group_id: str) -> int:
         metadata = await self._load_metadata(project_id)
-        count = 0
+        max_index = 0
         for data in metadata.values():
             generation_context = data.get("generation_context") or {}
-            if (
-                data.get("parent_candidate_id") == parent_candidate_id
-                or generation_context.get("parent_candidate_id") == parent_candidate_id
-            ):
-                count += 1
-        return count + 1
+            if data.get("revision_group_id") != revision_group_id and generation_context.get("revision_group_id") != revision_group_id:
+                continue
+            raw_index = data.get("revision_index") or generation_context.get("revision_index") or 0
+            try:
+                max_index = max(max_index, int(raw_index))
+            except (TypeError, ValueError):
+                continue
+        return max_index + 1
 
     async def create_feedback_revision_candidate(
         self,
@@ -302,17 +304,21 @@ class CandidateService:
             source_path=parent.source_path,
         )
 
-        revised_content = await llm_service.complete_sync(
-            [
-                {
-                    "role": "system",
-                    "content": "你是小说候选稿修订助手。只输出完整修订后的候选稿正文，不输出解释。",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            timeout=180,
-            max_tokens=3000,
-        )
+        try:
+            revised_content = await llm_service.complete_sync(
+                [
+                    {
+                        "role": "system",
+                        "content": "你是小说候选稿修订助手。只输出完整修订后的候选稿正文，不输出解释。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                timeout=180,
+                max_tokens=3000,
+            )
+        except Exception as exc:
+            logger.warning("feedback revision LLM failed: %s", type(exc).__name__)
+            raise ValueError("REVISION_LLM_FAILED") from exc
         revised_content = (revised_content or "").strip()
         if not revised_content:
             raise ValueError("EMPTY_REVISION_CONTENT")
@@ -326,12 +332,12 @@ class CandidateService:
                 forbidden_beats=forbidden_texts,
             )
 
-        revision_index = await self._next_revision_index(project_id, parent_candidate_id)
         revision_group_id = (
             parent.revision_group_id
             or (parent.generation_context or {}).get("revision_group_id")
             or f"revgrp_{uuid.uuid4().hex[:8]}"
         )
+        revision_index = await self._next_revision_index(project_id, revision_group_id)
         generation_context = {
             "revision_type": "feedback_revision",
             "parent_candidate_id": parent_candidate_id,

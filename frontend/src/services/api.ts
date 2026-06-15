@@ -19,7 +19,7 @@ const rawApi = axios.create({
 
 // 请求拦截器：动态 baseURL + 注入重试计数
 rawApi.interceptors.request.use((config) => {
-  ;config.__retryCount = 0
+  ;config.__retryCount = config.__retryCount ?? 0
   // 如果用户在设置中配置了自定义后端地址，覆盖 baseURL
   if (typeof window !== 'undefined') {
     try {

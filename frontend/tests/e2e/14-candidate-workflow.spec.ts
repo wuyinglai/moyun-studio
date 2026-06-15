@@ -14,8 +14,54 @@ import { dismissViteOverlay, createErrorCollector, filterSevereErrors } from './
 
 const projectId = 'e2e-human-candidate'
 
-async function installMocks(page: Page) {
-  let childRevisionCreated = false
+type MockOptions = {
+  failNextRevision?: boolean
+}
+
+async function installMocks(page: Page, options: MockOptions = {}) {
+  let failRevisionResponses = options.failNextRevision ? 3 : 0
+  let revisionCounter = 0
+  const candidates: Array<Record<string, unknown>> = [
+    {
+      id: 'cand-001',
+      source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
+      candidate_path: `${projectId}/candidates/cand-001.md`,
+      action: 'polish',
+      status: 'pending',
+      preview: '青云山脉绵延千里，仙鹤在云雾中穿行。少年站在山门前，仰望那高耸入云的石阶。',
+      created_at: new Date().toISOString(),
+      generation_context: {
+        required_beats_input: [{ id: 'beat-1', text: '正文必须提到第七层协议' }],
+        forbidden_beats_input: [{ id: 'forbid-1', text: '不能揭晓第七层协议完整真相' }],
+      },
+      beat_validation: {
+        enabled: true,
+        status: 'warning',
+        summary: '发现 1 个可能缺失的信息点',
+        required_beats: [{ id: 'beat-1', text: '正文必须提到第七层协议', status: 'missing' }],
+        forbidden_beats: [],
+      },
+    },
+    {
+      id: 'cand-002',
+      source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
+      candidate_path: `${projectId}/candidates/cand-002.md`,
+      action: 'rewrite',
+      status: 'pending',
+      preview: '青云宗的山门前，一位白衣少年负手而立。他的目光穿透云层，望向那遥远的峰顶。',
+      created_at: new Date(Date.now() - 60000).toISOString(),
+    },
+    {
+      id: 'cand-003',
+      source_path: `${projectId}/书名与创意.md`,
+      candidate_path: `${projectId}/candidates/cand-003.md`,
+      action: 'modify',
+      status: 'adopted',
+      preview: '已采用的内容',
+      created_at: new Date(Date.now() - 120000).toISOString(),
+    },
+  ]
+  const findCandidate = (candidateId: string) => candidates.find((item) => item.id === candidateId)
 
   await page.route('http://127.0.0.1:5173/api/**', async (route) => {
     const request = route.request()
@@ -109,91 +155,77 @@ async function installMocks(page: Page) {
 
     // ── Candidates ──
     else if (/^\/candidates\/.+\/.+\/revise$/.test(path) && method === 'POST') {
-      const payload = request.postDataJSON() as { feedback_text?: string; quick_actions?: string[] } | null
+      const payload = request.postDataJSON() as {
+        feedback_text?: string
+        quick_actions?: string[]
+        repair_scope?: string
+      } | null
       expect(payload?.feedback_text || payload?.quick_actions?.length).toBeTruthy()
-      childRevisionCreated = true
-      await ok({
-        id: 'cand-rev-001',
-        source_path: 'chapters/vol-01/ch-001/sec-001.md',
-        candidate_path: `${projectId}/.candidates/cand-rev-001.feedback_revision.md`,
+      if (failRevisionResponses > 0) {
+        failRevisionResponses -= 1
+        await route.fulfill({
+          status: 502,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: false, error: { code: 'LLM_ERROR', message: 'mock llm failed' } }),
+        })
+        return
+      }
+      const parentId = path.split('/').at(-2) || 'cand-001'
+      const parent = findCandidate(parentId)
+      const parentContext = (parent?.generation_context || {}) as Record<string, unknown>
+      const revisionGroupId = String(parent?.revision_group_id || parentContext.revision_group_id || 'revgrp-e2e')
+      revisionCounter += 1
+      const childId = `cand-rev-${String(revisionCounter).padStart(3, '0')}`
+      const child = {
+        id: childId,
+        source_path: parent?.source_path || 'chapters/vol-01/ch-001/sec-001.md',
+        candidate_path: `${projectId}/.candidates/${childId}.feedback_revision.md`,
         action: 'feedback_revision',
         status: 'pending',
-        parent_candidate_id: 'cand-001',
-        revision_group_id: 'revgrp-e2e',
-        revision_index: 1,
+        parent_candidate_id: parentId,
+        revision_group_id: revisionGroupId,
+        revision_index: revisionCounter,
         generation_context: {
           revision_type: 'feedback_revision',
-          parent_candidate_id: 'cand-001',
+          parent_candidate_id: parentId,
           feedback_text: payload?.feedback_text || '',
           quick_actions: payload?.quick_actions || [],
-          repair_scope: 'full_candidate',
+          repair_scope: payload?.repair_scope || 'full_candidate',
+          required_beats_input: parentContext.required_beats_input || [],
+          forbidden_beats_input: parentContext.forbidden_beats_input || [],
+          revision_group_id: revisionGroupId,
+          revision_index: revisionCounter,
         },
+        beat_validation: parent?.beat_validation || {},
         created_at: new Date().toISOString(),
         word_count: 42,
-      })
+      }
+      candidates.unshift(child)
+      await ok(child)
     } else if (/^\/candidates\/[^/]+\/[^/]+$/.test(path) && method === 'GET') {
       const candidateId = path.split('/').pop() || 'cand-001'
+      const candidate = findCandidate(candidateId)
       await ok({
         candidate: {
+          ...candidate,
           id: candidateId,
-          source_path: 'chapters/vol-01/ch-001/sec-001.md',
-          candidate_path: `${projectId}/candidates/${candidateId}.md`,
-          action: candidateId === 'cand-rev-001' ? 'feedback_revision' : 'polish',
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          word_count: 42,
+          source_path: String(candidate?.source_path || 'chapters/vol-01/ch-001/sec-001.md'),
+          candidate_path: String(candidate?.candidate_path || `${projectId}/candidates/${candidateId}.md`),
+          action: String(candidate?.action || 'polish'),
+          status: String(candidate?.status || 'pending'),
+          created_at: String(candidate?.created_at || new Date().toISOString()),
+          word_count: Number(candidate?.word_count || 42),
         },
         content: '候选稿预览正文',
       })
     } else if (/^\/candidates\//.test(path) && method === 'GET') {
-      // 返回候选稿列表
-      const items = [
-        {
-          id: 'cand-001',
-          source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
-          candidate_path: `${projectId}/candidates/cand-001.md`,
-          action: 'polish',
-          status: 'pending',
-          preview: '青云山脉绵延千里，仙鹤在云雾中穿行。少年站在山门前，仰望那高耸入云的石阶。',
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 'cand-002',
-          source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
-          candidate_path: `${projectId}/candidates/cand-002.md`,
-          action: 'rewrite',
-          status: 'pending',
-          preview: '青云宗的山门前，一位白衣少年负手而立。他的目光穿透云层，望向那遥远的峰顶。',
-          created_at: new Date(Date.now() - 60000).toISOString(),
-        },
-        {
-          id: 'cand-003',
-          source_path: `${projectId}/书名与创意.md`,
-          candidate_path: `${projectId}/candidates/cand-003.md`,
-          action: 'modify',
-          status: 'adopted',
-          preview: '已采用的内容',
-          created_at: new Date(Date.now() - 120000).toISOString(),
-        },
-      ]
-      if (childRevisionCreated) {
-        items.unshift({
-          id: 'cand-rev-001',
-          source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
-          candidate_path: `${projectId}/candidates/cand-rev-001.md`,
-          action: 'feedback_revision',
-          status: 'pending',
-          preview: '根据用户反馈生成的子候选稿',
-          created_at: new Date().toISOString(),
-          parent_candidate_id: 'cand-001',
-          revision_group_id: 'revgrp-e2e',
-          revision_index: 1,
-        })
-      }
-      await ok({ candidates: items })
+      await ok({ candidates })
     } else if (/^\/candidates\//.test(path) && path.includes('/adopt') && method === 'POST') {
       await ok({ success: true })
     } else if (/^\/candidates\//.test(path) && method === 'DELETE') {
+      const candidateId = path.split('/').at(-1) || ''
+      const candidate = findCandidate(candidateId)
+      if (candidate) candidate.status = 'discarded'
       await ok({ success: true })
     }
 
@@ -411,5 +443,79 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
 
     const severeErrors = filterSevereErrors(errors)
     expect(severeErrors).toEqual([])
+  })
+
+  test('T8.6: 空反馈且无快捷动作时不能提交 revision', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    await expect(page.getByTestId('candidate-revision-feedback')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('candidate-revision-submit')).toBeDisabled()
+  })
+
+  test('T8.6: adopted 候选稿不显示按反馈再生成按钮', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const adoptedCard = page.locator('.candidate-card').filter({ hasText: '已采用' })
+    await expect(adoptedCard).toBeVisible({ timeout: 5000 })
+    await expect(adoptedCard.getByTestId('candidate-revise-button')).toHaveCount(0)
+  })
+
+  test('T8.6: feedback revision 展示来源、轮次和反馈摘要', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    await page.getByTestId('candidate-revision-feedback').fill('保留开头，只改结尾，加强画面感')
+    await page.getByTestId('candidate-revision-submit').click()
+
+    const revisionCard = page.locator('.candidate-card').filter({ hasText: '反馈修订稿' }).first()
+    await expect(revisionCard.getByTestId('candidate-revision-summary')).toContainText('第 1 版', { timeout: 5000 })
+    await expect(revisionCard.getByTestId('candidate-revision-summary')).toContainText('保留开头')
+  })
+
+  test('T8.6: revision LLM 失败后 modal 保持打开并可重试', async ({ page }) => {
+    const errors = createErrorCollector(page)
+    await installMocks(page, { failNextRevision: true })
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    await page.getByTestId('candidate-revision-feedback').fill('第一次会失败')
+    await page.getByTestId('candidate-revision-submit').click()
+
+    await expect(page.getByTestId('candidate-revision-feedback')).toBeVisible({ timeout: 5000 })
+    await page.getByTestId('candidate-revision-feedback').fill('重试后生成')
+    await page.getByTestId('candidate-revision-submit').click()
+
+    await expect(page.locator('.candidate-card').filter({ hasText: '反馈修订稿' })).toBeVisible({ timeout: 5000 })
+
+    const severeErrors = filterSevereErrors(errors).filter((message) => !message.includes('status of 502'))
+    expect(severeErrors).toEqual([])
+  })
+
+  test('T8.6: parent 有 required beats 时 modal 显示继承检查数量', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    await expect(page.getByTestId('candidate-revision-beat-inheritance')).toContainText('必须信息点', { timeout: 5000 })
+    await expect(page.getByTestId('candidate-revision-beat-inheritance')).toContainText('禁止项')
   })
 })

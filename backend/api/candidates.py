@@ -31,6 +31,7 @@ ALLOWED_QUICK_ACTIONS = {
     "keep_style",
     "increase_conflict",
     "reduce_exposition",
+    "enhance_imagery",
     "补上缺失信息点",
     "不要新增人物",
     "保持原文风格",
@@ -180,6 +181,8 @@ async def revise_candidate(
             raise HTTPException(status_code=404, detail="parent candidate content not found") from exc
         if code == "EMPTY_REVISION_CONTENT":
             raise HTTPException(status_code=502, detail="LLM returned empty revision content") from exc
+        if code == "REVISION_LLM_FAILED":
+            raise HTTPException(status_code=502, detail="LLM failed while generating revision candidate") from exc
         raise
 
     event_bus = getattr(request.app.state, "event_bus", None)

@@ -25,6 +25,55 @@ class DummyLLMService:
         return self.output
 
 
+class FailingLLMService:
+    config = SimpleNamespace(model="mock-model")
+
+    async def complete_sync(self, messages, **kwargs):
+        raise RuntimeError("mock llm down")
+
+
+class SequentialLLMService:
+    def __init__(self, outputs: list[str]):
+        self.outputs = list(outputs)
+        self.config = SimpleNamespace(model="mock-model")
+
+    async def complete_sync(self, messages, **kwargs):
+        if not self.outputs:
+            return ""
+        return self.outputs.pop(0)
+
+
+async def _create_source_and_parent(
+    temp_workspace,
+    *,
+    status: CandidateStatus = CandidateStatus.PENDING,
+    generation_context: dict | None = None,
+    beat_validation: dict | None = None,
+):
+    fs = FileService(temp_workspace)
+    project_id = "test-project"
+    source_path = "chapters/vol-01/ch-001/sec-001.md"
+    source_full_path = temp_workspace / project_id / source_path
+    source_full_path.parent.mkdir(parents=True, exist_ok=True)
+    source_full_path.write_text("official scene text", encoding="utf-8")
+
+    service = CandidateService(fs)
+    parent = await service.create_candidate(
+        project_id=project_id,
+        source_path=source_path,
+        action=CandidateAction.REWRITE,
+        content="parent candidate text",
+        generation_context=generation_context or {},
+        beat_validation=beat_validation or {},
+    )
+    if status != CandidateStatus.PENDING:
+        metadata = await service._load_metadata(project_id)
+        metadata[parent.id]["status"] = status.value
+        await service._save_metadata(project_id, metadata)
+        parent = await service.get_candidate(project_id, parent.id)
+    return service, project_id, source_path, source_full_path, parent
+
+
 @pytest.mark.asyncio
 async def test_feedback_revision_creates_child_candidate_without_touching_parent(temp_workspace):
     fs = FileService(temp_workspace)
@@ -78,26 +127,15 @@ async def test_feedback_revision_creates_child_candidate_without_touching_parent
 
 
 @pytest.mark.asyncio
-async def test_feedback_revision_rejects_non_pending_parent(temp_workspace):
-    fs = FileService(temp_workspace)
-    project_id = "test-project"
-    source_path = "chapters/vol-01/ch-001/sec-001.md"
-    source_full_path = temp_workspace / project_id / source_path
-    source_full_path.parent.mkdir(parents=True, exist_ok=True)
-    source_full_path.write_text("正式场景正文", encoding="utf-8")
-
-    service = CandidateService(fs)
-    parent = await service.create_candidate(
-        project_id=project_id,
-        source_path=source_path,
-        action=CandidateAction.POLISH,
-        content="父候选稿正文",
+@pytest.mark.parametrize(
+    "status",
+    [CandidateStatus.ADOPTED, CandidateStatus.DISCARDED, CandidateStatus.REJECTED],
+)
+async def test_feedback_revision_rejects_non_pending_parent(temp_workspace, status):
+    service, project_id, _, _, parent = await _create_source_and_parent(
+        temp_workspace,
+        status=status,
     )
-
-    metadata = await service._load_metadata(project_id)
-    metadata[parent.id]["status"] = CandidateStatus.ADOPTED.value
-    await service._save_metadata(project_id, metadata)
-
     with pytest.raises(ValueError, match="PARENT_NOT_PENDING"):
         await service.create_feedback_revision_candidate(
             project_id=project_id,
@@ -109,6 +147,150 @@ async def test_feedback_revision_rejects_non_pending_parent(temp_workspace):
             prompt_template="{{ feedback_text }}",
             run_beat_validation=False,
         )
+
+
+@pytest.mark.asyncio
+async def test_revise_candidate_llm_failure_does_not_create_child(temp_workspace):
+    service, project_id, _, source_full_path, parent = await _create_source_and_parent(temp_workspace)
+    metadata_before = await service._load_metadata(project_id)
+
+    with pytest.raises(ValueError, match="REVISION_LLM_FAILED"):
+        await service.create_feedback_revision_candidate(
+            project_id=project_id,
+            parent_candidate_id=parent.id,
+            feedback_text="make it sharper",
+            quick_actions=[],
+            repair_scope="full_candidate",
+            llm_service=FailingLLMService(),
+            prompt_template="{{ feedback_text }} {{ parent_candidate_text }}",
+            run_beat_validation=False,
+        )
+
+    metadata_after = await service._load_metadata(project_id)
+    parent_after = await service.get_candidate(project_id, parent.id)
+
+    assert set(metadata_after.keys()) == set(metadata_before.keys())
+    assert parent_after.status == CandidateStatus.PENDING
+    assert parent_after.model_dump(mode="json") == metadata_before[parent.id]
+    assert source_full_path.read_text(encoding="utf-8") == "official scene text"
+
+
+@pytest.mark.asyncio
+async def test_revise_candidate_retry_after_llm_failure(temp_workspace):
+    service, project_id, _, source_full_path, parent = await _create_source_and_parent(temp_workspace)
+
+    with pytest.raises(ValueError, match="REVISION_LLM_FAILED"):
+        await service.create_feedback_revision_candidate(
+            project_id=project_id,
+            parent_candidate_id=parent.id,
+            feedback_text="first try fails",
+            quick_actions=[],
+            repair_scope="full_candidate",
+            llm_service=FailingLLMService(),
+            prompt_template="{{ feedback_text }}",
+            run_beat_validation=False,
+        )
+
+    child = await service.create_feedback_revision_candidate(
+        project_id=project_id,
+        parent_candidate_id=parent.id,
+        feedback_text="retry succeeds",
+        quick_actions=[],
+        repair_scope="full_candidate",
+        llm_service=DummyLLMService("retried child candidate"),
+        prompt_template="{{ feedback_text }}",
+        run_beat_validation=False,
+    )
+
+    assert child.parent_candidate_id == parent.id
+    assert child.status == CandidateStatus.PENDING
+    assert await service.get_candidate_content(project_id, child.id) == "retried child candidate"
+    assert source_full_path.read_text(encoding="utf-8") == "official scene text"
+
+
+@pytest.mark.asyncio
+async def test_feedback_revision_supports_multi_round_lineage(temp_workspace):
+    service, project_id, _, source_full_path, parent = await _create_source_and_parent(temp_workspace)
+
+    first_child = await service.create_feedback_revision_candidate(
+        project_id=project_id,
+        parent_candidate_id=parent.id,
+        feedback_text="first revision",
+        quick_actions=[],
+        repair_scope="full_candidate",
+        llm_service=DummyLLMService("first child"),
+        prompt_template="{{ feedback_text }}",
+        run_beat_validation=False,
+    )
+    second_child = await service.create_feedback_revision_candidate(
+        project_id=project_id,
+        parent_candidate_id=first_child.id,
+        feedback_text="second revision",
+        quick_actions=[],
+        repair_scope="full_candidate",
+        llm_service=DummyLLMService("second child"),
+        prompt_template="{{ feedback_text }}",
+        run_beat_validation=False,
+    )
+
+    assert first_child.parent_candidate_id == parent.id
+    assert second_child.parent_candidate_id == first_child.id
+    assert first_child.revision_group_id == second_child.revision_group_id
+    assert first_child.revision_index == 1
+    assert second_child.revision_index == 2
+    assert (await service.get_candidate(project_id, parent.id)).status == CandidateStatus.PENDING
+    assert (await service.get_candidate(project_id, first_child.id)).status == CandidateStatus.PENDING
+    assert second_child.status == CandidateStatus.PENDING
+    assert source_full_path.read_text(encoding="utf-8") == "official scene text"
+
+
+@pytest.mark.asyncio
+async def test_feedback_revision_inherits_beats_and_reruns_validator(temp_workspace):
+    service, project_id, _, _, parent = await _create_source_and_parent(
+        temp_workspace,
+        generation_context={
+            "required_beats_input": [{"id": "beat-1", "text": "mention the seventh protocol"}],
+            "forbidden_beats_input": [{"id": "forbid-1", "text": "do not reveal the full truth"}],
+        },
+        beat_validation={"status": "warning", "summary": "missing required beat"},
+    )
+    validator_json = """
+    {
+      "summary": "all required beats are present",
+      "required_beats": [
+        {
+          "text": "mention the seventh protocol",
+          "status": "satisfied",
+          "evidence": "seventh protocol",
+          "confidence": 0.9
+        }
+      ],
+      "forbidden_beats": [
+        {
+          "text": "do not reveal the full truth",
+          "violated": false,
+          "evidence": "",
+          "confidence": 0.9
+        }
+      ],
+      "logic_risks": []
+    }
+    """
+
+    child = await service.create_feedback_revision_candidate(
+        project_id=project_id,
+        parent_candidate_id=parent.id,
+        feedback_text="restore the missing beat",
+        quick_actions=["fix_missing_beats"],
+        repair_scope="full_candidate",
+        llm_service=SequentialLLMService(["child mentions the seventh protocol", validator_json]),
+        prompt_template="{{ feedback_text }}",
+        run_beat_validation=True,
+    )
+
+    assert child.generation_context["required_beats_input"][0]["text"] == "mention the seventh protocol"
+    assert child.generation_context["forbidden_beats_input"][0]["text"] == "do not reveal the full truth"
+    assert child.beat_validation["status"] == "pass"
 
 
 def test_candidate_revision_api_rejects_empty_feedback(client):

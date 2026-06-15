@@ -78,6 +78,18 @@
         >
           <div class="candidate-filename">{{ candidate.source_filename }}</div>
           <div
+            v-if="isFeedbackRevision(candidate)"
+            class="candidate-revision-summary"
+            data-testid="candidate-revision-summary"
+          >
+            <i class="fa-solid fa-code-branch" />
+            <div>
+              <strong>反馈修订稿 · 第 {{ revisionIndexLabel(candidate) }} 版</strong>
+              <span v-if="revisionParentLabel(candidate)">来自 {{ revisionParentLabel(candidate) }}</span>
+              <span v-if="revisionFeedbackSummary(candidate)">反馈：{{ revisionFeedbackSummary(candidate) }}</span>
+            </div>
+          </div>
+          <div
             v-if="candidate.warning_message"
             class="candidate-warning-message"
           >
@@ -249,6 +261,14 @@
           <i :class="beatValidationIcon(revisionParent)" />
           {{ beatValidationMessage(revisionParent) }}
         </div>
+        <div
+          v-if="revisionBeatCounts.total > 0"
+          class="revision-parent-beats"
+          data-testid="candidate-revision-beat-inheritance"
+        >
+          <i class="fa-solid fa-list-check" />
+          将继续检查 {{ revisionBeatCounts.required }} 个必须信息点、{{ revisionBeatCounts.forbidden }} 个禁止项。
+        </div>
         <div class="revision-quick-actions">
           <span>快捷反馈</span>
           <button
@@ -269,8 +289,15 @@
             data-testid="candidate-revision-feedback"
             rows="5"
             :disabled="revisionSubmitting"
-            placeholder="例如：加强冲突，不要新增人物，补上第七层协议。"
+            maxlength="1000"
+            placeholder="例如：补上缺失信息点；保留开头，只改结尾；不要新增人物或组织；加强冲突但保持原文风格。"
           />
+          <small
+            class="revision-length-hint"
+            :class="{ warning: revisionFeedbackLength > 900 }"
+          >
+            {{ revisionFeedbackLength }}/1000。反馈越具体，新候选稿越容易沿着你的意图修。
+          </small>
         </label>
         <label class="revision-field">
           <span>修改范围</span>
@@ -294,7 +321,7 @@
           <button
             class="btn-revision-submit"
             data-testid="candidate-revision-submit"
-            :disabled="revisionSubmitting"
+            :disabled="revisionSubmitting || !canSubmitRevision"
             @click="submitRevision"
           >
             <i class="fa-solid fa-wand-magic-sparkles" />
@@ -307,7 +334,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useNotificationStore } from '@/stores/notification'
 import { useFileStore, type FileNode } from '@/stores/file'
@@ -345,7 +372,15 @@ const revisionQuickActionOptions = [
   { value: 'keep_style', label: '保持原文风格' },
   { value: 'increase_conflict', label: '加强冲突' },
   { value: 'reduce_exposition', label: '减少解释' },
+  { value: 'enhance_imagery', label: '增强画面感' },
 ]
+
+const revisionFeedbackLength = computed(() => revisionFeedback.value.length)
+const canSubmitRevision = computed(() => (
+  revisionFeedback.value.trim().length > 0 || revisionQuickActions.value.length > 0
+) && revisionFeedbackLength.value <= 1000)
+
+const revisionBeatCounts = computed(() => getInheritedBeatCounts(revisionParent.value))
 
 function actionLabel(action: string): string {
   const labels: Record<string, string> = {
@@ -515,6 +550,55 @@ function getPreviewWarning(candidate: CandidateInfo | null): string {
   return ''
 }
 
+function getGenerationContext(candidate: CandidateInfo | null): Record<string, unknown> {
+  return (candidate?.generation_context || {}) as Record<string, unknown>
+}
+
+function isFeedbackRevision(candidate: CandidateInfo | null): boolean {
+  if (!candidate) return false
+  return candidate.action === 'feedback_revision' || getGenerationContext(candidate).revision_type === 'feedback_revision'
+}
+
+function revisionIndexLabel(candidate: CandidateInfo): number {
+  const contextIndex = getGenerationContext(candidate).revision_index
+  const value = candidate.revision_index || contextIndex || 1
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 1
+}
+
+function revisionParentLabel(candidate: CandidateInfo): string {
+  const parentId = candidate.parent_candidate_id || String(getGenerationContext(candidate).parent_candidate_id || '')
+  if (!parentId) return ''
+  return parentId.length > 14 ? `${parentId.slice(0, 14)}...` : parentId
+}
+
+function revisionFeedbackSummary(candidate: CandidateInfo): string {
+  const feedback = String(getGenerationContext(candidate).feedback_text || '').trim()
+  if (!feedback) return ''
+  return feedback.length > 42 ? `${feedback.slice(0, 42)}...` : feedback
+}
+
+function normalizeBeatList(value: unknown): unknown[] {
+  return Array.isArray(value) ? value.filter(Boolean) : []
+}
+
+function getInheritedBeatCounts(candidate: CandidateInfo | null): { required: number; forbidden: number; total: number } {
+  if (!candidate) return { required: 0, forbidden: 0, total: 0 }
+  const context = getGenerationContext(candidate)
+  const validation = (candidate.beat_validation || {}) as NonNullable<CandidateInfo['beat_validation']>
+  const required = normalizeBeatList(context.required_beats_input || context.inherited_required_beats || validation.required_beats)
+  const forbidden = normalizeBeatList(
+    context.forbidden_beats_input ||
+      context.inherited_forbidden_beats ||
+      validation.forbidden_beats,
+  )
+  return {
+    required: required.length,
+    forbidden: forbidden.length,
+    total: required.length + forbidden.length,
+  }
+}
+
 function openRevisionModal(candidate: CandidateInfo) {
   if (candidate.status !== 'pending') {
     notification.warning('只有待处理候选稿可以按反馈再生成')
@@ -553,6 +637,10 @@ async function submitRevision() {
   const feedbackText = revisionFeedback.value.trim()
   if (!feedbackText && revisionQuickActions.value.length === 0) {
     notification.warning('请填写反馈，或选择至少一个快捷反馈')
+    return
+  }
+  if (revisionFeedbackLength.value > 1000) {
+    notification.warning('反馈内容不能超过 1000 字')
     return
   }
 
@@ -924,6 +1012,34 @@ watch(() => projectStore.currentProject?.id, () => {
   font-weight: 500;
 }
 
+.candidate-revision-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 7px 0;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+
+  i {
+    color: #8b5cf6;
+    margin-top: 2px;
+  }
+
+  div {
+    display: grid;
+    gap: 2px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+}
+
 .candidate-meta {
   display: flex;
   gap: 12px;
@@ -1204,6 +1320,22 @@ watch(() => projectStore.currentProject?.id, () => {
   color: var(--text-secondary);
 }
 
+.revision-parent-beats {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 16px;
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+
+  i {
+    color: #8b5cf6;
+    margin-top: 2px;
+  }
+}
+
 .revision-parent {
   display: flex;
   align-items: center;
@@ -1280,6 +1412,16 @@ watch(() => projectStore.currentProject?.id, () => {
 .revision-field textarea {
   min-height: 110px;
   resize: vertical;
+}
+
+.revision-length-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+
+  &.warning {
+    color: var(--accent-warning);
+  }
 }
 
 .revision-footer {
