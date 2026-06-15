@@ -26,6 +26,7 @@ class CandidateAction(str, Enum):
     SHRINK = "shrink"             # 缩写
     POLISH = "polish"             # 润色
     FALLBACK_DRAFT = "fallback_draft"  # 应急草稿（LLM 失败后 fallback 生成）
+    FEEDBACK_REVISION = "feedback_revision"  # 用户反馈再生成候选稿
 
 
 class CandidateStatus(str, Enum):
@@ -66,6 +67,9 @@ class CandidateInfo(BaseModel):
     scene_plan_hash: str = Field("", description="生成时使用的 Scene Plan 哈希")
     scene_plan_path: str = Field("", description="生成时使用的 Scene Plan 文件路径（项目内相对路径）")
     beat_validation: Dict[str, Any] = Field(default_factory=dict, description="Required beat validation metadata")
+    parent_candidate_id: str | None = Field(None, description="Parent candidate id for feedback revision candidates")
+    revision_group_id: str | None = Field(None, description="Revision lineage group id")
+    revision_index: int = Field(0, description="Revision index within a lineage group")
 
     @property
     def filename(self) -> str:
@@ -100,6 +104,19 @@ class CreateCandidateRequest(BaseModel):
     scene_plan_hash: str = Field("", description="Scene Plan 哈希")
     scene_plan_path: str = Field("", description="Scene Plan 文件路径")
     beat_validation: Dict[str, Any] = Field(default_factory=dict, description="Required beat validation metadata")
+    parent_candidate_id: str | None = Field(None, description="Parent candidate id")
+    revision_group_id: str | None = Field(None, description="Revision lineage group id")
+    revision_index: int = Field(0, description="Revision index")
+
+
+class CandidateRevisionRequest(BaseModel):
+    """Create a child revision candidate from user feedback."""
+    feedback_text: str = Field("", description="User feedback for revision")
+    quick_actions: list[str] = Field(default_factory=list, description="Quick feedback action labels")
+    repair_scope: str = Field("full_candidate", description="full_candidate | keep_opening | ending_only")
+    inherit_required_beats: bool = Field(True, description="Inherit required beats from parent candidate")
+    inherit_forbidden_beats: bool = Field(True, description="Inherit forbidden beats from parent candidate")
+    run_beat_validation: bool = Field(True, description="Run beat validator for child candidate when beats exist")
 
 
 class AdoptCandidateRequest(BaseModel):

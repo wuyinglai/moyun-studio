@@ -135,6 +135,15 @@
             <i class="fa-solid fa-check" />
           </button>
           <button
+            v-if="candidate.status === 'pending'"
+            class="action-btn action-revise"
+            title="按反馈再生成"
+            data-testid="candidate-revise-button"
+            @click.stop="openRevisionModal(candidate)"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles" />
+          </button>
+          <button
             class="action-btn action-delete"
             title="删除"
             data-testid="candidate-reject-button"
@@ -207,6 +216,93 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="revisioning"
+      class="revision-modal"
+      @click.self="closeRevisionModal"
+    >
+      <div class="revision-content">
+        <div class="revision-header">
+          <span class="revision-title">按反馈再生成</span>
+          <button
+            class="btn-close"
+            :disabled="revisionSubmitting"
+            @click="closeRevisionModal"
+          >
+            <i class="fa-solid fa-x" />
+          </button>
+        </div>
+        <div class="revision-notice">
+          <i class="fa-solid fa-shield-halved" />
+          会生成一个新的候选稿，原候选稿和正式正文都不会被自动修改。
+        </div>
+        <div class="revision-parent">
+          <span>父候选稿</span>
+          <strong>{{ revisionParent?.id }}</strong>
+          <em>{{ revisionParent ? actionLabel(revisionParent.action) : '' }}</em>
+        </div>
+        <div
+          v-if="beatValidationMessage(revisionParent)"
+          class="revision-parent-warning"
+        >
+          <i :class="beatValidationIcon(revisionParent)" />
+          {{ beatValidationMessage(revisionParent) }}
+        </div>
+        <div class="revision-quick-actions">
+          <span>快捷反馈</span>
+          <button
+            v-for="action in revisionQuickActionOptions"
+            :key="action.value"
+            type="button"
+            :class="{ active: revisionQuickActions.includes(action.value) }"
+            :disabled="revisionSubmitting"
+            @click="toggleRevisionQuickAction(action.value)"
+          >
+            {{ action.label }}
+          </button>
+        </div>
+        <label class="revision-field">
+          <span>告诉 AI 你想怎么改</span>
+          <textarea
+            v-model="revisionFeedback"
+            data-testid="candidate-revision-feedback"
+            rows="5"
+            :disabled="revisionSubmitting"
+            placeholder="例如：加强冲突，不要新增人物，补上第七层协议。"
+          />
+        </label>
+        <label class="revision-field">
+          <span>修改范围</span>
+          <select
+            v-model="revisionScope"
+            :disabled="revisionSubmitting"
+          >
+            <option value="full_candidate">整个候选稿</option>
+            <option value="keep_opening">保留开头</option>
+            <option value="ending_only">只改结尾</option>
+          </select>
+        </label>
+        <div class="revision-footer">
+          <button
+            class="btn-cancel"
+            :disabled="revisionSubmitting"
+            @click="closeRevisionModal"
+          >
+            取消
+          </button>
+          <button
+            class="btn-revision-submit"
+            data-testid="candidate-revision-submit"
+            :disabled="revisionSubmitting"
+            @click="submitRevision"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles" />
+            {{ revisionSubmitting ? '生成中...' : '生成新候选稿' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -219,7 +315,7 @@ import { useEditorStore } from '@/stores/editor'
 import { useSSE } from '@/composables/useSSE'
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
-import type { CandidateAdoptResult, CandidateInfo } from '@/shared/api/types'
+import type { CandidateAdoptResult, CandidateInfo, CandidateRevisionRequest } from '@/shared/api/types'
 import { getApiErrorCode, toUserFacingMessage } from '@/utils/errorMessages'
 
 const projectStore = useProjectStore()
@@ -234,8 +330,22 @@ const selectedId = ref<string | null>(null)
 const previewing = ref(false)
 const previewCandidateInfo = ref<CandidateInfo | null>(null)
 const previewContent = ref('')
+const revisioning = ref(false)
+const revisionParent = ref<CandidateInfo | null>(null)
+const revisionFeedback = ref('')
+const revisionQuickActions = ref<string[]>([])
+const revisionScope = ref<'full_candidate' | 'keep_opening' | 'ending_only'>('full_candidate')
+const revisionSubmitting = ref(false)
 let disposeCandidateCreated: (() => void) | null = null
 let disposeCandidateAdopted: (() => void) | null = null
+
+const revisionQuickActionOptions = [
+  { value: 'fix_missing_beats', label: '补上缺失信息点' },
+  { value: 'avoid_new_entities', label: '不要新增人物' },
+  { value: 'keep_style', label: '保持原文风格' },
+  { value: 'increase_conflict', label: '加强冲突' },
+  { value: 'reduce_exposition', label: '减少解释' },
+]
 
 function actionLabel(action: string): string {
   const labels: Record<string, string> = {
@@ -247,6 +357,7 @@ function actionLabel(action: string): string {
     shrink: '缩写',
     polish: '润色',
     fallback_draft: '备用草稿',
+    feedback_revision: '反馈再生成',
   }
   return labels[action] || action
 }
@@ -402,6 +513,77 @@ function getPreviewWarning(candidate: CandidateInfo | null): string {
     return '可能与前文设定不一致，建议先预览再采纳。'
   }
   return ''
+}
+
+function openRevisionModal(candidate: CandidateInfo) {
+  if (candidate.status !== 'pending') {
+    notification.warning('只有待处理候选稿可以按反馈再生成')
+    return
+  }
+  revisionParent.value = candidate
+  revisionFeedback.value = ''
+  revisionQuickActions.value = []
+  revisionScope.value = 'full_candidate'
+  revisioning.value = true
+}
+
+function closeRevisionModal() {
+  if (revisionSubmitting.value) return
+  revisioning.value = false
+  revisionParent.value = null
+  revisionFeedback.value = ''
+  revisionQuickActions.value = []
+  revisionScope.value = 'full_candidate'
+}
+
+function toggleRevisionQuickAction(action: string) {
+  if (revisionSubmitting.value) return
+  if (revisionQuickActions.value.includes(action)) {
+    revisionQuickActions.value = revisionQuickActions.value.filter((item) => item !== action)
+  } else {
+    revisionQuickActions.value = [...revisionQuickActions.value, action]
+  }
+}
+
+async function submitRevision() {
+  const parent = revisionParent.value
+  const projectId = projectStore.currentProject?.id
+  if (!parent || !projectId) return
+
+  const feedbackText = revisionFeedback.value.trim()
+  if (!feedbackText && revisionQuickActions.value.length === 0) {
+    notification.warning('请填写反馈，或选择至少一个快捷反馈')
+    return
+  }
+
+  const payload: CandidateRevisionRequest = {
+    feedback_text: feedbackText,
+    quick_actions: revisionQuickActions.value,
+    repair_scope: revisionScope.value,
+    inherit_required_beats: true,
+    inherit_forbidden_beats: true,
+    run_beat_validation: true,
+  }
+
+  revisionSubmitting.value = true
+  try {
+    const child = await api.post<CandidateInfo>(
+      API_ROUTES.candidateRevise(projectId, parent.id),
+      payload,
+    )
+    notification.success('已生成新的反馈修订候选稿，采用后才会覆盖当前场景')
+    revisioning.value = false
+    revisionParent.value = null
+    revisionFeedback.value = ''
+    revisionQuickActions.value = []
+    revisionScope.value = 'full_candidate'
+    await fetchCandidates(true)
+    selectedId.value = child.id
+  } catch (error: unknown) {
+    notification.error(toUserFacingMessage(error, '按反馈再生成候选稿失败'))
+  } finally {
+    revisionSubmitting.value = false
+  }
 }
 
 async function adoptCandidate(candidate: CandidateInfo) {
@@ -783,6 +965,15 @@ watch(() => projectStore.currentProject?.id, () => {
       color: white;
     }
   }
+
+  &.action-revise {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+    &:hover {
+      background: #8b5cf6;
+      color: white;
+    }
+  }
 }
 
 /* 预览弹窗 */
@@ -956,6 +1147,164 @@ watch(() => projectStore.currentProject?.id, () => {
   &:hover {
     background: var(--border-color);
     color: var(--text-primary);
+  }
+}
+
+.revision-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.revision-content {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  width: 92%;
+  max-width: 560px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.revision-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.revision-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.revision-notice,
+.revision-parent-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.revision-notice {
+  background: rgba(59, 130, 246, 0.06);
+  color: var(--accent-primary);
+}
+
+.revision-parent-warning {
+  background: rgba(251, 146, 60, 0.1);
+  color: var(--text-secondary);
+}
+
+.revision-parent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.revision-parent strong {
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.revision-parent em {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.revision-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 4px;
+}
+
+.revision-quick-actions span {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.revision-quick-actions button {
+  border: 1px solid var(--border-color);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 12px;
+  cursor: pointer;
+
+  &.active {
+    border-color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.16);
+    color: #8b5cf6;
+  }
+}
+
+.revision-field {
+  display: grid;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.revision-field textarea,
+.revision-field select {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+
+  &:focus {
+    border-color: var(--accent-primary);
+  }
+}
+
+.revision-field textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.revision-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-revision-submit {
+  padding: 8px 16px;
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 </style>

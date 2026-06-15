@@ -44,6 +44,7 @@ export const API_ROUTES = {
   candidates: (projectId: string) => `/candidates/${projectId}`,
   candidateDetail: (projectId: string, candidateId: string) => `/candidates/${projectId}/${candidateId}`,
   candidateAdopt: (projectId: string, candidateId: string) => `/candidates/${projectId}/${candidateId}/adopt`,
+  candidateRevise: (projectId: string, candidateId: string) => `/candidates/${projectId}/${candidateId}/revise`,
   candidateDelete: (projectId: string, candidateId: string) => `/candidates/${projectId}/${candidateId}/delete`,
 
   // ── Lite ──────────────────────────────────────────

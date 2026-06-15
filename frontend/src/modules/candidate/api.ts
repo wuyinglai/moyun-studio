@@ -2,7 +2,7 @@
 
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
-import type { CandidateInfo, CandidateDetail, AdoptResult } from './types'
+import type { CandidateInfo, CandidateDetail, AdoptResult, CandidateRevisionRequest } from './types'
 
 /** 获取项目的候选稿列表 */
 export async function listCandidates(projectId: string, status?: string): Promise<CandidateInfo[]> {
@@ -23,6 +23,15 @@ export async function adoptCandidate(projectId: string, candidateId: string): Pr
     project_id: projectId,
     candidate_id: candidateId,
   })
+}
+
+/** 根据用户反馈生成 child revision candidate */
+export async function reviseCandidate(
+  projectId: string,
+  candidateId: string,
+  request: CandidateRevisionRequest,
+): Promise<CandidateInfo> {
+  return await api.post<CandidateInfo>(API_ROUTES.candidateRevise(projectId, candidateId), request)
 }
 
 /** 删除候选稿 */

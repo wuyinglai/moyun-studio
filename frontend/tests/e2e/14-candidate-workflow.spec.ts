@@ -15,6 +15,8 @@ import { dismissViteOverlay, createErrorCollector, filterSevereErrors } from './
 const projectId = 'e2e-human-candidate'
 
 async function installMocks(page: Page) {
+  let childRevisionCreated = false
+
   await page.route('http://127.0.0.1:5173/api/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())
@@ -106,9 +108,46 @@ async function installMocks(page: Page) {
     }
 
     // ── Candidates ──
-    else if (/^\/candidates\//.test(path) && method === 'GET') {
+    else if (/^\/candidates\/.+\/.+\/revise$/.test(path) && method === 'POST') {
+      const payload = request.postDataJSON() as { feedback_text?: string; quick_actions?: string[] } | null
+      expect(payload?.feedback_text || payload?.quick_actions?.length).toBeTruthy()
+      childRevisionCreated = true
+      await ok({
+        id: 'cand-rev-001',
+        source_path: 'chapters/vol-01/ch-001/sec-001.md',
+        candidate_path: `${projectId}/.candidates/cand-rev-001.feedback_revision.md`,
+        action: 'feedback_revision',
+        status: 'pending',
+        parent_candidate_id: 'cand-001',
+        revision_group_id: 'revgrp-e2e',
+        revision_index: 1,
+        generation_context: {
+          revision_type: 'feedback_revision',
+          parent_candidate_id: 'cand-001',
+          feedback_text: payload?.feedback_text || '',
+          quick_actions: payload?.quick_actions || [],
+          repair_scope: 'full_candidate',
+        },
+        created_at: new Date().toISOString(),
+        word_count: 42,
+      })
+    } else if (/^\/candidates\/[^/]+\/[^/]+$/.test(path) && method === 'GET') {
+      const candidateId = path.split('/').pop() || 'cand-001'
+      await ok({
+        candidate: {
+          id: candidateId,
+          source_path: 'chapters/vol-01/ch-001/sec-001.md',
+          candidate_path: `${projectId}/candidates/${candidateId}.md`,
+          action: candidateId === 'cand-rev-001' ? 'feedback_revision' : 'polish',
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          word_count: 42,
+        },
+        content: '候选稿预览正文',
+      })
+    } else if (/^\/candidates\//.test(path) && method === 'GET') {
       // 返回候选稿列表
-      await ok([
+      const items = [
         {
           id: 'cand-001',
           source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
@@ -136,7 +175,22 @@ async function installMocks(page: Page) {
           preview: '已采用的内容',
           created_at: new Date(Date.now() - 120000).toISOString(),
         },
-      ])
+      ]
+      if (childRevisionCreated) {
+        items.unshift({
+          id: 'cand-rev-001',
+          source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
+          candidate_path: `${projectId}/candidates/cand-rev-001.md`,
+          action: 'feedback_revision',
+          status: 'pending',
+          preview: '根据用户反馈生成的子候选稿',
+          created_at: new Date().toISOString(),
+          parent_candidate_id: 'cand-001',
+          revision_group_id: 'revgrp-e2e',
+          revision_index: 1,
+        })
+      }
+      await ok({ candidates: items })
     } else if (/^\/candidates\//.test(path) && path.includes('/adopt') && method === 'POST') {
       await ok({ success: true })
     } else if (/^\/candidates\//.test(path) && method === 'DELETE') {
@@ -233,6 +287,27 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     await expect(notice).toContainText('不会自动覆盖正文')
     await expect(notice).toContainText('可以先预览')
     console.log('[t6.9.2] ✓ candidate-notice 文案存在且包含安全说明')
+  })
+
+  test('T8.5-mini: pending 候选稿可以按反馈再生成 child candidate', async ({ page }) => {
+    const errors = createErrorCollector(page)
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+    await expect(page.getByTestId('candidate-revise-button').first()).toBeVisible({ timeout: 5000 })
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    await expect(page.getByTestId('candidate-revision-feedback')).toBeVisible({ timeout: 5000 })
+    await page.getByTestId('candidate-revision-feedback').fill('加强冲突，不要新增人物')
+    await page.getByTestId('candidate-revision-submit').click()
+
+    await expect(page.locator('.candidate-card').filter({ hasText: '反馈再生成' })).toBeVisible({ timeout: 5000 })
+
+    const severeErrors = filterSevereErrors(errors)
+    expect(severeErrors).toEqual([])
   })
 
   test('候选稿面板不会在页面加载时弹出错误提示', async ({ page }) => {

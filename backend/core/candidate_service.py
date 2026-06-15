@@ -13,8 +13,12 @@ import logging
 import re
 import uuid
 
+from jinja2 import Template
+
+from backend.core.beat_validator import RequiredBeatValidator
 from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
+from backend.core.llm import LLMService
 from backend.schemas.candidate import (
     CandidateAction,
     CandidateInfo,
@@ -109,6 +113,9 @@ class CandidateService:
         scene_plan_hash: str = "",
         scene_plan_path: str = "",
         beat_validation: dict | None = None,
+        parent_candidate_id: str | None = None,
+        revision_group_id: str | None = None,
+        revision_index: int = 0,
     ) -> CandidateInfo:
         """创建候选稿
 
@@ -161,6 +168,9 @@ class CandidateService:
             scene_plan_hash=scene_plan_hash,
             scene_plan_path=scene_plan_path,
             beat_validation=beat_validation or {},
+            parent_candidate_id=parent_candidate_id,
+            revision_group_id=revision_group_id,
+            revision_index=revision_index,
         )
 
         metadata = await self._load_metadata(project_id)
@@ -168,6 +178,199 @@ class CandidateService:
         await self._save_metadata(project_id, metadata)
 
         return candidate_info
+
+    # ─── Feedback Revision ────────────────────────────────────────────────
+
+    @staticmethod
+    def _normalize_beat_items(value, prefix: str) -> list[dict]:
+        """Normalize stored beat metadata into id/text objects."""
+        if not value:
+            return []
+        raw_items = value if isinstance(value, list) else [value]
+        result: list[dict] = []
+        for index, item in enumerate(raw_items, start=1):
+            text = ""
+            beat_id = f"{prefix}-{index}"
+            if isinstance(item, str):
+                text = item.strip()
+            elif isinstance(item, dict):
+                text = str(item.get("text") or item.get("beat") or item.get("description") or "").strip()
+                beat_id = str(item.get("id") or beat_id)
+            elif item is not None:
+                text = str(item).strip()
+            if text:
+                result.append({"id": beat_id, "text": text})
+        return result
+
+    @classmethod
+    def _extract_inherited_beats(
+        cls,
+        parent: CandidateInfo,
+        inherit_required_beats: bool = True,
+        inherit_forbidden_beats: bool = True,
+    ) -> tuple[list[dict], list[dict]]:
+        """Extract required/forbidden beats from parent generation context first, then validator metadata."""
+        generation_context = parent.generation_context or {}
+        beat_validation = parent.beat_validation or {}
+
+        required: list[dict] = []
+        forbidden: list[dict] = []
+
+        if inherit_required_beats:
+            required = cls._normalize_beat_items(generation_context.get("required_beats_input"), "beat")
+            if not required:
+                required = cls._normalize_beat_items(generation_context.get("inherited_required_beats"), "beat")
+            if not required:
+                required = cls._normalize_beat_items(beat_validation.get("required_beats"), "beat")
+
+        if inherit_forbidden_beats:
+            forbidden = cls._normalize_beat_items(generation_context.get("forbidden_beats_input"), "forbid")
+            if not forbidden:
+                forbidden = cls._normalize_beat_items(generation_context.get("inherited_forbidden_beats"), "forbid")
+            if not forbidden:
+                forbidden = cls._normalize_beat_items(
+                    beat_validation.get("forbidden_beats") or beat_validation.get("forbidden_violations"),
+                    "forbid",
+                )
+
+        return required, forbidden
+
+    async def _next_revision_index(self, project_id: str, parent_candidate_id: str) -> int:
+        metadata = await self._load_metadata(project_id)
+        count = 0
+        for data in metadata.values():
+            generation_context = data.get("generation_context") or {}
+            if (
+                data.get("parent_candidate_id") == parent_candidate_id
+                or generation_context.get("parent_candidate_id") == parent_candidate_id
+            ):
+                count += 1
+        return count + 1
+
+    async def create_feedback_revision_candidate(
+        self,
+        project_id: str,
+        parent_candidate_id: str,
+        feedback_text: str,
+        quick_actions: list[str],
+        repair_scope: str,
+        llm_service: LLMService,
+        prompt_template: str,
+        inherit_required_beats: bool = True,
+        inherit_forbidden_beats: bool = True,
+        run_beat_validation: bool = True,
+    ) -> CandidateInfo:
+        """Create a child candidate from user feedback without changing the source scene."""
+        parent = await self.get_candidate(project_id, parent_candidate_id)
+        if not parent:
+            raise ValueError("PARENT_NOT_FOUND")
+        if parent.status != CandidateStatus.PENDING:
+            raise ValueError("PARENT_NOT_PENDING")
+
+        parent_content = await self.get_candidate_content(project_id, parent_candidate_id)
+        if parent_content is None:
+            raise ValueError("PARENT_CONTENT_NOT_FOUND")
+
+        source_content = ""
+        try:
+            source_content, _, _ = await self.file_service.read_file(
+                self._project_path(project_id, parent.source_path)
+            )
+        except Exception:
+            logger.debug("读取 parent source failed for feedback revision", exc_info=True)
+
+        required_beats, forbidden_beats = self._extract_inherited_beats(
+            parent,
+            inherit_required_beats=inherit_required_beats,
+            inherit_forbidden_beats=inherit_forbidden_beats,
+        )
+        required_texts = [item["text"] for item in required_beats]
+        forbidden_texts = [item["text"] for item in forbidden_beats]
+
+        parent_validation = parent.beat_validation or {}
+        prompt = Template(prompt_template).render(
+            official_source_text=source_content,
+            parent_candidate_text=parent_content,
+            feedback_text=feedback_text,
+            quick_actions=quick_actions,
+            repair_scope=repair_scope,
+            required_beats=required_beats,
+            forbidden_beats=forbidden_beats,
+            parent_beat_validation_summary=parent_validation.get("summary", ""),
+            parent_beat_validation_status=parent_validation.get("status", ""),
+            parent_beat_validation=parent_validation,
+            source_path=parent.source_path,
+        )
+
+        revised_content = await llm_service.complete_sync(
+            [
+                {
+                    "role": "system",
+                    "content": "你是小说候选稿修订助手。只输出完整修订后的候选稿正文，不输出解释。",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            timeout=180,
+            max_tokens=3000,
+        )
+        revised_content = (revised_content or "").strip()
+        if not revised_content:
+            raise ValueError("EMPTY_REVISION_CONTENT")
+
+        beat_validation = {}
+        if run_beat_validation and (required_texts or forbidden_texts):
+            validator = RequiredBeatValidator(llm_service)
+            beat_validation = await validator.validate(
+                revised_content,
+                required_beats=required_texts,
+                forbidden_beats=forbidden_texts,
+            )
+
+        revision_index = await self._next_revision_index(project_id, parent_candidate_id)
+        revision_group_id = (
+            parent.revision_group_id
+            or (parent.generation_context or {}).get("revision_group_id")
+            or f"revgrp_{uuid.uuid4().hex[:8]}"
+        )
+        generation_context = {
+            "revision_type": "feedback_revision",
+            "parent_candidate_id": parent_candidate_id,
+            "feedback_text": feedback_text,
+            "quick_actions": quick_actions,
+            "repair_scope": repair_scope,
+            "source_candidate_action": parent.action.value,
+            "source_candidate_status_at_revision": parent.status.value,
+            "source_candidate_beat_validation_status": parent_validation.get("status", ""),
+            "parent_validation_summary": parent_validation,
+            "inherited_required_beats": bool(required_beats),
+            "inherited_forbidden_beats": bool(forbidden_beats),
+            "required_beats_input": required_beats,
+            "forbidden_beats_input": forbidden_beats,
+            "revision_group_id": revision_group_id,
+            "revision_index": revision_index,
+        }
+
+        return await self.create_candidate(
+            project_id=project_id,
+            source_path=parent.source_path,
+            action=CandidateAction.FEEDBACK_REVISION,
+            content=revised_content,
+            workflow_run_id=parent.workflow_run_id,
+            model=getattr(getattr(llm_service, "config", None), "model", None),
+            pipeline_id=parent.pipeline_id,
+            prompt_version=parent.prompt_version,
+            source_mode=parent.source_mode,
+            continuity=parent.continuity,
+            source_type="llm",
+            warning_message=None,
+            generation_context=generation_context,
+            scene_plan_hash=parent.scene_plan_hash,
+            scene_plan_path=parent.scene_plan_path,
+            beat_validation=beat_validation,
+            parent_candidate_id=parent_candidate_id,
+            revision_group_id=revision_group_id,
+            revision_index=revision_index,
+        )
 
     # ─── 查询 ────────────────────────────────────────────
 

@@ -204,9 +204,11 @@
 - 详情 API：`GET /api/candidates/{projectId}/{candidateId}`。
 - 采用 API：`POST /api/candidates/{projectId}/{candidateId}/adopt`。
 - 删除 API：`DELETE /api/candidates/{projectId}/{candidateId}`。
+- 按反馈再生成 API：`POST /api/candidates/{projectId}/{candidateId}/revise`。
 - 采用会覆盖 `source_path` 对应原文件。
+- 只有 `pending` 候选稿显示“按反馈再生成”。用户输入反馈或选择快捷反馈后，后端生成一个新的 child candidate；原候选稿和正式正文都不自动修改。
 
-结论：主工作台并非所有“重写/润色”都先进入候选稿。Candidate 是独立面板和后端能力；是否产生候选稿要看触发的 pipeline/API。
+结论：主工作台的高风险改稿默认进入候选稿。Candidate 是独立面板和后端能力；候选稿可以被预览、采用、删除，也可以在 pending 状态下按用户反馈生成新的 child revision candidate。
 
 ## 3. LiteWritingView 流程
 
@@ -374,6 +376,10 @@ flowchart TD
   I --> K["预览候选稿"]
   K --> L["POST /api/candidates/:id/adopt"]
   L --> M["覆盖 source_path 原文件"]
+  I --> N["按反馈再生成"]
+  N --> O["POST /api/candidates/:id/revise"]
+  O --> P["创建 child revision candidate"]
+  P --> I
 ```
 
 ### 4.3 Lite：输入设定 → 生成 → 显示/保存/采用
@@ -429,6 +435,7 @@ flowchart TD
 | 主工作台 pipeline 输出刷新 | `/project/:id/file/...sec-001.md` | 让 mock pipeline 返回内容 | editor 流式追加，完成后 readFile 刷新 | fetch stream + `GET /api/file` | 否 | 否 | 是 | 否 | 可不查 |
 | 主工作台 candidate 面板 | `/project/:id` | 打开 Candidate tab | candidate 列表显示 | `GET /api/candidates/:projectId` | 否 | 否 | 否 | 是 | 否 |
 | 采用候选稿 | `/project/:id` | 预览 candidate，点击采用 | 状态更新/通知成功 | `GET /api/candidates/:id`、`POST /api/candidates/:id/adopt` | 否 | 否 | 是，覆盖 source | 是 | 否 |
+| 按反馈再生成候选稿 | `/project/:id` | pending candidate 点击“按反馈再生成”，输入反馈并提交 | 新 child candidate 出现在列表，父候选稿不变 | `POST /api/candidates/:id/revise` | 可 mock；真实 LLM 单独测 | 可轻量检查 | 否，采用前不覆盖 source | 是 | 否 |
 | Lite 无项目入口 | `/lite` | 打开页面 | 5 张开局卡或加载态可见 | `POST /api/lite/ideas` | 可 mock | 否 | 否 | 否 | 否 |
 | Lite 创建项目并写第一场景 | `/lite` | 选开局卡 | 跳转 `/project/:id/lite`，textarea 流式显示 | `POST /api/lite/projects`、`POST /api/lite/write-next-stream` | 可真实 LLM 独立测 | 是，真实 LLM 时检查 | 是，sec 文件 | 否 | 是，story engine |
 | Lite 选爽点卡写下一场景 | `/project/:id/lite` | 选右侧爽点卡 | 目标 sec 打开，流式输出，下一批卡刷新 | `POST /api/lite/write-next-stream`、`POST /api/lite/next-options` | 可 mock/真实各一套 | 真实时检查 | 是 | 否 | 是 |

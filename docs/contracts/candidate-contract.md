@@ -74,11 +74,41 @@ Adopt a candidate. Checks `base_hash` or `base_mtime` before applying.
 
 Reject a candidate.
 
+### POST /api/candidates/{project_id}/{candidate_id}/revise
+
+Create a child revision candidate from a pending parent candidate and user
+feedback.
+
+Rules:
+
+- Only `pending` parent candidates can be revised.
+- `adopted`, `discarded`, and `rejected` candidates must return an error and
+  must not create a child candidate.
+- The source scene file is loaded only as a factual anchor. It is not modified.
+- The parent candidate content is used as the draft to revise. It is not
+  modified.
+- The response is a new candidate with `action=feedback_revision`.
+- The child candidate can be previewed, adopted, or deleted through the same
+  existing candidate flow.
+- The child candidate must record lineage metadata:
+  - `parent_candidate_id`
+  - `revision_group_id`
+  - `revision_index`
+  - `generation_context.revision_type=feedback_revision`
+  - `generation_context.feedback_text`
+  - `generation_context.quick_actions`
+  - `generation_context.repair_scope`
+- If the parent candidate contains required / forbidden beat inputs, the child
+  revision should inherit them and run beat validation again when enabled.
+- The endpoint must not write full prompts, raw model output, API keys, or
+  private workspace dumps into metadata.
+
 ## Safety Checks
 
 - Adopting a candidate whose source file has changed must fail with a conflict error.
 - Candidate content must never be saved directly to the source file without the adopt flow.
 - The frontend must prevent direct editing of candidate files in the main editor.
+- Feedback revision candidate creation must not bypass the adopt flow.
 
 ## 必须生成候选稿的动作
 

@@ -1037,6 +1037,14 @@ class PipelineRunner:
                 beat_validation = {}
                 if is_beat_validation_enabled(extra_vars):
                     required_beats, forbidden_beats = extract_beat_validation_inputs(extra_vars)
+                    generation_context["required_beats_input"] = [
+                        {"id": f"beat-{idx + 1}", "text": beat}
+                        for idx, beat in enumerate(required_beats)
+                    ]
+                    generation_context["forbidden_beats_input"] = [
+                        {"id": f"forbid-{idx + 1}", "text": beat}
+                        for idx, beat in enumerate(forbidden_beats)
+                    ]
                     validator = RequiredBeatValidator(self.llm_service)
                     beat_validation = await validator.validate(
                         final_output,

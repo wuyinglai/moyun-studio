@@ -235,9 +235,18 @@ class GenerationService:
                         candidate_svc = CandidateService(self.file_service)
                         new_content = (content + "\n\n" + generated_text) if resolved_mode == "append" and target_exists else generated_text
                         beat_validation = {}
+                        generation_context = {}
                         if is_beat_validation_enabled(extra_vars):
                             required_beats, forbidden_beats = extract_beat_validation_inputs(extra_vars)
-                            beat_validation = await RequiredBeatValidator(self.llm_service).validate(
+                            generation_context["required_beats_input"] = [
+                                {"id": f"beat-{idx + 1}", "text": beat}
+                                for idx, beat in enumerate(required_beats)
+                            ]
+                            generation_context["forbidden_beats_input"] = [
+                                {"id": f"forbid-{idx + 1}", "text": beat}
+                                for idx, beat in enumerate(forbidden_beats)
+                            ]
+                            beat_validation = await RequiredBeatValidator(svc).validate(
                                 new_content,
                                 required_beats=required_beats,
                                 forbidden_beats=forbidden_beats,
@@ -248,6 +257,7 @@ class GenerationService:
                             action=action,
                             content=new_content,
                             beat_validation=beat_validation,
+                            generation_context=generation_context,
                         )
                         logger.info("Fallback %s 已保存为候选稿: %s -> %s", resolved_mode, file_path, candidate.id)
                         yield {"event": "candidate_created", "data": json.dumps({

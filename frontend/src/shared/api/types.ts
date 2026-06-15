@@ -109,7 +109,7 @@ export interface FileTreeNode {
 // ═══════════════════════════════════════════════════════════
 
 /** 候选稿操作类型 */
-export type CandidateAction = 'rewrite' | 'continue' | 'modify' | 'chat' | 'expand' | 'shrink' | 'polish' | 'fallback_draft'
+export type CandidateAction = 'rewrite' | 'continue' | 'modify' | 'chat' | 'expand' | 'shrink' | 'polish' | 'fallback_draft' | 'feedback_revision'
 
 /** 候选稿状态 */
 export type CandidateStatus = 'pending' | 'adopted' | 'rejected' | 'discarded'
@@ -169,6 +169,19 @@ export interface CandidateInfo {
   /** 简短摘要 — 如"可能与前文设定不一致"，便于卡片展示 */
   warning_message?: string | null
   beat_validation?: BeatValidationInfo | null
+  generation_context?: Record<string, unknown>
+  parent_candidate_id?: string | null
+  revision_group_id?: string | null
+  revision_index?: number
+}
+
+export interface CandidateRevisionRequest {
+  feedback_text: string
+  quick_actions?: string[]
+  repair_scope?: 'full_candidate' | 'keep_opening' | 'ending_only'
+  inherit_required_beats?: boolean
+  inherit_forbidden_beats?: boolean
+  run_beat_validation?: boolean
 }
 
 /** 候选稿详情 — 对应 backend/schemas/candidate.py CandidateDetailResponse */
