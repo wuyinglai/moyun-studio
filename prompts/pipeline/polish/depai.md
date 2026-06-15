@@ -9,6 +9,8 @@
 
 {% include 'blocks/beat-constraints.md' %}
 
+{% include 'blocks/polish-conservative-rules.md' %}
+
 ## 要求
 {% include 'blocks/depai-rules.md' %}
 

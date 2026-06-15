@@ -9,6 +9,8 @@
 
 {% include 'blocks/beat-constraints.md' %}
 
+{% include 'blocks/polish-conservative-rules.md' %}
+
 ## 检查维度
 {% include 'blocks/logic-rules.md' %}
 

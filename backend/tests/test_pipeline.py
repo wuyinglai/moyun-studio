@@ -319,6 +319,51 @@ class TestPromptRendering:
         assert "本次禁止新增 / 禁止揭晓" in result
         assert "不要新增导师角色" in result
 
+    def test_polish_prompt_includes_conservative_polish_constraints(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+    ):
+        runner = self._system_prompt_runner(mock_llm_service, mock_file_service, tmp_path)
+
+        result = runner.render_prompt(
+            "pipeline/polish/prose.md",
+            {
+                "previous_output": "女主右肩受伤，左手扶着剑鞘。",
+                "required_beats": ["女主右肩受伤必须保留"],
+                "forbidden_beats": ["女主不能突然右手持剑战斗"],
+            },
+        )
+
+        assert "保守润色边界" in result
+        assert "这是润色任务，不是重写任务" in result
+        assert "保持原文叙事人称和视角" in result
+        assert "关键名词尽量原样保留" in result
+        assert "不要新增与伤势、姿势、距离、手持物冲突的动作" in result
+        assert "不要把“关系软化”润色成完全和解" in result
+
+    def test_rewrite_prompt_does_not_include_polish_only_constraints(
+        self,
+        mock_llm_service,
+        mock_file_service,
+        tmp_path,
+    ):
+        runner = self._system_prompt_runner(mock_llm_service, mock_file_service, tmp_path)
+
+        result = runner.render_prompt(
+            "pipeline/rewrite/draft.md",
+            {
+                "file_content": "原文",
+                "style_guide": "文风",
+                "required_beats": ["线索必须保留"],
+                "forbidden_beats": ["不能提前揭晓"],
+            },
+        )
+
+        assert "保守润色边界" not in result
+        assert "这是润色任务，不是重写任务" not in result
+
     def test_rewrite_prompt_omits_empty_beat_sections(
         self,
         mock_llm_service,
