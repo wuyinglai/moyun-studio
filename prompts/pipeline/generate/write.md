@@ -37,6 +37,20 @@
 
 {% include 'blocks/writing-rules.md' %}
 
+{% if required_beats %}
+## 本场必须出现的信息点
+{% for beat in required_beats %}
+{% if beat is mapping %}- {{ beat.text }}{% else %}- {{ beat }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if forbidden_beats %}
+## 本场禁止出现 / 禁止揭晓
+{% for beat in forbidden_beats %}
+{% if beat is mapping %}- {{ beat.text }}{% else %}- {{ beat }}{% endif %}
+{% endfor %}
+{% endif %}
+
 ## 特别要求
 1. 只输出当前场景正文。
 2. 不要输出标题、分析、编号或说明。

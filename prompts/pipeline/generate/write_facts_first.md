@@ -52,6 +52,20 @@
 - 不要提前揭晓尚未到达的真相。
 - 不要让人物伤势、位置、道具归属和时间线自相矛盾。
 
+{% if required_beats %}
+## 本场必须出现的信息点
+{% for beat in required_beats %}
+{% if beat is mapping %}- {{ beat.text }}{% else %}- {{ beat }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if forbidden_beats %}
+## 本场禁止出现 / 禁止揭晓
+{% for beat in forbidden_beats %}
+{% if beat is mapping %}- {{ beat.text }}{% else %}- {{ beat }}{% endif %}
+{% endfor %}
+{% endif %}
+
 ## 本场景目标
 
 {% if scene_goal %}{{ scene_goal }}{% else %}{{ user_input }}{% endif %}
