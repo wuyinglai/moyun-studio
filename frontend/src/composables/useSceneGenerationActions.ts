@@ -11,6 +11,7 @@ import { useFileStore } from '@/stores/file'
 import { usePipelineStore } from '@/stores/pipeline'
 import { useTaskStore } from '@/stores/task'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useRequiredBeatsInput } from '@/composables/useRequiredBeatsInput'
 import { useWorkflowGuide, type StepStatus } from '@/composables/useWorkflowGuide'
 import { useTaskQueue, cancelQueuedTask } from '@/composables/useTaskQueue'
 import { toUserFacingMessage } from '@/utils/errorMessages'
@@ -47,6 +48,7 @@ export function useSceneGenerationActions() {
   const fileStore = useFileStore()
   const pipelineStore = usePipelineStore()
   const fileGen = useFileGeneration()
+  const beatInput = useRequiredBeatsInput()
   const guide = useWorkflowGuide()
   const taskQueue = useTaskQueue()
 
@@ -185,6 +187,7 @@ export function useSceneGenerationActions() {
         extraVars.previous_text = currentContent
         extraVars.current_scene_text = currentContent
       }
+      Object.assign(extraVars, beatInput.getBeatValidationExtraVars())
 
       // L1 auto-advance 已打开但未生成的文件 → 本次点击触发生成
       if (_nextConfirmQueued) {
@@ -334,11 +337,12 @@ export function useSceneGenerationActions() {
 
     await taskQueue.enqueue(
       async () => {
+        const pipelineExtraVars = candidateOnly ? beatInput.getBeatValidationExtraVars() : {}
         await fileGen.runPipeline(
           projectStore.currentProject!.id,
           targetFile,
           name,
-          undefined,
+          pipelineExtraVars,
           candidateOnly ? 'candidate' : name === 'extract' ? 'write_scene' : 'write_scene',
         )
         if (candidateOnly) {
@@ -534,7 +538,7 @@ export function useSceneGenerationActions() {
       projectId,
       targetPath,
       pipelineName,
-      { ...extraVars, _action: action },
+      { ...extraVars, ...beatInput.getBeatValidationExtraVars(), _action: action },
       outputMode,
     )
 

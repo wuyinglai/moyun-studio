@@ -75,6 +75,33 @@
         <i class="fa-solid fa-shield-halved" />
         生成结果会先保存为候选稿，不会直接覆盖正文。
       </p>
+      <details class="beat-input-box">
+        <summary>
+          <span>本场信息点</span>
+          <em v-if="hasBeatInput">已启用检查</em>
+        </summary>
+        <p class="beat-input-hint">
+          用于生成后检查候选稿是否漏掉关键信息。留空则不启用检查。
+        </p>
+        <label class="beat-input-field">
+          <span>本场必须出现</span>
+          <textarea
+            v-model="requiredBeatsText"
+            data-testid="required-beats-input"
+            rows="3"
+            placeholder="每行一个信息点，例如：正文必须提到第七层协议"
+          />
+        </label>
+        <label class="beat-input-field">
+          <span>本场禁止出现 / 禁止揭晓</span>
+          <textarea
+            v-model="forbiddenBeatsText"
+            data-testid="forbidden-beats-input"
+            rows="3"
+            placeholder="每行一个禁止项，例如：不能揭晓第七层协议完整真相"
+          />
+        </label>
+      </details>
     </section>
 
     <section class="quick-section">
@@ -129,6 +156,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { parseScenePath, buildChapterPlanPath } from '@/modules/scene/scenePath'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useRequiredBeatsInput } from '@/composables/useRequiredBeatsInput'
 import { useSceneGenerationActions } from '@/composables/useSceneGenerationActions'
 import { getPipelineForFile } from '@/utils/promptTypes'
 
@@ -140,6 +168,12 @@ const notification = useNotificationStore()
 const rightPanelStore = useRightPanelStore()
 const fileGen = useFileGeneration()
 const sceneActions = useSceneGenerationActions()
+const {
+  requiredBeatsText,
+  forbiddenBeatsText,
+  hasBeatInput,
+  getBeatValidationExtraVars,
+} = useRequiredBeatsInput()
 
 const running = ref(false)
 const statusText = ref('')
@@ -316,7 +350,10 @@ async function handleRewrite() {
         projectId.value,
         currentFilePath.value,
         'rewrite',
-        { user_prompt: '请在保留核心事件的基础上重写当前文件，增强人物动机、场景行动和场景钩子。' },
+        {
+          user_prompt: '请在保留核心事件的基础上重写当前文件，增强人物动机、场景行动和场景钩子。',
+          ...getBeatValidationExtraVars(),
+        },
         'candidate',
       )
     })
@@ -330,7 +367,10 @@ async function handleBoost() {
       projectId.value,
       currentFilePath.value,
       'rewrite',
-      { user_prompt: '请生成一版候选稿：保留当前场景核心事件，加强冲突压力、主角反击的爽点兑现，以及下一场景钩子。不要直接覆盖原文。' },
+      {
+        user_prompt: '请生成一版候选稿：保留当前场景核心事件，加强冲突压力、主角反击的爽点兑现，以及下一场景钩子。不要直接覆盖原文。',
+        ...getBeatValidationExtraVars(),
+      },
       'candidate',
     )
   })
@@ -406,6 +446,69 @@ async function handleBoost() {
     flex-shrink: 0;
     font-size: 10px;
   }
+}
+
+.beat-input-box {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(201, 169, 110, .18);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .12);
+}
+
+.beat-input-box summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--gold-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.beat-input-box summary em {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, .14);
+  color: var(--accent-success);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.beat-input-hint {
+  margin: 8px 0;
+  color: var(--text-muted-ink);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.beat-input-field {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  color: var(--text-muted-ink);
+  font-size: 12px;
+}
+
+.beat-input-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--border-ink);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .18);
+  color: var(--text-primary);
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+}
+
+.beat-input-field textarea:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 2px rgba(201, 169, 110, .12);
 }
 
 .action-grid {
