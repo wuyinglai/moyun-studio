@@ -41,6 +41,10 @@ function resolveApiUrl(path: string): string {
   return '/api' + path
 }
 
+function normalizeProjectPath(filePath: string): string {
+  return filePath.replace(/^\/+/, '')
+}
+
 export function useFileGeneration() {
   const editorStore = useEditorStore()
 
@@ -55,9 +59,10 @@ export function useFileGeneration() {
     promptType?: string,
   ) {
     if (_isGenerating.value) return
+    const requestFilePath = normalizeProjectPath(filePath)
 
     // 管线映射文件不应走 generate/continuation，应使用 runPipeline()
-    const pipelineForFile = getPipelineForFile(filePath)
+    const pipelineForFile = getPipelineForFile(requestFilePath)
     if (pipelineForFile && pipelineForFile !== 'title') {
       const notification = useNotificationStore()
       notification.error(`该文件属于 ${pipelineForFile} 管线，不支持直接生成。请使用专用管线。`)
@@ -78,7 +83,7 @@ export function useFileGeneration() {
     try {
       const body: Record<string, unknown> = {
         project_id: projectId,
-        file_path: filePath,
+        file_path: requestFilePath,
         prompt_type: promptType || 'generate/continuation',
         extra_vars: { ...(extraVars || {}) },
         mode: 'append',
@@ -106,7 +111,7 @@ export function useFileGeneration() {
       // 通过 generationEmitter → useSSE → handleEvent 统一处理 generation 事件
       // 不再直接写入 store，避免重复写入
       // 将 filePath 作为事件detail的一部分传递，以便正确更新文件
-      const filePathForEmitter = filePath
+      const filePathForEmitter = requestFilePath
       await parseSSEStream(reader, (_delta) => {
         // delta 事件由 useSSE 通过 generationEmitter 监听并处理
         // filePath 已在 closure 中，通过 emitter detail 传递
@@ -120,7 +125,7 @@ export function useFileGeneration() {
       if (prompt) {
         savedExtraVars.user_prompt = prompt
       }
-      useFileMetaStore().saveMeta(projectId, filePath, {
+      useFileMetaStore().saveMeta(projectId, requestFilePath, {
         promptType: promptType || 'generate/continuation',
         extraVars: savedExtraVars,
         generatedAt: new Date().toISOString(),
@@ -155,6 +160,7 @@ export function useFileGeneration() {
     outputMode?: 'write_scene' | 'candidate' | 'append',
   ) {
     if (_isGenerating.value) return
+    const requestFilePath = normalizeProjectPath(filePath)
 
     // 检测并发写入风险
     const fileStore = useFileStore()
@@ -174,13 +180,13 @@ export function useFileGeneration() {
       const requestBody: Record<string, unknown> = {
         pipeline: pipelineName,
         project_id: projectId,
-        target_file: filePath,
+        target_file: requestFilePath,
         output_mode: mode,
         extra_vars: extraVars || {},
       }
 
       // 如果启用了 Scene Plan 且 source file 匹配当前文件，添加到请求中
-      if (canUseScenePlanForGeneration(filePath)) {
+      if (canUseScenePlanForGeneration(requestFilePath)) {
         const scenePlan = getCurrentScenePlan()
         if (scenePlan) {
           requestBody.scene_plan = scenePlan
@@ -204,7 +210,7 @@ export function useFileGeneration() {
       // 通过 generationEmitter → useSSE → handleEvent 统一处理 generation 事件
       // 不再直接写入 store，避免重复写入
       // 将 filePath 作为事件detail的一部分传递，以便正确更新文件
-      const filePathForEmitter = filePath
+      const filePathForEmitter = requestFilePath
       const candidateOnly = mode === 'candidate'
       await parseSSEStream(reader, (_delta) => {
         // delta 事件由 useSSE 通过 generationEmitter 监听并处理
