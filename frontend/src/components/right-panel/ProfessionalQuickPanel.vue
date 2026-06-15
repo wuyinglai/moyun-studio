@@ -83,13 +83,22 @@
         <p class="beat-input-hint">
           用于生成后检查候选稿是否漏掉关键信息。留空则不启用检查。
         </p>
+        <p class="beat-input-summary">
+          {{ beatInputSummary }}
+        </p>
+        <p
+          v-if="hasLongBeatLine"
+          class="beat-input-warning"
+        >
+          单条信息点过长，建议拆成多行，模型会更容易遵守。
+        </p>
         <label class="beat-input-field">
           <span>本场必须出现</span>
           <textarea
             v-model="requiredBeatsText"
             data-testid="required-beats-input"
             rows="3"
-            placeholder="每行一个信息点，例如：正文必须提到第七层协议"
+            placeholder="每行一个必须出现的信息点，例如：第七层协议必须被提及"
           />
         </label>
         <label class="beat-input-field">
@@ -98,7 +107,7 @@
             v-model="forbiddenBeatsText"
             data-testid="forbidden-beats-input"
             rows="3"
-            placeholder="每行一个禁止项，例如：不能揭晓第七层协议完整真相"
+            placeholder="每行一个禁止项，例如：不能提前揭晓幕后人物身份"
           />
         </label>
       </details>
@@ -172,6 +181,8 @@ const {
   requiredBeatsText,
   forbiddenBeatsText,
   hasBeatInput,
+  beatInputSummary,
+  hasLongBeatLine,
   getBeatValidationExtraVars,
 } = useRequiredBeatsInput()
 
@@ -297,14 +308,41 @@ async function openCurrentPlan() {
 async function runAction(label: string, runner: () => Promise<void>) {
   if (!canGenerate.value || running.value) return
   running.value = true
-  statusText.value = `${label}已发送，结果将先进入候选稿。`
+  const timers: number[] = []
+  const clearTimers = () => {
+    for (const timer of timers) window.clearTimeout(timer)
+  }
+  const isCandidateAction = /重写|润色|精修|补强|爽点/.test(label)
+  const resultHint = isCandidateAction ? '结果将先进入候选稿。' : '正在准备写作结果。'
+  statusText.value = `正在准备生成……${resultHint}`
+  timers.push(window.setTimeout(() => {
+    statusText.value = '正在调用模型……'
+  }, 800))
+  timers.push(window.setTimeout(() => {
+    statusText.value = '模型响应较慢，仍在等待生成结果……'
+  }, 15000))
+  timers.push(window.setTimeout(() => {
+    statusText.value = '真实 LLM 生成可能需要更久。你可以继续等待，或稍后重试。'
+  }, 60000))
   try {
     await runner()
+    clearTimers()
+    statusText.value = isCandidateAction
+      ? '已生成候选稿，采用后才会覆盖当前场景。'
+      : `${label}完成。`
     notification.success(statusText.value)
   } catch (e: unknown) {
-    statusText.value = (e instanceof Error ? e.message : '') || `${label}失败`
+    clearTimers()
+    const rawMessage = e instanceof Error ? e.message : String(e || '')
+    const lower = rawMessage.toLowerCase()
+    if (lower.includes('llm_error') || lower.includes('timeout') || rawMessage.includes('模型调用')) {
+      statusText.value = '模型生成失败，可能是模型响应超时或服务暂时不可用。请稍后重试，或缩短上下文后再生成。'
+    } else {
+      statusText.value = rawMessage || `${label}失败`
+    }
     notification.error(statusText.value)
   } finally {
+    clearTimers()
     running.value = false
   }
 }
@@ -482,6 +520,21 @@ async function handleBoost() {
   color: var(--text-muted-ink);
   font-size: 11px;
   line-height: 1.5;
+}
+
+.beat-input-summary,
+.beat-input-warning {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.beat-input-summary {
+  color: var(--text-secondary);
+}
+
+.beat-input-warning {
+  color: var(--accent-warning);
 }
 
 .beat-input-field {

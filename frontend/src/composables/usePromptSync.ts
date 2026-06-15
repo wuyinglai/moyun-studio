@@ -10,6 +10,7 @@ import { useProjectStore } from '@/stores/project'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { usePipelineStore } from '@/stores/pipeline'
 import { getPipelineForFile, guessPromptType } from '@/utils/promptTypes'
+import { isSceneFile } from '@/modules/scene/scenePath'
 import { API_ROUTES, API_BASE } from '@/shared/api/routes'
 
 export function usePromptSync() {
@@ -30,7 +31,7 @@ export function usePromptSync() {
       }
 
       // 优先从 pipeline 定义加载 prompt
-      const pipelineName = getPipelineForFile(path)
+      const pipelineName = isSceneFile(path) ? 'generate' : getPipelineForFile(path)
       if (pipelineName) {
         try {
           await pipelineStore.fetchPipelineDetail(pipelineName)

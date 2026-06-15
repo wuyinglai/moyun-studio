@@ -128,7 +128,7 @@ export function useSceneGenerationActions() {
   }
 
   async function loadFilePrompt(projectId: string, filePath: string) {
-    const pipelineName = getPipelineForFile(filePath)
+    const pipelineName = isSceneFilePath(filePath) ? 'generate' : getPipelineForFile(filePath)
     if (pipelineName) {
       try {
         await pipelineStore.fetchPipelineDetail(pipelineName)

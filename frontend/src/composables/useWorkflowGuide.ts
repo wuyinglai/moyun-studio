@@ -143,6 +143,12 @@ export function useWorkflowGuide() {
   /** 从后端加载工作流定义 */
   async function loadWorkflow(name = 'full-novel') {
     try {
+      const list = await api.get<{ workflows: Array<{ name: string }> }>('/workflows')
+      if (!list?.workflows?.some((workflow) => workflow.name === name)) {
+        _error.value = '未找到工作流'
+        _steps.value = []
+        return
+      }
       const res = await api.get<{ workflow: { name: string; label: string; steps: Array<{ id: string; label: string; type: string; pipeline?: string; output?: string | null }> } }>(`/workflows/${name}`)
       const wf = res?.workflow
       if (!wf) {

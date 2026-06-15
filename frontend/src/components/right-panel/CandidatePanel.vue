@@ -97,7 +97,20 @@
             :class="`beat-message-${candidate.beat_validation?.status || 'unknown'}`"
           >
             <i :class="beatValidationIcon(candidate)" />
-            {{ beatValidationMessage(candidate) }}
+            <div class="beat-message-content">
+              <strong>{{ beatValidationMessage(candidate) }}</strong>
+              <ul
+                v-if="beatValidationDetails(candidate).length > 0"
+                class="beat-detail-list"
+              >
+                <li
+                  v-for="detail in beatValidationDetails(candidate)"
+                  :key="detail"
+                >
+                  {{ detail }}
+                </li>
+              </ul>
+            </div>
           </div>
           <div class="candidate-meta">
             <span class="meta-item">{{ formatTime(candidate.created_at) }}</span>
@@ -343,30 +356,37 @@ function beatValidationIcon(candidate: CandidateInfo | null): string {
   return 'fa-solid fa-circle-question'
 }
 
+function beatValidationDetails(candidate: CandidateInfo | null): string[] {
+  const validation = candidate?.beat_validation
+  if (!validation) return []
+  const required = validation.required_beats || []
+  const forbidden = validation.forbidden_beats || []
+  const missing = required
+    .filter((item) => item.status === 'missing')
+    .map((item) => `缺失：${item.text}`)
+  const partial = required
+    .filter((item) => item.status === 'partial' || item.status === 'unknown')
+    .map((item) => `不确定：${item.text}${item.evidence ? `（证据：${item.evidence}）` : ''}`)
+  const violations = forbidden
+    .filter((item) => item.violated)
+    .map((item) => `禁止项疑似出现：${item.text}${item.evidence ? `（证据：${item.evidence}）` : ''}`)
+  return [...missing, ...partial, ...violations].slice(0, 5)
+}
+
 function beatValidationWarning(candidate: CandidateInfo | null): string {
   const validation = candidate?.beat_validation
   if (!validation || validation.status !== 'warning') return ''
-  const missing = (validation.required_beats || [])
-    .filter((item) => item.status === 'missing' || item.status === 'partial' || item.status === 'unknown')
-    .map((item) => item.text)
-    .slice(0, 3)
-  const violations = (validation.forbidden_beats || [])
-    .filter((item) => item.violated)
-    .map((item) => item.text)
-    .slice(0, 3)
-  const details = [...missing, ...violations]
-  if (details.length > 0) {
-    return `信息点检查警告：${details.join('；')}。采用前建议先预览确认。`
-  }
+  const details = beatValidationDetails(candidate)
+  if (details.length > 0) return '信息点检查发现风险，采用前建议先预览确认。'
   return validation.summary || '信息点检查发现风险，采用前建议先预览确认。'
 }
 
 function beatValidationMessage(candidate: CandidateInfo | null): string {
   const validation = candidate?.beat_validation
   if (!validation?.status) return ''
-  if (validation.status === 'pass') return validation.summary || '必需信息点检查通过。'
+  if (validation.status === 'pass') return validation.summary || '信息点检查通过。'
   if (validation.status === 'warning') return beatValidationWarning(candidate)
-  return validation.summary || '信息点检查未完成，请采用前人工预览确认。'
+  return validation.summary || '信息点检查未完成，不影响采用，请自行预览确认。'
 }
 
 function getPreviewWarning(candidate: CandidateInfo | null): string {
@@ -650,6 +670,17 @@ watch(() => projectStore.currentProject?.id, () => {
     color: #f97316;
     margin-top: 2px;
   }
+}
+
+.beat-message-content {
+  display: grid;
+  gap: 4px;
+}
+
+.beat-detail-list {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--text-muted);
 }
 
 .beat-message-pass {
