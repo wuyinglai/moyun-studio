@@ -31,6 +31,7 @@ export function filterSevereErrors(errors: string[]): string[] {
       !e.includes('Download the Vue DevTools') &&
       !e.includes('net::ERR_CONNECTION_REFUSED') &&
       !e.includes('net::ERR_CONNECTION_CLOSED') &&
+      !e.includes('net::ERR_CERT_DATABASE_CHANGED') &&
       !e.includes('404 (Not Found)') &&
       !e.includes('[API Error]')
   )

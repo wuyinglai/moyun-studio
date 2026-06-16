@@ -16,9 +16,19 @@ const projectId = 'e2e-human-candidate'
 
 type MockOptions = {
   failNextRevision?: boolean
+  adoptConflict?: boolean
 }
 
-async function installMocks(page: Page, options: MockOptions = {}) {
+type MockState = {
+  candidates: Array<Record<string, unknown>>
+  revisionPayloads: Array<Record<string, unknown>>
+  adoptCalls: number
+  deleteCalls: number
+  fileSaveCalls: number
+  sseEvents: Array<Record<string, unknown>>
+}
+
+async function installMocks(page: Page, options: MockOptions = {}): Promise<MockState> {
   let failRevisionResponses = options.failNextRevision ? 3 : 0
   let revisionCounter = 0
   const candidates: Array<Record<string, unknown>> = [
@@ -77,6 +87,39 @@ async function installMocks(page: Page, options: MockOptions = {}) {
       },
     },
   ]
+  const state: MockState = {
+    candidates,
+    revisionPayloads: [],
+    adoptCalls: 0,
+    deleteCalls: 0,
+    fileSaveCalls: 0,
+    sseEvents: [
+      {
+        event: 'file.updated',
+        data: {
+          type: 'file.updated',
+          project_id: projectId,
+          payload: {
+            path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
+            size: 120,
+            mtime: 123456,
+          },
+        },
+      },
+      {
+        event: 'candidate-created',
+        data: {
+          type: 'candidate-created',
+          project_id: projectId,
+          payload: {
+            candidate_id: 'cand-sse-safe',
+            source_path: 'chapters/vol-01/ch-001/sec-001.md',
+            action: 'rewrite',
+          },
+        },
+      },
+    ],
+  }
   const findCandidate = (candidateId: string) => candidates.find((item) => item.id === candidateId)
 
   await page.route('http://127.0.0.1:5173/api/**', async (route) => {
@@ -126,11 +169,15 @@ async function installMocks(page: Page, options: MockOptions = {}) {
 
     // ── SSE ──
     else if (path === '/sse') {
+      const sseBody = [
+        'event: connected\ndata: {"timestamp":0}\n\n',
+        ...state.sseEvents.map((item) => `event: ${item.event}\ndata: ${JSON.stringify(item.data)}\n\n`),
+      ].join('')
       await route.fulfill({
         status: 200,
         contentType: 'text/event-stream',
         headers: { 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-        body: 'event: connected\ndata: {"timestamp":0}\n\n',
+        body: sseBody,
       })
     }
 
@@ -166,6 +213,7 @@ async function installMocks(page: Page, options: MockOptions = {}) {
         hash: 'scene-hash',
       })
     } else if (path === '/file/save' && method === 'POST') {
+      state.fileSaveCalls += 1
       await ok({ mtime: Date.now(), hash: 'saved-hash' })
     }
 
@@ -177,6 +225,7 @@ async function installMocks(page: Page, options: MockOptions = {}) {
         repair_scope?: string
       } | null
       expect(payload?.feedback_text || payload?.quick_actions?.length).toBeTruthy()
+      state.revisionPayloads.push((payload || {}) as Record<string, unknown>)
       if (failRevisionResponses > 0) {
         failRevisionResponses -= 1
         await route.fulfill({
@@ -237,8 +286,24 @@ async function installMocks(page: Page, options: MockOptions = {}) {
     } else if (/^\/candidates\//.test(path) && method === 'GET') {
       await ok({ candidates })
     } else if (/^\/candidates\//.test(path) && path.includes('/adopt') && method === 'POST') {
+      state.adoptCalls += 1
+      if (options.adoptConflict) {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'FILE_CONFLICT',
+              message: 'source file changed before candidate adoption',
+            },
+          }),
+        })
+        return
+      }
       await ok({ success: true })
     } else if (/^\/candidates\//.test(path) && method === 'DELETE') {
+      state.deleteCalls += 1
       const candidateId = path.split('/').at(-1) || ''
       const candidate = findCandidate(candidateId)
       if (candidate) candidate.status = 'discarded'
@@ -292,6 +357,7 @@ async function installMocks(page: Page, options: MockOptions = {}) {
       await ok({})
     }
   })
+  return state
 }
 
 test.describe('候选稿工作流 - 模拟人类操作', () => {
@@ -597,5 +663,97 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     await expect(cand002Card).toBeVisible({ timeout: 5000 })
     await expect(cand002Card.locator('[data-testid="candidate-quality-section"]')).toHaveCount(0)
     console.log('[t8.7] ✓ quality section hidden for candidate without validation data')
+  })
+  test('T9.2b: candidate SSE events do not expose full content', async ({ page }) => {
+    const state = await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await expect(page.getByTestId('main-entry-root')).toBeVisible({ timeout: 10000 })
+
+    expect(state.sseEvents.length).toBeGreaterThanOrEqual(2)
+    for (const event of state.sseEvents) {
+      expect(JSON.stringify(event)).not.toContain('"content"')
+      expect((event.data as { project_id?: string }).project_id).toBe(projectId)
+    }
+  })
+
+  test('T9.2b: cancelling warning adopt does not call adopt API', async ({ page }) => {
+    const state = await installMocks(page)
+    page.on('dialog', (dialog) => dialog.dismiss())
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').nth(4).click()
+
+    await page.locator('[data-testid="candidate-adopt-button"]').first().click()
+    expect(state.adoptCalls).toBe(0)
+    expect(state.fileSaveCalls).toBe(0)
+  })
+
+  test('T9.2b: FILE_CONFLICT on adopt keeps candidate pending and does not save source', async ({ page }) => {
+    const state = await installMocks(page, { adoptConflict: true })
+    page.on('dialog', (dialog) => dialog.accept())
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').nth(4).click()
+
+    await page.locator('[data-testid="candidate-adopt-button"]').first().click()
+    await expect.poll(() => state.adoptCalls).toBe(1)
+    expect(state.fileSaveCalls).toBe(0)
+    expect(state.candidates.find((candidate) => candidate.id === 'cand-001')?.status).toBe('pending')
+  })
+
+  test('T9.2b: deleting candidate does not write official scene file', async ({ page }) => {
+    const state = await installMocks(page)
+    page.on('dialog', (dialog) => dialog.accept())
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').nth(4).click()
+
+    await page.locator('[data-testid="candidate-reject-button"]').first().click()
+    await expect.poll(() => state.deleteCalls).toBe(1)
+    expect(state.fileSaveCalls).toBe(0)
+  })
+
+  test('T9.2b: feedback revision request preserves safety metadata flags', async ({ page }) => {
+    const state = await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').nth(4).click()
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    await page.getByTestId('candidate-revision-feedback').fill('keep the ending suspense and preserve satisfied beats')
+    await page.getByTestId('candidate-revision-submit').click()
+
+    await expect.poll(() => state.revisionPayloads.length).toBe(1)
+    expect(state.revisionPayloads[0]).toMatchObject({
+      feedback_text: 'keep the ending suspense and preserve satisfied beats',
+      repair_scope: 'full_candidate',
+      inherit_required_beats: true,
+      inherit_forbidden_beats: true,
+      run_beat_validation: true,
+    })
+  })
+
+  test('T9.2b: quick feedback action alone can create a safe revision candidate', async ({ page }) => {
+    const state = await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').nth(4).click()
+
+    await page.getByTestId('candidate-revise-button').first().click()
+    await page.locator('.revision-quick-actions button').first().click()
+    await expect(page.getByTestId('candidate-revision-submit')).toBeEnabled()
+    await page.getByTestId('candidate-revision-submit').click()
+
+    await expect.poll(() => state.revisionPayloads.length).toBe(1)
+    expect(state.revisionPayloads[0].feedback_text).toBe('')
+    expect(state.revisionPayloads[0].quick_actions).toEqual(expect.arrayContaining([expect.any(String)]))
+    expect(state.fileSaveCalls).toBe(0)
   })
 })
