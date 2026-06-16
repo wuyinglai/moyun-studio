@@ -90,6 +90,14 @@
             <span>连续性警告</span>
           </div>
           <div
+            v-if="continuityAnchorUsedCount(candidate) > 0"
+            class="quality-item quality-anchor"
+            data-testid="candidate-continuity-anchor-count"
+          >
+            <i class="fa-solid fa-link" />
+            <span>连续性锚点：已使用 {{ continuityAnchorUsedCount(candidate) }} 条</span>
+          </div>
+          <div
             v-if="candidate.warning_message"
             class="quality-detail quality-warning-detail"
           >
@@ -413,8 +421,15 @@ function hasQualityInfo(candidate: CandidateInfo): boolean {
   const bv = candidate.beat_validation
   const hasBeatValidation = !!bv && !!bv.status
   const hasContinuity = !!(candidate.continuity && candidate.continuity.has_warning)
+  const hasContinuityAnchors = continuityAnchorUsedCount(candidate) > 0
   const hasWarningMsg = !!candidate.warning_message
-  return hasBeatValidation || hasContinuity || hasWarningMsg
+  return hasBeatValidation || hasContinuity || hasContinuityAnchors || hasWarningMsg
+}
+
+function continuityAnchorUsedCount(candidate: CandidateInfo | null): number {
+  const raw = candidate?.continuity_anchors?.used_count
+  const count = Number(raw || 0)
+  return Number.isFinite(count) ? count : 0
 }
 
 function actionLabel(action: string): string {

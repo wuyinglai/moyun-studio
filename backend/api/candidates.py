@@ -114,6 +114,7 @@ async def create_candidate(
         scene_plan_hash=request.scene_plan_hash,
         scene_plan_path=request.scene_plan_path,
         beat_validation=request.beat_validation,
+        continuity_anchors=request.continuity_anchors,
         parent_candidate_id=request.parent_candidate_id,
         revision_group_id=request.revision_group_id,
         revision_index=request.revision_index,

@@ -89,6 +89,8 @@
 
 {% if outline %}{{ outline }}{% endif %}
 
+{% include 'blocks/continuity-anchors.md' %}
+
 {% include 'blocks/writing-rules.md' %}
 
 ## 输出前自检

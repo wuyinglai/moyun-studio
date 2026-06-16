@@ -142,6 +142,35 @@ export interface BeatValidationInfo {
   validator?: Record<string, unknown>
 }
 
+export type ContinuityAnchorType = 'character_state' | 'plot_clue' | 'object_location' | 'relationship' | 'world_rule'
+export type ContinuityAnchorScope = 'global' | 'chapter' | 'scene' | 'character'
+export type ContinuityAnchorStatus = 'active' | 'resolved' | 'archived'
+export type ContinuityAnchorPriority = 'high' | 'normal' | 'low'
+
+export interface ContinuityAnchor {
+  id: string
+  type: ContinuityAnchorType
+  title: string
+  content: string
+  scope: ContinuityAnchorScope
+  status: ContinuityAnchorStatus
+  priority: ContinuityAnchorPriority
+  source: 'user'
+  updated_at: string
+}
+
+export interface ContinuityAnchorsDocument {
+  version: number
+  anchors: ContinuityAnchor[]
+}
+
+export interface ContinuityAnchorMetadata {
+  enabled?: boolean
+  used_count?: number
+  anchor_ids?: string[]
+  types?: Record<string, number>
+}
+
 /** 候选稿信息 — 对应 backend/schemas/candidate.py CandidateInfo */
 export interface CandidateInfo {
   id: string
@@ -169,6 +198,7 @@ export interface CandidateInfo {
   /** 简短摘要 — 如"可能与前文设定不一致"，便于卡片展示 */
   warning_message?: string | null
   beat_validation?: BeatValidationInfo | null
+  continuity_anchors?: ContinuityAnchorMetadata | null
   generation_context?: Record<string, unknown>
   parent_candidate_id?: string | null
   revision_group_id?: string | null

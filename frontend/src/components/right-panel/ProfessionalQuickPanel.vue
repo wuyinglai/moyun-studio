@@ -111,6 +111,101 @@
           />
         </label>
       </details>
+      <details
+        class="anchor-input-box"
+        data-testid="continuity-anchors-section"
+      >
+        <summary>
+          <span>连续性锚点</span>
+          <em>{{ continuityAnchorCountText }}</em>
+        </summary>
+        <p class="beat-input-hint">
+          用于长期约束人物状态、线索、道具归属、关系和世界规则。生成时只注入 active 锚点。
+        </p>
+        <div class="anchor-form">
+          <label class="beat-input-field">
+            <span>标题</span>
+            <input
+              v-model="newAnchorTitle"
+              data-testid="continuity-anchor-title"
+              placeholder="例如：沈知夏左臂受伤"
+            >
+          </label>
+          <label class="beat-input-field">
+            <span>内容</span>
+            <textarea
+              v-model="newAnchorContent"
+              data-testid="continuity-anchor-content"
+              rows="3"
+              placeholder="例如：沈知夏左臂仍有旧伤，不能做高强度攀爬或近身格斗。"
+            />
+          </label>
+          <div class="anchor-controls">
+            <label>
+              <span>类型</span>
+              <select
+                v-model="newAnchorType"
+                data-testid="continuity-anchor-type"
+              >
+                <option value="character_state">人物状态</option>
+                <option value="plot_clue">线索伏笔</option>
+                <option value="object_location">道具归属</option>
+                <option value="relationship">人物关系</option>
+                <option value="world_rule">世界规则</option>
+              </select>
+            </label>
+            <label>
+              <span>优先级</span>
+              <select
+                v-model="newAnchorPriority"
+                data-testid="continuity-anchor-priority"
+              >
+                <option value="high">高</option>
+                <option value="normal">普通</option>
+                <option value="low">低</option>
+              </select>
+            </label>
+            <button
+              class="link-btn anchor-add-btn"
+              data-testid="continuity-anchor-add"
+              :disabled="!canAddContinuityAnchor"
+              @click="addContinuityAnchor"
+            >
+              添加锚点
+            </button>
+          </div>
+        </div>
+        <div
+          v-if="activeContinuityAnchors.length > 0"
+          class="anchor-list"
+        >
+          <div
+            v-for="anchor in activeContinuityAnchors"
+            :key="anchor.id"
+            class="anchor-item"
+            data-testid="continuity-anchor-item"
+          >
+            <div>
+              <strong>{{ anchor.title }}</strong>
+              <small>{{ anchor.type }} / {{ anchor.priority }}</small>
+              <p>{{ anchor.content }}</p>
+            </div>
+            <button
+              class="link-btn"
+              data-testid="continuity-anchor-archive"
+              @click="archiveContinuityAnchor(anchor.id)"
+            >
+              归档
+            </button>
+          </div>
+        </div>
+        <p
+          v-else
+          class="beat-input-summary"
+        >
+          暂无 active 锚点。
+        </p>
+      </details>
     </section>
 
     <section class="quick-section">
@@ -165,9 +260,11 @@ import { useNotificationStore } from '@/stores/notification'
 import { useRightPanelStore } from '@/stores/rightPanel'
 import { parseScenePath, buildChapterPlanPath } from '@/modules/scene/scenePath'
 import { useFileGeneration } from '@/composables/useFileGeneration'
+import { useContinuityAnchors } from '@/composables/useContinuityAnchors'
 import { useRequiredBeatsInput } from '@/composables/useRequiredBeatsInput'
 import { useSceneGenerationActions } from '@/composables/useSceneGenerationActions'
 import { getPipelineForFile } from '@/utils/promptTypes'
+import type { ContinuityAnchorPriority, ContinuityAnchorType } from '@/shared/api/types'
 
 const projectStore = useProjectStore()
 const fileStore = useFileStore()
@@ -177,6 +274,7 @@ const notification = useNotificationStore()
 const rightPanelStore = useRightPanelStore()
 const fileGen = useFileGeneration()
 const sceneActions = useSceneGenerationActions()
+const continuityAnchors = useContinuityAnchors()
 const {
   requiredBeatsText,
   forbiddenBeatsText,
@@ -188,6 +286,10 @@ const {
 
 const running = ref(false)
 const statusText = ref('')
+const newAnchorTitle = ref('')
+const newAnchorContent = ref('')
+const newAnchorType = ref<ContinuityAnchorType>('character_state')
+const newAnchorPriority = ref<ContinuityAnchorPriority>('normal')
 const engineSummary = reactive({
   desire: '待补充',
   conflict: '待补充',
@@ -202,6 +304,11 @@ const canGenerate = computed(() => Boolean(projectId.value && currentFilePath.va
 const isChapterFile = computed(() => /chapters\/.*\/sec-\d+\.md$/.test(currentFilePath.value))
 const continueLabel = computed(() => isChapterFile.value ? '生成当前场景' : '续写当前文件')
 const rewriteLabel = computed(() => isChapterFile.value ? '重写当前场景' : '重写当前文件')
+const activeContinuityAnchors = computed(() => continuityAnchors.activeAnchors.value)
+const continuityAnchorCountText = computed(() => `${continuityAnchors.activeCount.value} 条 active`)
+const canAddContinuityAnchor = computed(() => Boolean(
+  projectId.value && newAnchorTitle.value.trim() && newAnchorContent.value.trim(),
+))
 const currentFileHint = computed(() => {
   if (!projectId.value) return '打开项目后可使用专业快捷操作。'
   if (!currentFilePath.value) return '从文件树打开一个场景或素材文件。'
@@ -210,11 +317,35 @@ const currentFileHint = computed(() => {
 
 watch(projectId, () => {
   void refreshEngine()
+  if (projectId.value) {
+    void continuityAnchors.load(projectId.value)
+  }
 }, { immediate: true })
 
 onMounted(() => {
   void refreshEngine()
 })
+
+async function addContinuityAnchor() {
+  if (!projectId.value || !canAddContinuityAnchor.value) return
+  const added = await continuityAnchors.addAnchor(projectId.value, {
+    title: newAnchorTitle.value,
+    content: newAnchorContent.value,
+    type: newAnchorType.value,
+    priority: newAnchorPriority.value,
+  })
+  if (added) {
+    newAnchorTitle.value = ''
+    newAnchorContent.value = ''
+    notification.success('连续性锚点已添加。')
+  }
+}
+
+async function archiveContinuityAnchor(anchorId: string) {
+  if (!projectId.value || !anchorId) return
+  await continuityAnchors.archiveAnchor(projectId.value, anchorId)
+  notification.success('连续性锚点已归档。')
+}
 
 function firstLineOfSection(text: string, name: string) {
   const pattern = new RegExp(`## ${name}\\n(?<body>[\\s\\S]*?)(?=\\n## |$)`)
@@ -494,6 +625,10 @@ async function handleBoost() {
   background: rgba(0, 0, 0, .12);
 }
 
+.anchor-input-box {
+  @extend .beat-input-box;
+}
+
 .beat-input-box summary {
   display: flex;
   align-items: center;
@@ -559,9 +694,83 @@ async function handleBoost() {
   outline: none;
 }
 
-.beat-input-field textarea:focus {
+.beat-input-field input,
+.anchor-controls select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--border-ink);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .18);
+  color: var(--text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.beat-input-field textarea:focus,
+.beat-input-field input:focus,
+.anchor-controls select:focus {
   border-color: var(--gold-primary);
   box-shadow: 0 0 0 2px rgba(201, 169, 110, .12);
+}
+
+.anchor-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.anchor-controls label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted-ink);
+  font-size: 12px;
+}
+
+.anchor-add-btn {
+  grid-column: 1 / -1;
+  min-height: 34px;
+}
+
+.anchor-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.anchor-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .025);
+}
+
+.anchor-item strong,
+.anchor-item small {
+  display: block;
+}
+
+.anchor-item strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.anchor-item small {
+  margin-top: 2px;
+  color: var(--text-muted-ink);
+  font-size: 10px;
+}
+
+.anchor-item p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .action-grid {

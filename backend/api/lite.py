@@ -31,6 +31,7 @@ from backend.application.lite_prompt_builder import LitePromptBuilder
 from backend.application.lite_quality_service import LiteQualityService
 from backend.config import Settings, get_settings
 from backend.core.candidate_service import CandidateService
+from backend.core.continuity_anchor_service import ContinuityAnchorService
 from backend.core.exceptions import ProjectNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService, load_llm_config_from_workspace
@@ -79,6 +80,7 @@ async def _create_lite_candidate(
     source_path: str,
     action: str,
     content: str,
+    continuity_anchors: dict | None = None,
 ) -> "CandidateInfo":
     """通过 CandidateService 创建 Lite 候选稿，返回 CandidateInfo"""
     candidate_service = CandidateService(file_service)
@@ -89,6 +91,7 @@ async def _create_lite_candidate(
         action=cand_action,
         content=content,
         source_mode="lite",
+        continuity_anchors=continuity_anchors,
     )
 
 
@@ -693,6 +696,10 @@ async def write_lite_next(
     else:
         pending_foreshadowing = ""
 
+    active_anchor_records = await ContinuityAnchorService(file_service).list_active(req.project_id)
+    continuity_anchor_items = ContinuityAnchorService.prompt_items(active_anchor_records)
+    continuity_anchor_metadata = ContinuityAnchorService.metadata(active_anchor_records)
+
     prompt_engine = PromptEngine(settings.prompts_path, file_service)
     prompt = await prompt_engine.render("generate/continuation", {
         "current_content": current_content,
@@ -702,6 +709,7 @@ async def write_lite_next(
         "style_guide": style_guide,
         "recent_context": recent_context,
         "pending_foreshadowing": pending_foreshadowing,
+        "continuity_anchor_items": continuity_anchor_items,
     })
 
     llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
@@ -735,6 +743,7 @@ async def write_lite_next(
         try:
             fallback_candidate_info = await _create_lite_candidate(
                 file_service, req.project_id, target_file, "fallback_draft", content,
+                continuity_anchors=continuity_anchor_metadata,
             )
             event_bus = getattr(request.app.state, "event_bus", None)
             if event_bus:
@@ -756,6 +765,7 @@ async def write_lite_next(
     elif is_candidate:
         candidate_info = await _create_lite_candidate(
             file_service, req.project_id, target_file, req.action, content,
+            continuity_anchors=continuity_anchor_metadata,
         )
         output_file = candidate_info.candidate_path
         event_bus = getattr(request.app.state, "event_bus", None)
@@ -806,6 +816,7 @@ async def write_lite_next(
                     "style_guide": style_guide,
                     "recent_context": recent_context,
                     "pending_foreshadowing": pending_foreshadowing,
+                    "continuity_anchor_items": continuity_anchor_items,
                 })
                 repaired = await lite_llm.complete_with_deadline(
                     [{"role": "user", "content": repair_prompt}],
@@ -949,6 +960,10 @@ async def write_lite_next_stream(
             else:
                 pending_foreshadowing = ""
 
+            active_anchor_records = await ContinuityAnchorService(file_service).list_active(req.project_id)
+            continuity_anchor_items = ContinuityAnchorService.prompt_items(active_anchor_records)
+            continuity_anchor_metadata = ContinuityAnchorService.metadata(active_anchor_records)
+
             prefs_text = LitePromptBuilder.format_preferences(req.prefs)
             goal = "\n".join([
                 f"本章爽点卡：{req.selected_card.title}",
@@ -976,6 +991,7 @@ async def write_lite_next_stream(
             "style_guide": style_guide,
             "recent_context": recent_context,
             "pending_foreshadowing": pending_foreshadowing,
+            "continuity_anchor_items": continuity_anchor_items,
             })
 
             llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
@@ -1042,6 +1058,7 @@ async def write_lite_next_stream(
                 try:
                     fallback_candidate_info = await _create_lite_candidate(
                         file_service, req.project_id, target_file, "fallback_draft", content,
+                        continuity_anchors=continuity_anchor_metadata,
                     )
                     event_bus = getattr(request.app.state, "event_bus", None)
                     if event_bus:
@@ -1063,6 +1080,7 @@ async def write_lite_next_stream(
             elif is_candidate:
                 candidate_info = await _create_lite_candidate(
                     file_service, req.project_id, target_file, req.action, content,
+                    continuity_anchors=continuity_anchor_metadata,
                 )
                 output_file = candidate_info.candidate_path
                 event_bus = getattr(request.app.state, "event_bus", None)

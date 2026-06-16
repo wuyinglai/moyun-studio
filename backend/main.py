@@ -261,6 +261,7 @@ def create_app() -> FastAPI:
         characters,
         compare,
         config,
+        continuity_anchors,
         feedback,
         files,
         generate,
@@ -311,6 +312,7 @@ def create_app() -> FastAPI:
     app.include_router(trash.router, prefix="/api")
     app.include_router(lite.router, prefix="/api")
     app.include_router(candidates.router, prefix="/api")
+    app.include_router(continuity_anchors.router, prefix="/api")
     app.include_router(scene_plan.router, prefix="/api")
 
     # ── 前端静态文件 & 单页入口 ──────────────────────────────────

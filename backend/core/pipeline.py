@@ -40,6 +40,7 @@ from backend.core.beat_validator import (
     is_beat_validation_enabled,
 )
 from backend.core.candidate_service import CandidateService
+from backend.core.continuity_anchor_service import ContinuityAnchorService
 from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService
@@ -298,6 +299,7 @@ def _build_debug_prompt_payload(
             "has_previous_text": bool(step_vars.get("previous_text")),
             "has_current_scene_text": bool(step_vars.get("current_scene_text")),
             "has_continuity_anchors": bool(step_vars.get("continuity_anchors")),
+            "has_continuity_anchor_items": bool(step_vars.get("continuity_anchor_items")),
             "has_style_guide": bool(step_vars.get("style_guide")),
             "has_story_state": bool(step_vars.get("story_state")),
             "has_recent_context": bool(step_vars.get("recent_context")),
@@ -642,6 +644,13 @@ class PipelineRunner:
 
         # 加载章节变量（pending_foreshadowing, active_quests）
         chapter_vars = await self.load_chapter_vars(project_id, target_file or "")
+
+        anchor_service = ContinuityAnchorService(self.file_service)
+        active_anchor_records = await anchor_service.list_active(project_id)
+        continuity_anchor_items = anchor_service.prompt_items(active_anchor_records)
+        continuity_anchor_metadata = anchor_service.metadata(active_anchor_records)
+        if continuity_anchor_items:
+            extra_vars.setdefault("continuity_anchor_items", continuity_anchor_items)
 
         task_id = f"pipeline-{pipeline_name}-{uuid.uuid4().hex[:8]}"
         step_outputs: dict[str, str] = {}
@@ -1052,6 +1061,9 @@ class PipelineRunner:
                         forbidden_beats=forbidden_beats,
                     )
 
+                if continuity_anchor_metadata.get("used_count", 0) > 0:
+                    generation_context["continuity_anchor_ids"] = continuity_anchor_metadata.get("anchor_ids", [])
+
                 candidate = await candidate_service.create_candidate(
                     project_id=project_id,
                     source_path=target_file,
@@ -1064,6 +1076,7 @@ class PipelineRunner:
                     scene_plan_hash=scene_plan_hash,
                     scene_plan_path=scene_plan_path,
                     beat_validation=beat_validation,
+                    continuity_anchors=continuity_anchor_metadata,
                 )
                 candidate_id = candidate.id
                 logger.info("已生成候选稿: %s -> %s (continuity=%s)", target_file, candidate_id, continuity_severity)
@@ -1076,6 +1089,7 @@ class PipelineRunner:
                     "source_type": source_type,
                     "warning_message": warning_message,
                     "beat_validation_status": beat_validation.get("status") if beat_validation else None,
+                    "continuity_anchors_used_count": continuity_anchor_metadata.get("used_count", 0),
                 }, ensure_ascii=False)}
             elif output_mode == "write_scene":
                 await self.file_service.write_file(f"{project_id}/{target_file}", final_output, frontmatter)
@@ -1350,11 +1364,14 @@ class PipelineRunner:
             logger.warning("跳过危险路径写入: %s (需要候选稿机制)", output_path)
             try:
                 candidate_service = CandidateService(self.file_service)
+                active_anchor_records = await ContinuityAnchorService(self.file_service).list_active(project_id)
+                continuity_anchor_metadata = ContinuityAnchorService.metadata(active_anchor_records)
                 candidate = await candidate_service.create_candidate(
                     project_id=project_id,
                     source_path=output_path,
                     action=action,
                     content=content,
+                    continuity_anchors=continuity_anchor_metadata,
                 )
                 logger.info("危险路径输出已保存为候选稿: %s -> %s", output_path, candidate.id)
                 return candidate.id

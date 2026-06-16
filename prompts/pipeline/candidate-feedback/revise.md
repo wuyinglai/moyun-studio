@@ -1,57 +1,40 @@
-你正在根据作者反馈修订一个小说候选稿。
+﻿浣犳鍦ㄦ牴鎹綔鑰呭弽棣堜慨璁竴涓皬璇村€欓€夌銆?
+閲嶈瑙勫垯锛?- 杩欐槸鐢熸垚鏂扮殑 child candidate锛屼笉鏄慨鏀规寮忔鏂囥€?- 姝ｅ紡姝ｆ枃浜嬪疄閿氱偣涓嶅彲杩濊儗銆?- 鐖跺€欓€夌鏄渶瑕佷慨璁㈢殑鑽夌锛屼笉鏄渶缁堜簨瀹炪€?- 涓嶈鑷姩瑕嗙洊姝ｅ紡姝ｆ枃銆?- 涓嶈鑷姩閲囩敤鍊欓€夌銆?- 涓嶈鏂板閲嶈浜虹墿銆佺粍缁囥€侀亾鍏枫€佸湴鐐广€佹椂闂寸嚎璁惧畾锛岄櫎闈炵敤鎴峰弽棣堟槑纭姹傘€?- 杈撳嚭瀹屾暣淇鍚庣殑鍊欓€夌姝ｆ枃銆?- 涓嶈杈撳嚭瑙ｉ噴銆佽瘎鍒嗐€佸垪琛ㄣ€佹爣棰樿鏄庢垨 Markdown 鍏冧俊鎭€?
+銆恠ource_path銆?{{ source_path }}
 
-重要规则：
-- 这是生成新的 child candidate，不是修改正式正文。
-- 正式正文事实锚点不可违背。
-- 父候选稿是需要修订的草稿，不是最终事实。
-- 不要自动覆盖正式正文。
-- 不要自动采用候选稿。
-- 不要新增重要人物、组织、道具、地点、时间线设定，除非用户反馈明确要求。
-- 输出完整修订后的候选稿正文。
-- 不要输出解释、评分、列表、标题说明或 Markdown 元信息。
+{% include 'blocks/continuity-anchors.md' %}
 
-【source_path】
-{{ source_path }}
 
-【正式正文事实锚点】
-{{ official_source_text }}
+銆愭寮忔鏂囦簨瀹為敋鐐广€?{{ official_source_text }}
 
-【父候选稿】
-{{ parent_candidate_text }}
+銆愮埗鍊欓€夌銆?{{ parent_candidate_text }}
 
-【用户反馈】
-{{ feedback_text }}
+銆愮敤鎴峰弽棣堛€?{{ feedback_text }}
 
 {% if quick_actions %}
-【快捷反馈】
-{% for action in quick_actions %}
+銆愬揩鎹峰弽棣堛€?{% for action in quick_actions %}
 - {{ action }}
 {% endfor %}
 {% endif %}
 
-【修改范围】
-{{ repair_scope }}
+銆愪慨鏀硅寖鍥淬€?{{ repair_scope }}
 
 {% if parent_beat_validation_summary %}
-【父候选稿信息点检查摘要】
-状态：{{ parent_beat_validation_status }}
-摘要：{{ parent_beat_validation_summary }}
+銆愮埗鍊欓€夌淇℃伅鐐规鏌ユ憳瑕併€?鐘舵€侊細{{ parent_beat_validation_status }}
+鎽樿锛歿{ parent_beat_validation_summary }}
 {% endif %}
 
 {% if required_beats %}
-【必须保留或补上的信息点】
-{% for beat in required_beats %}
+銆愬繀椤讳繚鐣欐垨琛ヤ笂鐨勪俊鎭偣銆?{% for beat in required_beats %}
 {{ loop.index }}. {{ beat.text }}
 {% endfor %}
 {% endif %}
 
 {% if forbidden_beats %}
-【禁止出现或禁止提前揭晓的内容】
-{% for beat in forbidden_beats %}
+銆愮姝㈠嚭鐜版垨绂佹鎻愬墠鎻檽鐨勫唴瀹广€?{% for beat in forbidden_beats %}
 {{ loop.index }}. {{ beat.text }}
 {% endfor %}
 {% endif %}
 
-请根据用户反馈修订父候选稿。修订时以正式正文事实锚点为准，保留已经满足的信息点，补足缺失内容，并避免引入新错误。
-
-现在只输出完整修订后的候选稿正文。
+璇锋牴鎹敤鎴峰弽棣堜慨璁㈢埗鍊欓€夌銆備慨璁㈡椂浠ユ寮忔鏂囦簨瀹為敋鐐逛负鍑嗭紝淇濈暀宸茬粡婊¤冻鐨勪俊鎭偣锛岃ˉ瓒崇己澶卞唴瀹癸紝骞堕伩鍏嶅紩鍏ユ柊閿欒銆?
+鐜板湪鍙緭鍑哄畬鏁翠慨璁㈠悗鐨勫€欓€夌姝ｆ枃銆?

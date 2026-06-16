@@ -9,6 +9,8 @@
 
 {% include 'blocks/beat-constraints.md' %}
 
+{% include 'blocks/continuity-anchors.md' %}
+
 {% include 'blocks/polish-conservative-rules.md' %}
 
 ## 要求

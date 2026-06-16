@@ -17,6 +17,8 @@
 
 {% include 'blocks/beat-constraints.md' %}
 
+{% include 'blocks/continuity-anchors.md' %}
+
 ## 允许优化
 - 开头切入角度
 - 动作细节

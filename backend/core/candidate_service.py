@@ -16,6 +16,7 @@ import uuid
 from jinja2 import Template
 
 from backend.core.beat_validator import RequiredBeatValidator
+from backend.core.continuity_anchor_service import ContinuityAnchorService
 from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
 from backend.core.llm import LLMService
@@ -113,6 +114,7 @@ class CandidateService:
         scene_plan_hash: str = "",
         scene_plan_path: str = "",
         beat_validation: dict | None = None,
+        continuity_anchors: dict | None = None,
         parent_candidate_id: str | None = None,
         revision_group_id: str | None = None,
         revision_index: int = 0,
@@ -168,6 +170,7 @@ class CandidateService:
             scene_plan_hash=scene_plan_hash,
             scene_plan_path=scene_plan_path,
             beat_validation=beat_validation or {},
+            continuity_anchors=continuity_anchors or {},
             parent_candidate_id=parent_candidate_id,
             revision_group_id=revision_group_id,
             revision_index=revision_index,
@@ -290,6 +293,9 @@ class CandidateService:
         forbidden_texts = [item["text"] for item in forbidden_beats]
 
         parent_validation = parent.beat_validation or {}
+        active_anchors = await ContinuityAnchorService(self.file_service).list_active(project_id)
+        continuity_anchor_items = ContinuityAnchorService.prompt_items(active_anchors)
+        continuity_anchor_metadata = ContinuityAnchorService.metadata(active_anchors)
         prompt = Template(prompt_template).render(
             official_source_text=source_content,
             parent_candidate_text=parent_content,
@@ -301,6 +307,7 @@ class CandidateService:
             parent_beat_validation_summary=parent_validation.get("summary", ""),
             parent_beat_validation_status=parent_validation.get("status", ""),
             parent_beat_validation=parent_validation,
+            continuity_anchor_items=continuity_anchor_items,
             source_path=parent.source_path,
         )
 
@@ -355,6 +362,8 @@ class CandidateService:
             "revision_group_id": revision_group_id,
             "revision_index": revision_index,
         }
+        if continuity_anchor_metadata.get("used_count", 0) > 0:
+            generation_context["continuity_anchor_ids"] = continuity_anchor_metadata.get("anchor_ids", [])
 
         return await self.create_candidate(
             project_id=project_id,
@@ -373,6 +382,7 @@ class CandidateService:
             scene_plan_hash=parent.scene_plan_hash,
             scene_plan_path=parent.scene_plan_path,
             beat_validation=beat_validation,
+            continuity_anchors=continuity_anchor_metadata,
             parent_candidate_id=parent_candidate_id,
             revision_group_id=revision_group_id,
             revision_index=revision_index,

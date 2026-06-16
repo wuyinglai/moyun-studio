@@ -21,6 +21,7 @@ export const API_ROUTES = {
   // ── Projects ──────────────────────────────────────
   projects: '/projects',
   projectDetail: (projectId: string) => `/projects/${projectId}`,
+  continuityAnchors: (projectId: string) => `/projects/${projectId}/continuity-anchors`,
 
   // ── Files ─────────────────────────────────────────
   file: '/file',

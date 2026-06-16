@@ -51,6 +51,12 @@ async function installMocks(page: Page, options: MockOptions = {}): Promise<Mock
         required_beats: [{ id: 'beat-1', text: '正文必须提到第七层协议', status: 'missing' }],
         forbidden_beats: [],
       },
+      continuity_anchors: {
+        enabled: true,
+        used_count: 2,
+        anchor_ids: ['anchor-1', 'anchor-2'],
+        types: { character_state: 1, object_location: 1 },
+      },
     },
     {
       id: 'cand-002',
@@ -622,6 +628,19 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     await expect(qualitySection).toContainText('信息点有警告')
     await expect(qualitySection).toContainText('正文必须提到第七层协议')
     console.log('[t8.7] ✓ quality section shows warning + missing beat detail')
+  })
+
+  test('T9.3: 候选稿质量区展示已使用连续性锚点数量', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const anchorInfo = page.getByTestId('candidate-continuity-anchor-count').first()
+    await expect(anchorInfo).toBeVisible({ timeout: 5000 })
+    await expect(anchorInfo).toContainText('连续性锚点')
+    await expect(anchorInfo).toContainText('2')
   })
 
   test('T8.7: 质量检查区展示 unknown 状态并说明不影响采用', async ({ page }) => {

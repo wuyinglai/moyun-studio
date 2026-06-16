@@ -35,6 +35,8 @@
 ## 近期上下文
 {% if recent_context %}{{ recent_context }}{% endif %}
 
+{% include 'blocks/continuity-anchors.md' %}
+
 {% include 'blocks/writing-rules.md' %}
 
 {% if required_beats %}
