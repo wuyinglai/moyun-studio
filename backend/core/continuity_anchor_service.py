@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
 
-from backend.core.exceptions import MoyunFileNotFoundError, ValidationError
+from backend.core.exceptions import MoyunFileNotFoundError
 from backend.core.file_ops import FileService
 from backend.schemas.continuity_anchor import (
     ContinuityAnchor,
@@ -33,11 +33,15 @@ class ContinuityAnchorService:
             content = read_result[0] if isinstance(read_result, tuple) else str(read_result)
         except (MoyunFileNotFoundError, FileNotFoundError):
             return ContinuityAnchorsDocument()
+        if not content or not content.strip():
+            return ContinuityAnchorsDocument()
         try:
-            raw = json.loads(content or "{}")
+            raw = json.loads(content)
             return ContinuityAnchorsDocument.model_validate(raw)
-        except (json.JSONDecodeError, PydanticValidationError) as exc:
-            raise ValidationError("Invalid continuity anchors document") from exc
+        except (json.JSONDecodeError, PydanticValidationError):
+            # Corrupt / non-JSON file: treat as empty, same as file-not-found.
+            # Raising here breaks unrelated pipelines when anchors file is stale.
+            return ContinuityAnchorsDocument()
 
     async def write_document(
         self,

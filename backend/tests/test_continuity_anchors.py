@@ -7,7 +7,6 @@ import yaml
 
 from backend.core.candidate_service import CandidateService
 from backend.core.continuity_anchor_service import ContinuityAnchorService
-from backend.core.exceptions import ValidationError
 from backend.core.file_ops import FileService
 from backend.core.pipeline import PipelineRunner
 from backend.schemas.candidate import CandidateAction
@@ -88,14 +87,19 @@ async def test_continuity_anchor_read_write_and_active_filter(temp_workspace):
 
 
 @pytest.mark.asyncio
-async def test_invalid_continuity_anchor_document_is_rejected(temp_workspace):
+async def test_invalid_continuity_anchor_document_returns_empty(temp_workspace):
+    """Invalid / corrupt anchor JSON should degrade gracefully to empty document.
+
+    This prevents unrelated pipelines from crashing when the anchors file
+    contains stale or garbage data.  write_document still validates on write.
+    """
     project_dir = temp_workspace / "test-project"
     project_dir.mkdir(exist_ok=True)
     (project_dir / "continuity-anchors.json").write_text('{"anchors":[{"id":""}]}', encoding="utf-8")
     service = ContinuityAnchorService(FileService(temp_workspace))
 
-    with pytest.raises(ValidationError):
-        await service.read_document("test-project")
+    doc = await service.read_document("test-project")
+    assert doc.anchors == []
 
 
 def test_continuity_anchor_api_get_put(client):

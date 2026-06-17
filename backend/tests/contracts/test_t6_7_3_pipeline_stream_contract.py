@@ -48,6 +48,9 @@ class MockFileService:
         self.write_calls = []
 
     async def read_file(self, path):
+        # continuity-anchors.json: simulate old project without anchors
+        if "continuity-anchors.json" in str(path):
+            raise FileNotFoundError(f"mock: {path}")
         return "# Test\n\nInitial content.\n", None, False
 
     async def write_file(self, path, content, frontmatter=None):
