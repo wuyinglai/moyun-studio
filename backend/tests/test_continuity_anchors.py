@@ -5,6 +5,8 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 from backend.core.candidate_service import CandidateService
 from backend.core.continuity_anchor_service import ContinuityAnchorService
 from backend.core.file_ops import FileService
@@ -133,7 +135,7 @@ def test_continuity_anchor_prompt_block_is_conditional(tmp_path):
     prompts_dir = tmp_path / "prompts"
     (prompts_dir / "blocks").mkdir(parents=True)
     (prompts_dir / "blocks" / "continuity-anchors.md").write_text(
-        Path("prompts/blocks/continuity-anchors.md").read_text(encoding="utf-8"),
+        (PROJECT_ROOT / "prompts" / "blocks" / "continuity-anchors.md").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     (prompts_dir / "pipeline" / "generate").mkdir(parents=True)
