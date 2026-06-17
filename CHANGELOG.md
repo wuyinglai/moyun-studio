@@ -4,6 +4,49 @@ All notable changes to Moyun Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning in spirit while still in developer preview.
 
+## v0.2.1 - Writing Quality Enhancement Release
+
+**Released**: 2026-06-17
+**Tag**: `v0.2.1`
+**Release commit**: `fa99483`
+**Archive commit**: `51741e5`
+
+### Added
+
+- Candidate Quality Metadata MVP — 5 quality dimensions (instruction_following, continuity, style_preservation, change_scope, forbidden_check) computed automatically for generation candidates.
+- Repair Candidate MVP — `CandidateAction.REPAIR` creates child candidates for warning recovery without modifying parent or source.
+- Continuity Anchors metadata — active anchors auto-extracted for quality computation and prompt injection.
+- Real LLM dogfood coverage — Agnes AI real model smoke across 8 writing scenarios (rewrite, polish, forbidden checks, relationship jump, feedback revision, repair, continuity anchors).
+- Safety boundary verification — adopted/discarded parent cannot be revised or repaired; repair creates new child candidate only.
+- v0.2.1 release documentation — `docs/releases/v0.2.1-rc-notes.md`, `docs/releases/v0.2.1-rc-checklist.md`, `docs/releases/v0.2.1-release-final-report.md`.
+
+### Changed
+
+- `create_candidate()` now auto-fetches continuity anchors from `ContinuityAnchorService.list_active()` when not explicitly provided.
+- Quality metadata is now available to `CandidatePanel` for advisory display alongside beat validation.
+- Pipeline prompt rendering cleanup — archive issues resolved; prompt templates use consistent pattern.
+
+### Fixed
+
+- `test_continuity_anchors.py` fixture — absolute path resolution instead of relative path lookup.
+- Repair prompt template — properly preserves source context without introducing new plot elements.
+- Continuity anchor count accuracy — `used_count >= 3` reliably detected for quality continuity scoring.
+
+### Known Issues
+
+- Guardrails allowlist still contains low-frequency noise; targeted cleanup recommended for v0.2.2.
+- T9.4 stage implementation docs remain scattered across `docs/design/`; consolidation recommended.
+
+### Test Results
+
+- **Backend tests**: 52 passed (release gate) / 115 passed (full set)
+- **Frontend build**: passed
+- **Focused E2E**: 23 passed
+- **Full mock E2E**: 77 passed, 93 skipped
+- **Real LLM dogfood**: 8 cases passed
+
+[v0.2.1]: https://github.com/wuyinglai/moyun-studio/releases/tag/v0.2.1
+
 ## v0.2.0 - Writing Quality Loop Developer Preview
 
 This is an internal developer preview, not a commercial production release.

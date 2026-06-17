@@ -3,9 +3,12 @@
 > 阶段：T9
 > 类型：Stage Planning / Documentation
 > 风险等级：Risk C
-> 状态：规划完成
-> 日期：2026-06-16
+> 状态：v0.2.1 已发布（T9.1-T9.5 完成）
+> 日期：2026-06-16 规划，2026-06-17 v0.2.1 发布
 > 前置依赖：T8 写作质量闭环已归档，见 `docs/archives/t8-writing-quality-closure.md`
+> 发布标签：`v0.2.1`
+> 发布提交：`fa99483`
+> GitHub Release：https://github.com/wuyinglai/moyun-studio/releases/tag/v0.2.1
 
 ## 1. T8 收口状态
 
@@ -76,107 +79,60 @@ T9 总目标分为四类：
 
 ### Priority 1：T9.1 Release Candidate / 维护版收口
 
-这是 T9 的第一优先级。
+✅ **已完成**（2026-06-16，作为 v0.2.0 发布）。
 
-目标是把 T8 已完成的能力整理成一个可交付、可说明、可回归的版本，而不是继续堆功能。
+已交付内容：
 
-建议内容：
-
-- 明确版本定位：`v0.1.3` 维护版或 `v0.2.0` RC。
-- 更新 README。
-- 更新 CHANGELOG。
-- 新增或更新 KNOWN_ISSUES。
-- 新增 Release checklist。
-- 新增 Preflight checklist。
-- 新增 Smoke checklist。
+- 明确版本定位：`v0.2.0` Writing Quality Loop Developer Preview。
+- 更新 README / CHANGELOG。
+- 新增 Release checklist / Preflight checklist / Smoke checklist。
 - 汇总 T8 capability summary。
-- 明确已知限制和不承诺项。
-
-阶段目标：
-
-- 让外部用户或未来维护者能理解当前版本能做什么、不能做什么。
-- 让发布前检查有固定清单。
-- 让当前能力形成一个稳定 baseline。
-
-风险等级：Risk C / Risk B。文档为主，涉及 release checklist 时为中低风险。
+- tag `v0.2.0` 已推送，GitHub Release 已发布。
 
 ### Priority 2：T9.2 测试债务专项
 
-第二优先级是测试债务治理。
+✅ **已完成**（2026-06-17，作为 v0.2.1 的一部分）。
 
-当前 full E2E 已能跑通主要链路，但 skipped 数量仍然较多。T9.2 应先做分类和治理设计，再逐步修复。
+已交付内容：
 
-建议内容：
-
-- 分类 skipped E2E：环境依赖、真实 LLM、历史流程、缺 mock、已废弃流程。
-- 提取通用 mock helpers。
-- 清理不必要的 `waitForTimeout`。
-- 统一 `spec 99` mock / smoke 规范。
-- 分层 real backend smoke。
-- 分层 real LLM smoke。
-- 明确哪些测试进入 CI，哪些保留为手动 release gate。
-
-阶段目标：
-
-- 降低 E2E 维护成本。
-- 减少“看似通过但实际没覆盖”的测试假象。
-- 把真实 LLM 测试从日常 CI 中分离成可控 smoke。
-
-风险等级：Risk C / Risk B。先做报告为 Risk C；修改测试基础设施为 Risk B。
+- Focused E2E recovery（`tests/e2e/14-candidate-workflow.spec.ts` 23 passed）。
+- Real backend / real LLM smoke 分层。
+- 明确 release gate 测试集与日常 CI 测试集的分界。
+- Continuity anchors 测试（`test_continuity_anchors.py` 7 passed）。
 
 ### Priority 3：T9.3 长文连续性 / Story State 最小设计
 
-第三优先级是长文连续性设计，但不建议立即实现大系统。
+✅ **已完成**（2026-06-17，作为 v0.2.1 的一部分）。
 
-当前更适合先设计 `docs/design/t9-3-continuity-anchors.md`，聚焦“用户可控的连续性锚点”，而不是完整 Scene Plan 或自动全书规划。
+已交付内容：
 
-建议关注：
+- Continuity Anchors 设计已归档：`docs/design/t9-3-final-continuity-anchors-closure.md`。
+- 定义 5 类锚点：人物状态、道具归属、地点/时间、伏笔状态、必须记住的事实。
+- `ContinuityAnchorService.list_active()` / `metadata()` 实现。
+- anchors 进入 prompt + 影响 quality continuity 评分。
+- 未引入大纲强依赖或自动全书规划。
 
-- 当前场景发生前必须记住的事实。
-- 人物状态锚点。
-- 道具归属锚点。
-- 地点 / 时间锚点。
-- 伏笔状态锚点。
-- 用户可以手动确认、修改、删除的 continuity anchors。
-- anchors 如何进入 prompt。
-- anchors 如何影响 validator 或 candidate warning。
+### Priority 4：T9.4 写作质量增强
 
-不建议此阶段直接做：
+✅ **已完成**（2026-06-17，作为 v0.2.1 的一部分）。
 
-- 全书自动规划。
-- 大纲强依赖。
-- 自动改写 story-state。
-- 自动 repair 正文。
+已交付内容（从规划→实现）：
 
-阶段目标：
+- **Repair Candidate MVP** — `CandidateAction.REPAIR`，`create_repair_candidate()`，不修改 parent/source。
+- **Candidate Quality Metadata MVP** — 5 维度（instruction_following, continuity, style_preservation, change_scope, forbidden_check）。
+- **Continuity Anchors metadata 修复** — `create_candidate()` 自动从 service 获取 active anchors。
+- **Safety boundary verification** — adopted/discarded parent 不可 revision/repair；repair 创建新 child candidate 仅。
+- **Real LLM dogfood** — Agnes AI 8 个真实中文写作场景验证通过。
 
-- 找到比 Scene Plan 更轻、更可控的长文连续性方案。
-- 让用户能理解并掌控 AI 需要记住什么。
+### Priority 5：T9.5 Pipeline Prompt Rendering Cleanup
 
-风险等级：Risk C。设计优先，不直接改产品代码。
+✅ **已完成**（2026-06-17，作为 v0.2.1 的一部分）。
 
-### Priority 4：T9.4 写作质量增强规划
+已交付内容：
 
-第四优先级是下一轮写作质量增强规划。
-
-它应该建立在 T9.1 发布收口、T9.2 测试治理和 T9.3 continuity design 之后。
-
-候选方向：
-
-- repair candidate。
-- validator categories。
-- quality score。
-- candidate comparison。
-- warning explanation。
-- “为什么不建议 adopt” 的解释型 UI。
-- 多候选稿横向比较。
-
-阶段目标：
-
-- 明确哪些增强真正有助于用户决策。
-- 避免直接走 automatic repair 或复杂 dashboard。
-
-风险等级：Risk C。只做规划；若实现则升为 Risk B+。
+- 归档问题已不存在：prompt 文件路径正常，无需从 archive 恢复。
+- `docs/design/t9-5-pipeline-prompt-rendering-cleanup.md` 已归档。
+- 115 backend tests passed（完整回归）。
 
 ## 5. 暂缓事项
 
@@ -196,23 +152,23 @@ T9 总目标分为四类：
 
 这些方向都会显著增加状态复杂度、测试成本和用户误操作风险。当前更重要的是把已有 candidate 安全闭环、真实 LLM dogfood 和测试基线稳定下来。
 
-## 6. 推荐执行顺序
+## 6. 推荐执行顺序 ✅ 已完成
 
-推荐 T9 执行顺序：
+T9 推荐执行顺序已全部执行：
 
-1. T9.0：阶段方向评估与优先级排序。
-2. T9.1：Release Candidate / 维护版收口。
-3. T9.1-final：Release preflight / smoke checklist。
-4. T9.2：测试债务专项。
-5. T9.3：Continuity Anchors 最小设计。
-6. T9.4：写作质量增强规划。
+1. ✅ T9.0：阶段方向评估与优先级排序。
+2. ✅ T9.1：Release Candidate / 维护版收口（v0.2.0）。
+3. ✅ T9.1-final：Release preflight / smoke checklist。
+4. ✅ T9.2：测试债务专项（focused E2E + real LLM smoke 分层）。
+5. ✅ T9.3：Continuity Anchors 最小设计 + 最小实现。
+6. ✅ T9.4：写作质量增强（Quality Metadata + Repair Candidate + Real LLM dogfood）。
+7. ✅ T9.5：Pipeline Prompt Rendering Cleanup。
 
-该顺序的核心理由：
+交付成果：
 
-- 先发布收口，避免在未稳定的基线上继续扩张。
-- 再治理测试债务，提升后续开发安全性。
-- 再设计长文连续性，避免过早进入大纲或 Scene Plan 系统。
-- 最后规划更复杂的质量增强。
+- **v0.2.0`：Writing Quality Loop Developer Preview（2026-06-16，tag `v0.2.0`）。
+- **v0.2.1`：Writing Quality Enhancement Release（2026-06-17，tag `v0.2.1`，commit `fa99483`）。
+- 完整发布文档：`docs/releases/v0.2.1-rc-notes.md`、`docs/releases/v0.2.1-rc-checklist.md`、`docs/releases/v0.2.1-release-final-report.md`。
 
 ## 7. 第一批任务建议
 
@@ -305,15 +261,30 @@ T9 期间必须继续遵守以下边界：
 
 ## 10. 最终建议
 
-建议 T9 立即进入 T9.1 Release Candidate / 维护版收口，而不是继续追加写作功能。
+T9 阶段已完成：v0.2.0 + v0.2.1 已发布。
 
-推荐路线：
+### T9 交付总结
 
-1. 先完成 T9.1a / T9.1b / T9.1c，把当前能力变成可发布基线。
-2. 再进入 T9.2，清理测试债务，尤其是 skipped E2E 和真实 LLM smoke 分层。
-3. 然后进入 T9.3，用 Continuity Anchors 设计解决长文连续性，而不是直接引入重型 Scene Plan。
-4. 最后进入 T9.4，规划 repair candidate、quality score、candidate comparison 等增强。
+| 项目 | 状态 | 备注 |
+|------|------|------|
+| v0.2.0 Writing Quality Loop Developer Preview | ✅ Released | 2026-06-16, tag `v0.2.0` |
+| v0.2.1 Writing Quality Enhancement Release | ✅ Released | 2026-06-17, tag `v0.2.1`, commit `fa99483` |
+| Release gate backend tests | ✅ 52 passed | 完整 115 passed |
+| Frontend build | ✅ passed | 3435 modules |
+| Focused E2E | ✅ 23 passed | `14-candidate-workflow.spec.ts` |
+| Full mock E2E | ✅ 77 passed | 93 skipped |
+| Real LLM dogfood | ✅ 8 cases | Agnes AI `agnes-2.0-flash` |
+| Safety boundaries | ✅ verified | repair/revision 不修改 parent/source |
+| API key 安全检查 | ✅ clean | 无真实 key 泄露 |
 
-结论：
+### 推荐路线
 
-T8 已经完成“写作质量闭环”的基本产品能力。T9 的第一目标应是产品化和稳定化，而不是继续扩大生成链路复杂度。
+T9 阶段结束，建议进入 **T10 阶段** 或 **v0.2.2 维护迭代**：
+
+1. **v0.2.2** — 小版本维护：guardrails 噪音清理、T9.4 文档合并、quality score UI 迭代。
+2. **测试债务持续治理** — 把 skipped E2E 逐步恢复或删除。
+3. **下一阶段规划** — 定义 T10 目标（Story State 操作界面、candidate comparison、quality explanation）。
+
+### 结论
+
+T8 + T9 已经完成"写作质量闭环"从 MVP 到可发布版本的完整路径。v0.2.1 是当前的稳定发布基线。下一步应聚焦文档整合和小范围维护，而非继续扩大功能范围。

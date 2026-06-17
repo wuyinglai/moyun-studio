@@ -15,11 +15,20 @@
 
 ## v0.2 — Reliability & Configuration
 
-- Conflict detection (`expected_mtime` / `expected_hash`) for memory and material endpoints
-- ConfigService for workspace-level configuration (replacing raw `.config.json` I/O)
-- Route remaining raw I/O through FileService
-- Deeper real LLM E2E and quality reports
-- Improved error messages and user-facing diagnostics
+- [x] **v0.2.0** — Writing Quality Loop Developer Preview (2026-06-16, release commit `6ef7d78`)
+- [x] **v0.2.1** — Writing Quality Enhancement Release (2026-06-17, tag `v0.2.1`, release commit `fa99483`)
+  - Candidate Quality Metadata MVP
+  - Repair Candidate MVP
+  - Continuity Anchors metadata for quality computation
+  - Real LLM dogfood with Agnes AI
+  - Safety boundary verification for repair/revision flows
+  - [Release notes](https://github.com/wuyinglai/moyun-studio/releases/tag/v0.2.1)
+- [ ] v0.2.2 — Planned: guardrails noise cleanup, T9.4 docs consolidation, quality score UX iteration
+- [ ] Conflict detection (`expected_mtime` / `expected_hash`) for memory and material endpoints
+- [ ] ConfigService for workspace-level configuration (replacing raw `.config.json` I/O)
+- [ ] Route remaining raw I/O through FileService
+- [ ] Deeper real LLM E2E and quality reports
+- [ ] Improved error messages and user-facing diagnostics
 
 ## v0.3 — Enhanced Writing Experience
 
