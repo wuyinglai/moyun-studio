@@ -13,7 +13,7 @@ import logging
 import re
 import uuid
 
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 
 from backend.core.beat_validator import RequiredBeatValidator
 from backend.core.continuity_anchor_service import ContinuityAnchorService
@@ -264,6 +264,7 @@ class CandidateService:
         inherit_required_beats: bool = True,
         inherit_forbidden_beats: bool = True,
         run_beat_validation: bool = True,
+        prompt_search_paths: list[str] | None = None,
     ) -> CandidateInfo:
         """Create a child candidate from user feedback without changing the source scene."""
         parent = await self.get_candidate(project_id, parent_candidate_id)
@@ -296,7 +297,13 @@ class CandidateService:
         active_anchors = await ContinuityAnchorService(self.file_service).list_active(project_id)
         continuity_anchor_items = ContinuityAnchorService.prompt_items(active_anchors)
         continuity_anchor_metadata = ContinuityAnchorService.metadata(active_anchors)
-        prompt = Template(prompt_template).render(
+        if prompt_search_paths:
+            env = Environment(loader=FileSystemLoader(prompt_search_paths), autoescape=False)
+            tpl = env.from_string(prompt_template)
+        else:
+            from jinja2 import Template as _Template
+            tpl = _Template(prompt_template)
+        prompt = tpl.render(
             official_source_text=source_content,
             parent_candidate_text=parent_content,
             feedback_text=feedback_text,

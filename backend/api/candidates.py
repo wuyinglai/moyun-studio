@@ -159,6 +159,11 @@ async def revise_candidate(
     llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
     llm_service = LLMService.from_workspace_config(llm_cfg)
 
+    # Build prompt search paths so Jinja2 {% include %} directives can resolve
+    prompt_search_paths = [str(settings.prompts_path)]
+    if settings.system_prompts_path:
+        prompt_search_paths.append(str(settings.system_prompts_path))
+
     try:
         child = await candidate_service.create_feedback_revision_candidate(
             project_id=project_id,
@@ -171,6 +176,7 @@ async def revise_candidate(
             inherit_required_beats=body.inherit_required_beats,
             inherit_forbidden_beats=body.inherit_forbidden_beats,
             run_beat_validation=body.run_beat_validation,
+            prompt_search_paths=prompt_search_paths,
         )
     except ValueError as exc:
         code = str(exc)
