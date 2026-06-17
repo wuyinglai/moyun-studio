@@ -221,6 +221,15 @@ class CandidateService:
         except Exception:
             logger.debug("读取源文件失败，跳过 base_hash 记录", exc_info=True)
 
+        # 如果未传入 continuity_anchors，自动从 service 获取（用于 quality 计算）
+        if continuity_anchors is None:
+            try:
+                active = await ContinuityAnchorService(self.file_service).list_active(project_id)
+                continuity_anchors = ContinuityAnchorService.metadata(active)
+            except Exception:
+                logger.debug("获取 continuity anchors 失败", exc_info=True)
+                continuity_anchors = {}
+
         # 生成 quality metadata
         source_word_count = self._compute_word_count(source_content)
         candidate_word_count = self._compute_word_count(content)

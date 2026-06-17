@@ -1,0 +1,27 @@
+{
+  "Case 7: Second Repair": {
+    "id": "cand_2194709e",
+    "action": "repair",
+    "status": "pending",
+    "parent_id": "cand_32d33061",
+    "quality": "instruction_following=<CandidateQuality.UNKNOWN: 'unknown'> continuity=<CandidateQuality.UNKNOWN: 'unknown'> style_preservation=<CandidateQuality.UNKNOWN: 'unknown'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  },
+  "Case 8: Continuity via Service": {
+    "id": "cand_53fd69e4",
+    "action": "rewrite",
+    "status": "pending",
+    "active_anchor_count": 3,
+    "used_count": 3,
+    "anchor_ids": [
+      "anchor-1",
+      "anchor-2",
+      "anchor-3"
+    ],
+    "types": {
+      "character_state": 1,
+      "object_location": 1,
+      "relationship": 1
+    },
+    "quality": "instruction_following=<CandidateQuality.UNKNOWN: 'unknown'> continuity=<CandidateQuality.PASS: 'pass'> style_preservation=<CandidateQuality.UNKNOWN: 'unknown'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  }
+}
