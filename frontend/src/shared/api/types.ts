@@ -229,6 +229,14 @@ export interface CandidateRevisionRequest {
   run_beat_validation?: boolean
 }
 
+/** 修复候选稿请求 — 对应 backend/schemas/candidate.py RepairCandidateRequest */
+export interface RepairCandidateRequest {
+  extra_instruction?: string
+  inherit_required_beats?: boolean
+  inherit_forbidden_beats?: boolean
+  run_beat_validation?: boolean
+}
+
 /** 候选稿详情 — 对应 backend/schemas/candidate.py CandidateDetailResponse */
 export interface CandidateDetail {
   candidate: CandidateInfo

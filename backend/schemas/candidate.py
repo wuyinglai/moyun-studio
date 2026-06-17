@@ -27,6 +27,7 @@ class CandidateAction(str, Enum):
     POLISH = "polish"             # 润色
     FALLBACK_DRAFT = "fallback_draft"  # 应急草稿（LLM 失败后 fallback 生成）
     FEEDBACK_REVISION = "feedback_revision"  # 用户反馈再生成候选稿
+    REPAIR = "repair"             # 修复候选稿（基于质量警告自动生成）
 
 
 class CandidateStatus(str, Enum):
@@ -157,6 +158,14 @@ class CandidateRevisionRequest(BaseModel):
     feedback_text: str = Field("", description="User feedback for revision")
     quick_actions: list[str] = Field(default_factory=list, description="Quick feedback action labels")
     repair_scope: str = Field("full_candidate", description="full_candidate | keep_opening | ending_only")
+    inherit_required_beats: bool = Field(True, description="Inherit required beats from parent candidate")
+    inherit_forbidden_beats: bool = Field(True, description="Inherit forbidden beats from parent candidate")
+    run_beat_validation: bool = Field(True, description="Run beat validator for child candidate when beats exist")
+
+
+class RepairCandidateRequest(BaseModel):
+    """Create a repair child candidate from parent candidate warnings."""
+    extra_instruction: str = Field("", description="Optional user supplement instruction for repair")
     inherit_required_beats: bool = Field(True, description="Inherit required beats from parent candidate")
     inherit_forbidden_beats: bool = Field(True, description="Inherit forbidden beats from parent candidate")
     run_beat_validation: bool = Field(True, description="Run beat validator for child candidate when beats exist")

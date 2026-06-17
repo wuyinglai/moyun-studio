@@ -19,6 +19,7 @@ from backend.schemas.candidate import (
     CreateCandidateRequest,
     CandidateRevisionRequest,
     DeleteCandidateResponse,
+    RepairCandidateRequest,
 )
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
@@ -49,6 +50,17 @@ def _load_revision_prompt(settings) -> str:
     if system_path and system_path.exists():
         return system_path.read_text(encoding="utf-8")
     raise HTTPException(status_code=500, detail="candidate feedback revision prompt missing")
+
+
+def _load_repair_prompt(settings) -> str:
+    relative = "pipeline/candidate-feedback/repair.md"
+    user_path = settings.prompts_path / relative
+    system_path = settings.system_prompts_path / relative if settings.system_prompts_path else None
+    if user_path.exists():
+        return user_path.read_text(encoding="utf-8")
+    if system_path and system_path.exists():
+        return system_path.read_text(encoding="utf-8")
+    raise HTTPException(status_code=500, detail="repair prompt missing")
 
 
 @router.get("/{project_id}", response_model=CandidateListResponse)
@@ -200,6 +212,69 @@ async def revise_candidate(
             source_path=child.source_path,
             action=child.action,
             source="api/candidates/revise",
+        )
+        await event_bus.publish(evt.type, evt.to_sse_dict())
+
+    return child
+
+
+@router.post("/{project_id}/{candidate_id}/repair", response_model=CandidateInfo)
+async def repair_candidate(
+    project_id: str,
+    candidate_id: str,
+    body: RepairCandidateRequest,
+    request: Request,
+):
+    """Create a repair child candidate from parent candidate warnings.
+
+    This does NOT auto-edit the source. It creates a new candidate only.
+    """
+    settings = get_settings()
+    file_service = FileService(settings.projects_path, max_file_write_size=settings.max_file_write_size)
+    candidate_service = CandidateService(file_service)
+    prompt_template = _load_repair_prompt(settings)
+    llm_cfg = await asyncio.to_thread(load_llm_config_from_workspace, settings)
+    llm_service = LLMService.from_workspace_config(llm_cfg)
+
+    # Build prompt search paths so Jinja2 {% include %} directives can resolve
+    prompt_search_paths = [str(settings.prompts_path)]
+    if settings.system_prompts_path:
+        prompt_search_paths.append(str(settings.system_prompts_path))
+
+    try:
+        child = await candidate_service.create_repair_candidate(
+            project_id=project_id,
+            parent_candidate_id=candidate_id,
+            extra_instruction=body.extra_instruction,
+            llm_service=llm_service,
+            prompt_template=prompt_template,
+            inherit_required_beats=body.inherit_required_beats,
+            inherit_forbidden_beats=body.inherit_forbidden_beats,
+            run_beat_validation=body.run_beat_validation,
+            prompt_search_paths=prompt_search_paths,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        if code == "PARENT_NOT_FOUND":
+            raise HTTPException(status_code=404, detail="parent candidate not found") from exc
+        if code == "PARENT_NOT_PENDING":
+            raise HTTPException(status_code=409, detail="only pending candidates can be repaired") from exc
+        if code == "PARENT_CONTENT_NOT_FOUND":
+            raise HTTPException(status_code=404, detail="parent candidate content not found") from exc
+        if code == "EMPTY_REPAIR_CONTENT":
+            raise HTTPException(status_code=502, detail="LLM returned empty repair content") from exc
+        if code == "REPAIR_LLM_FAILED":
+            raise HTTPException(status_code=502, detail="LLM failed while generating repair candidate") from exc
+        raise
+
+    event_bus = getattr(request.app.state, "event_bus", None)
+    if event_bus:
+        evt = make_candidate_created_event(
+            project_id=project_id,
+            candidate_id=child.id,
+            source_path=child.source_path,
+            action=child.action,
+            source="api/candidates/repair",
         )
         await event_bus.publish(evt.type, evt.to_sse_dict())
 

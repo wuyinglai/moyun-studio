@@ -229,6 +229,17 @@
             <i class="fa-solid fa-wand-magic-sparkles" />
             <span class="action-revise-label">按反馈再生成</span>
           </button>
+          <!-- 修复候选稿按钮：仅 pending 且有警告时显示 -->
+          <button
+            v-if="candidate.status === 'pending' && hasRepairableWarning(candidate)"
+            class="action-btn action-repair"
+            title="基于警告修复候选稿"
+            data-testid="candidate-repair-button"
+            @click.stop="repairCandidate(candidate)"
+          >
+            <i class="fa-solid fa-bandaid" />
+            <span class="action-repair-label">修复候选稿</span>
+          </button>
         </div>
       </div>
     </div>
@@ -846,6 +857,36 @@ async function deleteCandidate(candidate: CandidateInfo) {
   }
 }
 
+/** 检查候选稿是否有可修复的警告 */
+function hasRepairableWarning(candidate: CandidateInfo): boolean {
+  if (candidate.status !== 'pending') return false
+  const q = candidate.quality
+  if (!q) return false
+  // 有任意质量警告则认为可修复
+  return (
+    q.instruction_following === 'warning' ||
+    q.forbidden_check === 'warning' ||
+    q.change_scope === 'large'
+  )
+}
+
+/** 修复候选稿 */
+async function repairCandidate(candidate: CandidateInfo) {
+  if (!projectStore.currentProject?.id) return
+  if (!confirm('修复会生成新的候选稿，不会自动修改正文。是否继续？')) {
+    return
+  }
+  try {
+    const { repairCandidate: repairApi } = await import('@/modules/candidate/api')
+    const child = await repairApi(projectStore.currentProject.id, candidate.id)
+    notification.success('已生成修复候选稿')
+    await fetchCandidates()
+    void child // child info available if needed
+  } catch (error: unknown) {
+    notification.error(toUserFacingMessage(error, '生成修复候选稿失败'))
+  }
+}
+
 onMounted(() => {
   void fetchCandidates(true)
   disposeCandidateCreated = sse.on('candidate-created', () => {
@@ -1333,6 +1374,16 @@ watch(() => projectStore.currentProject?.id, () => {
 }
 
 .action-revise-label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.action-repair {
+  color: var(--accent-warning, #f97316);
+  border-color: var(--accent-warning, #f97316);
+}
+
+.action-repair-label {
   font-size: 11px;
   white-space: nowrap;
 }

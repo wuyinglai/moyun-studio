@@ -485,6 +485,187 @@ class CandidateService:
             revision_index=revision_index,
         )
 
+    # ─── Repair Candidate ─────────────────────────────────────────────────
+
+    @classmethod
+    def _build_repair_warnings(cls, parent: CandidateInfo) -> str:
+        """Build a human-readable warnings text from parent candidate metadata."""
+        warnings: list[str] = []
+        bv = parent.beat_validation or {}
+        quality = parent.quality
+
+        # 1. beat_validation warnings
+        bv_status = bv.get("status", "")
+        if bv_status == "warning":
+            bv_summary = bv.get("summary", "存在信息点风险")
+            warnings.append(f"信息点检查警告：{bv_summary}")
+            required_beats = bv.get("required_beats", [])
+            for beat in required_beats:
+                if beat.get("status") in ("missing", "partial", "unknown"):
+                    warnings.append(f"  - 缺失/不确定信息点：{beat.get('text', '')}")
+            forbidden_beats = bv.get("forbidden_beats", [])
+            for beat in forbidden_beats:
+                if beat.get("violated"):
+                    warnings.append(f"  - 疑似违反禁止项：{beat.get('text', '')}")
+
+        # 2. quality metadata warnings
+        if quality:
+            if quality.instruction_following == CandidateQuality.WARNING:
+                warnings.append("指令遵守度：存在警告")
+            if quality.forbidden_check == CandidateQuality.WARNING:
+                warnings.append("禁止项检查：存在警告")
+            if quality.change_scope == CandidateQuality.LARGE:
+                warnings.append("改动幅度较大（超过40%），可能偏离原文较多")
+
+        # 3. continuity warnings
+        continuity = parent.continuity or {}
+        if continuity.get("has_warning"):
+            warnings.append(f"连续性警告：{continuity.get('message', '可能与前文设定不一致')}")
+
+        if not warnings:
+            warnings.append("系统未检测到明显问题，但用户仍可手动修复")
+        return "\n".join(warnings)
+
+    async def create_repair_candidate(
+        self,
+        project_id: str,
+        parent_candidate_id: str,
+        llm_service: LLMService,
+        prompt_template: str,
+        extra_instruction: str = "",
+        inherit_required_beats: bool = True,
+        inherit_forbidden_beats: bool = True,
+        run_beat_validation: bool = True,
+        prompt_search_paths: list[str] | None = None,
+    ) -> CandidateInfo:
+        """Create a repair child candidate based on parent candidate warnings.
+
+        This does NOT auto-edit the source. It creates a new candidate only.
+        """
+        parent = await self.get_candidate(project_id, parent_candidate_id)
+        if not parent:
+            raise ValueError("PARENT_NOT_FOUND")
+        if parent.status != CandidateStatus.PENDING:
+            raise ValueError("PARENT_NOT_PENDING")
+
+        parent_content = await self.get_candidate_content(project_id, parent_candidate_id)
+        if parent_content is None:
+            raise ValueError("PARENT_CONTENT_NOT_FOUND")
+
+        source_content = ""
+        try:
+            source_content, _, _ = await self.file_service.read_file(
+                self._project_path(project_id, parent.source_path)
+            )
+        except Exception:
+            logger.debug("读取 parent source failed for repair", exc_info=True)
+
+        required_beats, forbidden_beats = self._extract_inherited_beats(
+            parent,
+            inherit_required_beats=inherit_required_beats,
+            inherit_forbidden_beats=inherit_forbidden_beats,
+        )
+        required_texts = [item["text"] for item in required_beats]
+        forbidden_texts = [item["text"] for item in forbidden_beats]
+
+        warnings_text = self._build_repair_warnings(parent)
+
+        active_anchors = await ContinuityAnchorService(self.file_service).list_active(project_id)
+        continuity_anchor_items = ContinuityAnchorService.prompt_items(active_anchors)
+        continuity_anchor_metadata = ContinuityAnchorService.metadata(active_anchors)
+
+        if prompt_search_paths:
+            env = Environment(loader=FileSystemLoader(prompt_search_paths), autoescape=False)
+            tpl = env.from_string(prompt_template)
+        else:
+            from jinja2 import Template as _Template
+            tpl = _Template(prompt_template)
+
+        prompt = tpl.render(
+            official_source_text=source_content,
+            parent_candidate_text=parent_content,
+            warnings_text=warnings_text,
+            required_beats=required_beats,
+            forbidden_beats=forbidden_beats,
+            extra_instruction=extra_instruction,
+            continuity_anchor_items=continuity_anchor_items,
+            source_path=parent.source_path,
+        )
+
+        try:
+            repaired_content = await llm_service.complete_sync(
+                [
+                    {
+                        "role": "system",
+                        "content": "你是小说候选稿修复助手。只输出完整修复后的候选稿正文，不输出解释。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                timeout=180,
+                max_tokens=3000,
+            )
+        except Exception as exc:
+            logger.warning("repair LLM failed: %s", type(exc).__name__)
+            raise ValueError("REPAIR_LLM_FAILED") from exc
+        repaired_content = (repaired_content or "").strip()
+        if not repaired_content:
+            raise ValueError("EMPTY_REPAIR_CONTENT")
+
+        beat_validation = {}
+        if run_beat_validation and (required_texts or forbidden_texts):
+            validator = RequiredBeatValidator(llm_service)
+            beat_validation = await validator.validate(
+                repaired_content,
+                required_beats=required_texts,
+                forbidden_beats=forbidden_texts,
+            )
+
+        revision_group_id = (
+            parent.revision_group_id
+            or (parent.generation_context or {}).get("revision_group_id")
+            or f"revgrp_{uuid.uuid4().hex[:8]}"
+        )
+        revision_index = await self._next_revision_index(project_id, revision_group_id)
+        generation_context = {
+            "revision_type": "repair",
+            "parent_candidate_id": parent_candidate_id,
+            "source_candidate_action": parent.action.value,
+            "source_candidate_status_at_revision": parent.status.value,
+            "repair_warnings": warnings_text,
+            "extra_instruction": extra_instruction,
+            "inherited_required_beats": bool(required_beats),
+            "inherited_forbidden_beats": bool(forbidden_beats),
+            "required_beats_input": required_beats,
+            "forbidden_beats_input": forbidden_beats,
+            "revision_group_id": revision_group_id,
+            "revision_index": revision_index,
+        }
+        if continuity_anchor_metadata.get("used_count", 0) > 0:
+            generation_context["continuity_anchor_ids"] = continuity_anchor_metadata.get("anchor_ids", [])
+
+        return await self.create_candidate(
+            project_id=project_id,
+            source_path=parent.source_path,
+            action=CandidateAction.REPAIR,
+            content=repaired_content,
+            workflow_run_id=parent.workflow_run_id,
+            model=getattr(getattr(llm_service, "config", None), "model", None),
+            pipeline_id=parent.pipeline_id,
+            prompt_version=parent.prompt_version,
+            source_mode=parent.source_mode,
+            continuity=parent.continuity,
+            source_type="llm",
+            warning_message=None,
+            generation_context=generation_context,
+            scene_plan_hash=parent.scene_plan_hash,
+            scene_plan_path=parent.scene_plan_path,
+            beat_validation=beat_validation,
+            continuity_anchors=continuity_anchor_metadata,
+            parent_candidate_id=parent_candidate_id,
+            revision_group_id=revision_group_id,
+            revision_index=revision_index,
+        )
+
     # ─── 查询 ────────────────────────────────────────────
 
     async def get_candidate(self, project_id: str, candidate_id: str) -> CandidateInfo | None:

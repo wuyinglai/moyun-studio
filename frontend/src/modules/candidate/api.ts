@@ -2,7 +2,7 @@
 
 import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
-import type { CandidateInfo, CandidateDetail, AdoptResult, CandidateRevisionRequest } from './types'
+import type { CandidateInfo, CandidateDetail, AdoptResult, CandidateRevisionRequest, RepairCandidateRequest } from './types'
 
 /** 获取项目的候选稿列表 */
 export async function listCandidates(projectId: string, status?: string): Promise<CandidateInfo[]> {
@@ -40,4 +40,13 @@ export async function deleteCandidate(projectId: string, candidateId: string): P
     project_id: projectId,
     candidate_id: candidateId,
   })
+}
+
+/** 根据警告信息生成 repair child candidate */
+export async function repairCandidate(
+  projectId: string,
+  candidateId: string,
+  request: RepairCandidateRequest = {},
+): Promise<CandidateInfo> {
+  return await api.post<CandidateInfo>(API_ROUTES.candidateRepair(projectId, candidateId), request)
 }
