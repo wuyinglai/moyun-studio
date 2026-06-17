@@ -339,6 +339,12 @@ async def test_candidate_revision_api_rejects_adopted_parent(client, temp_worksp
         "from_workspace_config",
         staticmethod(lambda config: DummyLLMService()),
     )
+    # Mock the prompt loader to avoid filesystem setup for prompts
+    monkeypatch.setattr(
+        candidates_api,
+        "_load_revision_prompt",
+        lambda settings: "fake revision prompt",
+    )
 
     response = client.post(
         f"/api/candidates/{project_id}/{parent.id}/revise",
