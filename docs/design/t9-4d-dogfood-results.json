@@ -1,0 +1,38 @@
+{
+  "Case 1: Rewrite + Continuity": {
+    "id": "cand_251ba44a",
+    "action": "rewrite",
+    "status": "pending",
+    "quality": "instruction_following=<CandidateQuality.UNKNOWN: 'unknown'> continuity=<CandidateQuality.UNKNOWN: 'unknown'> style_preservation=<CandidateQuality.UNKNOWN: 'unknown'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  },
+  "Case 2: Polish Conservative": {
+    "id": "cand_f5a3faea",
+    "action": "polish",
+    "status": "pending",
+    "quality": "instruction_following=<CandidateQuality.UNKNOWN: 'unknown'> continuity=<CandidateQuality.UNKNOWN: 'unknown'> style_preservation=<CandidateQuality.PASS: 'pass'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  },
+  "Case 3: Forbidden Reveal": {
+    "id": "cand_40b11cdb",
+    "action": "rewrite",
+    "status": "pending",
+    "quality": "instruction_following=<CandidateQuality.PASS: 'pass'> continuity=<CandidateQuality.UNKNOWN: 'unknown'> style_preservation=<CandidateQuality.UNKNOWN: 'unknown'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  },
+  "Case 4: Relationship Jump": {
+    "id": "cand_a599dfad",
+    "action": "rewrite",
+    "status": "pending",
+    "quality": "instruction_following=<CandidateQuality.WARNING: 'warning'> continuity=<CandidateQuality.UNKNOWN: 'unknown'> style_preservation=<CandidateQuality.UNKNOWN: 'unknown'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  },
+  "Case 5: Feedback Revision": {
+    "id": "cand_26b00965",
+    "action": "feedback_revision",
+    "status": "pending",
+    "quality": "instruction_following=<CandidateQuality.UNKNOWN: 'unknown'> continuity=<CandidateQuality.UNKNOWN: 'unknown'> style_preservation=<CandidateQuality.UNKNOWN: 'unknown'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  },
+  "Case 6: Repair Candidate": {
+    "id": "cand_a5a0bec1",
+    "action": "repair",
+    "status": "pending",
+    "quality": "instruction_following=<CandidateQuality.UNKNOWN: 'unknown'> continuity=<CandidateQuality.UNKNOWN: 'unknown'> style_preservation=<CandidateQuality.UNKNOWN: 'unknown'> change_scope=<CandidateQuality.LARGE: 'large'> forbidden_check=<CandidateQuality.PASS: 'pass'> notes=[]"
+  }
+}
