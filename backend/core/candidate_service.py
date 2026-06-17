@@ -23,6 +23,8 @@ from backend.core.llm import LLMService
 from backend.schemas.candidate import (
     CandidateAction,
     CandidateInfo,
+    CandidateQuality,
+    CandidateQualityMetadata,
     CandidateStatus,
 )
 
@@ -94,6 +96,81 @@ class CandidateService:
         """计算内容哈希"""
         return hashlib.md5(content.encode("utf-8")).hexdigest()
 
+    @staticmethod
+    def _compute_word_count(text: str) -> int:
+        """计算中文字数和英文单词数"""
+        cn = len(re.findall(r'[一-鿿]', text))
+        en = len(re.findall(r'[a-zA-Z]+', text))
+        return cn + en
+
+    @classmethod
+    def generate_quality_metadata(
+        cls,
+        action: CandidateAction,
+        beat_validation: dict | None,
+        continuity_anchors: dict | None,
+        source_word_count: int,
+        candidate_word_count: int,
+    ) -> CandidateQualityMetadata:
+        """生成5个维度的quality metadata（规则计算，不用LLM）"""
+        # 1. instruction_following: 基于 beat_validation.status
+        bv = beat_validation or {}
+        bv_status = bv.get("status", "unknown")
+        if bv_status == "pass":
+            instruction_following = CandidateQuality.PASS
+        elif bv_status == "warning":
+            instruction_following = CandidateQuality.WARNING
+        else:
+            instruction_following = CandidateQuality.UNKNOWN
+
+        # 2. continuity: 基于 continuity_anchors.used_count > 0
+        ca = continuity_anchors or {}
+        used_count = ca.get("used_count", 0)
+        if used_count > 0:
+            continuity = CandidateQuality.PASS
+        else:
+            continuity = CandidateQuality.UNKNOWN
+
+        # 3. style_preservation: polish → pass, 其他 → unknown
+        if action == CandidateAction.POLISH:
+            style_preservation = CandidateQuality.PASS
+        else:
+            style_preservation = CandidateQuality.UNKNOWN
+
+        # 4. change_scope: 基于长度变化
+        if source_word_count > 0 and candidate_word_count > 0:
+            delta = abs(candidate_word_count - source_word_count) / source_word_count
+            if delta < 0.10:
+                change_scope = CandidateQuality.SMALL
+            elif delta <= 0.40:
+                change_scope = CandidateQuality.MEDIUM
+            else:
+                change_scope = CandidateQuality.LARGE
+        else:
+            change_scope = CandidateQuality.UNKNOWN
+
+        # 5. forbidden_check: 基于 beat_validation 是否有 forbidden violation
+        forbidden_beats = bv.get("forbidden_beats") or []
+        has_forbidden_warning = False
+        if isinstance(forbidden_beats, list):
+            has_forbidden_warning = any(
+                item.get("violated") is not False
+                for item in forbidden_beats
+            )
+        if has_forbidden_warning:
+            forbidden_check = CandidateQuality.WARNING
+        else:
+            forbidden_check = CandidateQuality.PASS
+
+        return CandidateQualityMetadata(
+            instruction_following=instruction_following,
+            continuity=continuity,
+            style_preservation=style_preservation,
+            change_scope=change_scope,
+            forbidden_check=forbidden_check,
+            notes=[],
+        )
+
     # ─── 创建候选稿 ──────────────────────────────────────
 
     async def create_candidate(
@@ -135,6 +212,7 @@ class CandidateService:
         # 1. 读取源文件，记录 base_hash 和 base_mtime
         base_hash = ""
         base_mtime = None
+        source_content = ""
         full_source_path = self._project_path(project_id, source_path)
         try:
             source_content, _, mtime = await self.file_service.read_file(full_source_path)
@@ -142,6 +220,17 @@ class CandidateService:
             base_mtime = mtime
         except Exception:
             logger.debug("读取源文件失败，跳过 base_hash 记录", exc_info=True)
+
+        # 生成 quality metadata
+        source_word_count = self._compute_word_count(source_content)
+        candidate_word_count = self._compute_word_count(content)
+        quality = self.generate_quality_metadata(
+            action=action,
+            beat_validation=beat_validation,
+            continuity_anchors=continuity_anchors,
+            source_word_count=source_word_count,
+            candidate_word_count=candidate_word_count,
+        )
 
         # 2. 保存候选正文
         await self.file_service.write_file(candidate_path, content)
@@ -157,7 +246,7 @@ class CandidateService:
             base_mtime=base_mtime,
             status=CandidateStatus.PENDING,
             created_at=datetime.now(),
-            word_count=len(content),
+            word_count=candidate_word_count,
             workflow_run_id=workflow_run_id,
             model=model,
             pipeline_id=pipeline_id,
@@ -174,6 +263,7 @@ class CandidateService:
             parent_candidate_id=parent_candidate_id,
             revision_group_id=revision_group_id,
             revision_index=revision_index,
+            quality=quality,
         )
 
         metadata = await self._load_metadata(project_id)

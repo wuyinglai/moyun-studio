@@ -54,6 +54,37 @@
             {{ statusLabel(candidate.status) }}
           </span>
         </div>
+        <!-- Quality Summary - MVP 3 dimensions -->
+        <div
+          v-if="candidate.quality"
+          class="quality-summary"
+          data-testid="candidate-quality-summary"
+        >
+          <span
+            class="quality-badge"
+            :class="qualityBadgeClass(candidate.quality.instruction_following)"
+            :title="`指令遵守: ${candidate.quality.instruction_following}`"
+          >
+            <i :class="qualityBadgeIcon(candidate.quality.instruction_following)" />
+            {{ qualityLabel('instruction', candidate.quality.instruction_following) }}
+          </span>
+          <span
+            class="quality-badge"
+            :class="qualityBadgeClass(candidate.quality.continuity)"
+            :title="`连续性: ${candidate.quality.continuity}`"
+          >
+            <i :class="qualityBadgeIcon(candidate.quality.continuity)" />
+            {{ qualityLabel('continuity', candidate.quality.continuity) }}
+          </span>
+          <span
+            class="quality-badge quality-badge-scope"
+            :class="scopeBadgeClass(candidate.quality.change_scope)"
+            :title="`改动幅度: ${candidate.quality.change_scope}`"
+          >
+            <i :class="scopeBadgeIcon(candidate.quality.change_scope)" />
+            {{ candidate.quality.change_scope }}
+          </span>
+        </div>
         <!-- 质量检查区 -->
         <div
           v-if="hasQualityInfo(candidate)"
@@ -454,6 +485,45 @@ function statusLabel(status: string): string {
     discarded: '已放弃',
   }
   return labels[status] || status
+}
+
+function qualityBadgeClass(value: string): string {
+  if (value === 'pass') return 'badge-pass'
+  if (value === 'warning') return 'badge-warning'
+  return 'badge-unknown'
+}
+
+function qualityBadgeIcon(value: string): string {
+  if (value === 'pass') return 'fa-solid fa-check'
+  if (value === 'warning') return 'fa-solid fa-exclamation'
+  return 'fa-solid fa-question'
+}
+
+function qualityLabel(type: 'instruction' | 'continuity', value: string): string {
+  if (type === 'instruction') {
+    if (value === 'pass') return '指令✓'
+    if (value === 'warning') return '指令⚠'
+    return '指令?'
+  }
+  if (type === 'continuity') {
+    if (value === 'pass') return '连续✓'
+    return '连续?'
+  }
+  return value
+}
+
+function scopeBadgeClass(value: string): string {
+  if (value === 'small') return 'badge-pass'
+  if (value === 'medium') return 'badge-warning'
+  if (value === 'large') return 'badge-danger'
+  return 'badge-unknown'
+}
+
+function scopeBadgeIcon(value: string): string {
+  if (value === 'small') return 'fa-solid fa-minus'
+  if (value === 'medium') return 'fa-solid fa-equals'
+  if (value === 'large') return 'fa-solid fa-plus'
+  return 'fa-solid fa-question'
 }
 
 function formatTime(timeStr: string): string {
@@ -1016,6 +1086,47 @@ watch(() => projectStore.currentProject?.id, () => {
   i {
     color: var(--text-muted);
   }
+}
+
+.quality-summary {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+
+.quality-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+
+  i { font-size: 9px; }
+
+  &.badge-pass {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--accent-success);
+  }
+  &.badge-warning {
+    background: rgba(251, 146, 60, 0.18);
+    color: #f97316;
+  }
+  &.badge-danger {
+    background: rgba(239, 68, 68, 0.18);
+    color: var(--accent-danger);
+  }
+  &.badge-unknown {
+    background: rgba(148, 163, 184, 0.15);
+    color: var(--text-muted);
+  }
+}
+
+.quality-badge-scope {
+  font-family: monospace;
+  font-size: 9px;
 }
 
 .candidate-action {

@@ -171,6 +171,19 @@ export interface ContinuityAnchorMetadata {
   types?: Record<string, number>
 }
 
+/** Quality dimension values */
+export type CandidateQuality = 'pass' | 'warning' | 'unknown' | 'small' | 'medium' | 'large'
+
+/** 候选稿质量元数据 - 5个轻量质量维度（规则计算，不用LLM） */
+export interface CandidateQualityMetadata {
+  instruction_following: CandidateQuality
+  continuity: CandidateQuality
+  style_preservation: CandidateQuality
+  change_scope: CandidateQuality
+  forbidden_check: CandidateQuality
+  notes: string[]
+}
+
 /** 候选稿信息 — 对应 backend/schemas/candidate.py CandidateInfo */
 export interface CandidateInfo {
   id: string
@@ -203,6 +216,8 @@ export interface CandidateInfo {
   parent_candidate_id?: string | null
   revision_group_id?: string | null
   revision_index?: number
+  /** Quality metadata - 5 lightweight dimensions (rule-based, no LLM) */
+  quality?: CandidateQualityMetadata
 }
 
 export interface CandidateRevisionRequest {

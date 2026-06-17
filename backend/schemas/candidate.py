@@ -37,6 +37,41 @@ class CandidateStatus(str, Enum):
     DISCARDED = "discarded"       # 已放弃
 
 
+class CandidateQuality(str, Enum):
+    """Quality dimension values"""
+    PASS = "pass"
+    WARNING = "warning"
+    UNKNOWN = "unknown"
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+
+
+class CandidateQualityMetadata(BaseModel):
+    """候选稿质量元数据 - 5个轻量质量维度（规则计算，不用LLM）"""
+    instruction_following: CandidateQuality = Field(
+        default=CandidateQuality.UNKNOWN,
+        description="指令遵守度：基于beat_validation pass/warning/unknown"
+    )
+    continuity: CandidateQuality = Field(
+        default=CandidateQuality.UNKNOWN,
+        description="连续性：基于continuity anchors used_count > 0则pass"
+    )
+    style_preservation: CandidateQuality = Field(
+        default=CandidateQuality.UNKNOWN,
+        description="风格保持：polish动作则pass，其他unknown"
+    )
+    change_scope: CandidateQuality = Field(
+        default=CandidateQuality.UNKNOWN,
+        description="改动幅度：基于长度变化 <10% small, 10%~40% medium, >40% large"
+    )
+    forbidden_check: CandidateQuality = Field(
+        default=CandidateQuality.UNKNOWN,
+        description="禁止项检查：基于beat_validation有forbidden warning则warning，否则pass"
+    )
+    notes: list[str] = Field(default_factory=list, description="备注信息")
+
+
 class CandidateInfo(BaseModel):
     """候选稿信息"""
     id: str = Field(..., description="候选稿唯一标识")
@@ -71,6 +106,12 @@ class CandidateInfo(BaseModel):
     parent_candidate_id: str | None = Field(None, description="Parent candidate id for feedback revision candidates")
     revision_group_id: str | None = Field(None, description="Revision lineage group id")
     revision_index: int = Field(0, description="Revision index within a lineage group")
+
+    # Quality metadata - MVP 5 dimensions
+    quality: CandidateQualityMetadata = Field(
+        default_factory=CandidateQualityMetadata,
+        description="质量元数据 - 5个轻量维度"
+    )
 
     @property
     def filename(self) -> str:
