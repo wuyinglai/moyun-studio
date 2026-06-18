@@ -19,13 +19,35 @@
       候选稿不会自动覆盖正文。你可以先预览，再决定是否采用。
     </div>
 
+    <!-- T10.5 筛选区 -->
+    <div class="filter-bar" data-testid="candidate-filter-bar">
+      <button
+        v-for="filterOption in filterOptions"
+        :key="filterOption.value"
+        class="filter-btn"
+        :class="{ 'filter-btn-active': filterStatus === filterOption.value}"
+        :data-testid="`candidate-filter-${filterOption.value}`"
+        @click="setFilter(filterOption.value)"
+      >
+        {{ filterOption.label }}
+        <span
+          v-if="filterOption.count >= 0"
+          class="filter-count"
+          :data-testid="`candidate-filter-count-${filterOption.value}`"
+        >
+          {{ filterOption.count }}
+        </span>
+      </button>
+    </div>
+
     <!-- 候选稿列表 -->
     <div
-      v-if="candidates.length === 0"
+      v-if="filteredCandidates.length === 0"
       class="empty-state"
+      data-testid="candidate-empty-state"
     >
       <i class="fa-solid fa-file-text" />
-      <span>{{ loading ? '加载中...' : '暂无候选稿' }}</span>
+      <span>{{ loading ? '加载中...' : getEmptyStateText() }}</span>
     </div>
 
     <div
@@ -33,26 +55,36 @@
       class="candidate-list"
     >
       <div
-        v-for="candidate in candidates"
+        v-for="candidate in filteredCandidates"
         :key="candidate.id"
         class="candidate-card"
-        :class="{ active: selectedId === candidate.id }"
+        :class="{ active: selectedId === candidate.id, 'card-focus': candidate.id === focusedCandidateId }"
         @click="selectCandidate(candidate)"
       >
         <div class="card-header">
-          <span class="candidate-action" :class="`action-${candidate.action}`">
-            {{ actionLabel(candidate.action) }}
-          </span>
-          <span
-            v-if="candidate.source_type"
-            class="source-type-badge"
-            :class="`source-${candidate.source_type}`"
-          >
-            {{ candidate.source_type === 'dry-run' ? '模拟运行' : 'AI 生成' }}
-          </span>
-          <span class="candidate-status" :class="`status-${candidate.status}`">
-            {{ statusLabel(candidate.status) }}
-          </span>
+          <div class="card-header-row">
+            <span class="candidate-action" :class="`action-${candidate.action}`">
+              {{ actionLabel(candidate.action) }}
+            </span>
+            <span
+              v-if="candidate.source_type"
+              class="source-type-badge"
+              :class="`source-${candidate.source_type}`"
+            >
+              {{ candidate.source_type === 'dry-run' ? '模拟运行' : 'AI 生成' }}
+            </span>
+            <span class="candidate-status" :class="`status-${candidate.status}`">
+              {{ statusLabel(candidate.status) }}
+            </span>
+            <span
+              v-if="candidate.parent_candidate_id"
+              class="source-parent-badge"
+              data-testid="candidate-parent-source-badge"
+            >
+              <i class="fa-solid fa-arrow-up-from-bracket" />
+              {{ sourceFromParent(candidate) }}
+            </span>
+          </div>
         </div>
         <!-- Quality Summary - MVP 3 dimensions -->
         <div
@@ -526,6 +558,9 @@ const fileStore = useFileStore()
 const editorStore = useEditorStore()
 const sse = useSSE()
 
+// T10.5: 筛选 + 聚焦
+const filterStatus = ref<string>('all')
+const focusedCandidateId = ref<string | null>(null)
 const candidates = ref<CandidateInfo[]>([])
 const loading = ref(false)
 const selectedId = ref<string | null>(null)
@@ -543,6 +578,45 @@ const compareCandidateInfo = ref<CandidateInfo | null>(null)
 let disposeCandidateCreated: (() => void) | null = null
 let disposeCandidateAdopted: (() => void) | null = null
 const expandedQuality = ref<Set<string>>(new Set())
+
+// T10.5: 筛选相关 computed/functions
+const filteredCandidates = computed(() => {
+  if (filterStatus.value === 'all') return candidates.value
+  if (filterStatus.value === 'discarded') {
+    return candidates.value.filter((c) => c.status === 'discarded' || c.status === 'rejected')
+  }
+  return candidates.value.filter((c) => c.status === filterStatus.value)
+})
+
+const filterOptions = computed(() => [
+  { value: 'all', label: '全部', count: candidates.value.length },
+  { value: 'pending', label: '待处理', count: candidates.value.filter((c) => c.status === 'pending').length },
+  { value: 'adopted', label: '已采纳', count: candidates.value.filter((c) => c.status === 'adopted').length },
+  {
+    value: 'discarded',
+    label: '已丢弃',
+    count: candidates.value.filter((c) => c.status === 'discarded' || c.status === 'rejected').length,
+  },
+])
+
+function setFilter(value: string) {
+  filterStatus.value = value
+}
+
+function getEmptyStateText(): string {
+  if (candidates.value.length === 0) return '暂无候选稿。生成内容后会出现在这里。'
+  if (filterStatus.value === 'pending') return '暂无待处理候选稿。'
+  if (filterStatus.value === 'adopted') return '暂无已采纳候选稿。'
+  if (filterStatus.value === 'discarded') return '暂无已丢弃候选稿。'
+  return '当前筛选条件下暂无候选稿。'
+}
+
+function sourceFromParent(candidate: CandidateInfo): string {
+  const action = candidate.action as string
+  if (action === 'repair') return '修复自上一版'
+  if (action === 'feedback_revision') return '根据反馈再生成'
+  return '来自父候选稿'
+}
 
 function toggleQualityExpanded(id: string) {
   const next = new Set(expandedQuality.value)
@@ -711,6 +785,7 @@ function selectCandidate(candidate: CandidateInfo) {
 
 async function previewCandidate(candidate: CandidateInfo) {
   previewCandidateInfo.value = candidate
+  focusedCandidateId.value = candidate.id
   previewing.value = true
   previewContent.value = ''
   
@@ -724,19 +799,28 @@ async function previewCandidate(candidate: CandidateInfo) {
 }
 
 function closePreview() {
+  const closingId = previewCandidateInfo.value?.id || null
   previewing.value = false
   previewCandidateInfo.value = null
   previewContent.value = ''
+  if (focusedCandidateId.value === closingId) {
+    focusedCandidateId.value = null
+  }
 }
 
 function openCompare(candidate: CandidateInfo) {
   compareCandidateInfo.value = candidate
+  focusedCandidateId.value = candidate.id
   comparing.value = true
 }
 
 function closeCompare() {
+  const closingId = compareCandidateInfo.value?.id || null
   comparing.value = false
   compareCandidateInfo.value = null
+  if (focusedCandidateId.value === closingId) {
+    focusedCandidateId.value = null
+  }
 }
 
 async function syncAdoptedSource(sourcePath: string) {
@@ -1061,6 +1145,76 @@ watch(() => projectStore.currentProject?.id, () => {
 </script>
 
 <style scoped>
+/* T10.5: filter bar */
+.filter-bar {
+  display: flex;
+  gap: 4px;
+  padding: 4px 12px 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.filter-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.filter-btn-active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.filter-btn-active:hover {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.filter-count {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* card-focus: 正在查看/比较 */
+.card-focus {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -1px;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.06), var(--bg-card));
+}
+
+/* 来源 badge: parent_candidate_id 显示 */
+.source-parent-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.card-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .candidate-panel {
   display: flex;
   flex-direction: column;
