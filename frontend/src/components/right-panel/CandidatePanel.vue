@@ -263,6 +263,14 @@
               <i class="fa-solid fa-eye" />
             </button>
             <button
+              class="action-btn"
+              title="比较差异"
+              data-testid="candidate-compare-button"
+              @click.stop="openCompare(candidate)"
+            >
+              <i class="fa-solid fa-code-compare" />
+            </button>
+            <button
               v-if="candidate.status === 'pending'"
               class="action-btn action-adopt"
               title="采用"
@@ -468,6 +476,15 @@
         </div>
       </div>
     </div>
+
+    <!-- T10.2 Compare Modal -->
+    <CompareModal
+      v-if="comparing && compareCandidateInfo"
+      :candidate="compareCandidateInfo"
+      :project-id="projectStore.currentProject?.id || ''"
+      :candidates="candidates"
+      @close="closeCompare"
+    />
   </div>
 </template>
 
@@ -489,6 +506,7 @@ import {
   CANDIDATE_SAFETY_TEXT,
   type QualityExplanationSummary,
 } from '@/modules/candidate/qualityExplanation'
+import CompareModal from './CompareModal.vue'
 
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
@@ -508,6 +526,8 @@ const revisionFeedback = ref('')
 const revisionQuickActions = ref<string[]>([])
 const revisionScope = ref<'full_candidate' | 'keep_opening' | 'ending_only'>('full_candidate')
 const revisionSubmitting = ref(false)
+const comparing = ref(false)
+const compareCandidateInfo = ref<CandidateInfo | null>(null)
 let disposeCandidateCreated: (() => void) | null = null
 let disposeCandidateAdopted: (() => void) | null = null
 const expandedQuality = ref<Set<string>>(new Set())
@@ -580,6 +600,7 @@ function actionLabel(action: string): string {
     expand: '扩写',
     shrink: '缩写',
     polish: '润色',
+    repair: '修复版',
     fallback_draft: '备用草稿',
     feedback_revision: '反馈再生成',
   }
@@ -694,6 +715,16 @@ function closePreview() {
   previewing.value = false
   previewCandidateInfo.value = null
   previewContent.value = ''
+}
+
+function openCompare(candidate: CandidateInfo) {
+  compareCandidateInfo.value = candidate
+  comparing.value = true
+}
+
+function closeCompare() {
+  comparing.value = false
+  compareCandidateInfo.value = null
 }
 
 async function syncAdoptedSource(sourcePath: string) {
@@ -1427,6 +1458,7 @@ watch(() => projectStore.currentProject?.id, () => {
   &.action-shrink { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
   &.action-polish { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
   &.action-fallback_draft { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+  &.action-repair { background: rgba(251, 146, 60, 0.2); color: #f97316; }
 }
 
 .candidate-status {

@@ -100,6 +100,26 @@ async function installMocks(page: Page, options: MockOptions = {}): Promise<Mock
         forbidden_beats: [],
       },
     },
+    {
+      id: 'cand-005',
+      source_path: `${projectId}/chapters/vol-01/ch-001/sec-001.md`,
+      candidate_path: `${projectId}/candidates/cand-005.md`,
+      action: 'repair',
+      status: 'pending',
+      preview: '修复后内容...',
+      created_at: new Date(Date.now() - 60000).toISOString(),
+      parent_candidate_id: 'cand-001',
+      revision_group_id: 'revgrp_test01',
+      revision_index: 1,
+      quality: {
+        instruction_following: 'pass',
+        continuity: 'pass',
+        style_preservation: 'unknown',
+        change_scope: 'small',
+        forbidden_check: 'pass',
+        notes: [],
+      },
+    },
   ]
   const state: MockState = {
     candidates,
@@ -909,5 +929,123 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     await toggle.click()
     await expect(page.getByTestId('candidate-quality-explanation-body').first()).toHaveCount(0)
     console.log('[t10.1b] ✓ quality explanation collapses on second click')
+  })
+
+  // ── T10.2b: Candidate Compare MVP ──────────────────────────────
+
+  test('T10.2b: compare button is visible on candidate cards', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const compareBtn = page.getByTestId('candidate-compare-button').first()
+    await expect(compareBtn).toBeVisible({ timeout: 5000 })
+    await expect(compareBtn).toHaveAttribute('title', '比较差异')
+    console.log('[t10.2b] ✓ compare button visible with correct title')
+  })
+
+  test('T10.2b: clicking compare opens modal with correct labels (mode A)', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // Click compare on cand-002 (no parent → mode A)
+    const cand002Card = page.locator('.candidate-card').filter({ hasText: '重写' }).first()
+    await cand002Card.getByTestId('candidate-compare-button').click()
+
+    const modal = page.getByTestId('compare-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    await expect(modal).toContainText('候选稿比较')
+    await expect(modal).toContainText('当前正文')
+    await expect(modal).toContainText('重写候选稿')
+    console.log('[t10.2b] ✓ mode A: modal shows 当前正文 vs 重写候选稿')
+  })
+
+  test('T10.2b: compare modal shows safety notice and no adopt button', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-compare-button').first().click()
+
+    const modal = page.getByTestId('compare-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    await expect(modal).toContainText('比较视图仅用于查看差异')
+    await expect(modal).toContainText('不会修改正文')
+    // Verify no adopt button in modal
+    await expect(modal.locator('button').filter({ hasText: '采用' })).toHaveCount(0)
+    console.log('[t10.2b] ✓ safety notice present, no adopt button in compare modal')
+  })
+
+  test('T10.2b: repair child compare shows parent vs child labels (mode B)', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // Click compare on cand-005 (repair child of cand-001 → mode B)
+    const cand005Card = page.locator('.candidate-card').filter({ hasText: '修复版' }).first()
+    await cand005Card.getByTestId('candidate-compare-button').click()
+
+    const modal = page.getByTestId('compare-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    await expect(modal).toContainText('父候选稿')
+    await expect(modal).toContainText('修复版候选稿')
+    console.log('[t10.2b] ✓ mode B: repair child shows 父候选稿 vs 修复版候选稿')
+  })
+
+  test('T10.2b: compare modal shows diff area and summary', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-compare-button').first().click()
+
+    const modal = page.getByTestId('compare-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    await expect(modal.getByTestId('compare-diff-area')).toBeVisible({ timeout: 5000 })
+    await expect(modal.getByTestId('compare-summary')).toBeVisible()
+    console.log('[t10.2b] ✓ diff area and summary visible')
+  })
+
+  test('T10.2b: compare modal close button works', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-compare-button').first().click()
+    await expect(page.getByTestId('compare-modal')).toBeVisible({ timeout: 5000 })
+
+    await page.getByTestId('compare-modal').locator('button').filter({ hasText: '关闭' }).click()
+    await expect(page.getByTestId('compare-modal')).toHaveCount(0)
+    console.log('[t10.2b] ✓ compare modal closes on button click')
+  })
+
+  test('T10.2b: adopted candidate can still open compare', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-003 is adopted
+    const cand003Card = page.locator('.candidate-card').filter({ hasText: '已采用' }).first()
+    await cand003Card.getByTestId('candidate-compare-button').click()
+
+    const modal = page.getByTestId('compare-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    await expect(modal).toContainText('候选稿比较')
+    console.log('[t10.2b] ✓ adopted candidate can open compare without changing status')
   })
 })
