@@ -4,6 +4,33 @@ All notable changes to Moyun Studio will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic versioning in spirit while still in developer preview.
 
+## v0.2.2 - Maintenance Release
+
+**Released**: 2026-06-18
+**Tag**: `v0.2.2`
+**Release commit**: `59d8fb4`
+**Archive commit**: `e7b2a64`
+
+### Added
+
+- v0.2.2 release documentation — `docs/releases/v0.2.2-release-notes.md`, `docs/releases/v0.2.2-release-checklist.md`, `docs/releases/v0.2.2-release-final-report.md`.
+
+### Changed
+
+- Guardrails allowlist annotations — `# AI_GUARDRAIL_ALLOW` comments added to all allowlisted violations (B/D/C classification, no real security risk).
+- Known issues and roadmap updated to reflect v0.2.1/v0.2.2a resolved items.
+
+### No Product Code Changes
+
+- v0.2.2 is a pure maintenance release. No backend logic, no frontend UI, no test logic changes.
+- Fully backward compatible with v0.2.1.
+
+### Release Notes
+
+https://github.com/wuyinglai/moyun-studio/releases/tag/v0.2.2
+
+---
+
 ## v0.2.1 - Writing Quality Enhancement Release
 
 **Released**: 2026-06-17

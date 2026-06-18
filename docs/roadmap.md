@@ -30,9 +30,11 @@
 - [x] **v0.2.2b** — Docs Consolidation + Known Issues Update (2026-06-17)
   - T9.4 docs status consolidated
   - Known issues updated with resolved items
-- [ ] **v0.2.2** — Maintenance release candidate (planned)
-  - Release notes polish
-  - Minor smoke test improvements (optional)
+- [x] **v0.2.2** — Maintenance Release (2026-06-18, tag `v0.2.2`, release commit `59d8fb4`)
+  - Guardrails allowlist cleanup (v0.2.2a)
+  - Docs consolidation + known issues update (v0.2.2b)
+  - No product code changes — pure maintenance release
+  - [Release notes](https://github.com/wuyinglai/moyun-studio/releases/tag/v0.2.2)
 - [ ] Conflict detection (`expected_mtime` / `expected_hash`) for memory and material endpoints
 - [ ] ConfigService for workspace-level configuration (replacing raw `.config.json` I/O)
 - [ ] Route remaining raw I/O through FileService

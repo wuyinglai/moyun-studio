@@ -12,7 +12,7 @@ This document tracks current limitations, common failure modes, and workarounds.
 | v0.2.1 | Released | 2026-06-17 |
 | v0.2.2a | Done | 2026-06-17 (Guardrails Allowlist Cleanup) |
 | v0.2.2b | Done | 2026-06-17 (Docs Consolidation + Known Issues Update) |
-| v0.2.2 | Planned | Maintenance release candidate |
+| v0.2.2 | Released | 2026-06-18 (Maintenance release, tag v0.2.2) |
 
 ---
 
