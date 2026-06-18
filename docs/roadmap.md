@@ -23,7 +23,16 @@
   - Real LLM dogfood with Agnes AI
   - Safety boundary verification for repair/revision flows
   - [Release notes](https://github.com/wuyinglai/moyun-studio/releases/tag/v0.2.1)
-- [ ] v0.2.2 — Planned: guardrails noise cleanup, T9.4 docs consolidation, quality score UX iteration
+- [x] **v0.2.2a** — Guardrails Allowlist Cleanup (2026-06-17, commit `e85836a`)
+  - All guardrails violations classified and allowlisted
+  - No real security risk found
+  - [Report](docs/security/v0-2-2a-guardrails-allowlist-cleanup.md)
+- [x] **v0.2.2b** — Docs Consolidation + Known Issues Update (2026-06-17)
+  - T9.4 docs status consolidated
+  - Known issues updated with resolved items
+- [ ] **v0.2.2** — Maintenance release candidate (planned)
+  - Release notes polish
+  - Minor smoke test improvements (optional)
 - [ ] Conflict detection (`expected_mtime` / `expected_hash`) for memory and material endpoints
 - [ ] ConfigService for workspace-level configuration (replacing raw `.config.json` I/O)
 - [ ] Route remaining raw I/O through FileService

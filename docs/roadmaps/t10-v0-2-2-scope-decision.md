@@ -22,6 +22,9 @@ archive commit: 51741e5
 post-release roadmap commit: d9830f9
 GitHub Release: https://github.com/wuyinglai/moyun-studio/releases/tag/v0.2.1
 T9 阶段已全部完成（T9.0 - T9.5）
+
+v0.2.2a — Guardrails Allowlist Cleanup（2026-06-17, commit e85836a）
+v0.2.2b — Docs Consolidation + Known Issues Update（2026-06-17, ✅ Done）
 ```
 
 ---

@@ -4,6 +4,29 @@ This document tracks current limitations, common failure modes, and workarounds.
 
 ---
 
+## Version Status
+
+| Version | Status | Date |
+|---------|--------|------|
+| v0.2.0 | Released | 2026-06-16 |
+| v0.2.1 | Released | 2026-06-17 |
+| v0.2.2a | Done | 2026-06-17 (Guardrails Allowlist Cleanup) |
+| v0.2.2b | Done | 2026-06-17 (Docs Consolidation + Known Issues Update) |
+| v0.2.2 | Planned | Maintenance release candidate |
+
+---
+
+## Recently Resolved (v0.2.1 / v0.2.2a)
+
+| # | Issue | Resolution | Version |
+|---|-------|------------|---------|
+| R1 | Guardrails existing noise | All violations classified and allowlisted (B/D/C, no real risk) | v0.2.2a |
+| R2 | T9.4 continuity metadata dogfood | `create_candidate()` auto-fetches continuity anchors from service | v0.2.1 |
+| R3 | T9.4 continuity prompt test path | Absolute path resolution instead of relative path lookup | v0.2.1 |
+| R4 | Pipeline prompt rendering contract | Archive issues resolved; prompt templates use consistent pattern | v0.2.1 (T9.5) |
+
+---
+
 ## Release Blockers / 阻断发布问题
 
 以下问题出现时必须修复才能发布：
