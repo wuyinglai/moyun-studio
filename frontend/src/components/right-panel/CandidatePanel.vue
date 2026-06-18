@@ -87,7 +87,6 @@
         </div>
         <!-- T10.1 Quality Explanation Collapsible Area -->
         <div
-          v-if="getQualityExplanation(candidate)"
           class="quality-explanation"
           data-testid="candidate-quality-explanation"
         >
@@ -98,7 +97,7 @@
             @click.stop="toggleQualityExpanded(candidate.id)"
           >
             <i :class="isQualityExpanded(candidate) ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right'" />
-            <span>{{ getQualityExplanation(candidate)!.collapsedText }}</span>
+            <span>{{ getQualityExplanation(candidate).collapsedText }}</span>
           </button>
           <div
             v-if="isQualityExpanded(candidate)"
@@ -106,7 +105,14 @@
             data-testid="candidate-quality-explanation-body"
           >
             <div
-              v-for="dim in getQualityExplanation(candidate)!.dimensions"
+              v-if="getQualityExplanation(candidate).dimensions.length === 0"
+              class="quality-explanation-empty"
+              data-testid="candidate-quality-explanation-empty"
+            >
+              当前候选稿没有质量解释数据。
+            </div>
+            <div
+              v-for="dim in getQualityExplanation(candidate).dimensions"
               :key="dim.key"
               class="quality-dimension"
               :data-testid="`quality-dimension-${dim.key}`"
@@ -516,7 +522,7 @@ function toggleQualityExpanded(id: string) {
   expandedQuality.value = next
 }
 
-function getQualityExplanation(candidate: CandidateInfo): QualityExplanationSummary | null {
+function getQualityExplanation(candidate: CandidateInfo): QualityExplanationSummary {
   return buildQualityExplanation(candidate)
 }
 
@@ -1300,6 +1306,12 @@ watch(() => projectStore.currentProject?.id, () => {
   display: grid;
   gap: 8px;
   border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.quality-explanation-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 0;
 }
 
 .quality-dimension {

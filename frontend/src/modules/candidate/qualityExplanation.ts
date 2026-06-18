@@ -136,11 +136,19 @@ function forbiddenDescription(q: CandidateQualityMetadata): string {
 
 /**
  * Build a full quality explanation summary from candidate data.
- * Safe for old candidates without quality metadata — returns null.
+ * Old candidates without quality metadata get a minimal placeholder.
  */
-export function buildQualityExplanation(candidate: CandidateInfo): QualityExplanationSummary | null {
+export function buildQualityExplanation(candidate: CandidateInfo): QualityExplanationSummary {
   const q = candidate.quality
-  if (!q) return null
+  if (!q) {
+    return {
+      passCount: 0,
+      warningCount: 0,
+      unknownCount: 0,
+      dimensions: [],
+      collapsedText: '质量提示：暂无质量解释',
+    }
+  }
 
   const dimensions: DimensionExplanation[] = [
     {
@@ -215,8 +223,10 @@ export function buildQualityExplanation(candidate: CandidateInfo): QualityExplan
 }
 
 /**
- * Whether the repair button explanation should be shown.
- * Matches hasRepairableWarning() in CandidatePanel.vue.
+ * Whether the repair explanation should be shown inside the expanded quality area.
+ * Only true when the repair button itself is visible — i.e. candidate is pending
+ * AND has a repairable warning (instruction_following=warning, forbidden_check=warning,
+ * or change_scope=large). Mirrors hasRepairableWarning() in CandidatePanel.vue.
  */
 export function shouldShowRepairExplanation(candidate: CandidateInfo): boolean {
   if (candidate.status !== 'pending') return false

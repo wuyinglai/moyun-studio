@@ -874,18 +874,24 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     console.log('[t10.1b] ✓ candidate-only safety text present')
   })
 
-  test('T10.1b: old candidate without quality metadata does not show explanation area', async ({ page }) => {
+  test('T10.1b: old candidate without quality metadata shows placeholder, not fake dimensions', async ({ page }) => {
     await installMocks(page)
 
     await page.goto(`/project/${projectId}`)
     await dismissViteOverlay(page)
     await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
 
-    // cand-002 has no quality metadata
+    // cand-002 has no quality metadata — should show placeholder
     const cand002Card = page.locator('.candidate-card').filter({ hasText: '重写' }).first()
     await expect(cand002Card).toBeVisible({ timeout: 5000 })
-    await expect(cand002Card.locator('[data-testid="candidate-quality-explanation"]')).toHaveCount(0)
-    console.log('[t10.1b] ✓ old candidate without quality metadata has no explanation area')
+    const toggle = cand002Card.locator('[data-testid="candidate-quality-explanation-toggle"]')
+    await expect(toggle).toContainText('暂无质量解释')
+
+    // Expand and verify no fake dimensions are shown
+    await toggle.click()
+    await expect(cand002Card.locator('[data-testid="candidate-quality-explanation-empty"]')).toBeVisible()
+    await expect(cand002Card.locator('[data-testid="quality-dimension-instruction_following"]')).toHaveCount(0)
+    console.log('[t10.1b] ✓ old candidate shows placeholder, no fake dimensions')
   })
 
   test('T10.1b: quality explanation collapses on second click', async ({ page }) => {
