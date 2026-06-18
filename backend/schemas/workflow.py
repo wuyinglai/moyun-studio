@@ -12,7 +12,7 @@ class WorkflowStepDef(BaseModel):
     pipeline: str | None = None
     input: str | None = None
     output: str | None = None
-    output_mode: str = "write_scene"  # LEGACY_COMPAT: overwrite accepted but deprecated
+    output_mode: str = "write_scene"  # LEGACY_COMPAT: overwrite accepted but deprecated  # AI_GUARDRAIL_ALLOW: schema definition
     action: str | None = None  # file step: mkdir | copy | delete
     path: str | None = None  # file step path
     count: str | None = None  # loop step: "{{ variables.xxx }}" or number

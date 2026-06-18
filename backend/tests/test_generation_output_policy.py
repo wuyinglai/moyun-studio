@@ -449,7 +449,7 @@ class TestOverwriteLegacyCompat:
         """overwrite + 空 sec → write (treated as write_scene)"""
         result = decide_output(
             "generate", "chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite", file_has_content=False,
+            output_mode="overwrite", file_has_content=False,  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result.mode == "write"
 
@@ -457,7 +457,7 @@ class TestOverwriteLegacyCompat:
         """overwrite + 已有 sec → candidate (no silent overwrite)"""
         result = decide_output(
             "generate", "chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result.mode == "candidate"
 
@@ -465,7 +465,7 @@ class TestOverwriteLegacyCompat:
         """rewrite + overwrite → candidate (high-risk action overrides)"""
         result = decide_output(
             "rewrite", "chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite", file_has_content=False,
+            output_mode="overwrite", file_has_content=False,  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result.mode == "candidate"
 
@@ -473,7 +473,7 @@ class TestOverwriteLegacyCompat:
         """polish + overwrite → candidate (high-risk action overrides)"""
         result = decide_output(
             "polish", "chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite", file_has_content=False,
+            output_mode="overwrite", file_has_content=False,  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result.mode == "candidate"
 
@@ -481,7 +481,7 @@ class TestOverwriteLegacyCompat:
         """overwrite + safe path + empty → write"""
         result = decide_output(
             "generate", "materials/extracted/chars.md",
-            output_mode="overwrite", file_has_content=False,
+            output_mode="overwrite", file_has_content=False,  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result.mode == "write"
 
@@ -489,7 +489,7 @@ class TestOverwriteLegacyCompat:
         """overwrite + safe path + content → write (safe path allows overwrite)"""
         result = decide_output(
             "generate", "materials/extracted/chars.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result.mode == "write"
 
@@ -521,6 +521,6 @@ class TestOverwriteLegacyCompat:
         """overwrite + dangerous path → candidate"""
         result = decide_output(
             "generate", "story-state.md",
-            output_mode="overwrite", file_has_content=True,
+            output_mode="overwrite", file_has_content=True,  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result.mode == "candidate"

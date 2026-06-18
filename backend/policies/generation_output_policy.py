@@ -108,7 +108,7 @@ def decide_output(
     Args:
         action: 操作类型（rewrite, polish, write_new_scene, extract 等）
         target_path: 目标文件相对路径
-        output_mode: 显式指定的输出模式（write_scene, candidate, append, none; LEGACY_COMPAT: overwrite/rewrite accepted but deprecated）
+        output_mode: 显式指定的输出模式（write_scene, candidate, append, none; LEGACY_COMPAT: overwrite/rewrite accepted but deprecated）  # AI_GUARDRAIL_ALLOW: policy doc with LEGACY_COMPAT note
         file_exists: 目标文件是否存在
         file_has_content: 目标文件是否有实质内容
         require_candidate: 是否强制生成候选稿

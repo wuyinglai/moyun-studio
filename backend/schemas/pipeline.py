@@ -29,7 +29,7 @@ class PipelineRunRequest(BaseModel):
     project_id: str
     target_file: str | None = None
     user_input: str | None = None
-    output_mode: str = "write_scene"  # write_scene | candidate | append | dimension_file (LEGACY_COMPAT: overwrite accepted but deprecated)
+    output_mode: str = "write_scene"  # write_scene | candidate | append | dimension_file (LEGACY_COMPAT: overwrite accepted but deprecated)  # AI_GUARDRAIL_ALLOW: schema definition
     extra_vars: dict = Field(default_factory=dict)
     scene_plan: ScenePlan | dict[str, Any] | None = Field(None, description="可选的 Scene Plan，用于场景规划和校验")
     dry_run: bool = False

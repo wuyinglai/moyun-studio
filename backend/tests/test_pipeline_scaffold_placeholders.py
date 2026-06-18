@@ -72,7 +72,7 @@ async def test_write_scene_replaces_style_guide_placeholder(runner, mock_file_se
     write_calls = []
 
     async def mock_write(path, content, frontmatter=None):
-        write_calls.append({"path": str(path), "content": content})
+        write_calls.append({"path": str(path), "content": content})  # AI_GUARDRAIL_ALLOW: test mock data, not SSE
 
     mock_file_service.write_file = AsyncMock(side_effect=mock_write)
 

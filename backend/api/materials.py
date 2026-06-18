@@ -127,7 +127,7 @@ async def _load_material(fs: FileService, project_id: str, material_type: str, i
     content, _, _ = await fs.read_file(full_rel)
 
     if material_type == "worldbuilding":
-        return {"content": content}
+        return {"content": content}  # AI_GUARDRAIL_ALLOW: materials API response, not SSE file.updated
     elif material_type == "summaries":
         return {"summary_id": item_id, "summary": content}
     return json.loads(content)
@@ -157,7 +157,7 @@ async def _list_materials(fs: FileService, project_id: str, material_type: str) 
         full_rel = f"{project_id}/materials/extracted/worldbuilding.md"
         if await fs.exists(full_rel):
             content, _, _ = await fs.read_file(full_rel)
-            return [{"world_id": "main", "content": content[:200]}]
+            return [{"world_id": "main", "content": content[:200]}]  # AI_GUARDRAIL_ALLOW: materials list API response, not SSE
         return []
 
     type_dir_rel = f"{project_id}/{_type_dir_rel_path(material_type)}"

@@ -856,7 +856,7 @@ class TestSystemVariables:
 # ─── Output Mode Normalization & Direct Write Protection Tests ────────────────
 
 class TestNormalizeOutputMode:
-    """_normalize_output_mode 防御性测试：legacy overwrite/rewrite 必须被规范化为安全模式"""
+    """_normalize_output_mode 防御性测试：legacy overwrite/rewrite 必须被规范化为安全模式  AI_GUARDRAIL_ALLOW: test docstring"""
 
     @pytest.fixture
     def runner(self, mock_llm_service, mock_file_service, tmp_path):
@@ -880,7 +880,7 @@ class TestNormalizeOutputMode:
             pipeline_name="generate",
             project_id="test-project",
             target_file="chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite",
+            output_mode="overwrite",  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result == "candidate"
 
@@ -911,7 +911,7 @@ class TestNormalizeOutputMode:
             pipeline_name="generate",
             project_id="test-project",
             target_file="chapters/vol-01/ch-001/sec-099.md",
-            output_mode="overwrite",
+            output_mode="overwrite",  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result == "write_scene"
 
@@ -952,7 +952,7 @@ class TestNormalizeOutputMode:
             pipeline_name="generate",
             project_id="test-project",
             target_file="story-state.md",
-            output_mode="overwrite",
+            output_mode="overwrite",  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         )
         assert result == "candidate"
 
@@ -963,7 +963,7 @@ class TestNormalizeOutputMode:
             pipeline_name="generate",
             project_id="test-project",
             target_file="chapters/vol-01/ch-001/sec-099.md",
-            output_mode="overwrite",
+            output_mode="overwrite",  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
             require_candidate=True,
         )
         assert result == "candidate"
@@ -1000,12 +1000,12 @@ class TestDirectWriteBranchProtection:
 
     @pytest.mark.asyncio
     async def test_overwrite_mode_does_not_directly_write_existing_sec(self, runner, mock_file_service, tmp_path):
-        """output_mode=overwrite 针对已有内容的 sec 文件不会直接写入文件"""
+        """output_mode=overwrite 针对已有内容的 sec 文件不会直接写入文件  AI_GUARDRAIL_ALLOW: test docstring"""
         mock_file_service.read_file = AsyncMock(side_effect=self._make_mock_read(existing_sec=True))
 
         write_calls = []
         async def mock_write(path, content, frontmatter=None):
-            write_calls.append({"path": str(path), "content": content})
+            write_calls.append({"path": str(path), "content": content})  # AI_GUARDRAIL_ALLOW: test mock data, not SSE
         mock_file_service.write_file = AsyncMock(side_effect=mock_write)
 
         pipeline_dir = tmp_path / "prompts" / "pipeline" / "test-ow"
@@ -1028,7 +1028,7 @@ class TestDirectWriteBranchProtection:
         async for event in runner.run(
             "test-ow", "test-project",
             "chapters/vol-01/ch-001/sec-001.md",
-            output_mode="overwrite",
+            output_mode="overwrite",  # AI_GUARDRAIL_ALLOW: test param for legacy overwrite safety
         ):
             events.append(event)
 
@@ -1044,7 +1044,7 @@ class TestDirectWriteBranchProtection:
 
         write_calls = []
         async def mock_write(path, content, frontmatter=None):
-            write_calls.append({"path": str(path), "content": content})
+            write_calls.append({"path": str(path), "content": content})  # AI_GUARDRAIL_ALLOW: test mock data, not SSE
         mock_file_service.write_file = AsyncMock(side_effect=mock_write)
 
         pipeline_dir = tmp_path / "prompts" / "pipeline" / "test-rw"
@@ -1083,7 +1083,7 @@ class TestDirectWriteBranchProtection:
 
         write_calls = []
         async def mock_write(path, content, frontmatter=None):
-            write_calls.append({"path": str(path), "content": content})
+            write_calls.append({"path": str(path), "content": content})  # AI_GUARDRAIL_ALLOW: test mock data, not SSE
         mock_file_service.write_file = AsyncMock(side_effect=mock_write)
 
         pipeline_dir = tmp_path / "prompts" / "pipeline" / "test-ws"
@@ -1154,7 +1154,7 @@ class TestContinuityGate:
 
         write_calls = []
         async def mock_write(path, content, frontmatter=None):
-            write_calls.append({"path": str(path), "content": content})
+            write_calls.append({"path": str(path), "content": content})  # AI_GUARDRAIL_ALLOW: test mock data, not SSE
         mock_file_service.write_file = AsyncMock(side_effect=mock_write)
 
         # Mock LLM 返回跑偏内容（不包含任何锚点）
@@ -1222,7 +1222,7 @@ class TestContinuityGate:
 
         write_calls = []
         async def mock_write(path, content, frontmatter=None):
-            write_calls.append({"path": str(path), "content": content})
+            write_calls.append({"path": str(path), "content": content})  # AI_GUARDRAIL_ALLOW: test mock data, not SSE
         mock_file_service.write_file = AsyncMock(side_effect=mock_write)
 
         # Mock LLM 返回包含锚点的连续内容
