@@ -1048,4 +1048,130 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     await expect(modal).toContainText('候选稿比较')
     console.log('[t10.2b] ✓ adopted candidate can open compare without changing status')
   })
+
+  // ─── T10.3b: Candidate Decision Flow UI 验收测试 ──────────────────────────────────
+
+  test('T10.3b: pending candidate shows primary/secondary/trailing action groups', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-001 is pending
+    const cand001Card = page.locator('.candidate-card').filter({ hasText: '待处理' }).first()
+
+    // Primary group: preview, compare, adopt
+    await expect(cand001Card.locator('button[title="预览"]')).toBeVisible()
+    await expect(cand001Card.getByTestId('candidate-compare-button')).toBeVisible()
+    await expect(cand001Card.getByTestId('candidate-adopt-button')).toBeVisible()
+
+    // Secondary group: revise, repair
+    await expect(cand001Card.getByTestId('candidate-revise-button')).toBeVisible()
+    await expect(cand001Card.getByTestId('candidate-repair-button')).toBeVisible()
+
+    // Trailing group: delete
+    await expect(cand001Card.getByTestId('candidate-reject-button')).toBeVisible()
+
+    console.log('[t10.3b] ✓ pending candidate shows primary/secondary/trailing action groups')
+  })
+
+  test('T10.3b: adopted candidate shows preview/compare/delete but not adopt/revise/repair', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-003 is adopted
+    const cand003Card = page.locator('.candidate-card').filter({ hasText: '已采用' }).first()
+
+    // Primary group: preview, compare (adopt is hidden for adopted)
+    await expect(cand003Card.locator('button[title="预览"]')).toBeVisible()
+    await expect(cand003Card.getByTestId('candidate-compare-button')).toBeVisible()
+    await expect(cand003Card.getByTestId('candidate-adopt-button')).toHaveCount(0)
+
+    // Secondary group is hidden
+    await expect(cand003Card.getByTestId('candidate-revise-button')).toHaveCount(0)
+    await expect(cand003Card.getByTestId('candidate-repair-button')).toHaveCount(0)
+
+    // Trailing group: delete is still visible
+    await expect(cand003Card.getByTestId('candidate-reject-button')).toBeVisible()
+
+    console.log('[t10.3b] ✓ adopted candidate shows preview/compare/delete but not adopt/revise/repair')
+  })
+
+  test('T10.3b: pending candidate with warning shows adopt hint', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-001 is pending with warning (instruction_following=warning)
+    const cand001Card = page.locator('.candidate-card').filter({ hasText: '待处理' }).first()
+
+    // Adopt hint should be visible for pending candidate with warning
+    await expect(cand001Card.getByTestId('candidate-adopt-hint')).toBeVisible()
+    await expect(cand001Card.getByTestId('candidate-adopt-hint')).toContainText('采纳前建议先查看质量提示和比较差异')
+
+    console.log('[t10.3b] ✓ pending candidate with warning shows adopt hint')
+  })
+
+  test('T10.3b: pending candidate without warning does not show adopt hint', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-002 is pending without warning or quality data
+    const cand002Card = page.locator('.candidate-card').filter({ hasText: '重写' }).nth(0)
+
+    // Adopt hint should not be visible
+    await expect(cand002Card.getByTestId('candidate-adopt-hint')).toHaveCount(0)
+
+    console.log('[t10.3b] ✓ pending candidate without warning does not show adopt hint')
+  })
+
+  test('T10.3b: adopt hint does not block adopt action', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-001 is pending with warning
+    const cand001Card = page.locator('.candidate-card').filter({ hasText: '待处理' }).first()
+
+    // Adopt button should still be visible and enabled
+    const adoptButton = cand001Card.getByTestId('candidate-adopt-button')
+    await expect(adoptButton).toBeVisible()
+    await expect(adoptButton).toBeEnabled()
+
+    // Adopt hint is present but does not disable adopt
+    await expect(cand001Card.getByTestId('candidate-adopt-hint')).toBeVisible()
+
+    console.log('[t10.3b] ✓ adopt hint does not block adopt action')
+  })
+
+  test('T10.3b: compare modal still has no adopt button', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // Open compare modal for any candidate
+    await page.locator('.candidate-card').first().getByTestId('candidate-compare-button').click()
+
+    const modal = page.getByTestId('compare-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+
+    // Compare modal should not have adopt button
+    await expect(modal.getByTestId('candidate-adopt-button')).toHaveCount(0)
+    await expect(modal.getByRole('button', { name: /采用|采纳/ })).toHaveCount(0)
+
+    console.log('[t10.3b] ✓ compare modal still has no adopt button')
+  })
 })
