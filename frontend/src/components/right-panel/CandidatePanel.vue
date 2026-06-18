@@ -85,6 +85,61 @@
             {{ candidate.quality.change_scope }}
           </span>
         </div>
+        <!-- T10.1 Quality Explanation Collapsible Area -->
+        <div
+          v-if="getQualityExplanation(candidate)"
+          class="quality-explanation"
+          data-testid="candidate-quality-explanation"
+        >
+          <button
+            class="quality-explanation-toggle"
+            :aria-expanded="isQualityExpanded(candidate)"
+            data-testid="candidate-quality-explanation-toggle"
+            @click.stop="toggleQualityExpanded(candidate.id)"
+          >
+            <i :class="isQualityExpanded(candidate) ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right'" />
+            <span>{{ getQualityExplanation(candidate)!.collapsedText }}</span>
+          </button>
+          <div
+            v-if="isQualityExpanded(candidate)"
+            class="quality-explanation-body"
+            data-testid="candidate-quality-explanation-body"
+          >
+            <div
+              v-for="dim in getQualityExplanation(candidate)!.dimensions"
+              :key="dim.key"
+              class="quality-dimension"
+              :data-testid="`quality-dimension-${dim.key}`"
+            >
+              <div class="quality-dimension-header">
+                <span class="quality-dimension-label">{{ dim.label }}</span>
+                <span class="quality-dimension-status" :class="dim.cssClass">{{ dim.statusLabel }}</span>
+              </div>
+              <div class="quality-dimension-description">{{ dim.description }}</div>
+            </div>
+            <!-- Repair explanation (T10.1a §9) -->
+            <div
+              v-if="showRepairExplanation(candidate)"
+              class="quality-repair-explanation"
+              data-testid="candidate-repair-explanation"
+            >
+              <i class="fa-solid fa-bandaid" />
+              <div>
+                <strong>修复候选稿</strong>
+                <span>{{ getRepairExplanation(candidate) }}</span>
+                <span class="quality-repair-note">修复会生成新的候选稿，不会自动采纳，也不会覆盖正文。</span>
+              </div>
+            </div>
+            <!-- Candidate-only safety text (T10.1a §10) -->
+            <div
+              class="quality-safety-text"
+              data-testid="candidate-safety-text"
+            >
+              <i class="fa-solid fa-shield-halved" />
+              {{ candidateSafetyText }}
+            </div>
+          </div>
+        </div>
         <!-- 质量检查区 -->
         <div
           v-if="hasQualityInfo(candidate)"
@@ -421,6 +476,13 @@ import api from '@/services/api'
 import { API_ROUTES } from '@/shared/api/routes'
 import type { CandidateAdoptResult, CandidateInfo, CandidateRevisionRequest } from '@/shared/api/types'
 import { getApiErrorCode, toUserFacingMessage } from '@/utils/errorMessages'
+import {
+  buildQualityExplanation,
+  shouldShowRepairExplanation,
+  repairExplanation,
+  CANDIDATE_SAFETY_TEXT,
+  type QualityExplanationSummary,
+} from '@/modules/candidate/qualityExplanation'
 
 const projectStore = useProjectStore()
 const notification = useNotificationStore()
@@ -442,6 +504,35 @@ const revisionScope = ref<'full_candidate' | 'keep_opening' | 'ending_only'>('fu
 const revisionSubmitting = ref(false)
 let disposeCandidateCreated: (() => void) | null = null
 let disposeCandidateAdopted: (() => void) | null = null
+const expandedQuality = ref<Set<string>>(new Set())
+
+function toggleQualityExpanded(id: string) {
+  const next = new Set(expandedQuality.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  expandedQuality.value = next
+}
+
+function getQualityExplanation(candidate: CandidateInfo): QualityExplanationSummary | null {
+  return buildQualityExplanation(candidate)
+}
+
+function isQualityExpanded(candidate: CandidateInfo): boolean {
+  return expandedQuality.value.has(candidate.id)
+}
+
+function showRepairExplanation(candidate: CandidateInfo): boolean {
+  return shouldShowRepairExplanation(candidate)
+}
+
+function getRepairExplanation(candidate: CandidateInfo): string {
+  return repairExplanation(candidate)
+}
+
+const candidateSafetyText = CANDIDATE_SAFETY_TEXT
 
 const revisionQuickActionOptions = [
   { value: 'fix_missing_beats', label: '补上缺失信息点' },
@@ -1168,6 +1259,146 @@ watch(() => projectStore.currentProject?.id, () => {
 .quality-badge-scope {
   font-family: monospace;
   font-size: 9px;
+}
+
+/* T10.1 Quality Explanation collapsible area */
+.quality-explanation {
+  margin: 6px 0;
+  border-radius: var(--radius-sm);
+  background: rgba(148, 163, 184, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.quality-explanation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.08);
+  }
+
+  i {
+    font-size: 9px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+}
+
+.quality-explanation-body {
+  padding: 4px 8px 8px;
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.quality-dimension {
+  padding: 4px 0;
+}
+
+.quality-dimension-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.quality-dimension-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quality-dimension-status {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 3px;
+
+  &.expl-pass {
+    background: rgba(34, 197, 94, 0.12);
+    color: var(--accent-success);
+  }
+  &.expl-warning {
+    background: rgba(251, 146, 60, 0.14);
+    color: #f97316;
+  }
+  &.expl-danger {
+    background: rgba(239, 68, 68, 0.14);
+    color: var(--accent-danger);
+  }
+  &.expl-unknown {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--text-muted);
+  }
+}
+
+.quality-dimension-description {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.quality-repair-explanation {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 7px 8px;
+  background: rgba(251, 146, 60, 0.07);
+  border-left: 2px solid #f97316;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+
+  i {
+    flex-shrink: 0;
+    color: #f97316;
+    margin-top: 2px;
+  }
+
+  div {
+    display: grid;
+    gap: 2px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+}
+
+.quality-repair-note {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.quality-safety-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--accent-primary);
+  line-height: 1.45;
+
+  i {
+    flex-shrink: 0;
+    font-size: 10px;
+    margin-top: 1px;
+  }
 }
 
 .candidate-action {

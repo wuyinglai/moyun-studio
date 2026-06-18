@@ -57,6 +57,14 @@ async function installMocks(page: Page, options: MockOptions = {}): Promise<Mock
         anchor_ids: ['anchor-1', 'anchor-2'],
         types: { character_state: 1, object_location: 1 },
       },
+      quality: {
+        instruction_following: 'warning',
+        continuity: 'pass',
+        style_preservation: 'pass',
+        change_scope: 'medium',
+        forbidden_check: 'pass',
+        notes: ['beat validation warning'],
+      },
     },
     {
       id: 'cand-002',
@@ -774,5 +782,126 @@ test.describe('候选稿工作流 - 模拟人类操作', () => {
     expect(state.revisionPayloads[0].feedback_text).toBe('')
     expect(state.revisionPayloads[0].quick_actions).toEqual(expect.arrayContaining([expect.any(String)]))
     expect(state.fileSaveCalls).toBe(0)
+  })
+
+  // ── T10.1b: Quality Explanation UI ──────────────────────────────
+
+  test('T10.1b: quality explanation toggle visible for candidate with quality metadata', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const toggle = page.getByTestId('candidate-quality-explanation-toggle').first()
+    await expect(toggle).toBeVisible({ timeout: 5000 })
+    await expect(toggle).toContainText('质量提示')
+    console.log('[t10.1b] ✓ quality explanation toggle visible with collapsed text')
+  })
+
+  test('T10.1b: quality explanation expands to show 5 dimensions on click', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const toggle = page.getByTestId('candidate-quality-explanation-toggle').first()
+    await toggle.click()
+
+    const body = page.getByTestId('candidate-quality-explanation-body').first()
+    await expect(body).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('quality-dimension-instruction_following')).toBeVisible()
+    await expect(page.getByTestId('quality-dimension-continuity')).toBeVisible()
+    await expect(page.getByTestId('quality-dimension-style_preservation')).toBeVisible()
+    await expect(page.getByTestId('quality-dimension-change_scope')).toBeVisible()
+    await expect(page.getByTestId('quality-dimension-forbidden_check')).toBeVisible()
+    console.log('[t10.1b] ✓ 5 quality dimensions visible after expand')
+  })
+
+  test('T10.1b: quality explanation uses correct status labels (pass/warning/unknown)', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-quality-explanation-toggle').first().click()
+
+    // cand-001 has instruction_following=warning
+    const instructionDim = page.getByTestId('quality-dimension-instruction_following')
+    await expect(instructionDim).toContainText('需注意')
+
+    // cand-001 has continuity=pass
+    const continuityDim = page.getByTestId('quality-dimension-continuity')
+    await expect(continuityDim).toContainText('通过')
+
+    // cand-001 has change_scope=medium → "变化适中"
+    const changeDim = page.getByTestId('quality-dimension-change_scope')
+    await expect(changeDim).toContainText('变化适中')
+    console.log('[t10.1b] ✓ status labels use user-friendly copy (pass/warning)')
+  })
+
+  test('T10.1b: repair explanation shown when candidate has instruction_following warning', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-quality-explanation-toggle').first().click()
+
+    const repairExpl = page.getByTestId('candidate-repair-explanation')
+    await expect(repairExpl).toBeVisible({ timeout: 5000 })
+    await expect(repairExpl).toContainText('修复候选稿')
+    await expect(repairExpl).toContainText('不会自动采纳')
+    console.log('[t10.1b] ✓ repair explanation visible with safety note')
+  })
+
+  test('T10.1b: safety text always visible in expanded quality explanation', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    await page.getByTestId('candidate-quality-explanation-toggle').first().click()
+
+    const safetyText = page.getByTestId('candidate-safety-text')
+    await expect(safetyText).toBeVisible({ timeout: 5000 })
+    await expect(safetyText).toContainText('所有质量提示仅供参考')
+    await expect(safetyText).toContainText('不会自动修改正文')
+    console.log('[t10.1b] ✓ candidate-only safety text present')
+  })
+
+  test('T10.1b: old candidate without quality metadata does not show explanation area', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    // cand-002 has no quality metadata
+    const cand002Card = page.locator('.candidate-card').filter({ hasText: '重写' }).first()
+    await expect(cand002Card).toBeVisible({ timeout: 5000 })
+    await expect(cand002Card.locator('[data-testid="candidate-quality-explanation"]')).toHaveCount(0)
+    console.log('[t10.1b] ✓ old candidate without quality metadata has no explanation area')
+  })
+
+  test('T10.1b: quality explanation collapses on second click', async ({ page }) => {
+    await installMocks(page)
+
+    await page.goto(`/project/${projectId}`)
+    await dismissViteOverlay(page)
+    await page.locator('.right-panel .panel-tab').filter({ hasText: '候选稿' }).click()
+
+    const toggle = page.getByTestId('candidate-quality-explanation-toggle').first()
+    // Expand
+    await toggle.click()
+    await expect(page.getByTestId('candidate-quality-explanation-body').first()).toBeVisible()
+    // Collapse
+    await toggle.click()
+    await expect(page.getByTestId('candidate-quality-explanation-body').first()).toHaveCount(0)
+    console.log('[t10.1b] ✓ quality explanation collapses on second click')
   })
 })
