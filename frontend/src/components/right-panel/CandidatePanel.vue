@@ -1502,6 +1502,9 @@ watch(() => projectStore.currentProject?.id, () => {
   font-size: 13px;
   color: var(--text-primary);
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .candidate-revision-summary {
@@ -1638,6 +1641,7 @@ watch(() => projectStore.currentProject?.id, () => {
   align-items: center;
   justify-content: space-between;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .card-actions-primary {
@@ -1653,6 +1657,7 @@ watch(() => projectStore.currentProject?.id, () => {
 .card-actions-trailing {
   display: flex;
   gap: 4px;
+  margin-left: auto;
 }
 
 .action-btn {
@@ -1827,7 +1832,7 @@ watch(() => projectStore.currentProject?.id, () => {
 .preview-body {
   flex: 1;
   padding: 16px;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .preview-textarea {
