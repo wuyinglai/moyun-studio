@@ -253,6 +253,15 @@
             <span class="meta-item">{{ candidate.word_count }} 字</span>
           </div>
         </div>
+        <!-- Adopt 前轻量提示：有 warning/change_scope=large/repairable 时显示 -->
+        <div
+          v-if="candidate.status === 'pending' && showAdoptHint(candidate)"
+          class="adopt-hint"
+          data-testid="candidate-adopt-hint"
+        >
+          <i class="fa-solid fa-lightbulb" />
+          <span>采纳前建议先查看质量提示和比较差异。</span>
+        </div>
         <div class="card-actions">
           <div class="card-actions-primary">
             <button
@@ -279,6 +288,30 @@
             >
               <i class="fa-solid fa-check" />
             </button>
+          </div>
+          <div class="card-actions-secondary">
+            <button
+              v-if="candidate.status === 'pending'"
+              class="action-btn action-revise"
+              title="按反馈再生成"
+              data-testid="candidate-revise-button"
+              @click.stop="openRevisionModal(candidate)"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles" />
+              <span class="action-revise-label">按反馈再生成</span>
+            </button>
+            <button
+              v-if="candidate.status === 'pending' && hasRepairableWarning(candidate)"
+              class="action-btn action-repair"
+              title="基于警告修复候选稿"
+              data-testid="candidate-repair-button"
+              @click.stop="repairCandidate(candidate)"
+            >
+              <i class="fa-solid fa-bandaid" />
+              <span class="action-repair-label">修复候选稿</span>
+            </button>
+          </div>
+          <div class="card-actions-trailing">
             <button
               class="action-btn action-delete"
               title="删除"
@@ -288,27 +321,6 @@
               <i class="fa-solid fa-trash-can" />
             </button>
           </div>
-          <button
-            v-if="candidate.status === 'pending'"
-            class="action-btn action-revise"
-            title="按反馈再生成"
-            data-testid="candidate-revise-button"
-            @click.stop="openRevisionModal(candidate)"
-          >
-            <i class="fa-solid fa-wand-magic-sparkles" />
-            <span class="action-revise-label">按反馈再生成</span>
-          </button>
-          <!-- 修复候选稿按钮：仅 pending 且有警告时显示 -->
-          <button
-            v-if="candidate.status === 'pending' && hasRepairableWarning(candidate)"
-            class="action-btn action-repair"
-            title="基于警告修复候选稿"
-            data-testid="candidate-repair-button"
-            @click.stop="repairCandidate(candidate)"
-          >
-            <i class="fa-solid fa-bandaid" />
-            <span class="action-repair-label">修复候选稿</span>
-          </button>
         </div>
       </div>
     </div>
@@ -990,12 +1002,23 @@ function hasRepairableWarning(candidate: CandidateInfo): boolean {
   if (candidate.status !== 'pending') return false
   const q = candidate.quality
   if (!q) return false
-  // 有任意质量警告则认为可修复
   return (
     q.instruction_following === 'warning' ||
     q.forbidden_check === 'warning' ||
     q.change_scope === 'large'
   )
+}
+
+/** 是否显示 adopt 前轻量提示 */
+function showAdoptHint(candidate: CandidateInfo): boolean {
+  if (candidate.status !== 'pending') return false
+  if (hasRepairableWarning(candidate)) return true
+  const q = candidate.quality
+  if (q && q.change_scope === 'large') return true
+  const bv = candidate.beat_validation
+  if (bv && bv.status === 'warning') return true
+  if (candidate.continuity && candidate.continuity.has_warning) return true
+  return false
 }
 
 /** 修复候选稿 */
@@ -1591,6 +1614,25 @@ watch(() => projectStore.currentProject?.id, () => {
   margin: 6px 0;
 }
 
+.adopt-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--accent-warning);
+  line-height: 1.4;
+
+  i {
+    flex-shrink: 0;
+    font-size: 11px;
+  }
+}
+
 .card-actions {
   display: flex;
   align-items: center;
@@ -1599,6 +1641,16 @@ watch(() => projectStore.currentProject?.id, () => {
 }
 
 .card-actions-primary {
+  display: flex;
+  gap: 4px;
+}
+
+.card-actions-secondary {
+  display: flex;
+  gap: 4px;
+}
+
+.card-actions-trailing {
   display: flex;
   gap: 4px;
 }

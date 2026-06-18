@@ -73,9 +73,7 @@
 import { ref, computed, onMounted } from 'vue'
 import type { CandidateInfo } from '@/shared/api/types'
 import api from '@/services/api'
-import { API_ROUTES } from '@/shared/api/routes'
 import { useFileStore } from '@/stores/file'
-import { toUserFacingMessage } from '@/utils/errorMessages'
 import {
   computeLineDiff,
   computeSummary,
